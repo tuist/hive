@@ -9,7 +9,7 @@ import Config
 
 config :hive,
   ecto_repos: [Hive.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime, binary_id_type: :binary_id]
 
 # Configure the endpoint
 config :hive, HiveWeb.Endpoint,

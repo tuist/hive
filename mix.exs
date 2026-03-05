@@ -60,7 +60,8 @@ defmodule Hive.MixProject do
       {:bandit, "~> 1.5"},
       {:noora, github: "tuist/noora", sparse: "web"},
       {:ueberauth, "~> 0.10"},
-      {:ueberauth_google, "~> 0.12"}
+      {:ueberauth_google, "~> 0.12"},
+      {:uniq, "~> 0.6"}
     ]
   end
 

@@ -26,6 +26,27 @@ defmodule HiveWeb.AuthController do
     end
   end
 
+  def dev_login(conn, _params) do
+    if Application.get_env(:hive, :dev_routes) do
+      case Accounts.get_user_by_email("test@hive.dev") do
+        nil ->
+          conn
+          |> put_flash(:error, "Test user not found. Run mix run priv/repo/seeds.exs first.")
+          |> redirect(to: ~p"/login")
+
+        user ->
+          conn
+          |> put_session(:user_id, user.id)
+          |> configure_session(renew: true)
+          |> redirect(to: ~p"/")
+      end
+    else
+      conn
+      |> put_resp_content_type("text/plain")
+      |> send_resp(404, "Not found")
+    end
+  end
+
   def delete(conn, _params) do
     conn
     |> configure_session(drop: true)

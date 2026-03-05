@@ -4,19 +4,18 @@ defmodule Hive.Accounts do
 
   def get_user(id), do: Repo.get(User, id)
 
-  def find_or_create_user_from_auth(%Ueberauth.Auth{} = auth) do
-    provider = to_string(auth.provider)
-    uid = to_string(auth.uid)
+  def get_user_by_email(email), do: Repo.get_by(User, email: email)
 
-    case Repo.get_by(User, provider: provider, provider_uid: uid) do
+  def find_or_create_user_from_auth(%Ueberauth.Auth{} = auth) do
+    email = auth.info.email
+
+    case Repo.get_by(User, email: email) do
       nil ->
         %User{}
         |> User.changeset(%{
-          email: auth.info.email,
+          email: email,
           name: auth.info.name,
-          avatar_url: auth.info.image,
-          provider: provider,
-          provider_uid: uid
+          avatar_url: auth.info.image
         })
         |> Repo.insert()
 

@@ -23,6 +23,7 @@ defmodule HiveWeb.Router do
     pipe_through [:browser]
 
     live "/login", LoginLive, :login
+    post "/dev/login", AuthController, :dev_login
   end
 
   scope "/auth", HiveWeb do
