@@ -9,9 +9,46 @@
       </.link>
     </div>
     <div data-part="right-section">
-      <.link href={~p"/logout"} method="delete">
-        <.button variant="secondary" size="small" label={gettext("Log out")} />
-      </.link>
+      <div
+        id="account-dropdown"
+        class="account-dropdown"
+        phx-hook="NooraDropdown"
+        data-loop-focus
+        data-close-on-select
+        data-positioning-offset-main-axis={6}
+      >
+        <button data-part="trigger">
+          <.avatar
+            id="account-dropdown-avatar"
+            size="small"
+            name={@current_user.name || @current_user.email}
+            image_href={Hive.Accounts.User.avatar_url(@current_user)}
+          />
+        </button>
+        <div data-part="positioner">
+          <div data-part="content">
+            <div data-part="header">
+              <.avatar
+                id="account-dropdown-content-avatar"
+                name={@current_user.name || @current_user.email}
+                image_href={Hive.Accounts.User.avatar_url(@current_user)}
+              />
+              <div data-part="text">
+                <p data-part="title">{@current_user.name || @current_user.email}</p>
+                <p data-part="subtitle">{@current_user.email}</p>
+              </div>
+            </div>
+            <.line_divider />
+            <div data-part="actions">
+              <.link href={~p"/logout"} method="delete">
+                <.button label={gettext("Log out")} size="large" variant="destructive">
+                  <:icon_left><.logout /></:icon_left>
+                </.button>
+              </.link>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <.line_divider />

@@ -72,19 +72,19 @@ msgstr ""
 msgid "GitHub issues, Linear tasks, Slack support requests, and other work items will appear here."
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:11
+#: lib/hive_web/components/layouts/dashboard.html.heex:44
 #, elixir-autogen, elixir-format
 msgid "Log out"
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:19
+#: lib/hive_web/components/layouts/dashboard.html.heex:58
 #: lib/hive_web/live/signals_live.ex:5
 #: lib/hive_web/live/signals_live.ex:10
 #, elixir-autogen, elixir-format
 msgid "Signals"
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:25
+#: lib/hive_web/components/layouts/dashboard.html.heex:64
 #: lib/hive_web/live/swarms_live.ex:5
 #: lib/hive_web/live/swarms_live.ex:10
 #, elixir-autogen, elixir-format
@@ -96,7 +96,7 @@ msgstr ""
 msgid "Instance configuration and preferences will appear here."
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:31
+#: lib/hive_web/components/layouts/dashboard.html.heex:70
 #: lib/hive_web/live/settings_live.ex:5
 #: lib/hive_web/live/settings_live.ex:10
 #, elixir-autogen, elixir-format

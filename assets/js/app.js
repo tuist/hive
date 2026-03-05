@@ -1,6 +1,7 @@
 import "../../deps/noora/web/css/noora.css"
 import "../css/routes/auth.css"
 import "../css/layouts/dashboard.css"
+import "../css/components/account_dropdown.css"
 
 // If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
@@ -27,13 +28,14 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/hive"
+import Noora from "../../deps/noora/web/js/index.js"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...Noora.Hooks},
 })
 
 // Show progress bar on live navigation and form submits
