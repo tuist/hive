@@ -1,0 +1,92 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/components/core_components.ex:368
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:30
+#: lib/hive_web/components/layouts.ex:42
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr ""
+
+#: lib/hive_web/live/login_live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Continue with Google"
+msgstr ""
+
+#: lib/hive_web/live/login_live.ex:26
+#, elixir-autogen, elixir-format
+msgid "Enter the hive. Your swarm awaits."
+msgstr ""
+
+#: lib/hive_web/live/login_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "Log in as test user"
+msgstr ""
+
+#: lib/hive_web/live/login_live.ex:24
+#, elixir-autogen, elixir-format
+msgid "Log in to Hive"
+msgstr ""
+
+#: lib/hive_web/live/login_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "No authentication providers are configured. Set the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to enable Google OAuth."
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:37
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:25
+#, elixir-autogen, elixir-format
+msgid "We can't find the internet"
+msgstr ""
+
+#: lib/hive_web/components/core_components.ex:74
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr ""
+
+#: lib/hive_web/live/swarms_live.ex:11
+#, elixir-autogen, elixir-format
+msgid "Active and past agentic sessions will appear here."
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:11
+#, elixir-autogen, elixir-format
+msgid "GitHub issues, Linear tasks, Slack support requests, and other work items will appear here."
+msgstr ""
+
+#: lib/hive_web/components/layouts/dashboard.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "Log out"
+msgstr ""
+
+#: lib/hive_web/components/layouts/dashboard.html.heex:18
+#: lib/hive_web/live/signals_live.ex:5
+#: lib/hive_web/live/signals_live.ex:10
+#, elixir-autogen, elixir-format
+msgid "Signals"
+msgstr ""
+
+#: lib/hive_web/components/layouts/dashboard.html.heex:24
+#: lib/hive_web/live/swarms_live.ex:5
+#: lib/hive_web/live/swarms_live.ex:10
+#, elixir-autogen, elixir-format
+msgid "Swarms"
+msgstr ""

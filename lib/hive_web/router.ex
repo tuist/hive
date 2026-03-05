@@ -36,7 +36,14 @@ defmodule HiveWeb.Router do
   scope "/", HiveWeb do
     pipe_through [:browser, :require_auth]
 
-    get "/", PageController, :home
+    live_session :dashboard,
+      on_mount: [{HiveWeb.LayoutLive, :default}],
+      layout: {HiveWeb.Layouts, :dashboard} do
+      live "/", SignalsLive, :index
+      live "/signals", SignalsLive, :index
+      live "/swarms", SwarmsLive, :index
+    end
+
     delete "/logout", AuthController, :delete
   end
 

@@ -1,0 +1,35 @@
+<main class="layout">
+  <header class="headerbar">
+    <div data-part="left-section">
+      <.link navigate={~p"/"}>
+        <img src={~p"/images/logo.webp"} alt="Hive" class="headerbar__logo" />
+      </.link>
+    </div>
+    <div data-part="right-section">
+      <.link href={~p"/logout"} method="delete">
+        <.button variant="secondary" size="small" label={gettext("Log out")} />
+      </.link>
+    </div>
+  </header>
+  <.line_divider />
+  <section class="layout__main">
+    <.sidebar>
+      <.sidebar_item
+        label={gettext("Signals")}
+        icon="notification"
+        navigate={~p"/signals"}
+        selected={String.starts_with?(@current_path, "/signals")}
+      />
+      <.sidebar_item
+        label={gettext("Swarms")}
+        icon="robot"
+        navigate={~p"/swarms"}
+        selected={String.starts_with?(@current_path, "/swarms")}
+      />
+    </.sidebar>
+    <div class="layout__content">
+      <.flash_group flash={@flash} />
+      {@inner_content}
+    </div>
+  </section>
+</main>

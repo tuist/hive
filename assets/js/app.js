@@ -1,5 +1,6 @@
 import "../../deps/noora/web/css/noora.css"
 import "../css/routes/auth.css"
+import "../css/layouts/dashboard.css"
 
 // If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
