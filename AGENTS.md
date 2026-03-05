@@ -1,5 +1,9 @@
 This is a web application written using the Phoenix web framework.
 
+## Documentation
+
+The `README.md` file serves as the project documentation. Keep it up to date when adding new features, configuration options, or deployment instructions.
+
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues

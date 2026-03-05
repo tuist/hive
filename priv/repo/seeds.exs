@@ -1,11 +1,20 @@
 # Script for populating the database. You can run it as:
 #
 #     mix run priv/repo/seeds.exs
-#
-# Inside the script, you can read and write to any of your
-# repositories directly:
-#
-#     Hive.Repo.insert!(%Hive.SomeSchema{})
-#
-# We recommend using the bang functions (`insert!`, `update!`
-# and so on) as they will fail if something goes wrong.
+
+alias Hive.Repo
+alias Hive.Accounts.User
+
+# Create a seeded test user for development
+case Repo.get_by(User, email: "test@hive.dev") do
+  nil ->
+    %User{}
+    |> User.changeset(%{
+      email: "test@hive.dev",
+      name: "Test User"
+    })
+    |> Repo.insert!()
+
+  _user ->
+    :ok
+end

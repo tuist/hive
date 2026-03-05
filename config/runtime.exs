@@ -22,6 +22,13 @@ end
 
 config :hive, HiveWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Configure Google OAuth if env vars are set
+if google_client_id = System.get_env("GOOGLE_CLIENT_ID") do
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: google_client_id,
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
