@@ -23,6 +23,8 @@ env:
   secret:
     - SECRET_KEY_BASE
     - DATABASE_URL
+    - GOOGLE_CLIENT_ID
+    - GOOGLE_CLIENT_SECRET
 
 accessories:
   db:
