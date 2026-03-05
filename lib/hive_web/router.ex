@@ -42,6 +42,7 @@ defmodule HiveWeb.Router do
       live "/", SignalsLive, :index
       live "/signals", SignalsLive, :index
       live "/swarms", SwarmsLive, :index
+      live "/settings", SettingsLive, :index
     end
 
     delete "/logout", AuthController, :delete

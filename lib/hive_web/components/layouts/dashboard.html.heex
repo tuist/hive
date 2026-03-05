@@ -1,8 +1,9 @@
 <main class="layout">
   <header class="headerbar">
     <div data-part="left-section">
-      <.link navigate={~p"/"}>
+      <.link navigate={~p"/"} class="headerbar__brand">
         <img src={~p"/images/logo.webp"} alt="Hive" class="headerbar__logo" />
+        <span class="headerbar__title">Hive</span>
       </.link>
     </div>
     <div data-part="right-section">
@@ -25,6 +26,12 @@
         icon="atom"
         navigate={~p"/swarms"}
         selected={String.starts_with?(@current_path, "/swarms")}
+      />
+      <.sidebar_item
+        label={gettext("Settings")}
+        icon="settings"
+        navigate={~p"/settings"}
+        selected={String.starts_with?(@current_path, "/settings")}
       />
     </.sidebar>
     <div class="layout__content">
