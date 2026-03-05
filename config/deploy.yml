@@ -1,6 +1,6 @@
 service: hive
 
-image: ghcr.io/tuist/hive
+image: hive
 
 servers:
   web:
@@ -14,10 +14,7 @@ proxy:
   app_port: 4000
 
 registry:
-  server: ghcr.io
-  username: tuist
-  password:
-    - KAMAL_REGISTRY_PASSWORD
+  server: localhost:5555
 
 env:
   clear:
@@ -46,3 +43,4 @@ ssh:
 
 builder:
   arch: arm64
+  remote: ssh://root@188.245.221.31
