@@ -12,26 +12,22 @@
       <div
         id="account-dropdown"
         class="account-dropdown"
-        phx-hook="NooraDropdown"
-        data-loop-focus
-        data-close-on-select
-        data-positioning-offset-main-axis={6}
+        phx-hook="Dropdown"
       >
         <button data-part="trigger">
-          <.avatar
-            id="account-dropdown-avatar"
-            size="small"
-            name={@current_user.name || @current_user.email}
-            image_href={Hive.Accounts.User.avatar_url(@current_user)}
+          <img
+            src={Hive.Accounts.User.avatar_url(@current_user)}
+            alt={@current_user.name || @current_user.email}
+            class="account-dropdown__avatar"
           />
         </button>
         <div data-part="positioner">
           <div data-part="content">
             <div data-part="header">
-              <.avatar
-                id="account-dropdown-content-avatar"
-                name={@current_user.name || @current_user.email}
-                image_href={Hive.Accounts.User.avatar_url(@current_user)}
+              <img
+                src={Hive.Accounts.User.avatar_url(@current_user)}
+                alt={@current_user.name || @current_user.email}
+                class="account-dropdown__avatar account-dropdown__avatar--large"
               />
               <div data-part="text">
                 <p data-part="title">{@current_user.name || @current_user.email}</p>

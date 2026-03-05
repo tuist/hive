@@ -28,14 +28,32 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/hive"
-import Noora from "../../deps/noora/web/js/index.js"
 import topbar from "../vendor/topbar"
+
+const Dropdown = {
+  mounted() {
+    const trigger = this.el.querySelector('[data-part="trigger"]')
+    const positioner = this.el.querySelector('[data-part="positioner"]')
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation()
+      const open = trigger.getAttribute("data-state") === "open"
+      trigger.setAttribute("data-state", open ? "closed" : "open")
+    })
+
+    document.addEventListener("click", (e) => {
+      if (!this.el.contains(e.target)) {
+        trigger.setAttribute("data-state", "closed")
+      }
+    })
+  }
+}
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ...Noora.Hooks},
+  hooks: {...colocatedHooks, Dropdown},
 })
 
 // Show progress bar on live navigation and form submits
