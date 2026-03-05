@@ -19,7 +19,7 @@ defmodule HiveWeb.LoginLive do
     <div id="login">
       <div data-part="frame">
         <div data-part="content">
-          <img src={~p"/images/logo.svg"} alt="Hive Logo" data-part="logo" />
+          <img src={~p"/images/logo.webp"} alt="Hive Logo" data-part="logo" />
           <div data-part="header">
             <h1 data-part="title">Log in to Hive</h1>
             <span data-part="subtitle">
