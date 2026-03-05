@@ -6,7 +6,7 @@ servers:
   web:
     hosts:
       - 188.245.221.31
-    cmd: /app/bin/migrate && /app/bin/server
+    cmd: sh -c '/app/bin/migrate && /app/bin/server'
 
 proxy:
   ssl: true
