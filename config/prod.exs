@@ -11,10 +11,8 @@ config :hive, HiveWeb.Endpoint, cache_static_manifest: "priv/static/cache_manife
 # known as HSTS. If you have a health check endpoint, you may want to exclude it below.
 # Note `:force_ssl` is required to be set at compile-time.
 config :hive, HiveWeb.Endpoint,
-  force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  exclude: [
-    # paths: ["/health"],
-    hosts: ["localhost", "127.0.0.1"]
+  force_ssl: [
+    rewrite_on: [:x_forwarded_proto]
   ]
 
 # Configure Swoosh API Client
