@@ -1,33 +1,36 @@
 <main class="layout">
   <header class="headerbar">
     <div data-part="left-section">
-      <.link navigate={~p"/"}>
-        <span class="headerbar__brand">
-          <img src={~p"/images/logo.webp"} alt="Hive" class="headerbar__logo" />
-          <span class="headerbar__title">Hive</span>
-        </span>
+      <.link navigate={~p"/"} class="headerbar__brand">
+        <img src={~p"/images/logo.webp"} alt="Hive" class="headerbar__logo" />
+        <span class="headerbar__title">Hive</span>
       </.link>
     </div>
     <div data-part="right-section">
       <div
         id="account-dropdown"
         class="account-dropdown"
-        phx-hook="Dropdown"
+        phx-hook="NooraDropdown"
+        data-loop-focus
+        data-close-on-select
+        data-positioning-offset-main-axis={6}
       >
         <button data-part="trigger">
-          <img
-            src={Hive.Accounts.User.avatar_url(@current_user)}
-            alt={@current_user.name || @current_user.email}
-            class="account-dropdown__avatar"
+          <.avatar
+            id="account-dropdown-avatar"
+            size="small"
+            name={@current_user.name || @current_user.email}
+            image_href={Hive.Accounts.User.avatar_url(@current_user)}
           />
         </button>
         <div data-part="positioner">
           <div data-part="content">
             <div data-part="header">
-              <img
-                src={Hive.Accounts.User.avatar_url(@current_user)}
-                alt={@current_user.name || @current_user.email}
-                class="account-dropdown__avatar account-dropdown__avatar--large"
+              <.avatar
+                id="account-dropdown-content-avatar"
+                size="small"
+                name={@current_user.name || @current_user.email}
+                image_href={Hive.Accounts.User.avatar_url(@current_user)}
               />
               <div data-part="text">
                 <p data-part="title">{@current_user.name || @current_user.email}</p>

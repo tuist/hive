@@ -61,12 +61,16 @@
   }
 }
 
-.headerbar__brand {
+.headerbar__brand,
+.headerbar__brand:visited,
+.headerbar__brand:hover,
+.headerbar__brand:active {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: var(--noora-spacing-3);
   text-decoration: none;
+  color: inherit;
 }
 
 .headerbar__logo {

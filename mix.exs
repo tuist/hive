@@ -58,7 +58,7 @@ defmodule Hive.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:noora, github: "tuist/noora", sparse: "web"},
+      {:noora, "~> 0.71.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
       {:uniq, "~> 0.6"},

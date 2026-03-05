@@ -1,12 +1,10 @@
 .account-dropdown {
-  position: relative;
   display: flex;
   flex-direction: column;
   z-index: var(--noora-z-index-9);
   padding: unset;
 
   & [data-part="trigger"] {
-    display: flex;
     align-items: center;
     cursor: pointer;
     outline: unset;
@@ -22,16 +20,9 @@
       display: flex;
     }
 
-    &[data-state="open"] .account-dropdown__avatar {
+    &[data-state="open"] .noora-avatar {
       box-shadow: var(--noora-border-light-focus);
     }
-  }
-
-  & [data-part="positioner"] {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 6px;
   }
 
   & [data-part="content"] {
@@ -39,28 +30,27 @@
     border-radius: var(--noora-radius-2xlarge);
     background-color: var(--noora-surface-background-primary);
     padding: var(--noora-spacing-0) var(--noora-spacing-7);
-    min-width: 280px;
 
     & [data-part="header"] {
       display: flex;
       flex-direction: row;
       align-items: center;
-      gap: var(--noora-spacing-6);
+      gap: var(--noora-spacing-4);
       padding-bottom: var(--noora-spacing-2);
 
       & [data-part="text"] {
         display: flex;
         flex-direction: column;
-        gap: var(--noora-spacing-2);
-        padding: var(--noora-spacing-6) var(--noora-spacing-0);
+        gap: var(--noora-spacing-1);
+        padding: var(--noora-spacing-5) var(--noora-spacing-0);
 
         & [data-part="title"] {
-          color: var(--noora-surface-label-primary);
-          font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+          color: var(--noora-content-primary);
+          font: var(--noora-font-weight-medium) var(--noora-font-body-small);
         }
         & [data-part="subtitle"] {
-          color: var(--noora-surface-label-secondary);
-          font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+          color: var(--noora-content-secondary);
+          font: var(--noora-font-weight-regular) var(--noora-font-body-xsmall);
         }
       }
     }
@@ -70,19 +60,7 @@
       flex-direction: column;
       align-items: flex-start;
       gap: var(--noora-spacing-4);
-      padding-bottom: var(--noora-spacing-8);
+      padding-bottom: var(--noora-spacing-7);
     }
   }
-}
-
-.account-dropdown__avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.account-dropdown__avatar--large {
-  width: 40px;
-  height: 40px;
 }
