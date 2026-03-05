@@ -14,16 +14,14 @@ defmodule Hive.Accounts do
         %User{}
         |> User.changeset(%{
           email: email,
-          name: auth.info.name,
-          avatar_url: auth.info.image
+          name: auth.info.name
         })
         |> Repo.insert()
 
       user ->
         user
         |> User.changeset(%{
-          name: auth.info.name,
-          avatar_url: auth.info.image
+          name: auth.info.name
         })
         |> Repo.update()
     end
