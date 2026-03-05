@@ -42,6 +42,35 @@ You can also run the server inside IEx for interactive debugging:
 iex -S mix phx.server
 ```
 
+## 🏠 Self-hosting
+
+Hive is designed to be self-hosted. You can deploy it using [Kamal](https://kamal-deploy.org/) or any Docker-based deployment tool. The included `Dockerfile` builds a production-ready Elixir release.
+
+### Environment variables
+
+| Variable | Description | Required |
+|---|---|---|
+| `SECRET_KEY_BASE` | A secret key for signing and encrypting session data. Generate one with `mix phx.gen.secret`. | Yes |
+| `DATABASE_URL` | PostgreSQL connection string, e.g. `ecto://user:pass@host/hive_prod` | Yes |
+| `PHX_HOST` | The hostname where Hive is served, e.g. `hive.example.com` | Yes |
+| `PORT` | The port the server listens on (default: `4000`) | No |
+| `PHX_SERVER` | Set to `true` to start the web server (set automatically in the Docker release) | No |
+
+#### Identity providers
+
+Hive uses [Ueberauth](https://github.com/ueberauth/ueberauth) for authentication. Identity providers are configured through environment variables. If no provider is configured, the login page will display an informational message.
+
+**Google OAuth2**
+
+To enable Google as an identity provider, set the following environment variables:
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth2 client ID from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | OAuth2 client secret from the Google Cloud Console |
+
+When creating the OAuth2 credentials in Google Cloud Console, set the authorized redirect URI to `https://<your-host>/auth/google/callback`.
+
 ## 📄 License
 
 [MPL-2.0](LICENSE.md)

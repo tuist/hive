@@ -8,6 +8,11 @@ defmodule HiveWeb.Router do
     plug :put_root_layout, html: {HiveWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug HiveWeb.Plugs.FetchCurrentUser
+  end
+
+  pipeline :require_auth do
+    plug HiveWeb.Plugs.RequireAuth
   end
 
   pipeline :api do
@@ -15,23 +20,27 @@ defmodule HiveWeb.Router do
   end
 
   scope "/", HiveWeb do
-    pipe_through :browser
+    pipe_through [:browser]
 
-    get "/", PageController, :home
+    live "/login", LoginLive, :login
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", HiveWeb do
-  #   pipe_through :api
-  # end
+  scope "/auth", HiveWeb do
+    pipe_through [:browser]
+
+    get "/:provider", AuthController, :request
+    get "/:provider/callback", AuthController, :callback
+  end
+
+  scope "/", HiveWeb do
+    pipe_through [:browser, :require_auth]
+
+    get "/", PageController, :home
+    delete "/logout", AuthController, :delete
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:hive, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do

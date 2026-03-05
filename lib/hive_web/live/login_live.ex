@@ -1,0 +1,73 @@
+defmodule HiveWeb.LoginLive do
+  use HiveWeb, :live_view
+  use Noora
+
+  import HiveWeb.CoreComponents, only: []
+
+  def mount(_params, _session, socket) do
+    socket =
+      socket
+      |> assign(:page_title, "Log in")
+      |> assign(:google_configured?, google_configured?())
+
+    {:ok, socket}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div id="login">
+      <div data-part="frame">
+        <div data-part="content">
+          <img src={~p"/images/logo.svg"} alt="Hive Logo" data-part="logo" />
+          <div data-part="header">
+            <h1 data-part="title">Log in to Hive</h1>
+            <span data-part="subtitle">
+              Welcome back! Please log in to continue
+            </span>
+          </div>
+          <.alert
+            :if={Phoenix.Flash.get(@flash, :error)}
+            id="flash-error"
+            type="secondary"
+            status="error"
+            size="small"
+            title={Phoenix.Flash.get(@flash, :error)}
+          />
+          <div :if={@google_configured?} data-part="oauth">
+            <.button
+              href={~p"/auth/google"}
+              variant="secondary"
+              size="medium"
+              label="Continue with Google"
+            >
+              <:icon_left>
+                <.brand_google />
+              </:icon_left>
+            </.button>
+          </div>
+          <div :if={!@google_configured?} data-part="no-providers">
+            <.alert
+              id="no-providers"
+              type="secondary"
+              status="information"
+              size="small"
+              title="No authentication providers are configured. Set the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to enable Google OAuth."
+            />
+          </div>
+        </div>
+      </div>
+      <div data-part="background">
+        <div data-part="top-right-gradient"></div>
+        <div data-part="bottom-left-gradient"></div>
+      </div>
+    </div>
+    """
+  end
+
+  defp google_configured? do
+    Application.get_env(:ueberauth, Ueberauth.Strategy.Google.OAuth)[:client_id] not in [
+      nil,
+      ""
+    ]
+  end
+end
