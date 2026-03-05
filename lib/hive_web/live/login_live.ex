@@ -21,9 +21,9 @@ defmodule HiveWeb.LoginLive do
         <div data-part="content">
           <img src={~p"/images/logo.webp"} alt="Hive Logo" data-part="logo" />
           <div data-part="header">
-            <h1 data-part="title">Log in to Hive</h1>
+            <h1 data-part="title">{gettext("Log in to Hive")}</h1>
             <span data-part="subtitle">
-              Welcome back! Please log in to continue
+              {gettext("Enter the hive. Your swarm awaits.")}
             </span>
           </div>
           <.alert
@@ -39,7 +39,7 @@ defmodule HiveWeb.LoginLive do
               href={~p"/auth/google"}
               variant="secondary"
               size="medium"
-              label="Continue with Google"
+              label={gettext("Continue with Google")}
             >
               <:icon_left>
                 <.brand_google />
@@ -52,7 +52,11 @@ defmodule HiveWeb.LoginLive do
               type="secondary"
               status="information"
               size="small"
-              title="No authentication providers are configured. Set the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to enable Google OAuth."
+              title={
+                gettext(
+                  "No authentication providers are configured. Set the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to enable Google OAuth."
+                )
+              }
             />
           </div>
           <div :if={@dev_routes?} data-part="oauth">
@@ -62,7 +66,7 @@ defmodule HiveWeb.LoginLive do
                 type="submit"
                 variant="secondary"
                 size="medium"
-                label="Log in as test user"
+                label={gettext("Log in as test user")}
               />
             </form>
           </div>

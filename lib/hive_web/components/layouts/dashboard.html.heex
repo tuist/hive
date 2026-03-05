@@ -16,13 +16,13 @@
     <.sidebar>
       <.sidebar_item
         label={gettext("Signals")}
-        icon="notification"
+        icon="bell"
         navigate={~p"/signals"}
-        selected={String.starts_with?(@current_path, "/signals")}
+        selected={@current_path == "/" or String.starts_with?(@current_path, "/signals")}
       />
       <.sidebar_item
         label={gettext("Swarms")}
-        icon="robot"
+        icon="atom"
         navigate={~p"/swarms"}
         selected={String.starts_with?(@current_path, "/swarms")}
       />

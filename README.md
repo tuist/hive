@@ -1,4 +1,7 @@
-# 🐝 Hive
+<p align="center">
+  <img src="priv/static/images/logo.webp" alt="Hive" width="80" />
+</p>
+<h1 align="center">Hive</h1>
 
 An open-source, self-hostable take on [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) system, built with Elixir and Phoenix.
 
