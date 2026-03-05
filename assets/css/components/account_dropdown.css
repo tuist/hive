@@ -60,6 +60,7 @@
       flex-direction: column;
       align-items: flex-start;
       gap: var(--noora-spacing-4);
+      padding-top: var(--noora-spacing-8);
       padding-bottom: var(--noora-spacing-8);
     }
   }
