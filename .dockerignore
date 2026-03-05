@@ -1,0 +1,14 @@
+.git
+.kamal
+.elixir_ls
+_build
+deps
+node_modules
+tmp
+Gemfile
+Gemfile.lock
+mise.toml
+fnox.toml
+README.md
+AGENTS.md
+LICENSE.md

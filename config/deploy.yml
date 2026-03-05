@@ -1,0 +1,45 @@
+service: hive
+
+image: hive
+
+servers:
+  web:
+    hosts:
+      - 188.245.221.31
+    cmd: /app/bin/migrate && /app/bin/server
+
+proxy:
+  ssl: true
+  host: hive.tuist.dev
+  app_port: 4000
+
+registry:
+  server: localhost:4443
+
+env:
+  clear:
+    PHX_HOST: hive.tuist.dev
+    PORT: "4000"
+  secret:
+    - SECRET_KEY_BASE
+    - DATABASE_URL
+
+accessories:
+  db:
+    image: postgres:17
+    host: 188.245.221.31
+    port: 5432
+    env:
+      clear:
+        POSTGRES_DB: hive_prod
+        POSTGRES_USER: hive
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+
+ssh:
+  user: root
+
+builder:
+  arch: arm64
