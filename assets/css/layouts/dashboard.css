@@ -5,6 +5,16 @@
   min-height: 100vh;
 }
 
+.layout p {
+  margin: unset;
+}
+
+.layout a {
+  outline: unset;
+  text-decoration: none;
+  color: inherit;
+}
+
 .layout__main {
   display: flex;
   flex: 1;
@@ -61,16 +71,11 @@
   }
 }
 
-.headerbar__brand,
-.headerbar__brand:visited,
-.headerbar__brand:hover,
-.headerbar__brand:active {
+.headerbar__brand {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: var(--noora-spacing-3);
-  text-decoration: none;
-  color: inherit;
 }
 
 .headerbar__logo {
@@ -81,7 +86,6 @@
 }
 
 .headerbar__title {
-  font-size: var(--noora-font-size-md);
-  font-weight: var(--noora-font-weight-semibold);
+  font: var(--noora-font-weight-semibold) var(--noora-font-body-medium);
   color: var(--noora-content-primary);
 }
