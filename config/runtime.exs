@@ -29,6 +29,17 @@ if google_client_id = System.get_env("GOOGLE_CLIENT_ID") do
     client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 end
 
+# Configure encryption key for sensitive data at rest
+if encryption_key = System.get_env("ENCRYPTION_KEY") do
+  config :hive, Hive.Vault,
+    ciphers: [
+      default: {
+        Cloak.Ciphers.AES.GCM,
+        tag: "AES.GCM.V1", key: Base.decode64!(encryption_key)
+      }
+    ]
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

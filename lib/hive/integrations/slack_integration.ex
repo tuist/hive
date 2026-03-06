@@ -4,8 +4,8 @@ defmodule Hive.Integrations.SlackIntegration do
 
   schema "slack_integrations" do
     field :name, :string
-    field :bot_token, :string
-    field :signing_secret, :string
+    field :bot_token, Hive.Encrypted.Binary
+    field :signing_secret, Hive.Encrypted.Binary
 
     has_many :channels, Hive.Integrations.SlackChannel
 

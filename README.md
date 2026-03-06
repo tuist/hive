@@ -53,6 +53,7 @@ Hive is designed to be self-hosted. You can deploy it using [Kamal](https://kama
 |---|---|---|
 | `SECRET_KEY_BASE` | A secret key for signing and encrypting session data. Generate one with `mix phx.gen.secret`. | Yes |
 | `DATABASE_URL` | PostgreSQL connection string, e.g. `ecto://user:pass@host/hive_prod` | Yes |
+| `ENCRYPTION_KEY` | A base64-encoded 256-bit key for encrypting sensitive data at rest (tokens, secrets, private keys). Generate one with `elixir -e "IO.puts(Base.encode64(:crypto.strong_rand_bytes(32)))"`. | Yes |
 | `PHX_HOST` | The hostname where Hive is served, e.g. `hive.example.com` | Yes |
 | `PORT` | The port the server listens on (default: `4000`) | No |
 | `PHX_SERVER` | Set to `true` to start the web server (set automatically in the Docker release) | No |

@@ -4,9 +4,9 @@ defmodule Hive.Integrations.GitHubApp do
 
   schema "github_apps" do
     field :name, :string
-    field :webhook_secret, :string
+    field :webhook_secret, Hive.Encrypted.Binary
     field :app_id, :string
-    field :private_key, :string
+    field :private_key, Hive.Encrypted.Binary
     field :installation_id, :string
 
     has_many :repositories, Hive.Integrations.GitHubRepository, foreign_key: :github_app_id

@@ -55,6 +55,15 @@ config :ueberauth, Ueberauth,
     google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
   ]
 
+# Configure Cloak encryption vault (dev/test key, overridden in runtime.exs for prod)
+config :hive, Hive.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1", key: Base.decode64!("1oSOxarFdN433lR9b6TJDJD8I390ipHPFiSm1ykSYpQ=")
+    }
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
