@@ -16,12 +16,6 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:30
-#: lib/hive_web/components/layouts.ex:45
-#, elixir-autogen, elixir-format
-msgid "Attempting to reconnect"
-msgstr ""
-
 #: lib/hive_web/live/login_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "Continue with Google"
@@ -47,16 +41,6 @@ msgstr ""
 msgid "No authentication providers are configured. Set the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables to enable Google OAuth."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:40
-#, elixir-autogen, elixir-format
-msgid "Something went wrong!"
-msgstr ""
-
-#: lib/hive_web/components/layouts.ex:25
-#, elixir-autogen, elixir-format
-msgid "We can't find the internet"
-msgstr ""
-
 #: lib/hive_web/components/core_components.ex:74
 #, elixir-autogen, elixir-format
 msgid "close"
@@ -67,38 +51,277 @@ msgstr ""
 msgid "Active and past agentic sessions will appear here."
 msgstr ""
 
-#: lib/hive_web/live/signals_live.ex:12
-#, elixir-autogen, elixir-format
-msgid "GitHub issues, Linear tasks, Slack support requests, and other work items will appear here."
-msgstr ""
-
-#: lib/hive_web/components/layouts/dashboard.html.heex:44
+#: lib/hive_web/components/layouts/dashboard.html.heex:43
 #, elixir-autogen, elixir-format
 msgid "Log out"
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:58
-#: lib/hive_web/live/signals_live.ex:5
-#: lib/hive_web/live/signals_live.ex:10
+#: lib/hive_web/components/layouts/dashboard.html.heex:57
+#: lib/hive_web/live/signals_live.ex:14
+#: lib/hive_web/live/signals_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "Signals"
 msgstr ""
 
-#: lib/hive_web/components/layouts/dashboard.html.heex:64
+#: lib/hive_web/components/layouts/dashboard.html.heex:63
 #: lib/hive_web/live/swarms_live.ex:5
 #: lib/hive_web/live/swarms_live.ex:10
 #, elixir-autogen, elixir-format
 msgid "Swarms"
 msgstr ""
 
-#: lib/hive_web/live/settings_live.ex:11
-#, elixir-autogen, elixir-format
-msgid "Instance configuration and preferences will appear here."
-msgstr ""
-
-#: lib/hive_web/components/layouts/dashboard.html.heex:70
-#: lib/hive_web/live/settings_live.ex:5
-#: lib/hive_web/live/settings_live.ex:10
+#: lib/hive_web/components/layouts/dashboard.html.heex:69
+#: lib/hive_web/live/settings_live.ex:8
+#: lib/hive_web/live/settings_live.ex:14
+#: lib/hive_web/live/settings_signal_sources_live.ex:15
+#: lib/hive_web/live/settings_signal_sources_live.ex:26
 #, elixir-autogen, elixir-format
 msgid "Settings"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:131
+#, elixir-autogen, elixir-format
+msgid "Add Channel"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:36
+#, elixir-autogen, elixir-format
+msgid "Author"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:67
+#: lib/hive_web/live/settings_slack_bot_live.ex:53
+#: lib/hive_web/live/settings_slack_bot_live.ex:91
+#, elixir-autogen, elixir-format
+msgid "Bot Token"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:79
+#: lib/hive_web/live/settings_slack_bot_live.ex:103
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:135
+#: lib/hive_web/live/signals_live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Channel"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:121
+#: lib/hive_web/live/settings_slack_bot_live.ex:138
+#, elixir-autogen, elixir-format
+msgid "Channel ID"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Channel Name"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:209
+#, elixir-autogen, elixir-format
+msgid "Channel added."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:224
+#, elixir-autogen, elixir-format
+msgid "Channel removed."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:59
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:227
+#, elixir-autogen, elixir-format
+msgid "Failed to remove channel."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:114
+#, elixir-autogen, elixir-format
+msgid "Monitored Channels"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:74
+#: lib/hive_web/live/settings_slack_bot_live.ex:98
+#, elixir-autogen, elixir-format
+msgid "My Workspace"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:153
+#, elixir-autogen, elixir-format
+msgid "No channels being monitored yet."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:49
+#, elixir-autogen, elixir-format
+msgid "Not set"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Received"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:143
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:101
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:25
+#, elixir-autogen, elixir-format
+msgid "Signals are messages from monitored Slack channels and other sources."
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:30
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:33
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:52
+#, elixir-autogen, elixir-format
+msgid "Configure a Slack integration in Settings to start monitoring channels."
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:50
+#, elixir-autogen, elixir-format
+msgid "No signals yet"
+msgstr ""
+
+#: lib/hive_web/live/signals_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "Recent Signals"
+msgstr ""
+
+#: lib/hive_web/live/settings_live.ex:18
+#: lib/hive_web/live/settings_live.ex:29
+#: lib/hive_web/live/settings_signal_sources_live.ex:30
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr ""
+
+#: lib/hive_web/live/settings_live.ex:35
+#, elixir-autogen, elixir-format
+msgid "General instance configuration and preferences."
+msgstr ""
+
+#: lib/hive_web/live/settings_live.ex:33
+#, elixir-autogen, elixir-format
+msgid "Instance"
+msgstr ""
+
+#: lib/hive_web/live/settings_live.ex:23
+#: lib/hive_web/live/settings_signal_sources_live.ex:35
+#: lib/hive_web/live/settings_signal_sources_live.ex:41
+#, elixir-autogen, elixir-format
+msgid "Signal Sources"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:46
+#, elixir-autogen, elixir-format
+msgid "Add Bot"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:70
+#, elixir-autogen, elixir-format
+msgid "Are you sure? This will remove the bot and all its monitored channels."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:180
+#, elixir-autogen, elixir-format
+msgid "Bot updated."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:100
+#, elixir-autogen, elixir-format
+msgid "Channels"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:38
+#, elixir-autogen, elixir-format
+msgid "Configuration"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:45
+#, elixir-autogen, elixir-format
+msgid "Connection lost. Attempting to reconnect..."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:77
+#, elixir-autogen, elixir-format
+msgid "Create"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:65
+#, elixir-autogen, elixir-format
+msgid "Delete Bot"
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:196
+#, elixir-autogen, elixir-format
+msgid "Failed to delete bot."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:61
+#: lib/hive_web/live/settings_signal_sources_live.ex:94
+#: lib/hive_web/live/settings_slack_bot_live.ex:43
+#: lib/hive_web/live/settings_slack_bot_live.ex:85
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:109
+#, elixir-autogen, elixir-format
+msgid "No Slack bots configured yet. Add one to start monitoring channels."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:43
+#, elixir-autogen, elixir-format
+msgid "Slack Bots"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:129
+#, elixir-autogen, elixir-format
+msgid "Slack bot created."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:192
+#, elixir-autogen, elixir-format
+msgid "Slack bot deleted."
+msgstr ""
+
+#: lib/hive_web/live/settings_slack_bot_live.ex:14
+#, elixir-autogen, elixir-format
+msgid "Slack bot not found."
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:58
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Attempting to reconnect..."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:73
+#: lib/hive_web/live/settings_signal_sources_live.ex:97
+#: lib/hive_web/live/settings_slack_bot_live.ex:47
+#: lib/hive_web/live/settings_slack_bot_live.ex:97
+#, elixir-autogen, elixir-format
+msgid "Workspace"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:62
+#: lib/hive_web/live/settings_slack_bot_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "e.g. Community Support"
 msgstr ""

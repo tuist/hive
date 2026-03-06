@@ -20,7 +20,7 @@ if System.get_env("PHX_SERVER") do
   config :hive, HiveWeb.Endpoint, server: true
 end
 
-config :hive, HiveWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+config :hive, HiveWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "3030"))]
 
 # Configure Google OAuth if env vars are set
 if google_client_id = System.get_env("GOOGLE_CLIENT_ID") do

@@ -2,6 +2,8 @@ import "noora/noora.css"
 import "../css/routes/auth.css"
 import "../css/layouts/dashboard.css"
 import "../css/components/account_dropdown.css"
+import "../css/routes/settings.css"
+import "../css/routes/signals.css"
 
 import "phoenix_html"
 import {Socket} from "phoenix"

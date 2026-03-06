@@ -1,0 +1,143 @@
+#settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-9);
+
+  .noora-tab-menu-horizontal {
+    padding: var(--noora-spacing-0);
+  }
+
+  & > [data-part="title"] {
+    margin: 0;
+    padding-top: var(--noora-spacing-7);
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-xlarge);
+  }
+
+  & > [data-part="subtitle"] {
+    margin: 0;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+  }
+
+  & > [data-part="slack-card"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-9);
+
+    & [data-part="slack-integration"],
+    & [data-part="monitored-channels"] {
+      & > [data-part="header"] {
+        display: flex;
+        flex-direction: column;
+        gap: var(--noora-spacing-2);
+
+        & > [data-part="title"] {
+          display: flex;
+          align-items: center;
+          gap: var(--noora-spacing-2);
+          color: var(--noora-surface-label-primary);
+          font: var(--noora-font-weight-medium) var(--noora-font-heading-medium);
+        }
+
+        & > [data-part="subtitle"] {
+          color: var(--noora-surface-label-secondary);
+          font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+        }
+      }
+
+      & > [data-part="content"] {
+        display: flex;
+        flex-direction: column;
+        gap: var(--noora-spacing-6);
+      }
+    }
+  }
+
+  & > [data-part="general"] {
+    & > [data-part="header"] {
+      display: flex;
+      flex-direction: column;
+      gap: var(--noora-spacing-2);
+
+      & > [data-part="title"] {
+        color: var(--noora-surface-label-primary);
+        font: var(--noora-font-weight-medium) var(--noora-font-heading-medium);
+      }
+
+      & > [data-part="subtitle"] {
+        color: var(--noora-surface-label-secondary);
+        font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+      }
+    }
+  }
+
+  & [data-part="bot-info"] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    & > [data-part="bot-details"] {
+      display: flex;
+      flex-grow: 1;
+      flex-direction: column;
+      gap: var(--noora-spacing-2);
+
+      & > [data-part="bot-field"] {
+        display: flex;
+        gap: var(--noora-spacing-3);
+        align-items: center;
+
+        & > [data-part="label"] {
+          min-width: 80px;
+          color: var(--noora-surface-label-primary);
+          font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+        }
+
+        & > [data-part="value"] {
+          color: var(--noora-surface-label-secondary);
+          font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+        }
+      }
+    }
+
+    & > [data-part="actions"] {
+      display: flex;
+      gap: var(--noora-spacing-2);
+    }
+  }
+
+  & [data-part="bot-form"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-4);
+    max-width: 480px;
+
+    & > [data-part="form-actions"] {
+      display: flex;
+      gap: var(--noora-spacing-2);
+    }
+  }
+
+  & [data-part="channel-form"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-4);
+    max-width: 480px;
+
+    & > [data-part="channel-inputs"] {
+      display: flex;
+      gap: var(--noora-spacing-3);
+
+      & > * {
+        flex: 1;
+      }
+    }
+  }
+
+  & [data-part="empty"] {
+    margin: 0;
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  }
+}

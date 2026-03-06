@@ -43,6 +43,8 @@ defmodule HiveWeb.Router do
       live "/signals", SignalsLive, :index
       live "/swarms", SwarmsLive, :index
       live "/settings", SettingsLive, :index
+      live "/settings/signal-sources", SettingsSignalSourcesLive, :index
+      live "/settings/signal-sources/slack/:id", SettingsSlackBotLive, :show
     end
 
     delete "/logout", AuthController, :delete
