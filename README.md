@@ -75,6 +75,67 @@ When creating the OAuth2 credentials in Google Cloud Console, set the authorized
 > [!NOTE]
 > Contributions adding support for more identity providers (GitHub, GitLab, SAML, etc.) are very welcome!
 
+### Slack integration
+
+Hive monitors Slack channels for messages and turns them into signals. To set this up, you need to create a Slack app and configure it to send events to your Hive instance.
+
+#### 1. Create a Slack app from the manifest
+
+Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App** > **From a manifest**. Select your workspace, then paste the following manifest (replace `YOUR_HIVE_HOST` with your actual hostname):
+
+```json
+{
+  "display_information": {
+    "name": "Hive",
+    "description": "Monitors channels and creates signals for the Hive platform",
+    "background_color": "#094a9e"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Hive",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:history",
+        "channels:read",
+        "groups:history",
+        "groups:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://YOUR_HIVE_HOST/api/slack/events",
+      "bot_events": [
+        "message.channels",
+        "message.groups"
+      ]
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false
+  }
+}
+```
+
+#### 2. Install the app and collect credentials
+
+1. Click **Install to Workspace** and authorize the app
+2. Copy the **Bot User OAuth Token** (`xoxb-...`) from **OAuth & Permissions**
+3. Copy the **Signing Secret** from **Basic Information** > **App Credentials**
+
+#### 3. Configure in Hive
+
+1. Go to **Settings** > **Signal Sources** and add a new Slack bot
+2. Enter a name, the bot token, and the signing secret
+3. Add the channels you want to monitor (you'll need the channel IDs, which you can find by right-clicking a channel in Slack > **View channel details** > the ID is at the bottom)
+
+#### 4. Invite the bot
+
+Invite the bot to each channel you want to monitor by typing `/invite @Hive` in the channel.
+
 ## 📄 License
 
 [MPL-2.0](LICENSE.md)
