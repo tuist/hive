@@ -7,47 +7,53 @@
       </.link>
     </div>
     <div data-part="right-section">
-      <div
-        id="account-dropdown"
-        class="account-dropdown"
-        phx-hook="NooraDropdown"
-        data-loop-focus
-        data-close-on-select
-        data-positioning-offset-main-axis={6}
-      >
-        <button data-part="trigger">
-          <.avatar
-            id="account-dropdown-avatar"
-            size="small"
-            name={@current_user.name || @current_user.email}
-            image_href={Hive.Accounts.User.avatar_url(@current_user)}
-          />
-        </button>
-        <div data-part="positioner">
-          <div data-part="content">
-            <div data-part="header">
-              <.avatar
-                id="account-dropdown-content-avatar"
-                size="small"
-                name={@current_user.name || @current_user.email}
-                image_href={Hive.Accounts.User.avatar_url(@current_user)}
-              />
-              <div data-part="text">
-                <p data-part="title">{@current_user.name || @current_user.email}</p>
-                <p data-part="subtitle">{@current_user.email}</p>
+      <%= if @current_user do %>
+        <div
+          id="account-dropdown"
+          class="account-dropdown"
+          phx-hook="NooraDropdown"
+          data-loop-focus
+          data-close-on-select
+          data-positioning-offset-main-axis={6}
+        >
+          <button data-part="trigger">
+            <.avatar
+              id="account-dropdown-avatar"
+              size="small"
+              name={@current_user.name || @current_user.email}
+              image_href={Hive.Accounts.User.avatar_url(@current_user)}
+            />
+          </button>
+          <div data-part="positioner">
+            <div data-part="content">
+              <div data-part="header">
+                <.avatar
+                  id="account-dropdown-content-avatar"
+                  size="small"
+                  name={@current_user.name || @current_user.email}
+                  image_href={Hive.Accounts.User.avatar_url(@current_user)}
+                />
+                <div data-part="text">
+                  <p data-part="title">{@current_user.name || @current_user.email}</p>
+                  <p data-part="subtitle">{@current_user.email}</p>
+                </div>
               </div>
-            </div>
-            <.line_divider />
-            <div data-part="actions">
-              <.link href={~p"/logout"} method="delete">
-                <.button label={gettext("Log out")} size="large" variant="destructive">
-                  <:icon_left><.logout /></:icon_left>
-                </.button>
-              </.link>
+              <.line_divider />
+              <div data-part="actions">
+                <.link href={~p"/logout"} method="delete">
+                  <.button label={gettext("Log out")} size="large" variant="destructive">
+                    <:icon_left><.logout /></:icon_left>
+                  </.button>
+                </.link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      <% else %>
+        <.link navigate={~p"/login"}>
+          <.button label={gettext("Log in")} size="small" variant="secondary" />
+        </.link>
+      <% end %>
     </div>
   </header>
   <.line_divider />
@@ -66,6 +72,7 @@
         selected={String.starts_with?(@current_path, "/swarms")}
       />
       <.sidebar_item
+        :if={@current_user}
         label={gettext("Settings")}
         icon="settings"
         navigate={~p"/settings"}

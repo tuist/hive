@@ -41,7 +41,7 @@ defmodule HiveWeb.Router do
   end
 
   scope "/", HiveWeb do
-    pipe_through [:browser, :require_auth]
+    pipe_through [:browser]
 
     live_session :dashboard,
       on_mount: [{HiveWeb.LayoutLive, :default}],
@@ -49,6 +49,15 @@ defmodule HiveWeb.Router do
       live "/", SignalsLive, :index
       live "/signals", SignalsLive, :index
       live "/swarms", SwarmsLive, :index
+    end
+  end
+
+  scope "/", HiveWeb do
+    pipe_through [:browser, :require_auth]
+
+    live_session :settings,
+      on_mount: [{HiveWeb.LayoutLive, :default}],
+      layout: {HiveWeb.Layouts, :dashboard} do
       live "/settings", SettingsLive, :index
       live "/settings/signal-sources", SettingsSignalSourcesLive, :index
       live "/settings/signal-sources/slack/:id", SettingsSlackBotLive, :show
