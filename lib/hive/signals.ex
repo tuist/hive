@@ -1,6 +1,7 @@
 defmodule Hive.Signals do
   alias Hive.Repo
   alias Hive.Signals.Signal
+  alias Hive.Signals.SignalMessage
 
   import Ecto.Query
 
@@ -13,9 +14,23 @@ defmodule Hive.Signals do
     |> Repo.all()
   end
 
+  def get_signal(id) do
+    Signal
+    |> Repo.get(id)
+    |> Repo.preload(messages: from(m in SignalMessage, order_by: [asc: m.source_timestamp, asc: m.inserted_at]))
+  end
+
   def create_signal(attrs) do
     %Signal{}
     |> Signal.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def add_signal_message(%Signal{} = signal, attrs) do
+    attrs = Map.put(attrs, :signal_id, signal.id)
+
+    %SignalMessage{}
+    |> SignalMessage.changeset(attrs)
     |> Repo.insert()
   end
 end

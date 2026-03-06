@@ -7,6 +7,7 @@ alias Hive.Accounts.User
 alias Hive.Integrations.SlackIntegration
 alias Hive.Integrations.SlackChannel
 alias Hive.Signals.Signal
+alias Hive.Signals.SignalMessage
 
 # Create a seeded test user for development
 case Repo.get_by(User, email: "test@hive.dev") do
@@ -147,12 +148,76 @@ signals = [
   }
 ]
 
-for signal_attrs <- signals do
-  # Use source_url as a unique identifier to avoid duplicates
-  case Repo.get_by(Signal, source_url: signal_attrs.source_url) do
+inserted_signals =
+  for signal_attrs <- signals do
+    case Repo.get_by(Signal, source_url: signal_attrs.source_url) do
+      nil ->
+        %Signal{}
+        |> Signal.changeset(signal_attrs)
+        |> Repo.insert!()
+
+      existing ->
+        existing
+    end
+  end
+
+# Seed conversation threads for some signals
+conversations = %{
+  "Getting error when running tuist generate" => [
+    %{
+      author: "bob",
+      body: "I had the same issue. Try deleting the .build folder and running `tuist clean` first.",
+      source_timestamp: ~U[2026-03-04 10:15:00Z]
+    },
+    %{
+      author: "alice",
+      body: "That worked! Looks like there was a stale cache from a previous version. Thanks!",
+      source_timestamp: ~U[2026-03-04 10:22:00Z]
+    },
+    %{
+      author: "carol",
+      body: "We should probably add this to the troubleshooting docs. I've seen this come up a few times.",
+      source_timestamp: ~U[2026-03-04 10:30:00Z]
+    }
+  ],
+  "Cache misses after upgrading to 4.x" => [
+    %{
+      author: "eve",
+      body: "Same here. The cache key format changed in 4.x so all existing caches are invalidated.",
+      source_timestamp: ~U[2026-03-04 11:45:00Z]
+    },
+    %{
+      author: "frank",
+      body: "Is there a way to migrate the old cache? Rebuilding everything from scratch takes forever for us.",
+      source_timestamp: ~U[2026-03-04 12:00:00Z]
+    },
+    %{
+      author: "bob",
+      body: "No migration path unfortunately. But once the new cache warms up, times should be even better than 3.x.",
+      source_timestamp: ~U[2026-03-04 12:10:00Z]
+    }
+  ],
+  "Production incident: API latency spike" => [
+    %{
+      author: "ops-bot",
+      body: "Update: traced the issue to a slow database query on the projects endpoint. Rolling out a fix now.",
+      source_timestamp: ~U[2026-03-05 14:20:00Z]
+    },
+    %{
+      author: "ops-bot",
+      body: "Fix deployed. P99 latency back to normal at 180ms. Root cause was a missing index on the new analytics table.",
+      source_timestamp: ~U[2026-03-05 14:45:00Z]
+    }
+  ]
+}
+
+for signal <- inserted_signals,
+    messages = Map.get(conversations, signal.title, []),
+    message_attrs <- messages do
+  case Repo.get_by(SignalMessage, signal_id: signal.id, body: message_attrs.body) do
     nil ->
-      %Signal{}
-      |> Signal.changeset(signal_attrs)
+      %SignalMessage{}
+      |> SignalMessage.changeset(Map.put(message_attrs, :signal_id, signal.id))
       |> Repo.insert!()
 
     _existing ->
