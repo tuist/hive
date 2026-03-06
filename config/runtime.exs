@@ -29,8 +29,14 @@ if google_client_id = System.get_env("GOOGLE_CLIENT_ID") do
     client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 end
 
-# Configure encryption key for sensitive data at rest
-if encryption_key = System.get_env("ENCRYPTION_KEY") do
+if config_env() == :prod do
+  encryption_key =
+    System.get_env("ENCRYPTION_KEY") ||
+      raise """
+      environment variable ENCRYPTION_KEY is missing.
+      Generate one with: elixir -e "IO.puts(Base.encode64(:crypto.strong_rand_bytes(32)))"
+      """
+
   config :hive, Hive.Vault,
     ciphers: [
       default: {
@@ -38,9 +44,7 @@ if encryption_key = System.get_env("ENCRYPTION_KEY") do
         tag: "AES.GCM.V1", key: Base.decode64!(encryption_key)
       }
     ]
-end
 
-if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
