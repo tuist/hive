@@ -5,15 +5,15 @@
 
 An open-source, self-hostable platform for autonomous coding agents, inspired by [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) and built with Elixir and Phoenix.
 
-Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. The output of a flight is called **honey**, the structured result that gets delivered back (a PR, a reply, a report).
+Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. A flight produces **drops**, the individual deliverables (a PR, a reply, a report). A human then **tastes** each drop -- reviewing, approving, or rejecting it before it ships.
 
 ## ✨ Features
 
-- 📡 **Signal collection** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
+- 📡 **Signals** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
 - 🐝 **Swarms** - Define reusable workflows that mix deterministic and agent-driven steps
 - 🚀 **Flights** - Each signal triggers a flight that autonomously works through a swarm's steps
-- 🍯 **Honey** - The output of a flight: a pull request, a reply, a report, or any other deliverable
-- 👀 **Human review** - Every output goes through a human before merging
+- 🍯 **Drops** - The deliverables a flight produces: pull requests, replies, reports
+- 👅 **Tasting** - Every drop goes through human review before shipping
 - 🏠 **Self-hostable** - Deploy it on your own infrastructure
 
 ## 🚀 Getting started
