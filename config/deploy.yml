@@ -15,6 +15,9 @@ proxy:
 
 registry:
   server: 188.245.221.31:5555
+  username: hive
+  password:
+    - KAMAL_REGISTRY_PASSWORD
 
 env:
   clear:
