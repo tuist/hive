@@ -11,6 +11,8 @@ defmodule Hive.Signals.Signal do
     field :source_channel, :string
     field :source_timestamp, :utc_datetime
 
+    has_many :messages, Hive.Signals.SignalMessage
+
     timestamps()
   end
 

@@ -67,6 +67,12 @@ defmodule HiveWeb.SettingsSignalSourcesLive do
               label={gettext("Bot Token")}
               placeholder="xoxb-..."
             />
+            <.text_input
+              field={@bot_form[:signing_secret]}
+              type="basic"
+              label={gettext("Signing Secret")}
+              placeholder={gettext("Found in your Slack app's Basic Information page")}
+            />
             <div data-part="form-actions">
               <.button label={gettext("Create")} size="medium" type="submit" />
               <.button

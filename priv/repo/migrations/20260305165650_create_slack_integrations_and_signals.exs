@@ -36,5 +36,18 @@ defmodule Hive.Repo.Migrations.CreateSlackIntegrationsAndSignals do
 
     create index(:signals, [:source])
     create index(:signals, [:inserted_at])
+
+    create table(:signal_messages, primary_key: false) do
+      add :id, :binary_id, primary_key: true
+      add :signal_id, references(:signals, type: :binary_id, on_delete: :delete_all), null: false
+      add :author, :string
+      add :body, :text, null: false
+      add :source_url, :string
+      add :source_timestamp, :utc_datetime
+
+      timestamps()
+    end
+
+    create index(:signal_messages, [:signal_id])
   end
 end

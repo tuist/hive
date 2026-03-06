@@ -47,6 +47,10 @@ defmodule HiveWeb.SettingsSlackBotLive do
                 <span data-part="label">{gettext("Bot Token")}</span>
                 <span data-part="value">{mask_token(@integration.bot_token)}</span>
               </div>
+              <div data-part="bot-field">
+                <span data-part="label">{gettext("Signing Secret")}</span>
+                <span data-part="value">{mask_token(@integration.signing_secret)}</span>
+              </div>
             </div>
             <div data-part="actions">
               <.button
@@ -84,6 +88,12 @@ defmodule HiveWeb.SettingsSlackBotLive do
               type="basic"
               label={gettext("Bot Token")}
               placeholder="xoxb-..."
+            />
+            <.text_input
+              field={@bot_form[:signing_secret]}
+              type="basic"
+              label={gettext("Signing Secret")}
+              placeholder={gettext("Found in your Slack app's Basic Information page")}
             />
             <div data-part="form-actions">
               <.button label={gettext("Save")} size="medium" type="submit" />
