@@ -6,7 +6,9 @@ defmodule HiveWeb.Layouts do
   use HiveWeb, :html
   use Noora
 
-  import HiveWeb.CoreComponents, only: [flash: 1, show: 1, hide: 1]
+  import HiveWeb.CoreComponents, only: []
+
+  alias Phoenix.LiveView.JS
 
   embed_templates "layouts/*"
 
@@ -16,38 +18,50 @@ defmodule HiveWeb.Layouts do
   def flash_group(assigns) do
     ~H"""
     <div id={@id} aria-live="polite">
-      <.flash kind={:info} flash={@flash} />
-      <.flash kind={:error} flash={@flash} />
+      <.alert
+        :if={Phoenix.Flash.get(@flash, :info)}
+        id="flash-info"
+        type="secondary"
+        status="success"
+        size="small"
+        title={Phoenix.Flash.get(@flash, :info)}
+        dismissible
+      />
+      <.alert
+        :if={Phoenix.Flash.get(@flash, :error)}
+        id="flash-error"
+        type="secondary"
+        status="error"
+        size="small"
+        title={Phoenix.Flash.get(@flash, :error)}
+        dismissible
+      />
 
-      <.flash
+      <.alert
         id="client-error"
-        kind={:error}
-        title={gettext("We can't find the internet")}
-        phx-disconnected={show(".phx-client-error #client-error") |> JS.remove_attribute("hidden")}
-        phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
+        type="secondary"
+        status="warning"
+        size="small"
+        title={gettext("Connection lost. Attempting to reconnect...")}
+        phx-disconnected={
+          JS.show(to: ".phx-client-error #client-error") |> JS.remove_attribute("hidden")
+        }
+        phx-connected={JS.hide(to: "#client-error") |> JS.set_attribute({"hidden", ""})}
         hidden
-      >
-        {gettext("Attempting to reconnect")}
-        <HiveWeb.CoreComponents.icon
-          name="hero-arrow-path"
-          class="ml-1 size-3 motion-safe:animate-spin"
-        />
-      </.flash>
+      />
 
-      <.flash
+      <.alert
         id="server-error"
-        kind={:error}
-        title={gettext("Something went wrong!")}
-        phx-disconnected={show(".phx-server-error #server-error") |> JS.remove_attribute("hidden")}
-        phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
+        type="secondary"
+        status="error"
+        size="small"
+        title={gettext("Something went wrong. Attempting to reconnect...")}
+        phx-disconnected={
+          JS.show(to: ".phx-server-error #server-error") |> JS.remove_attribute("hidden")
+        }
+        phx-connected={JS.hide(to: "#server-error") |> JS.set_attribute({"hidden", ""})}
         hidden
-      >
-        {gettext("Attempting to reconnect")}
-        <HiveWeb.CoreComponents.icon
-          name="hero-arrow-path"
-          class="ml-1 size-3 motion-safe:animate-spin"
-        />
-      </.flash>
+      />
     </div>
     """
   end

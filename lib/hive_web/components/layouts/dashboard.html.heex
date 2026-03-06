@@ -73,7 +73,9 @@
       />
     </.sidebar>
     <div class="layout__content">
-      <.flash_group flash={@flash} />
+      <div class="layout__flash">
+        <.flash_group flash={@flash} />
+      </div>
       {@inner_content}
     </div>
   </section>

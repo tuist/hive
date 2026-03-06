@@ -62,7 +62,8 @@ defmodule Hive.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_google, "~> 0.12"},
       {:uniq, "~> 0.6"},
-      {:mimic, "~> 1.7", only: :test}
+      {:mimic, "~> 1.7", only: :test},
+      {:tidewave, "~> 0.2", only: :dev}
     ]
   end
 
