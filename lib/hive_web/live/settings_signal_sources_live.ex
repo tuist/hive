@@ -126,7 +126,7 @@ defmodule HiveWeb.SettingsSignalSourcesLive do
             :if={@show_add_github_form}
             for={@github_form}
             phx-submit="create_github_app"
-            data-part="github-form"
+            data-part="bot-form"
           >
             <.text_input
               field={@github_form[:name]}

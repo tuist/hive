@@ -109,7 +109,7 @@ defmodule HiveWeb.SettingsGitHubAppLive do
 
       <.card title={gettext("Monitored Repositories")} icon="bell" data-part="repositories-card">
         <.card_section data-part="monitored-repositories">
-          <.form for={@repository_form} phx-submit="add_repository" data-part="repository-form">
+          <.form for={@repository_form} phx-submit="add_repository" data-part="channel-form">
             <div data-part="channel-inputs">
               <.text_input
                 field={@repository_form[:owner]}
