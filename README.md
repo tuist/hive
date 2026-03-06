@@ -5,7 +5,7 @@
 
 An open-source, self-hostable platform for autonomous coding agents, inspired by [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) and built with Elixir and Phoenix.
 
-Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. A flight produces **drops**, the individual deliverables (a PR, a reply, a report). A human then **tastes** each drop -- reviewing, approving, or rejecting it before it ships.
+Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. A flight produces **drops**, the individual deliverables (a PR, a reply, a report). A human then **tastes** each drop, reviewing, approving, or rejecting it before it ships.
 
 ## ✨ Features
 
