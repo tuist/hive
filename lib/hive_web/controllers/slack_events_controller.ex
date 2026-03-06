@@ -18,7 +18,7 @@ defmodule HiveWeb.SlackEventsController do
     with :ok <- verify_timestamp(timestamp),
          {:ok, signing_secret} <- find_signing_secret(),
          :ok <- SlackEvents.verify_signature(raw_body, timestamp, signature, signing_secret) do
-      Task.start(fn -> SlackEvents.handle_event(event) end)
+      SlackEvents.handle_event(event)
       json(conn, %{ok: true})
     else
       {:error, :stale_timestamp} ->

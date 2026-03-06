@@ -1,8 +1,6 @@
 defmodule HiveWeb.GitHubEventsControllerTest do
   use HiveWeb.ConnCase, async: true
 
-  import ExUnit.CaptureLog
-
   alias Hive.Integrations
 
   defp create_app do

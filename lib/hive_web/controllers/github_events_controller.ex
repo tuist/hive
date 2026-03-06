@@ -13,7 +13,7 @@ defmodule HiveWeb.GitHubEventsController do
 
     with {:ok, webhook_secret} <- find_webhook_secret(),
          :ok <- GitHubEvents.verify_signature(raw_body, signature, webhook_secret) do
-      Task.start(fn -> GitHubEvents.handle_event(event_type, conn.body_params) end)
+      GitHubEvents.handle_event(event_type, conn.body_params)
       json(conn, %{ok: true})
     else
       {:error, :no_webhook_secret} ->
