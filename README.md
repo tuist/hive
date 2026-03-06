@@ -152,14 +152,18 @@ Go to **Settings** > **Developer settings** > **GitHub Apps** > **New GitHub App
   - **Repository permissions** > **Issues**: Read-only
 - **Subscribe to events**: Check **Issues** and **Issue comment**
 
-#### 2. Install the app
+#### 2. Generate a private key
 
-After creating the app, click **Install App** in the sidebar and install it on the repositories you want to monitor.
+In your GitHub App settings, scroll to **Private keys** and click **Generate a private key**. This downloads a `.pem` file that Hive uses to authenticate API requests.
 
-#### 3. Configure in Hive
+#### 3. Install the app
+
+Click **Install App** in the sidebar and install it on the repositories you want to monitor. Note the **installation ID** from the URL (e.g. `https://github.com/settings/installations/12345678` means the ID is `12345678`).
+
+#### 4. Configure in Hive
 
 1. Go to **Settings** > **Signal Sources** and add a new GitHub App
-2. Enter a name and the webhook secret you generated
+2. Enter the name, App ID (from the app's General page), installation ID, private key (paste the full PEM contents), and webhook secret
 3. Add the repositories you want to monitor (enter the owner and repository name separately, e.g. owner: `tuist`, repository: `tuist`)
 
 ## 📄 License

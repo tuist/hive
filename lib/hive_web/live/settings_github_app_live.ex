@@ -44,6 +44,18 @@ defmodule HiveWeb.SettingsGitHubAppLive do
                 <span data-part="value">{@app.name}</span>
               </div>
               <div data-part="bot-field">
+                <span data-part="label">{gettext("App ID")}</span>
+                <span data-part="value">{@app.app_id}</span>
+              </div>
+              <div data-part="bot-field">
+                <span data-part="label">{gettext("Installation ID")}</span>
+                <span data-part="value">{@app.installation_id}</span>
+              </div>
+              <div data-part="bot-field">
+                <span data-part="label">{gettext("Private Key")}</span>
+                <span data-part="value">{mask_token(@app.private_key)}</span>
+              </div>
+              <div data-part="bot-field">
                 <span data-part="label">{gettext("Webhook Secret")}</span>
                 <span data-part="value">{mask_token(@app.webhook_secret)}</span>
               </div>
@@ -86,6 +98,24 @@ defmodule HiveWeb.SettingsGitHubAppLive do
               type="basic"
               label={gettext("Name")}
               placeholder={gettext("e.g. My GitHub App")}
+            />
+            <.text_input
+              field={@app_form[:app_id]}
+              type="basic"
+              label={gettext("App ID")}
+              placeholder={gettext("Found in your GitHub App's General settings")}
+            />
+            <.text_input
+              field={@app_form[:installation_id]}
+              type="basic"
+              label={gettext("Installation ID")}
+              placeholder={gettext("Found in the installation URL after installing the app")}
+            />
+            <.text_input
+              field={@app_form[:private_key]}
+              type="basic"
+              label={gettext("Private Key")}
+              placeholder={gettext("PEM-encoded private key generated in your GitHub App settings")}
             />
             <.text_input
               field={@app_form[:webhook_secret]}

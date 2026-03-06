@@ -135,6 +135,24 @@ defmodule HiveWeb.SettingsSignalSourcesLive do
               placeholder={gettext("e.g. My GitHub App")}
             />
             <.text_input
+              field={@github_form[:app_id]}
+              type="basic"
+              label={gettext("App ID")}
+              placeholder={gettext("Found in your GitHub App's General settings")}
+            />
+            <.text_input
+              field={@github_form[:installation_id]}
+              type="basic"
+              label={gettext("Installation ID")}
+              placeholder={gettext("Found in the installation URL after installing the app")}
+            />
+            <.text_input
+              field={@github_form[:private_key]}
+              type="basic"
+              label={gettext("Private Key")}
+              placeholder={gettext("PEM-encoded private key generated in your GitHub App settings")}
+            />
+            <.text_input
               field={@github_form[:webhook_secret]}
               type="basic"
               label={gettext("Webhook Secret")}

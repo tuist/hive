@@ -6,6 +6,8 @@ alias Hive.Repo
 alias Hive.Accounts.User
 alias Hive.Integrations.SlackIntegration
 alias Hive.Integrations.SlackChannel
+alias Hive.Integrations.GitHubApp
+alias Hive.Integrations.GitHubRepository
 alias Hive.Signals.Signal
 alias Hive.Signals.SignalMessage
 
@@ -66,6 +68,52 @@ for bot_attrs <- bots do
       nil ->
         %SlackChannel{}
         |> SlackChannel.changeset(Map.put(channel_attrs, :slack_integration_id, integration.id))
+        |> Repo.insert!()
+
+      _existing ->
+        :ok
+    end
+  end
+end
+
+# Create GitHub apps with monitored repositories
+github_apps = [
+  %{
+    name: "Hive GitHub App",
+    webhook_secret: "whsec_fake_dev_secret",
+    app_id: "123456",
+    private_key: "-----BEGIN RSA PRIVATE KEY-----\nfake-dev-key\n-----END RSA PRIVATE KEY-----",
+    installation_id: "98765",
+    repositories: [
+      %{owner: "tuist", repo: "tuist"},
+      %{owner: "tuist", repo: "hive"}
+    ]
+  }
+]
+
+for app_attrs <- github_apps do
+  {repositories, app_attrs} = Map.pop(app_attrs, :repositories)
+
+  app =
+    case Repo.get_by(GitHubApp, name: app_attrs.name) do
+      nil ->
+        %GitHubApp{}
+        |> GitHubApp.changeset(app_attrs)
+        |> Repo.insert!()
+
+      existing ->
+        existing
+    end
+
+  for repo_attrs <- repositories do
+    case Repo.get_by(GitHubRepository,
+           owner: repo_attrs.owner,
+           repo: repo_attrs.repo,
+           github_app_id: app.id
+         ) do
+      nil ->
+        %GitHubRepository{}
+        |> GitHubRepository.changeset(Map.put(repo_attrs, :github_app_id, app.id))
         |> Repo.insert!()
 
       _existing ->
@@ -145,6 +193,26 @@ signals = [
     source_channel: "#incidents",
     source_url: "https://tuist-hq.slack.com/archives/C011INCIDENTS/p1709654400000700",
     source_timestamp: ~U[2026-03-05 14:00:00Z]
+  },
+  %{
+    title: "Swift 6 strict concurrency breaks generated project",
+    body:
+      "When enabling strict concurrency checking in Swift 6, the generated Xcode project has several warnings that become errors. The generated `TuistBundle` accessor isn't marked as `@Sendable`.",
+    source: "github",
+    source_author: "swiftdev42",
+    source_channel: "tuist/tuist",
+    source_url: "https://github.com/tuist/tuist/issues/7001",
+    source_timestamp: ~U[2026-03-05 16:00:00Z]
+  },
+  %{
+    title: "Add support for visionOS destinations",
+    body:
+      "It would be great to have first-class support for visionOS as a deployment destination. Currently we have to use workarounds with custom settings to target visionOS.",
+    source: "github",
+    source_author: "visionpro_fan",
+    source_channel: "tuist/tuist",
+    source_url: "https://github.com/tuist/tuist/issues/7002",
+    source_timestamp: ~U[2026-03-06 08:30:00Z]
   }
 ]
 
@@ -200,6 +268,19 @@ conversations = %{
       body:
         "No migration path unfortunately. But once the new cache warms up, times should be even better than 3.x.",
       source_timestamp: ~U[2026-03-04 12:10:00Z]
+    }
+  ],
+  "Swift 6 strict concurrency breaks generated project" => [
+    %{
+      author: "tuist-maintainer",
+      body:
+        "Thanks for reporting! This is a known issue with the code generation templates. We need to audit all generated accessors for Sendable conformance.",
+      source_timestamp: ~U[2026-03-05 16:30:00Z]
+    },
+    %{
+      author: "swiftdev42",
+      body: "Happy to help with a PR if you can point me to the relevant templates.",
+      source_timestamp: ~U[2026-03-05 17:00:00Z]
     }
   ],
   "Production incident: API latency spike" => [
