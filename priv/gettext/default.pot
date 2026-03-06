@@ -73,8 +73,8 @@ msgstr ""
 #: lib/hive_web/components/layouts/dashboard.html.heex:69
 #: lib/hive_web/live/settings_live.ex:8
 #: lib/hive_web/live/settings_live.ex:14
-#: lib/hive_web/live/settings_signal_sources_live.ex:15
-#: lib/hive_web/live/settings_signal_sources_live.ex:26
+#: lib/hive_web/live/settings_signal_sources_live.ex:17
+#: lib/hive_web/live/settings_signal_sources_live.ex:31
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
@@ -89,14 +89,16 @@ msgstr ""
 msgid "Author"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:67
+#: lib/hive_web/live/settings_signal_sources_live.ex:72
 #: lib/hive_web/live/settings_slack_bot_live.ex:47
 #: lib/hive_web/live/settings_slack_bot_live.ex:89
 #, elixir-autogen, elixir-format
 msgid "Bot Token"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:79
+#: lib/hive_web/live/settings_github_app_live.ex:97
+#: lib/hive_web/live/settings_signal_sources_live.ex:84
+#: lib/hive_web/live/settings_signal_sources_live.ex:146
 #: lib/hive_web/live/settings_slack_bot_live.ex:101
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -129,6 +131,7 @@ msgstr ""
 msgid "Channel removed."
 msgstr ""
 
+#: lib/hive_web/live/settings_github_app_live.ex:57
 #: lib/hive_web/live/settings_slack_bot_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -154,11 +157,13 @@ msgstr ""
 msgid "Received"
 msgstr ""
 
+#: lib/hive_web/live/settings_github_app_live.ex:134
 #: lib/hive_web/live/settings_slack_bot_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
 
+#: lib/hive_web/live/settings_github_app_live.ex:95
 #: lib/hive_web/live/settings_slack_bot_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Save"
@@ -196,7 +201,7 @@ msgstr ""
 
 #: lib/hive_web/live/settings_live.ex:18
 #: lib/hive_web/live/settings_live.ex:29
-#: lib/hive_web/live/settings_signal_sources_live.ex:30
+#: lib/hive_web/live/settings_signal_sources_live.ex:35
 #, elixir-autogen, elixir-format
 msgid "General"
 msgstr ""
@@ -212,13 +217,13 @@ msgid "Instance"
 msgstr ""
 
 #: lib/hive_web/live/settings_live.ex:23
-#: lib/hive_web/live/settings_signal_sources_live.ex:35
-#: lib/hive_web/live/settings_signal_sources_live.ex:41
+#: lib/hive_web/live/settings_signal_sources_live.ex:40
+#: lib/hive_web/live/settings_signal_sources_live.ex:46
 #, elixir-autogen, elixir-format
 msgid "Signal Sources"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:46
+#: lib/hive_web/live/settings_signal_sources_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "Add Bot"
 msgstr ""
@@ -233,11 +238,12 @@ msgstr ""
 msgid "Bot updated."
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:97
+#: lib/hive_web/live/settings_signal_sources_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Channels"
 msgstr ""
 
+#: lib/hive_web/live/settings_github_app_live.ex:38
 #: lib/hive_web/live/settings_slack_bot_live.ex:38
 #, elixir-autogen, elixir-format
 msgid "Configuration"
@@ -248,7 +254,8 @@ msgstr ""
 msgid "Connection lost. Attempting to reconnect..."
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:77
+#: lib/hive_web/live/settings_signal_sources_live.ex:82
+#: lib/hive_web/live/settings_signal_sources_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Create"
 msgstr ""
@@ -263,25 +270,29 @@ msgstr ""
 msgid "Failed to delete bot."
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:61
-#: lib/hive_web/live/settings_signal_sources_live.ex:94
+#: lib/hive_web/live/settings_github_app_live.ex:43
+#: lib/hive_web/live/settings_github_app_live.ex:85
+#: lib/hive_web/live/settings_signal_sources_live.ex:66
+#: lib/hive_web/live/settings_signal_sources_live.ex:99
+#: lib/hive_web/live/settings_signal_sources_live.ex:134
+#: lib/hive_web/live/settings_signal_sources_live.ex:161
 #: lib/hive_web/live/settings_slack_bot_live.ex:43
 #: lib/hive_web/live/settings_slack_bot_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:106
+#: lib/hive_web/live/settings_signal_sources_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "No Slack bots configured yet. Add one to start monitoring channels."
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:43
+#: lib/hive_web/live/settings_signal_sources_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Slack Bots"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:126
+#: lib/hive_web/live/settings_signal_sources_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Slack bot created."
 msgstr ""
@@ -301,21 +312,147 @@ msgstr ""
 msgid "Something went wrong. Attempting to reconnect..."
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:62
+#: lib/hive_web/live/settings_signal_sources_live.ex:67
 #: lib/hive_web/live/settings_slack_bot_live.ex:84
 #, elixir-autogen, elixir-format
 msgid "e.g. Community Support"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:74
+#: lib/hive_web/live/settings_signal_sources_live.ex:79
 #: lib/hive_web/live/settings_slack_bot_live.ex:96
 #, elixir-autogen, elixir-format
 msgid "Found in your Slack app's Basic Information page"
 msgstr ""
 
-#: lib/hive_web/live/settings_signal_sources_live.ex:73
+#: lib/hive_web/live/settings_signal_sources_live.ex:78
 #: lib/hive_web/live/settings_slack_bot_live.ex:51
 #: lib/hive_web/live/settings_slack_bot_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Signing Secret"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:119
+#, elixir-autogen, elixir-format
+msgid "Add App"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:125
+#, elixir-autogen, elixir-format
+msgid "Add Repository"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:171
+#, elixir-autogen, elixir-format
+msgid "App updated."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:68
+#, elixir-autogen, elixir-format
+msgid "Are you sure? This will remove the app and all its monitored repositories."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:63
+#, elixir-autogen, elixir-format
+msgid "Delete App"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Failed to delete app."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:219
+#, elixir-autogen, elixir-format
+msgid "Failed to remove repository."
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:116
+#, elixir-autogen, elixir-format
+msgid "GitHub Apps"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:212
+#, elixir-autogen, elixir-format
+msgid "GitHub app created."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:183
+#, elixir-autogen, elixir-format
+msgid "GitHub app deleted."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:14
+#, elixir-autogen, elixir-format
+msgid "GitHub app not found."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:108
+#, elixir-autogen, elixir-format
+msgid "Monitored Repositories"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:173
+#, elixir-autogen, elixir-format
+msgid "No GitHub apps configured yet. Add one to start monitoring repositories."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:144
+#, elixir-autogen, elixir-format
+msgid "No repositories being monitored yet."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:115
+#, elixir-autogen, elixir-format
+msgid "Owner"
+msgstr ""
+
+#: lib/hive_web/live/settings_signal_sources_live.ex:164
+#, elixir-autogen, elixir-format
+msgid "Repositories"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:121
+#: lib/hive_web/live/settings_github_app_live.ex:129
+#, elixir-autogen, elixir-format
+msgid "Repository"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:200
+#, elixir-autogen, elixir-format
+msgid "Repository added."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:216
+#, elixir-autogen, elixir-format
+msgid "Repository removed."
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:92
+#: lib/hive_web/live/settings_signal_sources_live.ex:141
+#, elixir-autogen, elixir-format
+msgid "The secret configured in your GitHub App's webhook settings"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:47
+#: lib/hive_web/live/settings_github_app_live.ex:91
+#: lib/hive_web/live/settings_signal_sources_live.ex:140
+#, elixir-autogen, elixir-format
+msgid "Webhook Secret"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:51
+#, elixir-autogen, elixir-format
+msgid "Webhook URL"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:86
+#: lib/hive_web/live/settings_signal_sources_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "e.g. My GitHub App"
+msgstr ""
+
+#: lib/hive_web/live/settings_github_app_live.ex:116
+#: lib/hive_web/live/settings_github_app_live.ex:122
+#, elixir-autogen, elixir-format
+msgid "e.g. tuist"
 msgstr ""

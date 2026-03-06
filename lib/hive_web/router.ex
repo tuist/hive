@@ -23,6 +23,7 @@ defmodule HiveWeb.Router do
     pipe_through [:api]
 
     post "/slack/events", SlackEventsController, :handle
+    post "/github/events", GitHubEventsController, :handle
   end
 
   scope "/", HiveWeb do
@@ -51,6 +52,7 @@ defmodule HiveWeb.Router do
       live "/settings", SettingsLive, :index
       live "/settings/signal-sources", SettingsSignalSourcesLive, :index
       live "/settings/signal-sources/slack/:id", SettingsSlackBotLive, :show
+      live "/settings/signal-sources/github/:id", SettingsGitHubAppLive, :show
     end
 
     delete "/logout", AuthController, :delete
