@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -26,7 +22,6 @@ jobs:
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      KAMAL_REGISTRY_PASSWORD: ${{ github.token }}
 
     steps:
       - uses: actions/checkout@v4
@@ -39,11 +34,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519,rsa,ecdsa 188.245.221.31 >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: Log into GHCR
-        run: |
-          echo "$KAMAL_REGISTRY_PASSWORD" | docker login ghcr.io -u tuist --password-stdin
-          ssh root@188.245.221.31 "echo $KAMAL_REGISTRY_PASSWORD | docker login ghcr.io -u tuist --password-stdin"
 
       - name: Deploy with Kamal
         run: kamal deploy
