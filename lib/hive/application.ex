@@ -9,6 +9,7 @@ defmodule Hive.Application do
   def start(_type, _args) do
     children = [
       HiveWeb.Telemetry,
+      Hive.Vault,
       Hive.Repo,
       {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Hive.PubSub},

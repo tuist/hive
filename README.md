@@ -5,13 +5,13 @@
 
 An open-source, self-hostable platform for autonomous coding agents, inspired by [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) and built with Elixir and Phoenix.
 
-Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub, then dispatches **swarms** of autonomous agents to act on them. A swarm combines deterministic steps (linting, CI) with flexible agent loops (code generation, test fixing) to turn a signal into a ready-to-review pull request with no human interaction in between.
+Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between.
 
 ## ✨ Features
 
 - 📡 **Signal collection** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
-- 🐝 **Swarm orchestration** - Define workflows that mix deterministic and agent-driven steps
-- 🤖 **Autonomous agents** - From signal to pull request with no back-and-forth
+- 🐝 **Swarms** - Define reusable workflows that mix deterministic and agent-driven steps
+- 🚀 **Flights** - Each signal triggers a flight that autonomously works through a swarm's steps
 - 👀 **Human review** - Every output goes through a human before merging
 - 🏠 **Self-hostable** - Deploy it on your own infrastructure
 
@@ -53,6 +53,7 @@ Hive is designed to be self-hosted. You can deploy it using [Kamal](https://kama
 |---|---|---|
 | `SECRET_KEY_BASE` | A secret key for signing and encrypting session data. Generate one with `mix phx.gen.secret`. | Yes |
 | `DATABASE_URL` | PostgreSQL connection string, e.g. `ecto://user:pass@host/hive_prod` | Yes |
+| `ENCRYPTION_KEY` | A base64-encoded 256-bit key for encrypting sensitive data at rest (tokens, secrets, private keys). Generate one with `elixir -e "IO.puts(Base.encode64(:crypto.strong_rand_bytes(32)))"`. | Yes |
 | `PHX_HOST` | The hostname where Hive is served, e.g. `hive.example.com` | Yes |
 | `PORT` | The port the server listens on (default: `4000`) | No |
 | `PHX_SERVER` | Set to `true` to start the web server (set automatically in the Docker release) | No |
@@ -135,6 +136,36 @@ Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New Ap
 #### 4. Invite the bot
 
 Invite the bot to each channel you want to monitor by typing `/invite @Hive` in the channel.
+
+### GitHub integration
+
+Hive monitors GitHub repositories for new issues and turns them into signals. Comments on tracked issues are added as signal messages. To set this up, you need to create a GitHub App and configure its webhook.
+
+#### 1. Create a GitHub App
+
+Go to **Settings** > **Developer settings** > **GitHub Apps** > **New GitHub App** and configure it:
+
+- **GitHub App name**: Hive (or any name you prefer)
+- **Homepage URL**: `https://YOUR_HIVE_HOST`
+- **Webhook URL**: `https://YOUR_HIVE_HOST/api/github/events`
+- **Webhook secret**: Generate a random secret (e.g. `openssl rand -hex 32`)
+- **Permissions**:
+  - **Repository permissions** > **Issues**: Read-only
+- **Subscribe to events**: Check **Issues** and **Issue comment**
+
+#### 2. Generate a private key
+
+In your GitHub App settings, scroll to **Private keys** and click **Generate a private key**. This downloads a `.pem` file that Hive uses to authenticate API requests.
+
+#### 3. Install the app
+
+Click **Install App** in the sidebar and install it on the repositories you want to monitor. Note the **installation ID** from the URL (e.g. `https://github.com/settings/installations/12345678` means the ID is `12345678`).
+
+#### 4. Configure in Hive
+
+1. Go to **Settings** > **Signal Sources** and add a new GitHub App
+2. Enter the name, App ID (from the app's General page), installation ID, private key (paste the full PEM contents), and webhook secret
+3. Add the repositories you want to monitor (enter the owner and repository name separately, e.g. owner: `tuist`, repository: `tuist`)
 
 ## 📄 License
 

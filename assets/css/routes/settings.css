@@ -135,6 +135,10 @@
     }
   }
 
+  & .noora-table table {
+    table-layout: fixed;
+  }
+
   & [data-part="empty"] {
     margin: 0;
     color: var(--noora-surface-label-secondary);

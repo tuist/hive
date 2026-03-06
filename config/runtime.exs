@@ -30,6 +30,21 @@ if google_client_id = System.get_env("GOOGLE_CLIENT_ID") do
 end
 
 if config_env() == :prod do
+  encryption_key =
+    System.get_env("ENCRYPTION_KEY") ||
+      raise """
+      environment variable ENCRYPTION_KEY is missing.
+      Generate one with: elixir -e "IO.puts(Base.encode64(:crypto.strong_rand_bytes(32)))"
+      """
+
+  config :hive, Hive.Vault,
+    ciphers: [
+      default: {
+        Cloak.Ciphers.AES.GCM,
+        tag: "AES.GCM.V1", key: Base.decode64!(encryption_key)
+      }
+    ]
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
