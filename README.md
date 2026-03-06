@@ -7,6 +7,10 @@ An open-source, self-hostable platform for autonomous coding agents, inspired by
 
 Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. A flight produces **drops**, the individual deliverables (a PR, a reply, a report). A human then **tastes** each drop, reviewing, approving, or rejecting it before it ships.
 
+## 🤔 Why Hive
+
+Every tool in the software delivery chain is adding its own agentic capabilities, but those capabilities are siloed. Software delivery spans domains and services, so we needed a control plane that can oversee the whole system. Hive is that control plane: a single place to define, run, and review autonomous workflows that cut across your entire stack.
+
 ## ✨ Features
 
 - 📡 **Signals** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
