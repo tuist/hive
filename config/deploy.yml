@@ -14,7 +14,7 @@ proxy:
   app_port: 4000
 
 registry:
-  server: localhost:5555
+  server: 188.245.221.31:5555
 
 env:
   clear:

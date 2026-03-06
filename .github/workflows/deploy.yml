@@ -36,8 +36,22 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519,rsa,ecdsa 188.245.221.31 >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Free registry port on server
-        run: ssh root@188.245.221.31 "fuser -k 5555/tcp || true"
+      - name: Ensure registry is running on server
+        run: ssh root@188.245.221.31 "docker start kamal-registry 2>/dev/null || docker run -d --name kamal-registry --restart always -p 5555:5000 registry:2"
+
+      - name: Set up remote builder with insecure registry
+        run: |
+          cat > /tmp/buildkitd.toml << 'EOF'
+          [registry."188.245.221.31:5555"]
+            http = true
+            insecure = true
+          EOF
+          BUILDER=kamal-remote-ssh---root-188-245-221-31
+          CONTEXT=${BUILDER}-context
+          docker context rm $CONTEXT 2>/dev/null || true
+          docker buildx rm $BUILDER 2>/dev/null || true
+          docker context create $CONTEXT --description "$BUILDER host" --docker "host=ssh://root@188.245.221.31"
+          docker buildx create --name $BUILDER --driver-opt network=host --buildkitd-config /tmp/buildkitd.toml $CONTEXT
 
       - name: Deploy with Kamal
         run: kamal deploy
