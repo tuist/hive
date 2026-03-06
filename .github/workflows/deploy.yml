@@ -41,11 +41,7 @@ jobs:
 
       - name: Set up remote builder with insecure registry
         run: |
-          cat > /tmp/buildkitd.toml << 'EOF'
-          [registry."188.245.221.31:5555"]
-            http = true
-            insecure = true
-          EOF
+          printf '[registry."188.245.221.31:5555"]\n  http = true\n  insecure = true\n' > /tmp/buildkitd.toml
           BUILDER=kamal-remote-ssh---root-188-245-221-31
           CONTEXT=${BUILDER}-context
           docker context rm $CONTEXT 2>/dev/null || true
