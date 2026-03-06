@@ -38,7 +38,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 188.245.221.31 >> ~/.ssh/known_hosts
+          ssh-keyscan -t ed25519,rsa,ecdsa -H 188.245.221.31 >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy with Kamal
         run: kamal deploy
