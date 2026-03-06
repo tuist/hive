@@ -39,15 +39,15 @@ jobs:
       - name: Ensure registry is running on server
         run: ssh root@188.245.221.31 "docker start kamal-registry 2>/dev/null || docker run -d --name kamal-registry --restart always -p 5555:5000 registry:2"
 
-      - name: Set up remote builder with insecure registry
+      - name: Configure buildkit for insecure registry
         run: |
-          printf '[registry."188.245.221.31:5555"]\n  http = true\n  insecure = true\n' > /tmp/buildkitd.toml
-          BUILDER=kamal-remote-ssh---root-188-245-221-31
-          CONTEXT=${BUILDER}-context
-          docker context rm $CONTEXT 2>/dev/null || true
-          docker buildx rm $BUILDER 2>/dev/null || true
-          docker context create $CONTEXT --description "$BUILDER host" --docker "host=ssh://root@188.245.221.31"
-          docker buildx create --name $BUILDER --driver-opt network=host --buildkitd-config /tmp/buildkitd.toml $CONTEXT
+          ssh root@188.245.221.31 '
+            for CONTAINER in $(docker ps -a --filter "name=buildkit" --format "{{.Names}}"); do
+              printf "[registry.\"188.245.221.31:5555\"]\n  http = true\n  insecure = true\n" | docker exec -i $CONTAINER sh -c "cat > /etc/buildkit/buildkitd.toml"
+              docker restart $CONTAINER
+            done
+            sleep 5
+          '
 
       - name: Deploy with Kamal
         run: kamal deploy
