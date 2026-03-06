@@ -49,4 +49,3 @@ ssh:
 builder:
   arch: arm64
   remote: ssh://root@188.245.221.31
-  driver: docker

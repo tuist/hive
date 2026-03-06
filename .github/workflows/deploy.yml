@@ -40,8 +40,10 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519,rsa,ecdsa 188.245.221.31 >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Log into GHCR on remote server
-        run: ssh root@188.245.221.31 "echo $KAMAL_REGISTRY_PASSWORD | docker login ghcr.io -u tuist --password-stdin"
+      - name: Log into GHCR
+        run: |
+          echo "$KAMAL_REGISTRY_PASSWORD" | docker login ghcr.io -u tuist --password-stdin
+          ssh root@188.245.221.31 "echo $KAMAL_REGISTRY_PASSWORD | docker login ghcr.io -u tuist --password-stdin"
 
       - name: Deploy with Kamal
         run: kamal deploy
