@@ -16,11 +16,12 @@ jobs:
     timeout-minutes: 20
 
     permissions:
+      contents: read
       packages: write
 
     env:
       DOCKER_BUILDKIT: 1
-      KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      KAMAL_REGISTRY_PASSWORD: ${{ github.token }}
       SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
