@@ -40,5 +40,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -t ed25519,rsa,ecdsa -H 188.245.221.31 >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Deploy with Kamal
         run: kamal deploy
