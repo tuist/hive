@@ -166,7 +166,8 @@ conversations = %{
   "Getting error when running tuist generate" => [
     %{
       author: "bob",
-      body: "I had the same issue. Try deleting the .build folder and running `tuist clean` first.",
+      body:
+        "I had the same issue. Try deleting the .build folder and running `tuist clean` first.",
       source_timestamp: ~U[2026-03-04 10:15:00Z]
     },
     %{
@@ -176,36 +177,42 @@ conversations = %{
     },
     %{
       author: "carol",
-      body: "We should probably add this to the troubleshooting docs. I've seen this come up a few times.",
+      body:
+        "We should probably add this to the troubleshooting docs. I've seen this come up a few times.",
       source_timestamp: ~U[2026-03-04 10:30:00Z]
     }
   ],
   "Cache misses after upgrading to 4.x" => [
     %{
       author: "eve",
-      body: "Same here. The cache key format changed in 4.x so all existing caches are invalidated.",
+      body:
+        "Same here. The cache key format changed in 4.x so all existing caches are invalidated.",
       source_timestamp: ~U[2026-03-04 11:45:00Z]
     },
     %{
       author: "frank",
-      body: "Is there a way to migrate the old cache? Rebuilding everything from scratch takes forever for us.",
+      body:
+        "Is there a way to migrate the old cache? Rebuilding everything from scratch takes forever for us.",
       source_timestamp: ~U[2026-03-04 12:00:00Z]
     },
     %{
       author: "bob",
-      body: "No migration path unfortunately. But once the new cache warms up, times should be even better than 3.x.",
+      body:
+        "No migration path unfortunately. But once the new cache warms up, times should be even better than 3.x.",
       source_timestamp: ~U[2026-03-04 12:10:00Z]
     }
   ],
   "Production incident: API latency spike" => [
     %{
       author: "ops-bot",
-      body: "Update: traced the issue to a slow database query on the projects endpoint. Rolling out a fix now.",
+      body:
+        "Update: traced the issue to a slow database query on the projects endpoint. Rolling out a fix now.",
       source_timestamp: ~U[2026-03-05 14:20:00Z]
     },
     %{
       author: "ops-bot",
-      body: "Fix deployed. P99 latency back to normal at 180ms. Root cause was a missing index on the new analytics table.",
+      body:
+        "Fix deployed. P99 latency back to normal at 180ms. Root cause was a missing index on the new analytics table.",
       source_timestamp: ~U[2026-03-05 14:45:00Z]
     }
   ]

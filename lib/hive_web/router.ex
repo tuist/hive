@@ -19,6 +19,12 @@ defmodule HiveWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/api", HiveWeb do
+    pipe_through [:api]
+
+    post "/slack/events", SlackEventsController, :handle
+  end
+
   scope "/", HiveWeb do
     pipe_through [:browser]
 

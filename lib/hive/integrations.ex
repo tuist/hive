@@ -69,4 +69,17 @@ defmodule Hive.Integrations do
     |> order_by([c], asc: c.channel_name)
     |> Repo.all()
   end
+
+  def find_monitored_channel(channel_id) do
+    SlackChannel
+    |> where([c], c.channel_id == ^channel_id)
+    |> Repo.one()
+    |> Repo.preload(:slack_integration)
+  end
+
+  def list_all_slack_integrations_with_signing_secret do
+    SlackIntegration
+    |> where([i], not is_nil(i.signing_secret))
+    |> Repo.all()
+  end
 end

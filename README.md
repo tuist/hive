@@ -3,17 +3,15 @@
 </p>
 <h1 align="center">Hive</h1>
 
-An open-source, self-hostable take on [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) system, built with Elixir and Phoenix.
+An open-source, self-hostable platform for autonomous coding agents, inspired by [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) and built with Elixir and Phoenix.
 
-Stripe's Minions are autonomous coding agents that turn a task description into a ready-to-review pull request with no human interaction in between. They use **blueprints**, hybrid orchestration flows that combine deterministic steps (linting, CI) with flexible agent loops (code generation, test fixing), to keep LLMs contained in predictable boxes. A typical minion run starts from a message, gathers context from tickets, docs, and code search, writes the code, runs tests, and opens a PR for human review.
-
-Hive brings that same idea into the open. Define blueprints, point them at your repos, and let autonomous agents do the grunt work while you stay in the review seat.
+Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub, then dispatches **swarms** of autonomous agents to act on them. A swarm combines deterministic steps (linting, CI) with flexible agent loops (code generation, test fixing) to turn a signal into a ready-to-review pull request with no human interaction in between.
 
 ## ✨ Features
 
-- 🔧 **Blueprint orchestration** - Define hybrid workflows mixing deterministic and agent-driven steps
-- 🔍 **Context gathering** - Pull in relevant docs, tickets, and code before the agent starts
-- 🤖 **One-shot agents** - From task to pull request with no back-and-forth
+- 📡 **Signal collection** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
+- 🐝 **Swarm orchestration** - Define workflows that mix deterministic and agent-driven steps
+- 🤖 **Autonomous agents** - From signal to pull request with no back-and-forth
 - 👀 **Human review** - Every output goes through a human before merging
 - 🏠 **Self-hostable** - Deploy it on your own infrastructure
 
@@ -37,7 +35,7 @@ mix setup
 mix phx.server
 ```
 
-Then visit [localhost:4000](http://localhost:4000) in your browser.
+Then visit [localhost:3030](http://localhost:3030) in your browser.
 
 You can also run the server inside IEx for interactive debugging:
 
@@ -73,6 +71,9 @@ To enable Google as an identity provider, set the following environment variable
 | `GOOGLE_CLIENT_SECRET` | OAuth2 client secret from the Google Cloud Console |
 
 When creating the OAuth2 credentials in Google Cloud Console, set the authorized redirect URI to `https://<your-host>/auth/google/callback`.
+
+> [!NOTE]
+> Contributions adding support for more identity providers (GitHub, GitLab, SAML, etc.) are very welcome!
 
 ## 📄 License
 

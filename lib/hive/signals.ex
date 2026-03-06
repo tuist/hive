@@ -17,7 +17,15 @@ defmodule Hive.Signals do
   def get_signal(id) do
     Signal
     |> Repo.get(id)
-    |> Repo.preload(messages: from(m in SignalMessage, order_by: [asc: m.source_timestamp, asc: m.inserted_at]))
+    |> Repo.preload(
+      messages: from(m in SignalMessage, order_by: [asc: m.source_timestamp, asc: m.inserted_at])
+    )
+  end
+
+  def get_signal_by_source_url(source_url) do
+    Signal
+    |> where([s], s.source_url == ^source_url)
+    |> Repo.one()
   end
 
   def create_signal(attrs) do
