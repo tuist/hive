@@ -44,12 +44,6 @@ defmodule HiveWeb.SettingsSlackBotLive do
                 <span data-part="value">{@integration.name}</span>
               </div>
               <div data-part="bot-field">
-                <span data-part="label">{gettext("Workspace")}</span>
-                <span data-part="value">
-                  {@integration.team_name || gettext("Not set")}
-                </span>
-              </div>
-              <div data-part="bot-field">
                 <span data-part="label">{gettext("Bot Token")}</span>
                 <span data-part="value">{mask_token(@integration.bot_token)}</span>
               </div>
@@ -90,12 +84,6 @@ defmodule HiveWeb.SettingsSlackBotLive do
               type="basic"
               label={gettext("Bot Token")}
               placeholder="xoxb-..."
-            />
-            <.text_input
-              field={@bot_form[:team_name]}
-              type="basic"
-              label={gettext("Workspace")}
-              placeholder={gettext("My Workspace")}
             />
             <div data-part="form-actions">
               <.button label={gettext("Save")} size="medium" type="submit" />

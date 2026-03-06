@@ -4,9 +4,8 @@ defmodule Hive.Repo.Migrations.CreateSlackIntegrationsAndSignals do
   def change do
     create table(:slack_integrations, primary_key: false) do
       add :id, :binary_id, primary_key: true
+      add :name, :string, null: false
       add :bot_token, :string, null: false
-      add :team_name, :string
-      add :team_id, :string
 
       timestamps()
     end

@@ -45,6 +45,15 @@
   padding: var(--noora-spacing-5) var(--noora-spacing-9) var(--noora-spacing-5) var(--noora-spacing-5);
   min-width: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.layout__flash {
+  position: fixed;
+  top: var(--noora-spacing-4);
+  right: var(--noora-spacing-4);
+  z-index: 50;
+  max-width: 420px;
 }
 
 .headerbar {

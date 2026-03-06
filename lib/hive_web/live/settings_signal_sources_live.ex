@@ -67,12 +67,6 @@ defmodule HiveWeb.SettingsSignalSourcesLive do
               label={gettext("Bot Token")}
               placeholder="xoxb-..."
             />
-            <.text_input
-              field={@bot_form[:team_name]}
-              type="basic"
-              label={gettext("Workspace")}
-              placeholder={gettext("My Workspace")}
-            />
             <div data-part="form-actions">
               <.button label={gettext("Create")} size="medium" type="submit" />
               <.button
@@ -93,9 +87,6 @@ defmodule HiveWeb.SettingsSignalSourcesLive do
           >
             <:col :let={integration} label={gettext("Name")}>
               <.text_cell label={integration.name} />
-            </:col>
-            <:col :let={integration} label={gettext("Workspace")}>
-              <.text_cell label={integration.team_name || "-"} />
             </:col>
             <:col :let={integration} label={gettext("Channels")}>
               <.badge_cell

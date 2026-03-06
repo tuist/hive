@@ -27,7 +27,6 @@ bots = [
   %{
     name: "Community Support",
     bot_token: "xoxb-community-support-fake",
-    team_name: "Tuist Community",
     channels: [
       %{channel_id: "C001SUPPORT", channel_name: "support"},
       %{channel_id: "C002GENERAL", channel_name: "general"},
@@ -37,7 +36,6 @@ bots = [
   %{
     name: "Internal Team",
     bot_token: "xoxb-internal-team-fake",
-    team_name: "Tuist HQ",
     channels: [
       %{channel_id: "C010ONCALL", channel_name: "on-call"},
       %{channel_id: "C011INCIDENTS", channel_name: "incidents"}
