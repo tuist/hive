@@ -5,13 +5,14 @@
 
 An open-source, self-hostable platform for autonomous coding agents, inspired by [Stripe's Minions](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2) and built with Elixir and Phoenix.
 
-Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between.
+Hive collects **signals** (support messages, bug reports, feature requests) from sources like Slack and GitHub. You define **swarms**, workflows that mix deterministic steps (linting, CI) with agentic steps (code generation, test fixing). When a signal arrives, Hive launches a **flight**, an execution of a swarm that turns the signal into a ready-to-review pull request with no human interaction in between. The output of a flight is called **honey**, the structured result that gets delivered back (a PR, a reply, a report).
 
 ## ✨ Features
 
 - 📡 **Signal collection** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
 - 🐝 **Swarms** - Define reusable workflows that mix deterministic and agent-driven steps
 - 🚀 **Flights** - Each signal triggers a flight that autonomously works through a swarm's steps
+- 🍯 **Honey** - The output of a flight: a pull request, a reply, a report, or any other deliverable
 - 👀 **Human review** - Every output goes through a human before merging
 - 🏠 **Self-hostable** - Deploy it on your own infrastructure
 
@@ -46,6 +47,8 @@ iex -S mix phx.server
 ## 🏠 Self-hosting
 
 Hive is designed to be self-hosted. You can deploy it using [Kamal](https://kamal-deploy.org/) or any Docker-based deployment tool. The included `Dockerfile` builds a production-ready Elixir release.
+
+The service exposes a `GET /up` health check endpoint that returns `200 OK` when the application is running. Kamal's proxy uses this by default to verify deployments.
 
 ### Environment variables
 
