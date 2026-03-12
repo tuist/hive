@@ -39,6 +39,12 @@ defmodule Hive.Signals do
     |> Repo.insert()
   end
 
+  def update_signal_status(%Signal{} = signal, status) do
+    signal
+    |> Signal.changeset(%{status: status})
+    |> Repo.update()
+  end
+
   def add_signal_message(%Signal{} = signal, attrs) do
     attrs = Map.put(attrs, :signal_id, signal.id)
 

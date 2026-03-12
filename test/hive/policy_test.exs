@@ -14,6 +14,17 @@ defmodule Hive.PolicyTest do
     end
   end
 
+  describe "signal:write" do
+    test "denies unauthenticated users" do
+      assert {:error, :unauthorized} = Policy.authorize(:signal_write, %{}, %{})
+    end
+
+    test "allows authenticated users" do
+      subject = %{current_user: %{id: "user-123"}}
+      assert :ok = Policy.authorize(:signal_write, subject, %{})
+    end
+  end
+
   describe "swarm:read" do
     test "allows unauthenticated users" do
       assert :ok = Policy.authorize(:swarm_read, %{}, %{})

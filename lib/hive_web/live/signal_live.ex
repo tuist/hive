@@ -5,6 +5,7 @@ defmodule HiveWeb.SignalLive do
   import HiveWeb.CoreComponents, only: []
 
   alias Hive.Markdown
+  alias Hive.Policy
   alias Hive.Signals
 
   def mount(%{"id" => id}, _session, socket) do
@@ -73,7 +74,23 @@ defmodule HiveWeb.SignalLive do
                 <.source_badge source={@signal.source} />
               </.metadata_item>
               <.metadata_item title={gettext("Status")}>
-                <.signal_status_badge status={@signal.status} />
+                <%= if @current_user do %>
+                  <.select
+                    id="signal-status-select"
+                    name="signal_status"
+                    label={gettext("Status")}
+                    value={Atom.to_string(@signal.status)}
+                    on_value_change="select_status"
+                  >
+                    <:item
+                      :for={status <- available_statuses()}
+                      value={Atom.to_string(status)}
+                      label={status_label(status)}
+                    />
+                  </.select>
+                <% else %>
+                  <.signal_status_badge status={@signal.status} />
+                <% end %>
               </.metadata_item>
               <.metadata_item title={gettext("Author")}>
                 {@signal.source_author || "-"}
@@ -149,6 +166,25 @@ defmodule HiveWeb.SignalLive do
     """
   end
 
+  def handle_event("select_status", %{"value" => [value]}, socket) do
+    with :ok <- Policy.authorize(:signal_write, socket.assigns, socket.assigns.signal),
+         {:ok, status} <- parse_status(value),
+         {:ok, updated_signal} <- Signals.update_signal_status(socket.assigns.signal, status) do
+      {:noreply,
+       assign(socket, :signal, %{socket.assigns.signal | status: updated_signal.status})}
+    else
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("You are not allowed to update signal status."))}
+
+      {:error, :invalid_status} ->
+        {:noreply, put_flash(socket, :error, gettext("Signal status is invalid."))}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply, put_flash(socket, :error, gettext("Signal status couldn't be updated."))}
+    end
+  end
+
   attr :title, :string, required: true
   slot :inner_block, required: true
 
@@ -156,7 +192,7 @@ defmodule HiveWeb.SignalLive do
     ~H"""
     <div data-part="metadata">
       <div data-part="title">{@title}</div>
-      <span data-part="label">{render_slot(@inner_block)}</span>
+      <div data-part="label">{render_slot(@inner_block)}</div>
     </div>
     """
   end
@@ -212,6 +248,15 @@ defmodule HiveWeb.SignalLive do
   defp message_source_link_label("github"), do: gettext("View comment")
   defp message_source_link_label("slack"), do: gettext("View reply")
   defp message_source_link_label(_source), do: gettext("Open source")
+
+  defp available_statuses, do: Hive.Signals.Signal.statuses()
+
+  defp parse_status("new"), do: {:ok, :new}
+  defp parse_status("in_flight"), do: {:ok, :in_flight}
+  defp parse_status("needs_review"), do: {:ok, :needs_review}
+  defp parse_status("resolved"), do: {:ok, :resolved}
+  defp parse_status("ignored"), do: {:ok, :ignored}
+  defp parse_status(_status), do: {:error, :invalid_status}
 
   defp status_label(:new), do: gettext("New")
   defp status_label(:in_flight), do: gettext("In Flight")

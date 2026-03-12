@@ -5,6 +5,10 @@ defmodule Hive.Policy do
     action :read do
       allow(true)
     end
+
+    action :write do
+      allow(:authenticated)
+    end
   end
 
   object :swarm do
