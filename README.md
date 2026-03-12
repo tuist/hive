@@ -64,6 +64,13 @@ The service exposes a `GET /up` health check endpoint that returns `200 OK` when
 | `PHX_HOST` | The hostname where Hive is served, e.g. `hive.example.com` | Yes |
 | `PORT` | The port the server listens on (default: `4000`) | No |
 | `PHX_SERVER` | Set to `true` to start the web server (set automatically in the Docker release) | No |
+| `HIVE_PUBLIC` | Set to `true` to make the instance publicly accessible without login. Guests can browse signals and swarms but cannot modify settings. | No |
+
+#### Public instances
+
+By default, Hive requires authentication to access any page. In development, Hive enables public mode by default so signals and swarms are readable without logging in. In any environment, setting `HIVE_PUBLIC=true` enables that same public access, and `HIVE_PUBLIC=false` disables it explicitly. A "Log in" button appears in the header for users who want to authenticate. Instance configuration and all write operations remain restricted to authenticated users. This is useful for running a public-facing Hive instance where the community can follow along.
+
+Authorization is handled by [LetMe](https://hex.pm/packages/let_me). The policy (`Hive.Policy`) is defined in terms of Hive domain objects like signals, swarms, integrations, and instance configuration instead of UI areas or storage-level records.
 
 #### Identity providers
 

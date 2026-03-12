@@ -4,14 +4,20 @@ defmodule HiveWeb.LoginLive do
 
   import HiveWeb.CoreComponents, only: []
 
-  def mount(_params, _session, socket) do
-    socket =
-      socket
-      |> assign(:page_title, "Log in")
-      |> assign(:google_configured?, google_configured?())
-      |> assign(:dev_routes?, Application.get_env(:hive, :dev_routes, false))
+  def mount(_params, session, socket) do
+    user_id = session["user_id"]
 
-    {:ok, socket}
+    if user_id && Hive.Accounts.get_user(user_id) do
+      {:ok, redirect(socket, to: ~p"/")}
+    else
+      socket =
+        socket
+        |> assign(:page_title, "Log in")
+        |> assign(:google_configured?, google_configured?())
+        |> assign(:dev_routes?, Application.get_env(:hive, :dev_routes, false))
+
+      {:ok, socket}
+    end
   end
 
   def render(assigns) do
