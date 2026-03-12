@@ -31,26 +31,30 @@ defmodule Hive.PolicyTest do
     end
   end
 
-  describe "slack_integration:write" do
+  describe "integration:write" do
     test "denies unauthenticated users" do
-      assert {:error, :unauthorized} = Policy.authorize(:slack_integration_write, %{}, %{})
+      assert {:error, :unauthorized} = Policy.authorize(:integration_write, %{}, %{})
     end
 
     test "denies when current_user is nil" do
       subject = %{current_user: nil}
-      assert {:error, :unauthorized} = Policy.authorize(:slack_integration_write, subject, %{})
+      assert {:error, :unauthorized} = Policy.authorize(:integration_write, subject, %{})
     end
 
     test "allows authenticated users" do
       subject = %{current_user: %{id: "user-123"}}
-      assert :ok = Policy.authorize(:slack_integration_write, subject, %{})
+      assert :ok = Policy.authorize(:integration_write, subject, %{})
     end
   end
 
-  describe "github_app:write" do
+  describe "integration:read" do
+    test "denies unauthenticated users" do
+      assert {:error, :unauthorized} = Policy.authorize(:integration_read, %{}, %{})
+    end
+
     test "allows authenticated users" do
       subject = %{current_user: %{id: "user-123"}}
-      assert :ok = Policy.authorize(:github_app_write, subject, %{})
+      assert :ok = Policy.authorize(:integration_read, subject, %{})
     end
   end
 end

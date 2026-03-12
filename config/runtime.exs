@@ -20,8 +20,20 @@ if System.get_env("PHX_SERVER") do
   config :hive, HiveWeb.Endpoint, server: true
 end
 
-if System.get_env("HIVE_PUBLIC") in ~w(true 1) do
-  config :hive, public: true
+case System.get_env("HIVE_PUBLIC") do
+  value when value in ~w(true 1) ->
+    config :hive, public: true
+
+  value when value in ~w(false 0) ->
+    config :hive, public: false
+
+  nil ->
+    if config_env() == :dev do
+      config :hive, public: true
+    end
+
+  _ ->
+    :ok
 end
 
 config :hive, HiveWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "3030"))]

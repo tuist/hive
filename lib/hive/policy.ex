@@ -23,37 +23,7 @@ defmodule Hive.Policy do
     end
   end
 
-  object :slack_integration, Hive.Integrations.SlackIntegration do
-    action :read do
-      allow(:authenticated)
-    end
-
-    action :write do
-      allow(:authenticated)
-    end
-  end
-
-  object :slack_channel, Hive.Integrations.SlackChannel do
-    action :read do
-      allow(:authenticated)
-    end
-
-    action :write do
-      allow(:authenticated)
-    end
-  end
-
-  object :github_app, Hive.Integrations.GitHubApp do
-    action :read do
-      allow(:authenticated)
-    end
-
-    action :write do
-      allow(:authenticated)
-    end
-  end
-
-  object :github_repository, Hive.Integrations.GitHubRepository do
+  object :integration do
     action :read do
       allow(:authenticated)
     end
