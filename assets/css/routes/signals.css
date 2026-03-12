@@ -16,3 +16,166 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
   }
 }
+
+#signal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-7);
+
+  & [data-part="back-link"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+    text-decoration: none;
+  }
+
+  & [data-part="header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--noora-spacing-5);
+    padding-top: var(--noora-spacing-7);
+  }
+
+  & [data-part="title-group"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+  }
+
+  & [data-part="title"] {
+    margin: 0;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-xlarge);
+  }
+
+  & [data-part="description"] {
+    margin: 0;
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  }
+
+  & [data-part="metadata"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--noora-spacing-4);
+    margin-bottom: var(--noora-spacing-5);
+  }
+
+  & [data-part="meta-item"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-1);
+  }
+
+  & [data-part="label"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+    text-transform: uppercase;
+  }
+
+  & [data-part="value"] {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+    word-break: break-word;
+  }
+
+  & [data-part="conversation"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-4);
+  }
+
+  & [data-part="empty-conversation"] {
+    margin: 0;
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  }
+
+  & [data-part="message"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-3);
+    padding: var(--noora-spacing-5);
+    border: 1px solid var(--noora-surface-border-subtle);
+    border-radius: var(--noora-border-radius-large);
+    background: var(--noora-surface-background-secondary);
+  }
+
+  & [data-part="message-header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--noora-spacing-4);
+  }
+
+  & [data-part="message-meta"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-1);
+  }
+
+  & [data-part="message-author"],
+  & [data-part="message-timestamp"] {
+    margin: 0;
+  }
+
+  & [data-part="message-author"] {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+  }
+
+  & [data-part="message-timestamp"],
+  & [data-part="message-source-link"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+}
+
+.signal-markdown {
+  color: var(--noora-surface-label-primary);
+  font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  line-height: 1.6;
+
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+
+  & a {
+    color: var(--noora-brand-label-accent);
+  }
+
+  & pre {
+    overflow-x: auto;
+    padding: var(--noora-spacing-4);
+    border-radius: var(--noora-border-radius-large);
+    background: var(--noora-surface-background-secondary);
+  }
+
+  & code {
+    font-family: var(--noora-font-family-mono);
+    font-size: 0.95em;
+  }
+
+  & blockquote {
+    margin-left: 0;
+    padding-left: var(--noora-spacing-4);
+    border-left: 2px solid var(--noora-surface-border-subtle);
+    color: var(--noora-surface-label-secondary);
+  }
+}
+
+@media (max-width: 768px) {
+  #signal {
+    & [data-part="header"] {
+      flex-direction: column;
+    }
+
+    & [data-part="message-header"] {
+      flex-direction: column;
+    }
+  }
+}

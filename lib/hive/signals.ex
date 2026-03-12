@@ -15,11 +15,16 @@ defmodule Hive.Signals do
   end
 
   def get_signal(id) do
-    Signal
-    |> Repo.get(id)
-    |> Repo.preload(
-      messages: from(m in SignalMessage, order_by: [asc: m.source_timestamp, asc: m.inserted_at])
-    )
+    with {:ok, id} <- Hive.UUIDv7.cast(id),
+         %Signal{} = signal <- Repo.get(Signal, id) do
+      Repo.preload(
+        signal,
+        messages:
+          from(m in SignalMessage, order_by: [asc: m.source_timestamp, asc: m.inserted_at])
+      )
+    else
+      _ -> nil
+    end
   end
 
   def get_signal_by_source_url(source_url) do

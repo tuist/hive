@@ -92,7 +92,7 @@ When creating the OAuth2 credentials in Google Cloud Console, set the authorized
 
 ### Slack integration
 
-Hive monitors Slack channels for messages and turns them into signals. To set this up, you need to create a Slack app and configure it to send events to your Hive instance.
+Hive monitors Slack channels for messages and turns them into signals. Replies in the same Slack thread are attached to that signal as conversation messages. Signal bodies and replies are rendered from markdown in the signal detail page. To set this up, you need to create a Slack app and configure it to send events to your Hive instance.
 
 #### 1. Create a Slack app from the manifest
 
@@ -153,7 +153,7 @@ Invite the bot to each channel you want to monitor by typing `/invite @Hive` in 
 
 ### GitHub integration
 
-Hive monitors GitHub repositories for new issues and turns them into signals. Comments on tracked issues are added as signal messages. To set this up, you need to create a GitHub App and configure its webhook.
+Hive monitors GitHub repositories for new issues and turns them into signals. Comments on tracked issues are added as signal messages, and issue bodies plus comments are rendered from markdown in the signal detail page. To set this up, you need to create a GitHub App and configure its webhook.
 
 #### 1. Create a GitHub App
 

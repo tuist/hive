@@ -51,6 +51,7 @@ defmodule Hive.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:swoosh, "~> 1.16"},
+      {:mdex, "~> 0.11.6"},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},

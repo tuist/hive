@@ -26,9 +26,13 @@ defmodule HiveWeb.SignalsLive do
       </p>
 
       <.card :if={@signals != []} title={gettext("Recent Signals")} icon="bell">
-        <.table id="signals-table" rows={@signals}>
+        <.table
+          id="signals-table"
+          rows={@signals}
+          row_navigate={fn signal -> ~p"/signals/#{signal.id}" end}
+        >
           <:col :let={signal} label={gettext("Source")}>
-            <.badge_cell label={signal.source} color="neutral" icon="brand_slack" />
+            <.badge_cell label={signal.source} color="neutral" icon={source_icon(signal.source)} />
           </:col>
           <:col :let={signal} label={gettext("Title")}>
             <.text_cell label={signal.title} />
@@ -40,7 +44,7 @@ defmodule HiveWeb.SignalsLive do
             <.text_cell label={signal.source_channel || "-"} />
           </:col>
           <:col :let={signal} label={gettext("Received")}>
-            <.text_cell label={Calendar.strftime(signal.inserted_at, "%b %d, %Y %H:%M")} />
+            <.text_cell label={format_timestamp(signal.source_timestamp || signal.inserted_at)} />
           </:col>
         </.table>
       </.card>
@@ -56,4 +60,12 @@ defmodule HiveWeb.SignalsLive do
     </div>
     """
   end
+
+  defp format_timestamp(timestamp) do
+    Calendar.strftime(timestamp, "%b %d, %Y %H:%M UTC")
+  end
+
+  defp source_icon("github"), do: "brand_github"
+  defp source_icon("slack"), do: "brand_slack"
+  defp source_icon(_source), do: "bell"
 end
