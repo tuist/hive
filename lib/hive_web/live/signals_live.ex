@@ -29,7 +29,7 @@ defmodule HiveWeb.SignalsLive do
         <.table
           id="signals-table"
           rows={@signals}
-          row_navigate={fn signal -> ~p"/signals/#{signal.id}" end}
+          row_click={fn signal -> %{"phx-click" => JS.navigate(~p"/signals/#{signal.id}")} end}
         >
           <:col :let={signal} label={gettext("Source")}>
             <.badge_cell label={signal.source} color="neutral" icon={source_icon(signal.source)} />
