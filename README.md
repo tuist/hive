@@ -68,9 +68,9 @@ The service exposes a `GET /up` health check endpoint that returns `200 OK` when
 
 #### Public instances
 
-By default, Hive requires authentication to access any page. When `HIVE_PUBLIC=true`, the dashboard (signals, swarms) becomes readable by anyone without logging in. A "Log in" button appears in the header for users who want to authenticate. Settings and all write operations remain restricted to authenticated users. This is useful for running a public-facing Hive instance where the community can follow along.
+By default, Hive requires authentication to access any page. When `HIVE_PUBLIC=true`, public domain objects like signals and swarms become readable by anyone without logging in. A "Log in" button appears in the header for users who want to authenticate. Instance configuration and all write operations remain restricted to authenticated users. This is useful for running a public-facing Hive instance where the community can follow along.
 
-Authorization is handled by [LetMe](https://hex.pm/packages/let_me). The policy (`Hive.Policy`) defines two permissions on the `:dashboard` object: `:read` (allowed for everyone) and `:write` (requires authentication).
+Authorization is handled by [LetMe](https://hex.pm/packages/let_me). The policy (`Hive.Policy`) is defined in terms of Hive domain objects instead of UI areas. Public reads are granted on objects like `:signal` and `:swarm`, while configuration objects like `:instance`, `:slack_integration`, and `:github_app` require an authenticated user.
 
 #### Identity providers
 
