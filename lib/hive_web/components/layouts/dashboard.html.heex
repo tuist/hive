@@ -50,9 +50,12 @@
           </div>
         </div>
       <% else %>
-        <.link navigate={~p"/login"}>
-          <.button label={gettext("Log in")} size="small" variant="secondary" />
-        </.link>
+        <.link_button
+          navigate={~p"/login"}
+          label={gettext("Log in")}
+          size="large"
+          variant="secondary"
+        />
       <% end %>
     </div>
   </header>

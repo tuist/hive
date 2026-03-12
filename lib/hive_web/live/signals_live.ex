@@ -34,6 +34,14 @@ defmodule HiveWeb.SignalsLive do
           <:col :let={signal} label={gettext("Source")}>
             <.badge_cell label={signal.source} color="neutral" icon={source_icon(signal.source)} />
           </:col>
+          <:col :let={signal} label={gettext("Status")}>
+            <.badge
+              label={status_label(signal.status)}
+              color={status_color(signal.status)}
+              style="light-fill"
+              size="small"
+            />
+          </:col>
           <:col :let={signal} label={gettext("Title")}>
             <.text_cell label={signal.title} />
           </:col>
@@ -68,4 +76,18 @@ defmodule HiveWeb.SignalsLive do
   defp source_icon("github"), do: "brand_github"
   defp source_icon("slack"), do: "brand_slack"
   defp source_icon(_source), do: "bell"
+
+  defp status_label(:new), do: gettext("New")
+  defp status_label(:in_flight), do: gettext("In Flight")
+  defp status_label(:needs_review), do: gettext("Needs Review")
+  defp status_label(:resolved), do: gettext("Resolved")
+  defp status_label(:ignored), do: gettext("Ignored")
+  defp status_label(_status), do: gettext("New")
+
+  defp status_color(:new), do: "information"
+  defp status_color(:in_flight), do: "focus"
+  defp status_color(:needs_review), do: "warning"
+  defp status_color(:resolved), do: "success"
+  defp status_color(:ignored), do: "neutral"
+  defp status_color(_status), do: "neutral"
 end

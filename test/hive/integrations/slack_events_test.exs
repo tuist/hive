@@ -42,6 +42,7 @@ defmodule Hive.Integrations.SlackEventsTest do
       assert {:ok, signal} = SlackEvents.handle_event(payload)
       assert signal.title == "Build is failing on main"
       assert signal.source == "slack"
+      assert signal.status == :new
       assert signal.source_author == "alice"
       assert signal.source_channel == "#builds"
       assert signal.source_url == "slack://channel/C123/p1710000000100000"

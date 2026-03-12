@@ -14,6 +14,7 @@ Every tool in the software delivery chain is adding its own agentic capabilities
 ## ✨ Features
 
 - 📡 **Signals** - Monitor Slack channels, GitHub issues, and other sources for actionable messages
+- 🏷️ **Signal Statuses** - Track each signal through `New`, `In Flight`, `Needs Review`, `Resolved`, or `Ignored`
 - 🐝 **Swarms** - Define reusable workflows that mix deterministic and agent-driven steps
 - 🚀 **Flights** - Each signal triggers a flight that autonomously works through a swarm's steps
 - 🍯 **Drops** - The deliverables a flight produces: pull requests, replies, reports

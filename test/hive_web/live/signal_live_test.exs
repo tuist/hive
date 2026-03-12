@@ -19,6 +19,7 @@ defmodule HiveWeb.SignalLiveTest do
         Please check the **failing build** and visit [the issue](https://example.com/issues/1).
         """,
         source: "github",
+        status: :needs_review,
         source_author: "alice",
         source_channel: "tuist/hive",
         source_url: "https://github.com/tuist/hive/issues/1",
@@ -45,6 +46,7 @@ defmodule HiveWeb.SignalLiveTest do
 
     assert has_element?(view, "#signal")
     assert has_element?(view, "#signal-source-link[href='#{signal.source_url}']")
+    assert has_element?(view, "#signal [data-part='meta']", "Needs Review")
     assert has_element?(view, "#signal [data-part='body'] strong", "failing build")
     assert has_element?(view, "#signal [data-part='body'] a[href='https://example.com/issues/1']")
     assert has_element?(view, "#message-#{message.id} [data-part='message-author']", "bob")

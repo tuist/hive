@@ -129,6 +129,7 @@ signals = [
     body:
       "Hey team, I'm getting a weird error when running `tuist generate` on the latest version. It says something about a missing manifest. Anyone seen this before?",
     source: "slack",
+    status: :resolved,
     source_author: "alice",
     source_channel: "#support",
     source_url: "https://tuist-community.slack.com/archives/C001SUPPORT/p1709654400000100",
@@ -139,6 +140,7 @@ signals = [
     body:
       "We upgraded from 3.x to 4.x and now we're seeing a lot of cache misses. Our build times went from 2 minutes to 15 minutes. Is there a migration guide for the cache format?",
     source: "slack",
+    status: :in_flight,
     source_author: "bob",
     source_channel: "#support",
     source_url: "https://tuist-community.slack.com/archives/C001SUPPORT/p1709654400000200",
@@ -149,6 +151,7 @@ signals = [
     body:
       "Would love to see better monorepo support with independent versioning per package. Right now we have to work around some limitations with our setup of 50+ modules.",
     source: "slack",
+    status: :new,
     source_author: "carol",
     source_channel: "#product-feedback",
     source_url: "https://tuist-community.slack.com/archives/C003FEEDBACK/p1709654400000300",
@@ -159,6 +162,7 @@ signals = [
     body:
       "Just wanted to say the new Tuist Cloud dashboard looks amazing. The build insights are super helpful for our team. Great work!",
     source: "slack",
+    status: :ignored,
     source_author: "dave",
     source_channel: "#general",
     source_url: "https://tuist-community.slack.com/archives/C002GENERAL/p1709654400000400",
@@ -169,6 +173,7 @@ signals = [
     body:
       "When I have SPM dependencies in my project, binary caching seems to skip them entirely. Is this expected behavior or a bug?",
     source: "slack",
+    status: :new,
     source_author: "eve",
     source_channel: "#support",
     source_url: "https://tuist-community.slack.com/archives/C001SUPPORT/p1709654400000500",
@@ -179,6 +184,7 @@ signals = [
     body:
       "We're trying to integrate Tuist Cloud into our GitHub Actions CI pipeline. The docs mention a token but I'm not sure where to generate it. Can someone point me in the right direction?",
     source: "slack",
+    status: :resolved,
     source_author: "frank",
     source_channel: "#support",
     source_url: "https://tuist-community.slack.com/archives/C001SUPPORT/p1709654400000600",
@@ -189,6 +195,7 @@ signals = [
     body:
       "We are seeing elevated API latency in production. P99 went from 200ms to 2s. Investigating now.",
     source: "slack",
+    status: :resolved,
     source_author: "ops-bot",
     source_channel: "#incidents",
     source_url: "https://tuist-hq.slack.com/archives/C011INCIDENTS/p1709654400000700",
@@ -199,6 +206,7 @@ signals = [
     body:
       "When enabling strict concurrency checking in Swift 6, the generated Xcode project has several warnings that become errors. The generated `TuistBundle` accessor isn't marked as `@Sendable`.",
     source: "github",
+    status: :needs_review,
     source_author: "swiftdev42",
     source_channel: "tuist/tuist",
     source_url: "https://github.com/tuist/tuist/issues/7001",
@@ -209,6 +217,7 @@ signals = [
     body:
       "It would be great to have first-class support for visionOS as a deployment destination. Currently we have to use workarounds with custom settings to target visionOS.",
     source: "github",
+    status: :in_flight,
     source_author: "visionpro_fan",
     source_channel: "tuist/tuist",
     source_url: "https://github.com/tuist/tuist/issues/7002",
@@ -226,6 +235,8 @@ inserted_signals =
 
       existing ->
         existing
+        |> Signal.changeset(signal_attrs)
+        |> Repo.update!()
     end
   end
 

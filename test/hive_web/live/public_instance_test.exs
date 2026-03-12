@@ -36,6 +36,8 @@ defmodule HiveWeb.PublicInstanceTest do
     test "allows unauthenticated users to view /signals", %{conn: conn} do
       conn = get(conn, ~p"/signals")
       assert html_response(conn, 200) =~ "Signals"
+      assert html_response(conn, 200) =~ "Status"
+      assert html_response(conn, 200) =~ "New"
     end
 
     test "allows unauthenticated users to view /", %{conn: conn} do
