@@ -21,6 +21,7 @@ registry:
 
 env:
   clear:
+    HIVE_PUBLIC: "true"
     PHX_HOST: hive.tuist.dev
     PORT: "4000"
   secret:

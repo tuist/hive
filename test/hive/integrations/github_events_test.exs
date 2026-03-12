@@ -62,6 +62,7 @@ defmodule Hive.Integrations.GitHubEventsTest do
       assert signal.title == "Bug: something is broken"
       assert signal.body == "Steps to reproduce..."
       assert signal.source == "github"
+      assert signal.status == :new
       assert signal.source_author == "contributor"
       assert signal.source_channel == full_name
       assert signal.source_url == "https://github.com/#{full_name}/issues/42"

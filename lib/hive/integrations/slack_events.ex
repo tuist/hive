@@ -33,8 +33,8 @@ defmodule Hive.Integrations.SlackEvents do
       nil ->
         :ignored
 
-      _channel ->
-        handle_thread_reply(event)
+      channel ->
+        handle_thread_reply(event, channel)
     end
   end
 
@@ -57,7 +57,7 @@ defmodule Hive.Integrations.SlackEvents do
       title: truncate(event["text"], 120),
       body: event["text"],
       source: "slack",
-      source_author: event["user"],
+      source_author: resolve_author(channel, event["user"]),
       source_channel: "##{channel.channel_name}",
       source_url: build_message_url(channel.channel_id, event["ts"]),
       source_timestamp: timestamp
@@ -74,7 +74,7 @@ defmodule Hive.Integrations.SlackEvents do
     end
   end
 
-  defp handle_thread_reply(event) do
+  defp handle_thread_reply(event, channel) do
     source_url = build_message_url(event["channel"], event["thread_ts"])
 
     case Signals.get_signal_by_source_url(source_url) do
@@ -86,7 +86,7 @@ defmodule Hive.Integrations.SlackEvents do
         timestamp = parse_slack_timestamp(event["ts"])
 
         attrs = %{
-          author: event["user"],
+          author: resolve_author(channel, event["user"]),
           body: event["text"],
           source_url: build_message_url(event["channel"], event["ts"]),
           source_timestamp: timestamp
@@ -127,5 +127,22 @@ defmodule Hive.Integrations.SlackEvents do
     else
       text
     end
+  end
+
+  defp resolve_author(_channel, nil), do: nil
+
+  defp resolve_author(channel, user_id) do
+    case slack_api().get_user_display_name(channel.slack_integration, user_id) do
+      {:ok, author} ->
+        author
+
+      {:error, reason} ->
+        Logger.warning("Failed to resolve Slack user #{user_id}: #{inspect(reason)}")
+        user_id
+    end
+  end
+
+  defp slack_api do
+    Application.get_env(:hive, :slack_api, Hive.Integrations.SlackAPI)
   end
 end

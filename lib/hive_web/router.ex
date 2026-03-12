@@ -48,6 +48,7 @@ defmodule HiveWeb.Router do
       layout: {HiveWeb.Layouts, :dashboard} do
       live "/", SignalsLive, :index
       live "/signals", SignalsLive, :index
+      live "/signals/:id", SignalLive, :show
       live "/swarms", SwarmsLive, :index
     end
   end

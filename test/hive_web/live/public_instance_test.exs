@@ -23,17 +23,31 @@ defmodule HiveWeb.PublicInstanceTest do
       original = Application.get_env(:hive, :public)
       Application.put_env(:hive, :public, true)
       on_exit(fn -> Application.put_env(:hive, :public, original) end)
-      :ok
+
+      {:ok, signal} =
+        Hive.Signals.create_signal(%{
+          title: "Public signal",
+          source: "github"
+        })
+
+      %{signal: signal}
     end
 
     test "allows unauthenticated users to view /signals", %{conn: conn} do
       conn = get(conn, ~p"/signals")
       assert html_response(conn, 200) =~ "Signals"
+      assert html_response(conn, 200) =~ "Status"
+      assert html_response(conn, 200) =~ "New"
     end
 
     test "allows unauthenticated users to view /", %{conn: conn} do
       conn = get(conn, ~p"/")
       assert html_response(conn, 200) =~ "Signals"
+    end
+
+    test "allows unauthenticated users to view /signals/:id", %{conn: conn, signal: signal} do
+      conn = get(conn, ~p"/signals/#{signal.id}")
+      assert html_response(conn, 200) =~ "Public signal"
     end
 
     test "allows unauthenticated users to view /swarms", %{conn: conn} do
