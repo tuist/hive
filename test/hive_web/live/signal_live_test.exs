@@ -74,4 +74,32 @@ defmodule HiveWeb.SignalLiveTest do
     assert has_element?(view, "#signal [data-part='meta']", "Resolved")
     assert Signals.get_signal(signal.id).status == :resolved
   end
+
+  test "renders Slack deep links without crashing", %{conn: conn} do
+    {:ok, signal} =
+      Signals.create_signal(%{
+        title: "Slack signal",
+        body: "A Slack message",
+        source: "slack",
+        status: :new,
+        source_author: "alice",
+        source_channel: "#support",
+        source_url: "slack://channel/C123/p1710000000100000",
+        source_timestamp: ~U[2026-03-12 11:00:00Z]
+      })
+
+    {:ok, message} =
+      Signals.add_signal_message(signal, %{
+        author: "bob",
+        body: "Follow-up in thread",
+        source_url: "slack://channel/C123/p1710000300200000",
+        source_timestamp: ~U[2026-03-12 11:30:00Z]
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/signals/#{signal.id}")
+
+    assert has_element?(view, "#signal")
+    assert has_element?(view, "#signal-source-link[href='#{signal.source_url}']")
+    assert has_element?(view, "#message-source-link-#{message.id}[href='#{message.source_url}']")
+  end
 end

@@ -42,7 +42,7 @@ defmodule HiveWeb.SignalLive do
         <.button
           :if={@signal.source_url}
           id="signal-source-link"
-          href={@signal.source_url}
+          href={external_destination(@signal.source_url)}
           target="_blank"
           rel="noopener noreferrer"
           label={source_link_label(@signal.source)}
@@ -143,7 +143,7 @@ defmodule HiveWeb.SignalLive do
             <.link_button
               :if={message.source_url}
               id={"message-source-link-#{message.id}"}
-              href={message.source_url}
+              href={external_destination(message.source_url)}
               target="_blank"
               label={message_source_link_label(@signal.source)}
               variant="secondary"
@@ -248,6 +248,9 @@ defmodule HiveWeb.SignalLive do
   defp message_source_link_label("github"), do: gettext("View comment")
   defp message_source_link_label("slack"), do: gettext("View reply")
   defp message_source_link_label(_source), do: gettext("Open source")
+
+  defp external_destination("slack://" <> rest), do: {:slack, "//" <> rest}
+  defp external_destination(destination), do: destination
 
   defp available_statuses, do: Hive.Signals.Signal.statuses()
 
