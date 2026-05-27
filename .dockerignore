@@ -1,0 +1,8 @@
+.git
+.elixir_ls
+_build
+deps
+node_modules
+tmp
+README.md
+AGENTS.md

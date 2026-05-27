@@ -1,0 +1,141 @@
+name: Hive
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MIX_ENV: test
+
+jobs:
+  build:
+    name: Build
+    runs-on: namespace-profile-default-with-volume
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Cache build
+        uses: actions/cache@v5
+        with:
+          path: _build
+          key: build-${{ runner.os }}-${{ env.MIX_ENV }}-${{ hashFiles('mix.lock') }}
+          restore-keys: build-${{ runner.os }}-${{ env.MIX_ENV }}-
+
+      - run: mix deps.get
+
+      - run: mix compile --warnings-as-errors
+
+  format:
+    name: Format
+    runs-on: namespace-profile-default-with-volume
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Cache build
+        uses: actions/cache@v5
+        with:
+          path: _build
+          key: build-${{ runner.os }}-${{ env.MIX_ENV }}-${{ hashFiles('mix.lock') }}
+          restore-keys: build-${{ runner.os }}-${{ env.MIX_ENV }}-
+
+      - run: mix deps.get
+
+      - run: mix format --check-formatted
+
+  credo:
+    name: Credo
+    runs-on: namespace-profile-default-with-volume
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Cache build
+        uses: actions/cache@v5
+        with:
+          path: _build
+          key: build-${{ runner.os }}-${{ env.MIX_ENV }}-${{ hashFiles('mix.lock') }}
+          restore-keys: build-${{ runner.os }}-${{ env.MIX_ENV }}-
+
+      - run: mix deps.get
+
+      - run: mix credo
+
+  test:
+    name: Test
+    runs-on: namespace-profile-default-with-volume
+    needs: build
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hive_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Cache build
+        uses: actions/cache@v5
+        with:
+          path: _build
+          key: build-${{ runner.os }}-${{ env.MIX_ENV }}-${{ hashFiles('mix.lock') }}
+          restore-keys: build-${{ runner.os }}-${{ env.MIX_ENV }}-
+
+      - run: mix deps.get
+
+      - run: mix test

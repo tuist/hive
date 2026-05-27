@@ -1,0 +1,102 @@
+# Production values for the Hive Helm chart.
+#
+# Assumes cert-manager, ingress-nginx, external-dns,
+# external-secrets-operator with a 1Password ClusterSecretStore named
+# `onepassword-hive`, and the CloudNativePG operator.
+
+nameOverride: ""
+fullnameOverride: "hive"
+
+host: hive.tuist.dev
+
+image:
+  repository: ghcr.io/tuist/hive
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecretName: ghcr-pull
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 75
+
+pdb:
+  enabled: true
+  minAvailable: 1
+
+service:
+  port: 80
+  targetPort: 4000
+
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-prod
+
+env:
+  POOL_SIZE: "10"
+  DATABASE_SSL: "1"
+
+probes:
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+
+externalSecrets:
+  refreshInterval: 1h
+  storeRef:
+    name: onepassword-hive
+    kind: ClusterSecretStore
+  items:
+    SECRET_KEY_BASE:
+      remoteRef: "hive-secret-key-base/password"
+  pullSecret:
+    enabled: true
+    item: "hive-ghcr-pull"
+    field: "notesPlain"
+
+postgres:
+  enabled: true
+  instances: 2
+  storageSize: 20Gi
+  storageClass: hcloud-volumes
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.0
+  database: hive
+  owner: hive
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  backup:
+    enabled: true
+    endpointURL: https://fsn1.your-objectstorage.com
+    destinationPath: s3://hive-postgres-backups/production
+    retention: 30d
+    schedule: "0 0 3 * * *"
+    credentialsSecretName: hive-postgres-backup-credentials
+    externalSecret:
+      accessKeyRemoteRef: "hive-postgres-backup/username"
+      secretKeyRemoteRef: "hive-postgres-backup/credential"
