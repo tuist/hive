@@ -34,11 +34,19 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
+  database_ssl_opts =
+    case System.get_env("DATABASE_SSL_CA_CERT_FILE") do
+      nil -> [verify: :verify_none]
+      "" -> [verify: :verify_none]
+      path -> [cacertfile: path, verify: :verify_peer]
+    end
+
   config :hive, Hive.Repo,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6,
-    ssl: System.get_env("DATABASE_SSL") in ~w(true 1)
+    ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
+    ssl_opts: database_ssl_opts
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
