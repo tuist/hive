@@ -45,6 +45,11 @@ ingress:
 env:
   POOL_SIZE: "10"
   DATABASE_SSL: "1"
+  HIVE_PRODUCT_NAME: "Hive"
+  HIVE_PRODUCT_TAGLINE: "Product work orchestration"
+  HIVE_AUTH_MODE: "none"
+  HIVE_AUTH_PROVIDER_NAME: "Identity provider"
+  HIVE_OIDC_SCOPES: "openid profile email"
 
 probes:
   readiness:
@@ -71,6 +76,21 @@ externalSecrets:
   items:
     SECRET_KEY_BASE:
       remoteRef: "hive-secret-key-base/password"
+    HIVE_OIDC_CLIENT_ID:
+      remoteRef: ""
+      optional: true
+    HIVE_OIDC_CLIENT_SECRET:
+      remoteRef: ""
+      optional: true
+    HIVE_OIDC_AUTHORIZE_URL:
+      remoteRef: ""
+      optional: true
+    HIVE_OIDC_TOKEN_URL:
+      remoteRef: ""
+      optional: true
+    HIVE_OIDC_USERINFO_URL:
+      remoteRef: ""
+      optional: true
   pullSecret:
     enabled: true
     item: "hive-ghcr-pull"

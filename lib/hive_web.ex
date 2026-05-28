@@ -36,6 +36,7 @@ defmodule HiveWeb do
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
       import HiveWeb.Gettext
+      use Noora
 
       unquote(verified_routes())
     end

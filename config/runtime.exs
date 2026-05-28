@@ -24,6 +24,18 @@ port =
 
 config :hive, HiveWeb.Endpoint, http: [port: port]
 
+config :hive, :auth,
+  mode: System.get_env("HIVE_AUTH_MODE", "none"),
+  product_name: System.get_env("HIVE_PRODUCT_NAME", "Hive"),
+  product_tagline: System.get_env("HIVE_PRODUCT_TAGLINE", "Product work orchestration"),
+  provider_name: System.get_env("HIVE_AUTH_PROVIDER_NAME", "Identity provider"),
+  oidc_authorize_url: System.get_env("HIVE_OIDC_AUTHORIZE_URL"),
+  oidc_token_url: System.get_env("HIVE_OIDC_TOKEN_URL"),
+  oidc_userinfo_url: System.get_env("HIVE_OIDC_USERINFO_URL"),
+  oidc_client_id: System.get_env("HIVE_OIDC_CLIENT_ID"),
+  oidc_client_secret: System.get_env("HIVE_OIDC_CLIENT_SECRET"),
+  oidc_scopes: System.get_env("HIVE_OIDC_SCOPES", "openid profile email")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

@@ -13,6 +13,13 @@ defmodule HiveWeb.Router do
 
     pipe_through :browser
 
+    get "/login", AuthController, :new
+    get "/auth/oidc", AuthController, :oidc
+    get "/auth/oidc/callback", AuthController, :callback
+    post "/logout", AuthController, :delete
+
+    pipe_through HiveWeb.Plugs.RequireAuthenticated
+
     get "/", PageController, :home
   end
 end
