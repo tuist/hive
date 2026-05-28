@@ -23,7 +23,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "hive.appSecretName" -}}
+{{- if .Values.secrets.existingSecret -}}
+{{ .Values.secrets.existingSecret }}
+{{- else -}}
 {{ include "hive.fullname" . }}-app
+{{- end -}}
 {{- end -}}
 
 {{- define "hive.postgresClusterName" -}}

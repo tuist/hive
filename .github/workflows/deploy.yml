@@ -109,6 +109,7 @@ jobs:
         run: |
           helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
             --namespace "$NAMESPACE" --create-namespace \
+            --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
             --rollback-on-failure --timeout 15m --wait
       - name: Diagnostics on failure

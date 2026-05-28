@@ -24,8 +24,10 @@ spec:
         {{- include "hive.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "hive.fullname" . }}
+      {{- if .Values.image.pullSecretName }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecretName }}
+      {{- end }}
       terminationGracePeriodSeconds: 30
       initContainers:
         - name: migrate

@@ -1,0 +1,44 @@
+# Tuist-specific values for the Hive Helm chart, applied on top of the
+# generic defaults in values.yaml. Assumes the production cluster has:
+# - cert-manager, ingress-nginx, external-dns
+# - the External Secrets Operator with a ClusterSecretStore named
+#   `onepassword-hive` pointing at the `hive-k8s-production` 1Password
+#   vault
+# - the CloudNativePG operator
+# - Hetzner Cloud block storage
+
+host: hive.tuist.dev
+
+image:
+  pullSecretName: ghcr-pull
+
+env:
+  HIVE_AUTH_MODE: "oidc"
+  HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
+
+externalSecrets:
+  enabled: true
+  storeRef:
+    name: onepassword-hive
+    kind: ClusterSecretStore
+  items:
+    SECRET_KEY_BASE:
+      remoteRef: "hive-secret-key-base/password"
+    HIVE_GOOGLE_CLIENT_ID:
+      remoteRef: "hive-google-oauth/username"
+    HIVE_GOOGLE_CLIENT_SECRET:
+      remoteRef: "hive-google-oauth/credential"
+  pullSecret:
+    enabled: true
+    item: "hive-ghcr-pull"
+    field: "notesPlain"
+
+postgres:
+  storageClass: hcloud-volumes
+  backup:
+    enabled: true
+    endpointURL: https://fsn1.your-objectstorage.com
+    destinationPath: s3://hive-postgres-backups/production
+    externalSecret:
+      accessKeyRemoteRef: "hive-postgres-backup/username"
+      secretKeyRemoteRef: "hive-postgres-backup/credential"
