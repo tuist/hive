@@ -1,3 +1,5 @@
+<img src="priv/static/images/logo.png" alt="Hive" width="30%" />
+
 # Hive
 
 Hive is a Phoenix application for orchestrating product work for Tuist.
