@@ -17,64 +17,31 @@ defmodule HiveWeb.AuthControllerTest do
     assert redirected_to(conn) == ~p"/login"
   end
 
-  test "GET /login renders the generic provider button", %{conn: conn} do
+  test "GET /login renders a button per configured provider", %{conn: conn} do
     Application.put_env(:hive, :auth,
       mode: "oidc",
-      oidc_provider: "generic",
-      oidc_client_id: "client-id",
-      oidc_authorize_url: "https://example.com/authorize",
-      oidc_token_url: "https://example.com/token"
+      providers: [
+        google: %{display_name: "Google", allowed_domains: []},
+        oidc: %{display_name: "Example IDP", allowed_domains: []}
+      ]
     )
 
     conn = get(conn, ~p"/login")
 
     response = html_response(conn, 200)
     assert response =~ "Log in to Hive"
-    assert response =~ "Continue with Identity provider"
+    assert response =~ "Continue with Google"
+    assert response =~ "Continue with Example IDP"
+    assert response =~ ~s|href="/auth/google"|
+    assert response =~ ~s|href="/auth/oidc"|
   end
 
-  test "GET /login renders a Google button when HIVE_OIDC_PROVIDER=google", %{conn: conn} do
-    Application.put_env(:hive, :auth,
-      mode: "oidc",
-      oidc_provider: "google",
-      oidc_client_id: "google-client-id",
-      oidc_client_secret: "google-client-secret"
-    )
+  test "GET /login warns when no provider is configured but mode is oidc", %{conn: conn} do
+    Application.put_env(:hive, :auth, mode: "oidc", providers: [])
 
     conn = get(conn, ~p"/login")
 
     response = html_response(conn, 200)
-    assert response =~ "Continue with Google"
-    assert response =~ ~p"/auth/google"
-  end
-
-  test "GET /auth/google adds hd hint when a single allowed domain is configured", %{conn: conn} do
-    Application.put_env(:hive, :auth,
-      mode: "oidc",
-      oidc_provider: "google",
-      oidc_client_id: "google-client-id",
-      oidc_client_secret: "google-client-secret",
-      oidc_allowed_domains: "tuist.dev"
-    )
-
-    conn = get(conn, ~p"/auth/google")
-
-    location = List.first(get_resp_header(conn, "location"))
-    assert location =~ "hd=tuist.dev"
-  end
-
-  test "GET /auth/google omits hd hint when multiple domains are configured", %{conn: conn} do
-    Application.put_env(:hive, :auth,
-      mode: "oidc",
-      oidc_provider: "google",
-      oidc_client_id: "google-client-id",
-      oidc_client_secret: "google-client-secret",
-      oidc_allowed_domains: "tuist.dev, tuist.io"
-    )
-
-    conn = get(conn, ~p"/auth/google")
-
-    location = List.first(get_resp_header(conn, "location"))
-    refute location =~ "hd="
+    assert response =~ "No identity provider is configured"
   end
 end

@@ -24,16 +24,102 @@ port =
 
 config :hive, HiveWeb.Endpoint, http: [port: port]
 
+scopes = ["openid", "profile", "email"]
+
+present? = fn value -> is_binary(value) and String.trim(value) != "" end
+
+parse_domains = fn
+  nil ->
+    []
+
+  value when is_binary(value) ->
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&String.downcase/1)
+    |> Enum.reject(&(&1 == ""))
+end
+
+google_client_id = System.get_env("HIVE_GOOGLE_CLIENT_ID")
+google_client_secret = System.get_env("HIVE_GOOGLE_CLIENT_SECRET")
+google_allowed = parse_domains.(System.get_env("HIVE_GOOGLE_ALLOWED_DOMAINS"))
+
+oidc_issuer = System.get_env("HIVE_OIDC_ISSUER")
+oidc_client_id = System.get_env("HIVE_OIDC_CLIENT_ID")
+oidc_client_secret = System.get_env("HIVE_OIDC_CLIENT_SECRET")
+oidc_display_name = System.get_env("HIVE_OIDC_DISPLAY_NAME", "Identity provider")
+oidc_allowed = parse_domains.(System.get_env("HIVE_OIDC_ALLOWED_DOMAINS"))
+
+google_configured? = present?.(google_client_id) and present?.(google_client_secret)
+oidc_configured? = present?.(oidc_issuer) and present?.(oidc_client_id)
+
+# Pre-filter the Google account picker with `hd=` when a single allowed
+# domain is configured (Google's hosted-domain hint).
+google_authorize_params =
+  case google_allowed do
+    [single] -> %{"hd" => single}
+    _ -> %{}
+  end
+
+# Oidcc workers fetch each issuer's .well-known/openid-configuration at
+# boot; only register issuers that have credentials so we don't spin up
+# workers for unused providers.
+issuers =
+  Enum.filter(
+    [
+      google_configured? && %{name: :google, issuer: "https://accounts.google.com"},
+      oidc_configured? && %{name: :oidc, issuer: oidc_issuer}
+    ],
+    & &1
+  )
+
+config :ueberauth_oidcc, :issuers, issuers
+
+google_strategy =
+  google_configured? &&
+    {:google,
+     {Ueberauth.Strategy.Oidcc,
+      issuer: :google,
+      client_id: google_client_id,
+      client_secret: google_client_secret,
+      scopes: scopes,
+      authorization_params: google_authorize_params}}
+
+oidc_strategy =
+  oidc_configured? &&
+    {:oidc,
+     {Ueberauth.Strategy.Oidcc,
+      issuer: :oidc, client_id: oidc_client_id, client_secret: oidc_client_secret, scopes: scopes}}
+
+providers = Enum.filter([google_strategy, oidc_strategy], & &1)
+
+config :ueberauth, Ueberauth, providers: providers
+
+# Display metadata + domain allowlists for each enabled provider. Hive
+# consults this in the login page (button labels) and after Ueberauth's
+# callback succeeds (domain check). Only providers that match an
+# Ueberauth strategy above appear here.
+hive_providers =
+  []
+  |> then(fn acc ->
+    if google_configured? do
+      [{:google, %{display_name: "Google", allowed_domains: google_allowed}} | acc]
+    else
+      acc
+    end
+  end)
+  |> then(fn acc ->
+    if oidc_configured? do
+      [{:oidc, %{display_name: oidc_display_name, allowed_domains: oidc_allowed}} | acc]
+    else
+      acc
+    end
+  end)
+  |> Enum.reverse()
+
 config :hive, :auth,
   mode: System.get_env("HIVE_AUTH_MODE", "none"),
-  oidc_provider: System.get_env("HIVE_OIDC_PROVIDER", "generic"),
-  oidc_client_id: System.get_env("HIVE_OIDC_CLIENT_ID"),
-  oidc_client_secret: System.get_env("HIVE_OIDC_CLIENT_SECRET"),
-  oidc_authorize_url: System.get_env("HIVE_OIDC_AUTHORIZE_URL"),
-  oidc_token_url: System.get_env("HIVE_OIDC_TOKEN_URL"),
-  oidc_userinfo_url: System.get_env("HIVE_OIDC_USERINFO_URL"),
-  oidc_scopes: System.get_env("HIVE_OIDC_SCOPES", "openid profile email"),
-  oidc_allowed_domains: System.get_env("HIVE_OIDC_ALLOWED_DOMAINS")
+  providers: hive_providers
 
 if config_env() == :prod do
   database_url =

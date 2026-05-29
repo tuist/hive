@@ -50,9 +50,17 @@ Dev port is allocated dynamically via `Hive.Config.DevInstance` (see `config/dev
 
 ## Auth
 
-Auth is configured under `:hive, :auth` (see `config/runtime.exs`). Hive runs at most one OIDC provider per instance, selected via `HIVE_OIDC_PROVIDER=google|generic`. `Hive.Auth.provider/0` returns the configured provider map (or `nil`). The controller flow at `/auth/:provider` is provider-agnostic; `:provider` matches the configured provider's key (`"google"` or `"oidc"`).
+Auth is delegated to [Ueberauth] + [ueberauth_oidcc] (an OIDC strategy built on the `oidcc` library, which auto-discovers each provider's endpoints from `.well-known/openid-configuration`). `config/runtime.exs` reads env vars and registers issuers + strategies; `Hive.Auth` exposes only what the app's UI and callback need (`enabled?/0`, `providers/0`, `check_domain/2`, `current_user/1`).
 
-When `HIVE_OIDC_PROVIDER=google`, Hive injects Google's hardcoded authorize/token/userinfo URLs and, with a single-entry `HIVE_OIDC_ALLOWED_DOMAINS`, adds the `hd=` hint to the authorize redirect. The allowed-domains list is enforced on callback regardless of the `hd=` hint.
+[Ueberauth]: https://github.com/ueberauth/ueberauth
+[ueberauth_oidcc]: https://github.com/erlef/ueberauth_oidcc
+
+Two providers are supported and can run side-by-side:
+
+- **Google** — preset on `https://accounts.google.com`; needs `HIVE_GOOGLE_CLIENT_ID/_SECRET`. `HIVE_GOOGLE_ALLOWED_DOMAINS` with a single domain also pushes Google's `hd=` hint to the authorize redirect.
+- **Generic OIDC** — point `HIVE_OIDC_ISSUER` at any issuer URL with a `.well-known/openid-configuration`; supply `HIVE_OIDC_CLIENT_ID/_SECRET` (and optionally `HIVE_OIDC_DISPLAY_NAME`).
+
+Routes: Ueberauth's plug owns `/auth/:provider` (redirect to IdP) and `/auth/:provider/callback` (token exchange + userinfo). The Hive `AuthController.callback/2` action reads `conn.assigns.ueberauth_auth`, runs `Hive.Auth.check_domain/2` against the provider's allowlist, and stores the user in the session.
 
 ## Conventions
 

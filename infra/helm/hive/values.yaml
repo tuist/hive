@@ -52,8 +52,6 @@ env:
   POOL_SIZE: "10"
   DATABASE_SSL: "1"
   HIVE_AUTH_MODE: "none"
-  HIVE_OIDC_PROVIDER: "generic"
-  HIVE_OIDC_SCOPES: "openid profile email"
 
 probes:
   readiness:
@@ -100,9 +98,9 @@ externalSecrets:
   #   items:
   #     SECRET_KEY_BASE:
   #       remoteRef: "hive-secret-key-base/password"
-  #     HIVE_OIDC_CLIENT_ID:
+  #     HIVE_GOOGLE_CLIENT_ID:
   #       remoteRef: "google-oauth/username"
-  #     HIVE_OIDC_CLIENT_SECRET:
+  #     HIVE_GOOGLE_CLIENT_SECRET:
   #       remoteRef: "google-oauth/credential"
   items: {}
   pullSecret:

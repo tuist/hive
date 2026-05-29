@@ -35,4 +35,11 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+# Ueberauth providers and OIDC issuers are populated at runtime from
+# environment variables (see config/runtime.exs). Defaults are empty so
+# nothing is started when no provider is configured.
+config :ueberauth_oidcc, :issuers, []
+
+config :ueberauth, Ueberauth, providers: []
+
 import_config "#{config_env()}.exs"

@@ -15,33 +15,37 @@ or self-host your own.
 
 ### Authentication
 
-Hive runs without authentication by default. Set `HIVE_AUTH_MODE=oidc` to gate
-all routes behind login. Hive supports one OIDC provider per instance,
-selected via `HIVE_OIDC_PROVIDER`:
+Hive runs without authentication by default. Set `HIVE_AUTH_MODE=oidc` to
+gate all routes behind login. Auth is delegated to [Ueberauth] +
+[ueberauth_oidcc]; any number of providers can be enabled simultaneously
+and will appear as buttons on the login screen.
 
-| `HIVE_OIDC_PROVIDER` | URL slug | Notes                                              |
-| -------------------- | -------- | -------------------------------------------------- |
-| `google` (preset)    | `google` | Google's URLs are hardcoded; only credentials needed |
-| `generic` (default)  | `oidc`   | Bring your own authorize/token/userinfo URLs       |
+[Ueberauth]: https://github.com/ueberauth/ueberauth
+[ueberauth_oidcc]: https://github.com/erlef/ueberauth_oidcc
 
-Shared variables:
+#### Google
 
-- `HIVE_OIDC_CLIENT_ID` — required
-- `HIVE_OIDC_CLIENT_SECRET` — required for Google; optional for generic
-- `HIVE_OIDC_SCOPES` — optional, defaults to `openid profile email`
-- `HIVE_OIDC_ALLOWED_DOMAINS` — optional, comma-separated list of email
-  domains to accept (e.g. `tuist.dev`). Enforced on the callback. For
-  Google, a single domain also adds Google's `hd=` hint to pre-filter
-  the account picker.
+- `HIVE_GOOGLE_CLIENT_ID`
+- `HIVE_GOOGLE_CLIENT_SECRET`
+- `HIVE_GOOGLE_ALLOWED_DOMAINS` (optional, comma-separated list of email
+  domains to accept; e.g. `tuist.dev`). When a single domain is set,
+  the authorize redirect also includes Google's `hd=` hint to pre-filter
+  the account picker. The check is enforced on the callback regardless.
 
-Generic-only variables (`HIVE_OIDC_PROVIDER=generic`):
+Callback URL: `/auth/google/callback` on the deployed host.
 
-- `HIVE_OIDC_AUTHORIZE_URL` — required
-- `HIVE_OIDC_TOKEN_URL` — required
-- `HIVE_OIDC_USERINFO_URL` — optional
+#### Generic OpenID Connect
 
-Callback URL: `/auth/<slug>/callback` on the deployed host
-(`/auth/google/callback` or `/auth/oidc/callback`).
+Any OIDC provider with a `.well-known/openid-configuration` endpoint:
+
+- `HIVE_OIDC_ISSUER` — the issuer base URL (Hive's auth client discovers
+  authorize/token/userinfo endpoints from `<issuer>/.well-known/openid-configuration`)
+- `HIVE_OIDC_CLIENT_ID`
+- `HIVE_OIDC_CLIENT_SECRET` (optional)
+- `HIVE_OIDC_DISPLAY_NAME` (optional, label on the login button; defaults to "Identity provider")
+- `HIVE_OIDC_ALLOWED_DOMAINS` (optional, comma-separated allowlist)
+
+Callback URL: `/auth/oidc/callback` on the deployed host.
 
 #### Setting up Google OAuth
 
@@ -52,8 +56,8 @@ Callback URL: `/auth/<slug>/callback` on the deployed host
 3. **Create Credentials → OAuth client ID → Web application**.
 4. Add the **Authorized redirect URI** for each environment, e.g.
    `https://hive.example.com/auth/google/callback`.
-5. Copy the Client ID and Client Secret into `HIVE_OIDC_CLIENT_ID` and
-   `HIVE_OIDC_CLIENT_SECRET`, and set `HIVE_OIDC_PROVIDER=google`.
+5. Copy the Client ID and Client Secret into `HIVE_GOOGLE_CLIENT_ID` and
+   `HIVE_GOOGLE_CLIENT_SECRET`.
 
 ### Deployment
 
@@ -69,15 +73,14 @@ Minimum bring-your-own setup:
 kubectl create namespace hive
 kubectl -n hive create secret generic hive-app \
   --from-literal=SECRET_KEY_BASE="$(mix phx.gen.secret)" \
-  --from-literal=HIVE_OIDC_CLIENT_ID="..." \
-  --from-literal=HIVE_OIDC_CLIENT_SECRET="..."
+  --from-literal=HIVE_GOOGLE_CLIENT_ID="..." \
+  --from-literal=HIVE_GOOGLE_CLIENT_SECRET="..."
 
 helm upgrade --install hive infra/helm/hive \
   --namespace hive \
   --set host=hive.example.com \
   --set env.HIVE_AUTH_MODE=oidc \
-  --set env.HIVE_OIDC_PROVIDER=google \
-  --set env.HIVE_OIDC_ALLOWED_DOMAINS=example.com
+  --set env.HIVE_GOOGLE_ALLOWED_DOMAINS=example.com
 ```
 
 If you run External Secrets Operator, enable `externalSecrets.enabled`
@@ -128,7 +131,6 @@ The vault must contain:
 - `hive-secret-key-base/password`, generated with `mix phx.gen.secret`.
 - `hive-google-oauth/username` and `hive-google-oauth/credential`, holding the
   Google OAuth client ID and secret. Wired into the deployment as
-  `HIVE_OIDC_CLIENT_ID` and `HIVE_OIDC_CLIENT_SECRET` (with
-  `HIVE_OIDC_PROVIDER=google` set in the production overlay).
+  `HIVE_GOOGLE_CLIENT_ID` and `HIVE_GOOGLE_CLIENT_SECRET`.
 - `hive-ghcr-pull/notesPlain`, base64 of a Docker config JSON for GHCR pulls.
 - `hive-postgres-backup/username` and `hive-postgres-backup/credential`, used by CNPG backups.

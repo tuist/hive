@@ -12,7 +12,7 @@ defmodule HiveWeb.PageHTML do
       error: Keyword.get(opts, :error),
       product_name: Auth.product_name(),
       auth_enabled?: Auth.enabled?(),
-      provider: Auth.provider()
+      providers: Auth.providers()
     }
 
     ~H"""
@@ -25,20 +25,21 @@ defmodule HiveWeb.PageHTML do
               <h1 data-part="title">Log in to {@product_name}</h1>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
-            <div :if={@auth_enabled? and @provider} data-part="oauth">
+            <div :if={@auth_enabled? and @providers != []} data-part="oauth">
               <.button
-                label={"Continue with #{@provider.display_name}"}
-                href={~p"/auth/#{@provider.key}"}
+                :for={{key, meta} <- @providers}
+                label={"Continue with #{meta.display_name}"}
+                href={~p"/auth/#{Atom.to_string(key)}"}
                 variant="secondary"
                 size="medium"
               />
             </div>
-            <div :if={@auth_enabled? and is_nil(@provider)} data-part="oauth">
+            <div :if={@auth_enabled? and @providers == []} data-part="oauth">
               <.alert
                 status="warning"
                 size="large"
                 title="No identity provider is configured"
-                description="Set HIVE_OIDC_CLIENT_ID and the URLs (or HIVE_OIDC_PROVIDER=google with a client secret) to enable login."
+                description="Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
               />
             </div>
             <div :if={!@auth_enabled?} data-part="oauth">
