@@ -18,6 +18,8 @@ env:
   # restricts who can actually sign in.
   HIVE_VISIBILITY: "public"
   HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
+  HIVE_OBJECT_STORAGE_PROVIDER: "s3"
+  HIVE_S3_FORCE_PATH_STYLE: "true"
 
 externalSecrets:
   enabled: true
@@ -31,6 +33,16 @@ externalSecrets:
       remoteRef: "hive-google-oauth/username"
     HIVE_GOOGLE_CLIENT_SECRET:
       remoteRef: "hive-google-oauth/credential"
+    HIVE_S3_BUCKET:
+      remoteRef: "hive-object-storage/bucket"
+    HIVE_S3_REGION:
+      remoteRef: "hive-object-storage/region"
+    HIVE_S3_ENDPOINT_URL:
+      remoteRef: "hive-object-storage/endpoint-url"
+    HIVE_S3_ACCESS_KEY_ID:
+      remoteRef: "hive-object-storage/username"
+    HIVE_S3_SECRET_ACCESS_KEY:
+      remoteRef: "hive-object-storage/credential"
   pullSecret:
     enabled: true
     item: "hive-ghcr-pull"

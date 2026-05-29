@@ -44,12 +44,8 @@ config :phoenix, :json_library, Jason
 # fails with "could not be started".
 config :ueberauth, Ueberauth,
   providers: [
-    google:
-      {Ueberauth.Strategy.Oidcc,
-       [issuer: :google, scopes: ["openid", "profile", "email"]]},
-    oidc:
-      {Ueberauth.Strategy.Oidcc,
-       [issuer: :oidc, scopes: ["openid", "profile", "email"]]}
+    google: {Ueberauth.Strategy.Oidcc, [issuer: :google, scopes: ["openid", "profile", "email"]]},
+    oidc: {Ueberauth.Strategy.Oidcc, [issuer: :oidc, scopes: ["openid", "profile", "email"]]}
   ]
 
 # Issuers + per-strategy credentials are populated at runtime by

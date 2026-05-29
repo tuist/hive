@@ -46,8 +46,8 @@ ingress:
   clusterIssuer: letsencrypt-prod
 
 # Static, non-sensitive environment variables passed to the pod.
-# Add HIVE_AUTH_MODE: "oidc" and provider env vars (Google, generic OIDC)
-# in your environment overlay to require login.
+# Add provider env vars (Google, generic OIDC) in your environment
+# overlay to require login.
 env:
   POOL_SIZE: "10"
   DATABASE_SSL: "1"
@@ -55,6 +55,10 @@ env:
   # behind login and only authenticated users (passing any configured
   # provider's domain allowlist) can access them.
   HIVE_VISIBILITY: "public"
+  # none: object storage is disabled. s3: configure HIVE_S3_* env vars
+  # below, usually with credentials coming from `externalSecrets.items`.
+  HIVE_OBJECT_STORAGE_PROVIDER: "none"
+  HIVE_S3_FORCE_PATH_STYLE: "false"
 
 probes:
   readiness:

@@ -40,6 +40,43 @@ parse_domains = fn
     |> Enum.reject(&(&1 == ""))
 end
 
+parse_boolean = fn value ->
+  value in ~w(true 1)
+end
+
+object_storage_provider =
+  "HIVE_OBJECT_STORAGE_PROVIDER"
+  |> System.get_env("none")
+  |> String.trim()
+  |> String.downcase()
+  |> case do
+    "none" ->
+      :none
+
+    "" ->
+      :none
+
+    "s3" ->
+      :s3
+
+    provider ->
+      raise """
+      unsupported HIVE_OBJECT_STORAGE_PROVIDER=#{provider}.
+      Supported values are: none, s3
+      """
+  end
+
+config :hive, :object_storage,
+  provider: object_storage_provider,
+  s3: [
+    bucket: System.get_env("HIVE_S3_BUCKET"),
+    region: System.get_env("HIVE_S3_REGION", "us-east-1"),
+    endpoint_url: System.get_env("HIVE_S3_ENDPOINT_URL"),
+    access_key_id: System.get_env("HIVE_S3_ACCESS_KEY_ID"),
+    secret_access_key: System.get_env("HIVE_S3_SECRET_ACCESS_KEY"),
+    force_path_style: parse_boolean.(System.get_env("HIVE_S3_FORCE_PATH_STYLE"))
+  ]
+
 google_client_id = System.get_env("HIVE_GOOGLE_CLIENT_ID")
 google_client_secret = System.get_env("HIVE_GOOGLE_CLIENT_SECRET")
 google_allowed = parse_domains.(System.get_env("HIVE_GOOGLE_ALLOWED_DOMAINS"))
