@@ -1,4 +1,6 @@
-<img src="priv/static/images/logo.png" alt="Hive" width="30%" />
+<p align="center">
+  <img src="priv/static/images/logo.png" alt="Hive" width="20%" />
+</p>
 
 # Hive
 
