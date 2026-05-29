@@ -35,11 +35,26 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
-# Ueberauth providers and OIDC issuers are populated at runtime from
-# environment variables (see config/runtime.exs). Defaults are empty so
-# nothing is started when no provider is configured.
-config :ueberauth_oidcc, :issuers, []
+# Ueberauth's plug reads the providers list at plug-init time (which is
+# compile-time in prod). Declare every possible provider here with just
+# the strategy module + static options; ueberauth_oidcc looks up its
+# credentials at request time from `:ueberauth_oidcc, :providers`,
+# which runtime.exs populates from env vars. Without a compile-time
+# entry here the strategy isn't registered and `/auth/:provider`
+# fails with "could not be started".
+config :ueberauth, Ueberauth,
+  providers: [
+    google:
+      {Ueberauth.Strategy.Oidcc,
+       [issuer: :google, scopes: ["openid", "profile", "email"]]},
+    oidc:
+      {Ueberauth.Strategy.Oidcc,
+       [issuer: :oidc, scopes: ["openid", "profile", "email"]]}
+  ]
 
-config :ueberauth, Ueberauth, providers: []
+# Issuers + per-strategy credentials are populated at runtime by
+# config/runtime.exs based on which env vars are set.
+config :ueberauth_oidcc, :issuers, []
+config :ueberauth_oidcc, :providers, []
 
 import_config "#{config_env()}.exs"

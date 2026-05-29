@@ -75,25 +75,41 @@ issuers =
 
 config :ueberauth_oidcc, :issuers, issuers
 
-google_strategy =
-  google_configured? &&
-    {:google,
-     {Ueberauth.Strategy.Oidcc,
-      issuer: :google,
-      client_id: google_client_id,
-      client_secret: google_client_secret,
-      scopes: scopes,
-      authorization_params: google_authorize_params}}
+# Per-strategy credentials. ueberauth_oidcc's strategy reads these at
+# request time from `:ueberauth_oidcc, :providers` and merges them on
+# top of the compile-time options in config/config.exs. Only set the
+# entries for providers whose env vars are present.
+ueberauth_oidcc_providers =
+  []
+  |> then(fn acc ->
+    if google_configured? do
+      [
+        google: [
+          client_id: google_client_id,
+          client_secret: google_client_secret,
+          scopes: scopes,
+          authorization_params: google_authorize_params
+        ]
+      ] ++ acc
+    else
+      acc
+    end
+  end)
+  |> then(fn acc ->
+    if oidc_configured? do
+      [
+        oidc: [
+          client_id: oidc_client_id,
+          client_secret: oidc_client_secret,
+          scopes: scopes
+        ]
+      ] ++ acc
+    else
+      acc
+    end
+  end)
 
-oidc_strategy =
-  oidc_configured? &&
-    {:oidc,
-     {Ueberauth.Strategy.Oidcc,
-      issuer: :oidc, client_id: oidc_client_id, client_secret: oidc_client_secret, scopes: scopes}}
-
-providers = Enum.filter([google_strategy, oidc_strategy], & &1)
-
-config :ueberauth, Ueberauth, providers: providers
+config :ueberauth_oidcc, :providers, ueberauth_oidcc_providers
 
 # Display metadata + domain allowlists for each enabled provider. Hive
 # consults this in the login page (button labels) and after Ueberauth's
