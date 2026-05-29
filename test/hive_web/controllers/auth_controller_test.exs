@@ -1,16 +1,12 @@
 defmodule HiveWeb.AuthControllerTest do
-  use HiveWeb.ConnCase, async: false
+  use HiveWeb.ConnCase, async: true
+  use Mimic
 
-  setup do
-    previous = Application.get_env(:hive, :auth)
-
-    on_exit(fn ->
-      Application.put_env(:hive, :auth, previous)
-    end)
-  end
+  alias Hive.Auth
 
   test "GET / redirects to login when the instance is private", %{conn: conn} do
-    Application.put_env(:hive, :auth, visibility: "private")
+    stub(Auth, :private?, fn -> true end)
+    stub(Auth, :current_user, fn _conn -> nil end)
 
     conn = get(conn, ~p"/")
 
@@ -18,13 +14,14 @@ defmodule HiveWeb.AuthControllerTest do
   end
 
   test "GET /login renders a button per configured provider", %{conn: conn} do
-    Application.put_env(:hive, :auth,
-      visibility: "private",
-      providers: [
+    stub(Auth, :private?, fn -> true end)
+
+    stub(Auth, :providers, fn ->
+      [
         google: %{display_name: "Google", allowed_domains: []},
         oidc: %{display_name: "Example IDP", allowed_domains: []}
       ]
-    )
+    end)
 
     conn = get(conn, ~p"/login")
 
@@ -37,7 +34,8 @@ defmodule HiveWeb.AuthControllerTest do
   end
 
   test "GET /login warns when no provider is configured but instance is private", %{conn: conn} do
-    Application.put_env(:hive, :auth, visibility: "private", providers: [])
+    stub(Auth, :private?, fn -> true end)
+    stub(Auth, :providers, fn -> [] end)
 
     conn = get(conn, ~p"/login")
 

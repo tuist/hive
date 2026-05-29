@@ -129,6 +129,7 @@ YAML
 - No comments unless the *why* is non-obvious. Don't restate what well-named code does.
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
 - Tests live under `test/hive_web/...` mirroring `lib/hive_web/...` paths.
+- **All tests are `async: true`.** Never mutate `Application` config in `setup`/`on_exit`: that serializes the suite. When a test needs to control behavior that reads from app config, stub the wrapping module with [Mimic](https://github.com/edgurgel/mimic) (process-local; safe under parallel execution). `test/test_helper.exs` lists which modules are Mimic-copied; add yours there when introducing new mockable surfaces.
 
 ### CSS
 
