@@ -64,6 +64,33 @@ Two providers are supported and can run side-by-side:
 
 Routes: Ueberauth's plug owns `/auth/:provider` (redirect to IdP) and `/auth/:provider/callback` (token exchange + userinfo). The Hive `AuthController.callback/2` action reads `conn.assigns.ueberauth_auth`, runs `Hive.Auth.check_domain/2` against the provider's allowlist, and stores the user in the session.
 
+## Releases
+
+Versioning is driven by [git-cliff] and Conventional Commits, modeled after the [tuist/tuist] monorepo. Two independent release tracks live in this repo:
+
+[git-cliff]: https://git-cliff.org
+[tuist/tuist]: https://github.com/tuist/tuist/blob/main/.github/workflows/release.yml
+
+- **App** (Docker image `ghcr.io/tuist/hive`) — versioned via `server@X.Y.Z` tags. Config: `cliff.toml` at the repo root. Any Conventional Commit that isn't `(helm)`-scoped contributes (so `feat(auth):`, `fix:`, `refactor(css):` etc. all count).
+- **Helm chart** (OCI artifact at `oci://ghcr.io/tuist/charts/hive`) — versioned via `helm@X.Y.Z` tags. Config: `infra/helm/hive/cliff.toml`. Only `(helm)`-scoped commits count.
+
+`.github/workflows/release.yml` runs on every push to `main`:
+
+1. **check-releases** uses `git cliff --bumped-version` to figure out whether either component has releasable changes since the last `server@*` / `helm@*` tag.
+2. **release-server** (conditional): generates release notes, refreshes `CHANGELOG.md`, builds and pushes the Docker image tagged with the new version (and `:latest`).
+3. **release-helm** (conditional): generates release notes, bumps `Chart.yaml` (`version` + `appVersion`), refreshes `infra/helm/hive/CHANGELOG.md`, runs `helm package` + `helm push` to the GHCR OCI registry.
+4. **commit-and-release**: creates git tags, publishes a GitHub Release per component with the cliff-generated notes, then commits the `CHANGELOG.md` / `Chart.yaml` bumps back to `main` with `[skip ci]`.
+
+The existing **`deploy.yml`** still fires on every push and ships a sha-tagged image to production immediately — this is the canonical promotion path. The release workflow runs in parallel and produces versioned artifacts for anyone consuming the Docker image or Helm chart out-of-band.
+
+To preview what the next release notes will look like locally:
+
+```bash
+mise exec -- git-cliff --config cliff.toml                       # app
+mise exec -- git-cliff --include-path "infra/helm/**/*" \
+  --config infra/helm/hive/cliff.toml                            # helm chart
+```
+
 ## Tuist's production deployment
 
 `infra/helm/hive/values-production.yaml` is the overlay Tuist applies to the chart at deploy time via `.github/workflows/deploy.yml`. The production cluster assumes cert-manager, ingress-nginx, external-dns, the CloudNativePG operator, the External Secrets Operator with a `ClusterSecretStore` named `onepassword-hive` pointing at the `hive-k8s-production` 1Password vault, and Hetzner Cloud block storage (`hcloud-volumes`).
