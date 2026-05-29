@@ -1,6 +1,7 @@
 defmodule Hive.Auth do
   @moduledoc false
 
+  @product_name "Hive"
   @google_authorize_url "https://accounts.google.com/o/oauth2/v2/auth"
   @google_token_url "https://oauth2.googleapis.com/token"
   @google_userinfo_url "https://openidconnect.googleapis.com/v1/userinfo"
@@ -19,17 +20,7 @@ defmodule Hive.Auth do
     |> String.downcase()
   end
 
-  def product_name do
-    :hive
-    |> Application.get_env(:auth, [])
-    |> Keyword.get(:product_name, "Hive")
-  end
-
-  def product_tagline do
-    :hive
-    |> Application.get_env(:auth, [])
-    |> Keyword.get(:product_tagline, "Product work orchestration")
-  end
+  def product_name, do: @product_name
 
   @doc """
   Returns the configured provider as a map, or nil if no provider is
@@ -99,7 +90,7 @@ defmodule Hive.Auth do
     if present?(authorize_url) and present?(token_url) do
       %{
         key: "oidc",
-        display_name: Keyword.get(auth, :provider_name, "Identity provider"),
+        display_name: "Identity provider",
         authorize_url: authorize_url,
         token_url: token_url,
         userinfo_url: Keyword.get(auth, :oidc_userinfo_url),

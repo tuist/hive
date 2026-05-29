@@ -11,7 +11,6 @@ defmodule HiveWeb.PageHTML do
       conn: conn,
       error: Keyword.get(opts, :error),
       product_name: Auth.product_name(),
-      product_tagline: Auth.product_tagline(),
       auth_enabled?: Auth.enabled?(),
       provider: Auth.provider()
     }
@@ -24,7 +23,6 @@ defmodule HiveWeb.PageHTML do
             <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
             <div data-part="header">
               <h1 data-part="title">Log in to {@product_name}</h1>
-              <span data-part="subtitle">{@product_tagline}</span>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
             <div :if={@auth_enabled? and @provider} data-part="oauth">
@@ -77,7 +75,6 @@ defmodule HiveWeb.PageHTML do
       auth_enabled?: Auth.enabled?(),
       csrf_token: Plug.CSRFProtection.get_csrf_token(),
       product_name: Auth.product_name(),
-      product_tagline: Auth.product_tagline(),
       user_email: user["email"],
       user_name: user_name,
       avatar_color: if(user_name == "Guest", do: "gray", else: "purple"),
@@ -96,7 +93,6 @@ defmodule HiveWeb.PageHTML do
         current_path={@current_path}
       >
         <h1>Overview</h1>
-        <p>{@product_tagline}</p>
         <.card icon="checkup_list" title="Getting started">
           <.card_section>
             <ul>

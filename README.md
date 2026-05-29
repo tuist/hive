@@ -39,8 +39,6 @@ Generic-only variables (`HIVE_OIDC_PROVIDER=generic`):
 - `HIVE_OIDC_AUTHORIZE_URL` — required
 - `HIVE_OIDC_TOKEN_URL` — required
 - `HIVE_OIDC_USERINFO_URL` — optional
-- `HIVE_AUTH_PROVIDER_NAME` — optional, label on the login button
-  (defaults to "Identity provider"; ignored for Google which always shows "Google")
 
 Callback URL: `/auth/<slug>/callback` on the deployed host
 (`/auth/google/callback` or `/auth/oidc/callback`).
@@ -56,10 +54,6 @@ Callback URL: `/auth/<slug>/callback` on the deployed host
    `https://hive.example.com/auth/google/callback`.
 5. Copy the Client ID and Client Secret into `HIVE_OIDC_CLIENT_ID` and
    `HIVE_OIDC_CLIENT_SECRET`, and set `HIVE_OIDC_PROVIDER=google`.
-
-#### Branding
-
-- `HIVE_PRODUCT_NAME` and `HIVE_PRODUCT_TAGLINE` control the login copy.
 
 ### Deployment
 

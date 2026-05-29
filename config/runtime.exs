@@ -26,9 +26,6 @@ config :hive, HiveWeb.Endpoint, http: [port: port]
 
 config :hive, :auth,
   mode: System.get_env("HIVE_AUTH_MODE", "none"),
-  product_name: System.get_env("HIVE_PRODUCT_NAME", "Hive"),
-  product_tagline: System.get_env("HIVE_PRODUCT_TAGLINE", "Product work orchestration"),
-  provider_name: System.get_env("HIVE_AUTH_PROVIDER_NAME", "Identity provider"),
   oidc_provider: System.get_env("HIVE_OIDC_PROVIDER", "generic"),
   oidc_client_id: System.get_env("HIVE_OIDC_CLIENT_ID"),
   oidc_client_secret: System.get_env("HIVE_OIDC_CLIENT_SECRET"),
