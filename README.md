@@ -2,7 +2,19 @@
   <img src="priv/static/images/logo.png" alt="Hive" width="20%" />
 </p>
 
-# Hive
+<h1 align="center">Hive</h1>
+
+<p align="center">
+  <a href="https://github.com/tuist/hive/releases">
+    <img src="https://img.shields.io/github/v/release/tuist/hive?style=flat-square" alt="Latest release" />
+  </a>
+  <a href="LICENSE.md">
+    <img src="https://img.shields.io/github/license/tuist/hive?style=flat-square" alt="MPL-2.0 license" />
+  </a>
+  <a href="https://elixir-lang.org">
+    <img src="https://img.shields.io/badge/language-Elixir-4B275F?style=flat-square" alt="Elixir" />
+  </a>
+</p>
 
 At Tuist we've reimagined how we shape and build product by leaning into
 LLMs and agentic workflows, and Hive is our take on it. It's built to run
