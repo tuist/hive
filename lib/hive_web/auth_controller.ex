@@ -25,7 +25,8 @@ defmodule HiveWeb.AuthController do
     }
 
     with key when is_atom(key) <- safe_atom(provider_key),
-         :ok <- Auth.check_domain(key, user["email"] || "") do
+         provider when not is_nil(provider) <- Auth.provider(key),
+         :ok <- Auth.check_domain(provider, user["email"] || "") do
       conn
       |> configure_session(renew: true)
       |> put_session(:current_user, user)

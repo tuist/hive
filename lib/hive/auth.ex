@@ -42,25 +42,25 @@ defmodule Hive.Auth do
   end
 
   @doc """
-  Checks an authenticated email against the provider's allowed-domains
+  Checks an authenticated email against a provider's allowed-domains
   list. Returns `:ok` when allowed (or when no list is set), or
-  `{:error, :domain_not_allowed}` when rejected.
+  `{:error, :domain_not_allowed}` when rejected. `nil` (unknown
+  provider) is rejected.
+
+  Pure function — pass `provider/1`'s result to it explicitly:
+
+      provider = Hive.Auth.provider(:google)
+      Hive.Auth.check_domain(provider, email)
   """
-  def check_domain(key, email) when is_atom(key) and is_binary(email) do
-    case provider(key) do
-      %{allowed_domains: []} ->
-        :ok
+  def check_domain(nil, _email), do: {:error, :domain_not_allowed}
+  def check_domain(%{allowed_domains: []}, _email), do: :ok
 
-      %{allowed_domains: domains} ->
-        domain = email |> String.split("@", parts: 2) |> List.last() |> String.downcase()
-        if domain in domains, do: :ok, else: {:error, :domain_not_allowed}
-
-      _ ->
-        {:error, :domain_not_allowed}
-    end
+  def check_domain(%{allowed_domains: domains}, email) when is_binary(email) do
+    domain = email |> String.split("@", parts: 2) |> List.last() |> String.downcase()
+    if domain in domains, do: :ok, else: {:error, :domain_not_allowed}
   end
 
-  def check_domain(_key, _email), do: {:error, :domain_not_allowed}
+  def check_domain(_provider, _email), do: {:error, :domain_not_allowed}
 
   def current_user(conn), do: Plug.Conn.get_session(conn, :current_user)
 end
