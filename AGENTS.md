@@ -60,6 +60,23 @@ When `HIVE_OIDC_PROVIDER=google`, Hive injects Google's hardcoded authorize/toke
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
 - Tests live under `test/hive_web/...` mirroring `lib/hive_web/...` paths.
 
+### CSS
+
+The stylesheet is split by responsibility, not bundled into one file:
+
+```
+assets/css/
+├── app.css                # @imports + base resets only
+├── layouts/<name>.css     # chrome shared across many routes (.layout, .headerbar, …)
+├── components/<name>.css  # extensions/combinations of Noora components (.account-dropdown, …)
+└── routes/<name>.css      # everything specific to one route, scoped under #<route-id>
+```
+
+- **Routes are identified by an `#id`** on the route's root element (e.g. `<main id="login">`). All route-specific CSS lives nested under that selector in `routes/<route>.css`. This keeps route styles from leaking and makes it obvious what each rule targets.
+- **Components in `components/`** are reusable widgets that either extend a Noora component or compose several (e.g. `.account-dropdown` wraps `<.avatar>`). Plain Noora usage doesn't need a file here.
+- **Use Noora variables** (`--noora-spacing-*`, `--noora-surface-*`, `--noora-font-*`, `--noora-radius-*`, `--noora-z-index-*`) over hardcoded values. Pixel dimensions for non-Noora-sized things (logo sizing, gradient blobs) are fine when no variable fits.
+- **Nest** with native CSS nesting (`&` operator). No utility/atomic classes — keep styling co-located with the component or route selector it belongs to.
+
 ## Deployment
 
 `main` auto-deploys via `.github/workflows/deploy.yml`: builds + pushes `ghcr.io/tuist/hive`, then `helm upgrade --install` against the `hive-production` cluster with the production overlay. Secrets come from 1Password (vault `hive-k8s-production`) via External Secrets Operator.
