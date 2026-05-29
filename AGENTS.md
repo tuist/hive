@@ -124,7 +124,7 @@ YAML
 
 ## Conventions
 
-- Conventional Commits for PR titles and commit messages (`feat:`, `refactor(helm):`, `docs:` …).
+- **PR titles and commit messages use Conventional Commits with an explicit scope naming the domain.** Examples: `feat(auth): support Apple sign-in`, `refactor(helm): genericize the chart`, `style(web): adopt tuist-style login`, `test(auth): use Mimic instead of put_env`, `ci(release): pin action SHAs`, `docs(deploy): document Tuist's overlay`. The scope drives `git-cliff`'s changelog grouping: `(helm)` commits feed the chart's release notes; every other scope feeds the app's. Don't omit the scope (`feat:` alone is acceptable in cliff but undermines reviewer/release-note clarity).
 - Prefer editing existing files over creating new ones; keep modules small and domain-focused.
 - No comments unless the *why* is non-obvious. Don't restate what well-named code does.
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
