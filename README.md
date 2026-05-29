@@ -5,8 +5,17 @@
 <h1 align="center">Hive</h1>
 
 <p align="center">
+  <a href="https://github.com/tuist/hive/actions/workflows/hive.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/tuist/hive/hive.yml?branch=main&label=ci&style=flat-square" alt="CI" />
+  </a>
+  <a href="https://github.com/tuist/hive/actions/workflows/deploy.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/tuist/hive/deploy.yml?branch=main&label=deploy&style=flat-square" alt="Deployment" />
+  </a>
   <a href="https://github.com/tuist/hive/releases">
-    <img src="https://img.shields.io/github/v/release/tuist/hive?style=flat-square" alt="Latest release" />
+    <img src="https://img.shields.io/github/v/release/tuist/hive?label=release&style=flat-square" alt="Latest release" />
+  </a>
+  <a href="https://github.com/tuist/hive/pkgs/container/hive">
+    <img src="https://img.shields.io/badge/image-ghcr.io%2Ftuist%2Fhive-2496ED?style=flat-square" alt="GHCR image" />
   </a>
   <a href="LICENSE.md">
     <img src="https://img.shields.io/github/license/tuist/hive?style=flat-square" alt="MPL-2.0 license" />
