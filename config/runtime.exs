@@ -29,17 +29,14 @@ config :hive, :auth,
   product_name: System.get_env("HIVE_PRODUCT_NAME", "Hive"),
   product_tagline: System.get_env("HIVE_PRODUCT_TAGLINE", "Product work orchestration"),
   provider_name: System.get_env("HIVE_AUTH_PROVIDER_NAME", "Identity provider"),
-  google_client_id: System.get_env("HIVE_GOOGLE_CLIENT_ID"),
-  google_client_secret: System.get_env("HIVE_GOOGLE_CLIENT_SECRET"),
-  google_scopes: System.get_env("HIVE_GOOGLE_SCOPES", "openid profile email"),
-  google_allowed_domains: System.get_env("HIVE_GOOGLE_ALLOWED_DOMAINS"),
-  oidc_allowed_domains: System.get_env("HIVE_OIDC_ALLOWED_DOMAINS"),
+  oidc_provider: System.get_env("HIVE_OIDC_PROVIDER", "generic"),
+  oidc_client_id: System.get_env("HIVE_OIDC_CLIENT_ID"),
+  oidc_client_secret: System.get_env("HIVE_OIDC_CLIENT_SECRET"),
   oidc_authorize_url: System.get_env("HIVE_OIDC_AUTHORIZE_URL"),
   oidc_token_url: System.get_env("HIVE_OIDC_TOKEN_URL"),
   oidc_userinfo_url: System.get_env("HIVE_OIDC_USERINFO_URL"),
-  oidc_client_id: System.get_env("HIVE_OIDC_CLIENT_ID"),
-  oidc_client_secret: System.get_env("HIVE_OIDC_CLIENT_SECRET"),
-  oidc_scopes: System.get_env("HIVE_OIDC_SCOPES", "openid profile email")
+  oidc_scopes: System.get_env("HIVE_OIDC_SCOPES", "openid profile email"),
+  oidc_allowed_domains: System.get_env("HIVE_OIDC_ALLOWED_DOMAINS")
 
 if config_env() == :prod do
   database_url =

@@ -23,6 +23,7 @@ defmodule HiveWeb.AuthControllerTest do
       provider_name: "Example IDP",
       product_name: "Hive",
       product_tagline: "Product work orchestration",
+      oidc_provider: "generic",
       oidc_client_id: "client-id",
       oidc_authorize_url: "https://example.com/authorize",
       oidc_token_url: "https://example.com/token"
@@ -36,26 +37,29 @@ defmodule HiveWeb.AuthControllerTest do
     assert response =~ "Continue with Example IDP"
   end
 
-  test "GET /login renders a Google button when Google credentials are configured", %{conn: conn} do
+  test "GET /login renders a Google button when HIVE_OIDC_PROVIDER=google", %{conn: conn} do
     Application.put_env(:hive, :auth,
       mode: "oidc",
       product_name: "Hive",
-      google_client_id: "google-client-id",
-      google_client_secret: "google-client-secret"
+      oidc_provider: "google",
+      oidc_client_id: "google-client-id",
+      oidc_client_secret: "google-client-secret"
     )
 
     conn = get(conn, ~p"/login")
 
     response = html_response(conn, 200)
     assert response =~ "Continue with Google"
+    assert response =~ ~p"/auth/google"
   end
 
   test "GET /auth/google adds hd hint when a single allowed domain is configured", %{conn: conn} do
     Application.put_env(:hive, :auth,
       mode: "oidc",
-      google_client_id: "google-client-id",
-      google_client_secret: "google-client-secret",
-      google_allowed_domains: "tuist.dev"
+      oidc_provider: "google",
+      oidc_client_id: "google-client-id",
+      oidc_client_secret: "google-client-secret",
+      oidc_allowed_domains: "tuist.dev"
     )
 
     conn = get(conn, ~p"/auth/google")
@@ -67,9 +71,10 @@ defmodule HiveWeb.AuthControllerTest do
   test "GET /auth/google omits hd hint when multiple domains are configured", %{conn: conn} do
     Application.put_env(:hive, :auth,
       mode: "oidc",
-      google_client_id: "google-client-id",
-      google_client_secret: "google-client-secret",
-      google_allowed_domains: "tuist.dev, tuist.io"
+      oidc_provider: "google",
+      oidc_client_id: "google-client-id",
+      oidc_client_secret: "google-client-secret",
+      oidc_allowed_domains: "tuist.dev, tuist.io"
     )
 
     conn = get(conn, ~p"/auth/google")

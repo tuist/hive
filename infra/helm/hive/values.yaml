@@ -55,8 +55,8 @@ env:
   HIVE_PRODUCT_TAGLINE: "Product work orchestration"
   HIVE_AUTH_MODE: "none"
   HIVE_AUTH_PROVIDER_NAME: "Identity provider"
+  HIVE_OIDC_PROVIDER: "generic"
   HIVE_OIDC_SCOPES: "openid profile email"
-  HIVE_GOOGLE_SCOPES: "openid profile email"
 
 probes:
   readiness:
@@ -103,10 +103,10 @@ externalSecrets:
   #   items:
   #     SECRET_KEY_BASE:
   #       remoteRef: "hive-secret-key-base/password"
-  #     HIVE_GOOGLE_CLIENT_ID:
-  #       remoteRef: "hive-google-oauth/username"
-  #     HIVE_GOOGLE_CLIENT_SECRET:
-  #       remoteRef: "hive-google-oauth/credential"
+  #     HIVE_OIDC_CLIENT_ID:
+  #       remoteRef: "google-oauth/username"
+  #     HIVE_OIDC_CLIENT_SECRET:
+  #       remoteRef: "google-oauth/credential"
   items: {}
   pullSecret:
     enabled: false

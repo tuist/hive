@@ -31,23 +31,51 @@ defmodule Hive.Auth do
     |> Keyword.get(:product_tagline, "Product work orchestration")
   end
 
-  def providers do
-    Enum.reject([google_provider(), oidc_provider()], &is_nil/1)
+  @doc """
+  Returns the configured provider as a map, or nil if no provider is
+  configured. Hive runs at most one provider per instance.
+  """
+  def provider do
+    auth = Application.get_env(:hive, :auth, [])
+    client_id = Keyword.get(auth, :oidc_client_id)
+
+    cond do
+      not present?(client_id) ->
+        nil
+
+      provider_type(auth) == "google" ->
+        google_provider(auth, client_id)
+
+      provider_type(auth) == "generic" ->
+        generic_provider(auth, client_id)
+
+      true ->
+        nil
+    end
   end
 
   def provider(key) when is_binary(key) do
-    Enum.find(providers(), &(&1.key == key))
+    case provider() do
+      %{key: ^key} = provider -> provider
+      _ -> nil
+    end
   end
 
   def current_user(conn), do: Plug.Conn.get_session(conn, :current_user)
 
-  defp google_provider do
-    auth = Application.get_env(:hive, :auth, [])
-    client_id = Keyword.get(auth, :google_client_id)
-    client_secret = Keyword.get(auth, :google_client_secret)
+  defp provider_type(auth) do
+    auth
+    |> Keyword.get(:oidc_provider, "generic")
+    |> to_string()
+    |> String.trim()
+    |> String.downcase()
+  end
 
-    if present?(client_id) and present?(client_secret) do
-      allowed_domains = parse_domains(Keyword.get(auth, :google_allowed_domains))
+  defp google_provider(auth, client_id) do
+    client_secret = Keyword.get(auth, :oidc_client_secret)
+
+    if present?(client_secret) do
+      allowed_domains = parse_domains(Keyword.get(auth, :oidc_allowed_domains))
 
       %{
         key: "google",
@@ -57,9 +85,29 @@ defmodule Hive.Auth do
         userinfo_url: @google_userinfo_url,
         client_id: client_id,
         client_secret: client_secret,
-        scopes: Keyword.get(auth, :google_scopes, @default_scopes),
+        scopes: Keyword.get(auth, :oidc_scopes, @default_scopes),
         allowed_domains: allowed_domains,
         authorize_params: google_authorize_params(allowed_domains)
+      }
+    end
+  end
+
+  defp generic_provider(auth, client_id) do
+    authorize_url = Keyword.get(auth, :oidc_authorize_url)
+    token_url = Keyword.get(auth, :oidc_token_url)
+
+    if present?(authorize_url) and present?(token_url) do
+      %{
+        key: "oidc",
+        display_name: Keyword.get(auth, :provider_name, "Identity provider"),
+        authorize_url: authorize_url,
+        token_url: token_url,
+        userinfo_url: Keyword.get(auth, :oidc_userinfo_url),
+        client_id: client_id,
+        client_secret: Keyword.get(auth, :oidc_client_secret),
+        scopes: Keyword.get(auth, :oidc_scopes, @default_scopes),
+        allowed_domains: parse_domains(Keyword.get(auth, :oidc_allowed_domains)),
+        authorize_params: %{}
       }
     end
   end
@@ -75,28 +123,6 @@ defmodule Hive.Auth do
     |> Enum.map(&String.trim/1)
     |> Enum.map(&String.downcase/1)
     |> Enum.reject(&(&1 == ""))
-  end
-
-  defp oidc_provider do
-    auth = Application.get_env(:hive, :auth, [])
-    client_id = Keyword.get(auth, :oidc_client_id)
-    authorize_url = Keyword.get(auth, :oidc_authorize_url)
-    token_url = Keyword.get(auth, :oidc_token_url)
-
-    if present?(client_id) and present?(authorize_url) and present?(token_url) do
-      %{
-        key: "oidc",
-        display_name: Keyword.get(auth, :provider_name, "Identity provider"),
-        authorize_url: authorize_url,
-        token_url: token_url,
-        userinfo_url: Keyword.get(auth, :oidc_userinfo_url),
-        client_id: client_id,
-        client_secret: Keyword.get(auth, :oidc_client_secret),
-        scopes: Keyword.get(auth, :oidc_scopes, @default_scopes),
-        allowed_domains: parse_domains(Keyword.get(auth, :oidc_allowed_domains)),
-        authorize_params: %{}
-      }
-    end
   end
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""

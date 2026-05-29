@@ -14,7 +14,8 @@ image:
 
 env:
   HIVE_AUTH_MODE: "oidc"
-  HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
+  HIVE_OIDC_PROVIDER: "google"
+  HIVE_OIDC_ALLOWED_DOMAINS: "tuist.dev"
 
 externalSecrets:
   enabled: true
@@ -24,9 +25,9 @@ externalSecrets:
   items:
     SECRET_KEY_BASE:
       remoteRef: "hive-secret-key-base/password"
-    HIVE_GOOGLE_CLIENT_ID:
+    HIVE_OIDC_CLIENT_ID:
       remoteRef: "hive-google-oauth/username"
-    HIVE_GOOGLE_CLIENT_SECRET:
+    HIVE_OIDC_CLIENT_SECRET:
       remoteRef: "hive-google-oauth/credential"
   pullSecret:
     enabled: true
