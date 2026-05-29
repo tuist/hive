@@ -42,4 +42,31 @@ defmodule HiveWeb.AuthControllerTest do
     response = html_response(conn, 200)
     assert response =~ "No identity provider is configured"
   end
+
+  test "GET /login on a public instance shows provider buttons when configured", %{conn: conn} do
+    stub(Auth, :private?, fn -> false end)
+
+    stub(Auth, :providers, fn ->
+      [google: %{display_name: "Google", allowed_domains: []}]
+    end)
+
+    conn = get(conn, ~p"/login")
+
+    response = html_response(conn, 200)
+    assert response =~ "Continue with Google"
+    assert response =~ "Continue without signing in"
+  end
+
+  test "GET /login on a public instance with no providers shows the public-instance copy", %{
+    conn: conn
+  } do
+    stub(Auth, :private?, fn -> false end)
+    stub(Auth, :providers, fn -> [] end)
+
+    conn = get(conn, ~p"/login")
+
+    response = html_response(conn, 200)
+    assert response =~ "This instance is public"
+    refute response =~ "HIVE_AUTH_MODE"
+  end
 end

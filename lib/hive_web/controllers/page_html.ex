@@ -25,7 +25,7 @@ defmodule HiveWeb.PageHTML do
               <h1 data-part="title">Log in to {@product_name}</h1>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
-            <div :if={@auth_enabled? and @providers != []} data-part="oauth">
+            <div :if={@providers != []} data-part="oauth">
               <.button
                 :for={{key, meta} <- @providers}
                 label={"Continue with #{meta.display_name}"}
@@ -33,8 +33,15 @@ defmodule HiveWeb.PageHTML do
                 variant="secondary"
                 size="medium"
               />
+              <.button
+                :if={!@auth_enabled?}
+                label="Continue without signing in"
+                href={~p"/"}
+                variant="secondary"
+                size="medium"
+              />
             </div>
-            <div :if={@auth_enabled? and @providers == []} data-part="oauth">
+            <div :if={@providers == [] and @auth_enabled?} data-part="oauth">
               <.alert
                 status="warning"
                 size="large"
@@ -42,15 +49,15 @@ defmodule HiveWeb.PageHTML do
                 description="Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
               />
             </div>
-            <div :if={!@auth_enabled?} data-part="oauth">
+            <div :if={@providers == [] and !@auth_enabled?} data-part="oauth">
               <.alert
                 status="information"
                 size="large"
-                title="Authentication is disabled for this environment"
-                description="Set HIVE_AUTH_MODE=oidc to require an external identity provider."
+                title="This instance is public"
+                description="Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
               />
               <.button
-                label="Continue without authentication"
+                label="Continue without signing in"
                 href={~p"/"}
                 variant="secondary"
                 size="medium"
