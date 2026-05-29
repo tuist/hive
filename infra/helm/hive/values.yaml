@@ -1,19 +1,22 @@
-# Production values for the Hive Helm chart.
+# Generic defaults for the Hive Helm chart.
 #
-# Assumes cert-manager, ingress-nginx, external-dns,
-# external-secrets-operator with a 1Password ClusterSecretStore named
-# `onepassword-hive`, and the CloudNativePG operator.
+# These values let anyone deploy their own Hive instance. Tuist's
+# production configuration lives in `values-production.yaml` and is
+# applied on top of these defaults via `helm upgrade -f`.
 
 nameOverride: ""
 fullnameOverride: "hive"
 
-host: hive.tuist.dev
+# Public hostname for the deployment. Override per environment.
+host: hive.example.com
 
 image:
   repository: ghcr.io/tuist/hive
   tag: ""
   pullPolicy: IfNotPresent
-  pullSecretName: ghcr-pull
+  # Name of an existing imagePullSecret in the release namespace. Leave
+  # empty if the image is public or your nodes are already authenticated.
+  pullSecretName: ""
 
 replicaCount: 2
 
@@ -42,9 +45,16 @@ ingress:
   className: nginx
   clusterIssuer: letsencrypt-prod
 
+# Static, non-sensitive environment variables passed to the pod.
+# Add HIVE_AUTH_MODE: "oidc" and provider env vars (Google, generic OIDC)
+# in your environment overlay to require login.
 env:
   POOL_SIZE: "10"
   DATABASE_SSL: "1"
+  # public: anyone can reach the dashboard. private: routes are gated
+  # behind login and only authenticated users (passing any configured
+  # provider's domain allowlist) can access them.
+  HIVE_VISIBILITY: "public"
 
 probes:
   readiness:
@@ -63,24 +73,50 @@ probes:
     timeoutSeconds: 3
     failureThreshold: 30
 
+# Secrets injected into the pod via envFrom. By default the chart
+# expects a Kubernetes Secret named `<release>-hive-app` (matching
+# `hive.appSecretName`) to already exist in the namespace with at
+# minimum `SECRET_KEY_BASE`. Two options to populate it:
+#
+#   1. Create it yourself (`kubectl create secret generic ...`). Set
+#      `secrets.existingSecret` to point at a differently-named secret.
+#   2. Enable `externalSecrets.enabled` below if you run the
+#      External Secrets Operator; the chart will create the secret
+#      for you from your configured backend (e.g. 1Password, Vault).
+secrets:
+  existingSecret: ""
+
+# External Secrets integration. Disabled by default so the generic
+# chart doesn't assume ESO is installed. Enable + provide a store
+# reference and remote refs in your environment overlay.
 externalSecrets:
+  enabled: false
   refreshInterval: 1h
   storeRef:
-    name: onepassword-hive
+    name: ""
     kind: ClusterSecretStore
-  items:
-    SECRET_KEY_BASE:
-      remoteRef: "hive-secret-key-base/password"
+  # Map of env var name → external backend reference. Only items with
+  # a non-empty `remoteRef` are wired up. Set in your overlay, e.g.:
+  #
+  #   items:
+  #     SECRET_KEY_BASE:
+  #       remoteRef: "hive-secret-key-base/password"
+  #     HIVE_GOOGLE_CLIENT_ID:
+  #       remoteRef: "google-oauth/username"
+  #     HIVE_GOOGLE_CLIENT_SECRET:
+  #       remoteRef: "google-oauth/credential"
+  items: {}
   pullSecret:
-    enabled: true
-    item: "hive-ghcr-pull"
-    field: "notesPlain"
+    enabled: false
+    item: ""
+    field: ""
 
 postgres:
   enabled: true
   instances: 2
   storageSize: 20Gi
-  storageClass: hcloud-volumes
+  # Empty string lets the cluster default storage class be used.
+  storageClass: ""
   imageName: ghcr.io/cloudnative-pg/postgresql:18.0
   database: hive
   owner: hive
@@ -91,12 +127,12 @@ postgres:
     limits:
       memory: 512Mi
   backup:
-    enabled: true
-    endpointURL: https://fsn1.your-objectstorage.com
-    destinationPath: s3://hive-postgres-backups/production
+    enabled: false
+    endpointURL: ""
+    destinationPath: ""
     retention: 30d
     schedule: "0 0 3 * * *"
     credentialsSecretName: hive-postgres-backup-credentials
     externalSecret:
-      accessKeyRemoteRef: "hive-postgres-backup/username"
-      secretKeyRemoteRef: "hive-postgres-backup/credential"
+      accessKeyRemoteRef: ""
+      secretKeyRemoteRef: ""

@@ -39,7 +39,9 @@ spec:
   imageName: {{ .Values.postgres.imageName }}
   storage:
     size: {{ .Values.postgres.storageSize }}
+    {{- if .Values.postgres.storageClass }}
     storageClass: {{ .Values.postgres.storageClass }}
+    {{- end }}
   bootstrap:
     initdb:
       database: {{ .Values.postgres.database }}
