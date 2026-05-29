@@ -78,6 +78,19 @@ Any OIDC provider with a `.well-known/openid-configuration` endpoint:
 
 Callback URL: `/auth/oidc/callback` on the deployed host.
 
+### Object storage
+
+Hive can be configured with S3-compatible object storage for features
+that need durable blobs. Set `HIVE_OBJECT_STORAGE_PROVIDER=s3` and
+provide:
+
+- `HIVE_S3_BUCKET`
+- `HIVE_S3_REGION`
+- `HIVE_S3_ENDPOINT_URL` (required for S3-compatible providers such as Hetzner)
+- `HIVE_S3_ACCESS_KEY_ID`
+- `HIVE_S3_SECRET_ACCESS_KEY`
+- `HIVE_S3_FORCE_PATH_STYLE` (optional, `true` or `1`; useful for S3-compatible providers)
+
 #### Setting up Google OAuth
 
 1. Open <https://console.cloud.google.com/apis/credentials> in the Google
@@ -105,13 +118,19 @@ kubectl create namespace hive
 kubectl -n hive create secret generic hive-app \
   --from-literal=SECRET_KEY_BASE="$(mix phx.gen.secret)" \
   --from-literal=HIVE_GOOGLE_CLIENT_ID="..." \
-  --from-literal=HIVE_GOOGLE_CLIENT_SECRET="..."
+  --from-literal=HIVE_GOOGLE_CLIENT_SECRET="..." \
+  --from-literal=HIVE_S3_ACCESS_KEY_ID="..." \
+  --from-literal=HIVE_S3_SECRET_ACCESS_KEY="..."
 
 helm upgrade --install hive infra/helm/hive \
   --namespace hive \
   --set host=hive.example.com \
   --set env.HIVE_VISIBILITY=private \
-  --set env.HIVE_GOOGLE_ALLOWED_DOMAINS=example.com
+  --set env.HIVE_GOOGLE_ALLOWED_DOMAINS=example.com \
+  --set env.HIVE_OBJECT_STORAGE_PROVIDER=s3 \
+  --set env.HIVE_S3_BUCKET=hive-objects \
+  --set env.HIVE_S3_REGION=us-east-1 \
+  --set env.HIVE_S3_ENDPOINT_URL=https://s3.example.com
 ```
 
 If you run External Secrets Operator, enable `externalSecrets.enabled`
