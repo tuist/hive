@@ -37,13 +37,13 @@ defmodule HiveWeb.Layouts do
     ~H"""
     <main class="layout">
       <header class="headerbar">
-        <a class="headerbar__left" href="/">
-          <div class="headerbar__brand">
+        <a data-part="left-section" href="/">
+          <div data-part="brand">
             <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
-            <span class="headerbar__title">{@product_name}</span>
+            <span data-part="title">{@product_name}</span>
           </div>
         </a>
-        <div class="headerbar__right">
+        <div data-part="right-section">
           <div class="account-dropdown">
             <button data-part="trigger" type="button">
               <.avatar
@@ -86,7 +86,7 @@ defmodule HiveWeb.Layouts do
         </div>
       </header>
       <.line_divider />
-      <section class="layout__main">
+      <section data-part="main">
         <.sidebar>
           <.sidebar_item
             label="Overview"
@@ -95,7 +95,7 @@ defmodule HiveWeb.Layouts do
             selected={@current_path == "/"}
           />
         </.sidebar>
-        <section class="layout__content">
+        <section data-part="content">
           {render_slot(@inner_block)}
         </section>
       </section>

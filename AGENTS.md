@@ -2,6 +2,8 @@
 
 Phoenix application that hosts Tuist's agentic product orchestration. MPL-2.0 licensed; runs as a single deployment per organization (Tuist hosts its own at `hive.tuist.dev`; the chart in `infra/helm/hive` supports self-hosting).
 
+**This is an open-source repository.** Treat every commit and PR as world-readable. Never paste credentials, tokens, kubeconfigs, OAuth secrets, database URLs, or `.env` contents into source, tests, fixtures, commit messages, or PR bodies. Production secrets live exclusively in the `hive-k8s-production` 1Password vault and are pulled into Kubernetes via External Secrets at deploy time — the repo only references them by name (`hive-google-oauth/credential`), never by value. Reference names are not secrets but treat them as low-stakes signal: assume an attacker reading the repo learns them. Test fixtures and example env values must use obvious placeholders (e.g. `"client-id"`, `"google-client-secret"`), never real credentials even if revoked.
+
 ## Tech Stack
 
 - **Backend**: Elixir 1.19.5 on Erlang/OTP 29.0, Phoenix 1.8
@@ -72,10 +74,24 @@ assets/css/
 └── routes/<name>.css      # everything specific to one route, scoped under #<route-id>
 ```
 
-- **Routes are identified by an `#id`** on the route's root element (e.g. `<main id="login">`). All route-specific CSS lives nested under that selector in `routes/<route>.css`. This keeps route styles from leaking and makes it obvious what each rule targets.
-- **Components in `components/`** are reusable widgets that either extend a Noora component or compose several (e.g. `.account-dropdown` wraps `<.avatar>`). Plain Noora usage doesn't need a file here.
-- **Use Noora variables** (`--noora-spacing-*`, `--noora-surface-*`, `--noora-font-*`, `--noora-radius-*`, `--noora-z-index-*`) over hardcoded values. Pixel dimensions for non-Noora-sized things (logo sizing, gradient blobs) are fine when no variable fits.
-- **Nest** with native CSS nesting (`&` operator). No utility/atomic classes — keep styling co-located with the component or route selector it belongs to.
+**Anchor + `data-part` (no BEM, no utilities).** Every layout/component/route has **one anchor selector** — a class for components and layouts (`.headerbar`, `.layout`, `.account-dropdown`) or an `#id` for routes (`#login`) — and **all internal regions are addressed via `data-part="name"`** on the HTML element, with the CSS nested under the anchor:
+
+```css
+.headerbar {
+  & [data-part="left-section"] { ... }
+  & [data-part="right-section"] { ... }
+  & [data-part="title"] { ... }
+}
+```
+
+Do **not** write BEM-style child classes (`.headerbar__left`, `.layout__main`, `.layout__content`), and do **not** reach for utility/atomic classes. This is the convention `../tuist/server` and `../atlas` use; it keeps HTML free of class soup and styles co-located with the anchor they extend. When in doubt, grep one of those repos for the closest equivalent.
+
+**Other rules:**
+
+- **Routes** get an `id` on their root element (`<main id="login">`, future `<div id="overview">`). All route-specific CSS lives nested under `#<route-id>` in `routes/<route>.css`.
+- **Components in `components/`** are reusable widgets that extend a Noora component or compose several (e.g. `.account-dropdown` wraps `<.avatar>`). Plain Noora usage doesn't need a file here.
+- **Use Noora variables** (`--noora-spacing-*`, `--noora-surface-*`, `--noora-font-*`, `--noora-radius-*`, `--noora-z-index-*`) over hardcoded values. Pixel dimensions for non-Noora-sized things (logo, gradient blobs) are fine when no variable fits.
+- **Nest** with native CSS (`&` operator). Media queries nest inside the anchor too.
 
 ## Deployment
 
