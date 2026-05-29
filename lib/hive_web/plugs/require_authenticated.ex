@@ -10,7 +10,7 @@ defmodule HiveWeb.Plugs.RequireAuthenticated do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    if Auth.enabled?() and is_nil(Auth.current_user(conn)) do
+    if Auth.private?() and is_nil(Auth.current_user(conn)) do
       conn
       |> redirect(to: ~p"/login")
       |> halt()

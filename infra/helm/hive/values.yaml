@@ -51,7 +51,10 @@ ingress:
 env:
   POOL_SIZE: "10"
   DATABASE_SSL: "1"
-  HIVE_AUTH_MODE: "none"
+  # public: anyone can reach the dashboard. private: routes are gated
+  # behind login and only authenticated users (passing any configured
+  # provider's domain allowlist) can access them.
+  HIVE_VISIBILITY: "public"
 
 probes:
   readiness:

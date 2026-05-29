@@ -118,7 +118,7 @@ hive_providers =
   |> Enum.reverse()
 
 config :hive, :auth,
-  mode: System.get_env("HIVE_AUTH_MODE", "none"),
+  visibility: System.get_env("HIVE_VISIBILITY", "public"),
   providers: hive_providers
 
 if config_env() == :prod do

@@ -10,20 +10,26 @@ defmodule Hive.Auth do
 
   @product_name "Hive"
 
-  def enabled? do
-    mode() == "oidc"
-  end
+  def product_name, do: @product_name
 
-  def mode do
+  @doc """
+  Returns the configured visibility: `"public"` (default) or `"private"`.
+  Driven by `HIVE_VISIBILITY` at runtime.
+  """
+  def visibility do
     :hive
     |> Application.get_env(:auth, [])
-    |> Keyword.get(:mode, "none")
+    |> Keyword.get(:visibility, "public")
     |> to_string()
     |> String.trim()
     |> String.downcase()
   end
 
-  def product_name, do: @product_name
+  @doc "True when the instance gates routes behind authentication."
+  def private?, do: visibility() == "private"
+
+  @doc "True when anyone can reach the dashboard without logging in."
+  def public?, do: not private?()
 
   @doc """
   Returns the list of providers configured for this instance, in the

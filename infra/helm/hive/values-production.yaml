@@ -13,7 +13,10 @@ image:
   pullSecretName: ghcr-pull
 
 env:
-  HIVE_AUTH_MODE: "oidc"
+  # Tuist's instance is public: anyone can browse it. Google login is
+  # still wired up for the team, but the allowlist (HIVE_GOOGLE_ALLOWED_DOMAINS)
+  # restricts who can actually sign in.
+  HIVE_VISIBILITY: "public"
   HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
 
 externalSecrets:

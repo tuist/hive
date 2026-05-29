@@ -9,8 +9,8 @@ defmodule HiveWeb.AuthControllerTest do
     end)
   end
 
-  test "GET / redirects to login when OIDC auth is enabled", %{conn: conn} do
-    Application.put_env(:hive, :auth, mode: "oidc")
+  test "GET / redirects to login when the instance is private", %{conn: conn} do
+    Application.put_env(:hive, :auth, visibility: "private")
 
     conn = get(conn, ~p"/")
 
@@ -19,7 +19,7 @@ defmodule HiveWeb.AuthControllerTest do
 
   test "GET /login renders a button per configured provider", %{conn: conn} do
     Application.put_env(:hive, :auth,
-      mode: "oidc",
+      visibility: "private",
       providers: [
         google: %{display_name: "Google", allowed_domains: []},
         oidc: %{display_name: "Example IDP", allowed_domains: []}
@@ -36,8 +36,8 @@ defmodule HiveWeb.AuthControllerTest do
     assert response =~ ~s|href="/auth/oidc"|
   end
 
-  test "GET /login warns when no provider is configured but mode is oidc", %{conn: conn} do
-    Application.put_env(:hive, :auth, mode: "oidc", providers: [])
+  test "GET /login warns when no provider is configured but instance is private", %{conn: conn} do
+    Application.put_env(:hive, :auth, visibility: "private", providers: [])
 
     conn = get(conn, ~p"/login")
 

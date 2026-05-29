@@ -11,7 +11,7 @@ defmodule HiveWeb.PageHTML do
       conn: conn,
       error: Keyword.get(opts, :error),
       product_name: Auth.product_name(),
-      auth_enabled?: Auth.enabled?(),
+      auth_enabled?: Auth.private?(),
       providers: Auth.providers()
     }
 
@@ -73,7 +73,7 @@ defmodule HiveWeb.PageHTML do
 
     assigns = %{
       conn: conn,
-      auth_enabled?: Auth.enabled?(),
+      auth_enabled?: Auth.private?(),
       csrf_token: Plug.CSRFProtection.get_csrf_token(),
       product_name: Auth.product_name(),
       user_email: user["email"],
