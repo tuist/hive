@@ -49,6 +49,7 @@ defmodule Hive.MixProject do
       {:let_me, "~> 3.0"},
       {:noora, "~> 0.81"},
       {:req, "~> 0.5"},
+      {:ex_aws_auth, "~> 1.3"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_oidcc, "~> 0.4"},
       {:ueberauth_github, "~> 0.8"},

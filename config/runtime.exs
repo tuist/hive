@@ -74,8 +74,13 @@ config :hive, :object_storage,
     endpoint_url: System.get_env("HIVE_S3_ENDPOINT_URL"),
     access_key_id: System.get_env("HIVE_S3_ACCESS_KEY_ID"),
     secret_access_key: System.get_env("HIVE_S3_SECRET_ACCESS_KEY"),
+    public_base_url: System.get_env("HIVE_S3_PUBLIC_BASE_URL"),
     force_path_style: parse_boolean.(System.get_env("HIVE_S3_FORCE_PATH_STYLE"))
   ]
+
+if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
+  config :hive, :opendata_vector, base_url: opendata_vector_url
+end
 
 google_client_id = System.get_env("HIVE_GOOGLE_CLIENT_ID")
 google_client_secret = System.get_env("HIVE_GOOGLE_CLIENT_SECRET")

@@ -140,3 +140,62 @@ postgres:
     externalSecret:
       accessKeyRemoteRef: ""
       secretKeyRemoteRef: ""
+
+# Optional vector database used by agentic features that need embedding search.
+# It mirrors Atlas' opendata-vector deployment: vectors are persisted in an
+# S3-compatible bucket and a PVC is used only as a local cache. Disabled by
+# default so self-hosted installs can start with just Postgres.
+vector:
+  enabled: false
+  image:
+    repository: ghcr.io/opendata-oss/vector
+    tag: "0.2.1"
+    pullPolicy: IfNotPresent
+  containerPort: 8080
+  logLevel: info
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+  service:
+    port: 8080
+  storage:
+    # Defaults to env.HIVE_S3_ENDPOINT_URL / env.HIVE_S3_REGION /
+    # env.HIVE_S3_BUCKET when those are plain values. Set these explicitly
+    # when the app object-storage values come from a Secret or ExternalSecret.
+    # Credentials are always read from the Hive app Secret's HIVE_S3_* keys.
+    endpointURL: ""
+    region: ""
+    bucket: ""
+    prefix: "vector"
+  cache:
+    size: 20Gi
+    # Empty string lets the cluster default storage class be used.
+    storageClass: ""
+    mountPath: /var/cache/opendata-vector
+    diskCapacityBytes: 17179869184
+    memoryCapacityBytes: 268435456
+  config:
+    dimensions: 1536
+    distanceMetric: L2
+    flushInterval: 60
+    splitThresholdVectors: 150
+    mergeThresholdVectors: 50
+    splitSearchNeighbourhood: 0
+    metadataFields:
+      - name: source_type
+        field_type: String
+        indexed: true
+  probes:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
