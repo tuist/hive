@@ -9,7 +9,7 @@ defmodule HiveWeb.ForageController do
   end
 
   def new_feature_request(conn, _params) do
-    with_current_user(conn, fn conn, _user ->
+    with_create_permission(conn, :feature_requests, fn conn, _user ->
       render_forage(
         conn,
         ForageHTML.new_feature_request_page(conn, Forage.change_feature_request())
@@ -18,7 +18,7 @@ defmodule HiveWeb.ForageController do
   end
 
   def create_feature_request(conn, %{"feature_request" => feature_request_params}) do
-    with_current_user(conn, fn conn, user ->
+    with_create_permission(conn, :feature_requests, fn conn, user ->
       case Forage.create_feature_request(feature_request_params, user) do
         {:ok, _feature_request} ->
           conn
@@ -55,15 +55,16 @@ defmodule HiveWeb.ForageController do
     html(conn, Phoenix.HTML.Safe.to_iodata(content))
   end
 
-  defp with_current_user(conn, fun) do
-    case current_user(conn) do
-      nil ->
-        conn
-        |> put_flash(:error, "Log in to submit feature requests.")
-        |> redirect(to: ~p"/login")
+  defp with_create_permission(conn, source_id, fun) do
+    source = Forage.get_source!(source_id)
+    user = current_user(conn)
 
-      user ->
-        fun.(conn, user)
+    if Forage.can_create?(source, user) do
+      fun.(conn, user)
+    else
+      conn
+      |> put_flash(:error, "Log in to submit feature requests.")
+      |> redirect(to: ~p"/login")
     end
   end
 

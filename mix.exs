@@ -45,6 +45,7 @@ defmodule Hive.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0", override: true},
       {:jason, "~> 1.2"},
+      {:let_me, "~> 3.0"},
       {:noora, "~> 0.81"},
       {:req, "~> 0.5"},
       {:ueberauth, "~> 0.10"},

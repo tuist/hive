@@ -6,8 +6,8 @@ defmodule Hive.Forage do
   import Ecto.Query
 
   alias Hive.Accounts.User
-  alias Hive.Auth
   alias Hive.Forage.FeatureRequest
+  alias Hive.Forage.Policy
   alias Hive.Repo
 
   @sources [
@@ -59,11 +59,12 @@ defmodule Hive.Forage do
     Enum.find(@sources, &(&1.id == id)) || raise ArgumentError, "unknown forage source: #{id}"
   end
 
-  def can_access?(%{visibility: :public}, _user), do: true
-  def can_access?(%{visibility: :organization}, user), do: Auth.member?(user)
+  def can_access?(source, user) do
+    Policy.authorize?(:forage_source_read, user, source)
+  end
 
   def can_create?(source, user) do
-    source.creatable? and can_access?(source, user)
+    Policy.authorize?(:forage_source_create, user, source)
   end
 
   def list_feature_requests do
