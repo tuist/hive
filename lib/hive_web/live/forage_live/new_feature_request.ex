@@ -49,7 +49,23 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   end
 
   defp assign_form(socket, changeset) do
-    assign(socket, :form, to_form(changeset, as: :feature_request))
+    assign(socket, :form, to_form(interpolate_errors(changeset), as: :feature_request))
+  end
+
+  # Noora's inputs render an error's raw message and drop its opts, so
+  # interpolate the bindings (e.g. `%{count}`) into the message here
+  # before the form reaches them.
+  defp interpolate_errors(%Ecto.Changeset{} = changeset) do
+    Map.update!(changeset, :errors, fn errors -> Enum.map(errors, &interpolate_error/1) end)
+  end
+
+  defp interpolate_error({field, {message, opts}}) do
+    interpolated =
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+
+    {field, {interpolated, opts}}
   end
 
   @impl true
