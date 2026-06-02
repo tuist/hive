@@ -3,6 +3,8 @@ defmodule HiveWeb.Layouts do
 
   use HiveWeb, :html
 
+  embed_templates "layouts/*"
+
   attr :title, :string, required: true
   slot :inner_block, required: true
 
@@ -19,32 +21,6 @@ defmodule HiveWeb.Layouts do
       </head>
       <body data-part="app-body">
         {render_slot(@inner_block)}
-      </body>
-    </html>
-    """
-  end
-
-  @doc """
-  Root layout for LiveView pages: the document shell that is rendered
-  once and into which each LiveView's content is diffed. Carries the
-  CSRF token and the LiveSocket script.
-  """
-  def root(assigns) do
-    ~H"""
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="csrf-token" content={get_csrf_token()} />
-        <title>{assigns[:page_title] || "Hive"}</title>
-        <link rel="icon" type="image/png" href={~p"/images/logo.png"} />
-        <link rel="stylesheet" href="/assets/js/app.css" />
-        <script defer src="/assets/js/app.js">
-        </script>
-      </head>
-      <body data-part="app-body">
-        {@inner_content}
       </body>
     </html>
     """
