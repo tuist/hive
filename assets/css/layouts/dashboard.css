@@ -21,41 +21,73 @@
       flex-shrink: 0;
       align-self: flex-start;
       margin-top: var(--noora-spacing-5);
+      width: 240px;
       max-height: calc(100vh - 72px);
       overflow-y: auto;
+
+      & [data-part="label"] {
+        white-space: nowrap;
+      }
+
+      & [data-part="forage-sources"] {
+        & > summary {
+          cursor: pointer;
+          list-style: none;
+
+          &::-webkit-details-marker {
+            display: none;
+          }
+
+          & .noora-tab-menu-vertical {
+            width: 100%;
+          }
+
+          & [data-part="label"] {
+            flex-grow: 1;
+          }
+
+          & [data-part="indicator"] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--noora-surface-label-secondary);
+            width: 18px;
+            height: 18px;
+            transition: transform 150ms ease;
+
+            & svg {
+              width: 100%;
+              height: 100%;
+            }
+          }
+        }
+
+        &[open] > summary .noora-tab-menu-vertical {
+          background: var(--noora-surface-background-secondary);
+        }
+
+        &[open] > summary [data-part="indicator"] {
+          transform: rotate(180deg);
+        }
+
+        & > [data-part="content"] {
+          display: flex;
+          flex-direction: column;
+          gap: var(--noora-spacing-1);
+          margin-top: var(--noora-spacing-4);
+          margin-left: 14px;
+          border-left: 1.5px solid var(--noora-surface-border-primary);
+          padding-left: 20px;
+        }
+      }
     }
 
-    & [data-part="content"] {
+    & > [data-part="content"] {
       position: relative;
       flex: 1;
-      padding: var(--noora-spacing-9) var(--noora-spacing-9) var(--noora-spacing-5)
-        var(--noora-spacing-5);
+      padding: var(--noora-spacing-7);
       min-width: 0;
       overflow: hidden;
-
-      & h1 {
-        color: var(--noora-surface-label-primary);
-        font: var(--noora-font-weight-medium) var(--noora-font-display-small);
-      }
-
-      & > p {
-        margin-top: var(--noora-spacing-3);
-        color: var(--noora-surface-label-secondary);
-        font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
-      }
-
-      & > .noora-card {
-        margin-top: var(--noora-spacing-8);
-      }
-
-      & ul {
-        display: grid;
-        gap: var(--noora-spacing-3);
-        margin: 0;
-        padding-left: var(--noora-spacing-5);
-        color: var(--noora-surface-label-secondary);
-        font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
-      }
     }
 
     @media (max-width: 1024px) {
@@ -67,14 +99,8 @@
         max-height: none;
       }
 
-      & [data-part="content"] {
+      & > [data-part="content"] {
         padding: var(--noora-spacing-6);
-      }
-    }
-
-    @media (max-width: 768px) {
-      & [data-part="content"] h1 {
-        font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
       }
     }
   }

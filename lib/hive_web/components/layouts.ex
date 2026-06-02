@@ -29,8 +29,10 @@ defmodule HiveWeb.Layouts do
   attr :user_email, :string, default: nil
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
+  attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
+  attr :forage_sources, :list, default: []
   slot :inner_block, required: true
 
   def dashboard(assigns) do
@@ -44,7 +46,7 @@ defmodule HiveWeb.Layouts do
           </div>
         </a>
         <div data-part="right-section">
-          <div class="account-dropdown">
+          <div :if={@signed_in?} class="account-dropdown">
             <button data-part="trigger" type="button">
               <.avatar
                 id="current-user-avatar"
@@ -68,32 +70,46 @@ defmodule HiveWeb.Layouts do
                   <span :if={@user_email} data-part="email">{@user_email}</span>
                 </div>
               </div>
-              <form :if={@auth_enabled?} method="post" action="/logout" data-part="actions">
+              <form method="post" action="/logout" data-part="actions">
                 <input type="hidden" name="_csrf_token" value={@csrf_token} />
                 <button type="submit">
                   <.logout />
                   <span>Log out</span>
                 </button>
               </form>
-              <div :if={!@auth_enabled?} data-part="actions">
-                <a href={~p"/login"}>
-                  <.settings />
-                  <span>Auth setup</span>
-                </a>
-              </div>
             </div>
           </div>
+          <.button
+            :if={!@signed_in?}
+            label="Sign in"
+            href={~p"/login"}
+            variant="primary"
+            size="medium"
+          />
         </div>
       </header>
       <.line_divider />
       <section data-part="main">
         <.sidebar>
-          <.sidebar_item
-            label="Overview"
-            icon="dashboard"
-            href="/"
-            selected={@current_path == "/"}
-          />
+          <details data-part="forage-sources" open>
+            <summary data-part="trigger">
+              <.tab_menu_vertical label="Forage">
+                <:icon_left><.icon name="list_tree" /></:icon_left>
+                <:icon_right>
+                  <span data-part="indicator"><.chevron_down /></span>
+                </:icon_right>
+              </.tab_menu_vertical>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                :for={source <- @forage_sources}
+                label={source.label}
+                icon={source.icon}
+                href={source.path}
+                selected={String.starts_with?(@current_path, source.path)}
+              />
+            </div>
+          </details>
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}

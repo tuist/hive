@@ -3,6 +3,7 @@
 @import "./layouts/dashboard.css";
 @import "./components/account_dropdown.css";
 @import "./routes/login.css";
+@import "./routes/forage.css";
 
 :root {
   color-scheme: light;
@@ -10,6 +11,16 @@
 
 * {
   box-sizing: border-box;
+}
+
+/*
+ * Noora authors its components against the browser default `content-box`. The
+ * card icon sizes its box with `width` + `padding` together, so our global
+ * `border-box` reset above collapses the icon to a few pixels. Restore the box
+ * model Noora expects for that element.
+ */
+.noora-card [data-part="icon"] {
+  box-sizing: content-box;
 }
 
 body {
