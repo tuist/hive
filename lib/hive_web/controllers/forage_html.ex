@@ -242,8 +242,8 @@ defmodule HiveWeb.ForageHTML do
       open: Enum.count(feature_requests, &(&1.status == :open)),
       contributors:
         feature_requests
-        |> Enum.map(&(&1.requester_email || &1.requester_name))
-        |> Enum.reject(&(&1 in [nil, ""]))
+        |> Enum.map(& &1.user_id)
+        |> Enum.reject(&is_nil/1)
         |> Enum.uniq()
         |> length()
     }
@@ -273,9 +273,8 @@ defmodule HiveWeb.ForageHTML do
     }
   end
 
-  defp requester_label(%{requester_email: email}) when email in [nil, ""] do
-    "Submitted anonymously"
-  end
+  defp requester_label(%{user: %{email: email}}) when is_binary(email),
+    do: "Submitted by #{email}"
 
-  defp requester_label(%{requester_email: email}), do: "Submitted by #{email}"
+  defp requester_label(_feature_request), do: "Submitted anonymously"
 end

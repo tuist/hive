@@ -6,7 +6,6 @@ defmodule Hive.Repo.Migrations.CreateForageFeatureRequests do
       add :id, :binary_id, primary_key: true
       add :title, :string, null: false
       add :description, :text, null: false
-      add :requester_email, :string
       add :status, :string, null: false, default: "open"
       add :visibility, :string, null: false, default: "public"
 

@@ -11,7 +11,6 @@ defmodule Hive.Forage.FeatureRequest do
   schema "forage_feature_requests" do
     field :title, :string
     field :description, :string
-    field :requester_email, :string
     field :status, Ecto.Enum, values: [:open, :planned, :closed], default: :open
     field :visibility, Ecto.Enum, values: [:public, :organization], default: :public
 
@@ -22,12 +21,10 @@ defmodule Hive.Forage.FeatureRequest do
 
   def changeset(feature_request, attrs) do
     feature_request
-    |> cast(attrs, [:title, :description, :requester_email])
+    |> cast(attrs, [:title, :description])
     |> validate_required([:title, :description])
     |> validate_length(:title, max: 160)
     |> validate_length(:description, min: 10, max: 2_000)
-    |> validate_length(:requester_email, max: 160)
-    |> validate_format(:requester_email, ~r/^[^\s]+@[^\s]+$/, allow_blank: true)
     |> put_change(:status, :open)
     |> put_change(:visibility, :public)
   end

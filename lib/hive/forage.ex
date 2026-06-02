@@ -69,6 +69,7 @@ defmodule Hive.Forage do
   def list_feature_requests do
     FeatureRequest
     |> order_by([feature_request], desc: feature_request.inserted_at)
+    |> preload(:user)
     |> Repo.all()
   end
 
@@ -78,7 +79,7 @@ defmodule Hive.Forage do
 
   def create_feature_request(attrs, %User{} = user) do
     %FeatureRequest{}
-    |> FeatureRequest.changeset(Map.put(attrs, "requester_email", user.email))
+    |> FeatureRequest.changeset(attrs)
     |> Ecto.Changeset.put_change(:user_id, user.id)
     |> Repo.insert()
   end

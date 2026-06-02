@@ -33,7 +33,7 @@ defmodule Hive.ForageTest do
            ]
   end
 
-  test "create_feature_request binds requester details from the signed-in user" do
+  test "create_feature_request associates the request with the signed-in user" do
     user = user()
 
     {:ok, feature_request} =
@@ -42,9 +42,22 @@ defmodule Hive.ForageTest do
         user
       )
 
-    assert feature_request.requester_email == "alice@example.com"
     assert feature_request.user_id == user.id
     assert feature_request.visibility == :public
     assert feature_request.status == :open
+  end
+
+  test "list_feature_requests preloads the requesting user" do
+    user = user()
+
+    {:ok, _} =
+      Forage.create_feature_request(
+        %{"title" => "GitHub sign-in", "description" => "Let requesters sign in with GitHub."},
+        user
+      )
+
+    assert [feature_request] = Forage.list_feature_requests()
+    assert feature_request.user.id == user.id
+    assert feature_request.user.email == "alice@example.com"
   end
 end
