@@ -62,10 +62,6 @@
           }
         }
 
-        &[open] > summary .noora-tab-menu-vertical {
-          background: var(--noora-surface-background-secondary);
-        }
-
         &[open] > summary [data-part="indicator"] {
           transform: rotate(180deg);
         }
