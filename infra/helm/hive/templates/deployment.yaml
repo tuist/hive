@@ -44,6 +44,10 @@ spec:
           env:
             - name: PHX_HOST
               value: {{ .Values.host | quote }}
+            {{- if and .Values.vector.enabled (not (hasKey .Values.env "HIVE_OPENDATA_VECTOR_URL")) }}
+            - name: HIVE_OPENDATA_VECTOR_URL
+              value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
+            {{- end }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
@@ -94,6 +98,10 @@ spec:
               value: {{ .Values.host | quote }}
             - name: PORT
               value: {{ .Values.service.targetPort | quote }}
+            {{- if and .Values.vector.enabled (not (hasKey .Values.env "HIVE_OPENDATA_VECTOR_URL")) }}
+            - name: HIVE_OPENDATA_VECTOR_URL
+              value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
+            {{- end }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}

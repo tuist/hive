@@ -89,7 +89,21 @@ provide:
 - `HIVE_S3_ENDPOINT_URL` (required for S3-compatible providers such as Hetzner)
 - `HIVE_S3_ACCESS_KEY_ID`
 - `HIVE_S3_SECRET_ACCESS_KEY`
+- `HIVE_S3_PUBLIC_BASE_URL` (optional, used when public URLs should use a CDN or custom domain)
 - `HIVE_S3_FORCE_PATH_STYLE` (optional, `true` or `1`; useful for S3-compatible providers)
+
+### Vector database
+
+Hive can also point at an `opendata-vector` HTTP database for embedding search. Set
+`HIVE_OPENDATA_VECTOR_URL` to the vector service base URL, for example
+`http://hive-vector:8080`.
+
+The Helm chart includes an optional `opendata-vector` deployment under
+`vector.*`. It is disabled by default so self-hosted installs only need
+Postgres to boot. When enabled, vectors are stored in an S3-compatible
+bucket and the pod uses a PVC as a local cache. It reuses Hive's object
+storage credentials from the app Secret and stores the index under
+`vector.storage.prefix`.
 
 #### Setting up Google OAuth
 
@@ -131,6 +145,17 @@ helm upgrade --install hive infra/helm/hive \
   --set env.HIVE_S3_BUCKET=hive-objects \
   --set env.HIVE_S3_REGION=us-east-1 \
   --set env.HIVE_S3_ENDPOINT_URL=https://s3.example.com
+```
+
+To enable the bundled vector database on the same object storage bucket,
+enable `vector.*` and choose a prefix:
+
+```bash
+helm upgrade --install hive infra/helm/hive \
+  --namespace hive \
+  --reuse-values \
+  --set vector.enabled=true \
+  --set vector.storage.prefix=vector
 ```
 
 If you run External Secrets Operator, enable `externalSecrets.enabled`

@@ -57,3 +57,22 @@ postgres:
     externalSecret:
       accessKeyRemoteRef: "hive-postgres-backup/username"
       secretKeyRemoteRef: "hive-postgres-backup/credential"
+
+vector:
+  enabled: true
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+  storage:
+    endpointURL: "https://fsn1.your-objectstorage.com"
+    region: "fsn1"
+    bucket: "hive-object-storage"
+    prefix: "vector/production"
+  cache:
+    size: 50Gi
+    storageClass: hcloud-volumes
+    diskCapacityBytes: 42949672960
+    memoryCapacityBytes: 536870912

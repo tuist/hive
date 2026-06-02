@@ -1,0 +1,153 @@
+{{- if .Values.vector.enabled }}
+{{- $appSecret := include "hive.appSecretName" . -}}
+{{- $storageEndpointURL := default (index .Values.env "HIVE_S3_ENDPOINT_URL") .Values.vector.storage.endpointURL -}}
+{{- $storageRegion := default (index .Values.env "HIVE_S3_REGION") .Values.vector.storage.region -}}
+{{- $storageBucket := default (index .Values.env "HIVE_S3_BUCKET") .Values.vector.storage.bucket -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hive.vectorName" . }}-config
+  labels:
+    {{- include "hive.vectorLabels" . | nindent 4 }}
+data:
+  vector.yaml: |
+    storage:
+      type: SlateDb
+      path: {{ .Values.vector.storage.prefix | quote }}
+      object_store:
+        type: Aws
+        region: {{ $storageRegion | quote }}
+        bucket: {{ $storageBucket | quote }}
+      block_cache:
+        type: FoyerHybrid
+        memory_capacity: {{ printf "%.0f" (.Values.vector.cache.memoryCapacityBytes | float64) }}
+        disk_capacity: {{ printf "%.0f" (.Values.vector.cache.diskCapacityBytes | float64) }}
+        disk_path: {{ printf "%s/block-cache" .Values.vector.cache.mountPath | quote }}
+    dimensions: {{ .Values.vector.config.dimensions }}
+    distance_metric: {{ .Values.vector.config.distanceMetric }}
+    flush_interval: {{ .Values.vector.config.flushInterval }}
+    split_threshold_vectors: {{ .Values.vector.config.splitThresholdVectors }}
+    merge_threshold_vectors: {{ .Values.vector.config.mergeThresholdVectors }}
+    split_search_neighbourhood: {{ .Values.vector.config.splitSearchNeighbourhood }}
+    metadata_fields:
+      {{- toYaml .Values.vector.config.metadataFields | nindent 6 }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hive.vectorName" . }}-cache
+  labels:
+    {{- include "hive.vectorLabels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.vector.cache.storageClass }}
+  storageClassName: {{ .Values.vector.cache.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.vector.cache.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hive.vectorName" . }}
+  labels:
+    {{- include "hive.vectorLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "hive.vectorSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hive.vectorSelectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ printf "%s-%s-%s" (toYaml .Values.vector.config) (toYaml .Values.vector.storage) (toYaml .Values.vector.cache) | sha256sum }}
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: vector
+          image: "{{ .Values.vector.image.repository }}:{{ .Values.vector.image.tag }}"
+          imagePullPolicy: {{ .Values.vector.image.pullPolicy }}
+          args:
+            - --port
+            - {{ .Values.vector.containerPort | quote }}
+            - vector
+            - --config
+            - /config/vector.yaml
+          ports:
+            - name: http
+              containerPort: {{ .Values.vector.containerPort }}
+              protocol: TCP
+          env:
+            - name: AWS_REGION
+              value: {{ $storageRegion | quote }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ $storageEndpointURL | quote }}
+            - name: AWS_ENDPOINT_URL_S3
+              value: {{ $storageEndpointURL | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $appSecret }}
+                  key: HIVE_S3_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $appSecret }}
+                  key: HIVE_S3_SECRET_ACCESS_KEY
+            - name: RUST_LOG
+              value: {{ .Values.vector.logLevel | quote }}
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: {{ .Values.vector.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.vector.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.vector.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.vector.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: {{ .Values.vector.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.vector.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.vector.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.vector.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.vector.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: cache
+              mountPath: {{ .Values.vector.cache.mountPath }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hive.vectorName" . }}-config
+        - name: cache
+          persistentVolumeClaim:
+            claimName: {{ include "hive.vectorName" . }}-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hive.vectorName" . }}
+  labels:
+    {{- include "hive.vectorLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.vector.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "hive.vectorSelectorLabels" . | nindent 4 }}
+{{- end }}

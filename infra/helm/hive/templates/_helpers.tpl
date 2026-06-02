@@ -37,3 +37,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "hive.postgresAppSecret" -}}
 {{ include "hive.postgresClusterName" . }}-app
 {{- end -}}
+
+{{- define "hive.vectorName" -}}
+{{ include "hive.fullname" . }}-vector
+{{- end -}}
+
+{{- define "hive.vectorLabels" -}}
+{{ include "hive.labels" . }}
+app.kubernetes.io/component: vector
+{{- end -}}
+
+{{- define "hive.vectorSelectorLabels" -}}
+{{ include "hive.selectorLabels" . }}
+app.kubernetes.io/component: vector
+{{- end -}}
