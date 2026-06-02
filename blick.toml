@@ -1,0 +1,38 @@
+[agent]
+kind = "opencode"
+model = "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
+
+[defaults]
+base = "origin/main"
+max_concurrency = 2
+
+[[skills]]
+name = "hive-elixir-review"
+source = "./.blick/skills/hive-elixir-review"
+
+[[reviews]]
+name = "elixir"
+skills = ["hive-elixir-review"]
+include = [
+  "assets/**/*.{css,js}",
+  "config/**/*.exs",
+  "infra/helm/hive/**/*.{yaml,yml,tpl,toml}",
+  "lib/**/*.ex",
+  "lib/**/*.heex",
+  "priv/**/*.exs",
+  "priv/**/*.sql",
+  "test/**/*.exs",
+  ".github/workflows/*.{yaml,yml}",
+  "mix.exs",
+  "mix.lock",
+  "AGENTS.md"
+]
+
+[learn]
+lookback_days = 7
+min_signal = 3
+team_reviewers = ["tuist/engineering"]
+labels = []
+base = "main"
+draft = true
+branch = "blick/learn"
