@@ -16,6 +16,11 @@ defmodule Hive.DataCase do
     end
   end
 
+  setup tags do
+    Hive.DataCase.setup_sandbox(tags)
+    :ok
+  end
+
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(Hive.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)

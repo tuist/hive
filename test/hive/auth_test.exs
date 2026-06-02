@@ -1,6 +1,7 @@
 defmodule Hive.AuthTest do
   use ExUnit.Case, async: true
 
+  alias Hive.Accounts.User
   alias Hive.Auth
 
   describe "check_domain/2" do
@@ -36,6 +37,28 @@ defmodule Hive.AuthTest do
       provider = %{display_name: "Google", allowed_domains: ["tuist.dev"]}
 
       assert Auth.check_domain(provider, nil) == {:error, :domain_not_allowed}
+    end
+  end
+
+  describe "role/2" do
+    test "an unauthenticated user is anonymous" do
+      assert Auth.role(nil, ["tuist.dev"]) == :anonymous
+    end
+
+    test "everyone signed in is a member when no org domains are configured" do
+      assert Auth.role(%User{email: "outsider@example.com"}, []) == :member
+    end
+
+    test "a matching email domain is a member" do
+      assert Auth.role(%User{email: "pedro@tuist.dev"}, ["tuist.dev"]) == :member
+    end
+
+    test "a non-matching email domain is an external contributor" do
+      assert Auth.role(%User{email: "jane@example.com"}, ["tuist.dev"]) == :contributor
+    end
+
+    test "domain matching is case-insensitive" do
+      assert Auth.role(%User{email: "Pedro@Tuist.DEV"}, ["tuist.dev"]) == :member
     end
   end
 end

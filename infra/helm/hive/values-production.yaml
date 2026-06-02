@@ -14,10 +14,14 @@ image:
 
 env:
   # Tuist's instance is public: anyone can browse it. Google login is
-  # still wired up for the team, but the allowlist (HIVE_GOOGLE_ALLOWED_DOMAINS)
-  # restricts who can actually sign in.
+  # the team's path, restricted to @tuist.dev via HIVE_GOOGLE_ALLOWED_DOMAINS.
+  # GitHub login is intentionally left unrestricted (no HIVE_GITHUB_ALLOWED_DOMAINS)
+  # so external contributors can sign in with their own accounts.
   HIVE_VISIBILITY: "public"
   HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
+  # Accounts on these domains are org members (see organization-only
+  # forage sources); everyone else who signs in is an external contributor.
+  HIVE_ORG_DOMAINS: "tuist.dev"
   HIVE_OBJECT_STORAGE_PROVIDER: "s3"
   HIVE_S3_FORCE_PATH_STYLE: "true"
 
@@ -33,6 +37,10 @@ externalSecrets:
       remoteRef: "hive-google-oauth/username"
     HIVE_GOOGLE_CLIENT_SECRET:
       remoteRef: "hive-google-oauth/credential"
+    HIVE_GITHUB_CLIENT_ID:
+      remoteRef: "hive-github-oauth/username"
+    HIVE_GITHUB_CLIENT_SECRET:
+      remoteRef: "hive-github-oauth/credential"
     HIVE_S3_BUCKET:
       remoteRef: "hive-object-storage/bucket"
     HIVE_S3_REGION:

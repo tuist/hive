@@ -2,6 +2,7 @@ defmodule HiveWeb.AuthControllerTest do
   use HiveWeb.ConnCase, async: true
   use Mimic
 
+  alias Hive.Accounts
   alias Hive.Auth
 
   test "GET / redirects to login when the instance is private", %{conn: conn} do
@@ -31,6 +32,20 @@ defmodule HiveWeb.AuthControllerTest do
     assert response =~ "Continue with Example IDP"
     assert response =~ ~s|href="/auth/google"|
     assert response =~ ~s|href="/auth/oidc"|
+  end
+
+  test "GET /login renders a GitHub button when GitHub is configured", %{conn: conn} do
+    stub(Auth, :private?, fn -> true end)
+
+    stub(Auth, :providers, fn ->
+      [github: %{display_name: "GitHub", allowed_domains: []}]
+    end)
+
+    conn = get(conn, ~p"/login")
+
+    response = html_response(conn, 200)
+    assert response =~ "Continue with GitHub"
+    assert response =~ ~s|href="/auth/github"|
   end
 
   test "GET /login warns when no provider is configured but instance is private", %{conn: conn} do
@@ -68,5 +83,28 @@ defmodule HiveWeb.AuthControllerTest do
     response = html_response(conn, 200)
     assert response =~ "This instance is public"
     refute response =~ "HIVE_AUTH_MODE"
+  end
+
+  test "GET /login offers a test-user sign in when dev routes are enabled", %{conn: conn} do
+    stub(Auth, :private?, fn -> false end)
+    stub(Auth, :providers, fn -> [] end)
+
+    conn = get(conn, ~p"/login")
+
+    response = html_response(conn, 200)
+    assert response =~ "Sign in as test user"
+    assert response =~ ~s|action="/dev/login"|
+  end
+
+  test "POST /dev/login signs in a test user and redirects to the dashboard", %{conn: conn} do
+    conn = post(conn, ~p"/dev/login")
+
+    assert redirected_to(conn) == ~p"/"
+
+    user_id = get_session(conn, :user_id)
+    assert user_id
+
+    user = Accounts.get_user(user_id)
+    assert user.email == "test@hive.dev"
   end
 end

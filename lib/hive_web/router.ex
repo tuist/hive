@@ -4,6 +4,7 @@ defmodule HiveWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -19,6 +20,10 @@ defmodule HiveWeb.Router do
 
     get "/login", AuthController, :new
     post "/logout", AuthController, :delete
+
+    if Application.compile_env(:hive, :dev_routes, false) do
+      post "/dev/login", AuthController, :dev_login
+    end
 
     scope "/auth" do
       pipe_through :oauth

@@ -4,9 +4,22 @@ defmodule Hive.Auth do
 
   Ueberauth owns the OAuth/OIDC dance; this module exposes the small set
   of helpers Hive needs around it: whether auth is required, what
-  providers should appear on the login screen, and whether a given
-  email is allowed for a given provider's domain allowlist.
+  providers should appear on the login screen, whether a given email is
+  allowed for a given provider's domain allowlist, and what role a
+  signed-in user has.
+
+  Hive is single-tenant: the deployment *is* the organization. A user is
+  either a **member** of the org (their email domain is one of the
+  configured org domains) or an external **contributor** (authenticated,
+  but from outside). Role is derived from the email on each request, not
+  stored, so changing the org domains reclassifies users without a
+  migration. When no org domains are configured, everyone who can sign
+  in is treated as a member (the natural default for a private instance
+  where logging in already implies you're staff).
   """
+
+  alias Hive.Accounts
+  alias Hive.Accounts.User
 
   @product_name "Hive"
 
@@ -68,5 +81,55 @@ defmodule Hive.Auth do
 
   def check_domain(_provider, _email), do: {:error, :domain_not_allowed}
 
-  def current_user(conn), do: Plug.Conn.get_session(conn, :current_user)
+  @doc """
+  Domains whose accounts count as members of this org. Driven by
+  `HIVE_ORG_DOMAINS` at runtime; empty means "treat every signed-in
+  user as a member".
+  """
+  def org_domains do
+    :hive
+    |> Application.get_env(:auth, [])
+    |> Keyword.get(:org_domains, [])
+  end
+
+  @doc """
+  Role of a user relative to the org this instance represents:
+
+  - `:anonymous` — not signed in
+  - `:member` — email domain is one of `org_domains/0` (or no org
+    domains are configured)
+  - `:contributor` — signed in, but from outside the org
+
+  Takes the org domains explicitly (defaulting to `org_domains/0`) so the
+  classification can be tested without touching global config.
+  """
+  def role(user, domains \\ org_domains())
+  def role(nil, _domains), do: :anonymous
+  def role(%User{}, []), do: :member
+
+  def role(%User{email: email}, domains) do
+    if email_domain(email) in domains, do: :member, else: :contributor
+  end
+
+  @doc "True when the user is a member of the org."
+  def member?(user), do: role(user) == :member
+
+  @doc "True when the user is signed in but not a member of the org."
+  def contributor?(user), do: role(user) == :contributor
+
+  @doc """
+  The persisted user for the current session, or `nil`. The session
+  stores only the user id; the record is loaded on demand.
+  """
+  def current_user(conn) do
+    conn
+    |> Plug.Conn.get_session(:user_id)
+    |> Accounts.get_user()
+  end
+
+  defp email_domain(email) when is_binary(email) do
+    email |> String.split("@", parts: 2) |> List.last() |> String.downcase()
+  end
+
+  defp email_domain(_email), do: ""
 end

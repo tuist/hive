@@ -49,6 +49,7 @@ defmodule Hive.MixProject do
       {:req, "~> 0.5"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_oidcc, "~> 0.4"},
+      {:ueberauth_github, "~> 0.8"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
