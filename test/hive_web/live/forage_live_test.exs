@@ -4,19 +4,40 @@ defmodule HiveWeb.ForageLiveTest do
   import Phoenix.LiveViewTest
 
   alias Hive.Accounts
+  alias Hive.Forage
 
   defp sign_in(conn, email) do
     {:ok, user} =
       Accounts.upsert_from_auth(%{email: email, provider: "test", provider_uid: email})
 
-    Plug.Test.init_test_session(conn, %{user_id: user.id})
+    {Plug.Test.init_test_session(conn, %{user_id: user.id}), user}
   end
 
-  describe "feature requests" do
-    test "renders the list page", %{conn: conn} do
+  describe "feature requests list" do
+    test "renders the empty state when there are no requests", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/forage/feature-requests")
 
       assert html =~ "Feature requests"
+      assert html =~ "No feature requests yet"
+    end
+
+    test "lists existing requests with requester and status, plus stats", %{conn: conn} do
+      {conn, user} = sign_in(conn, "alice@example.com")
+
+      {:ok, _} =
+        Forage.create_feature_request(
+          %{"title" => "Dark mode", "description" => "Please add a dark theme to the dashboard."},
+          user
+        )
+
+      {:ok, _view, html} = live(conn, ~p"/forage/feature-requests")
+
+      assert html =~ "Dark mode"
+      assert html =~ "Please add a dark theme to the dashboard."
+      assert html =~ "Submitted by alice@example.com"
+      assert html =~ "Open"
+      assert html =~ "Total requests"
+      assert html =~ "Contributors"
     end
 
     test "redirects guests away from the new-request page", %{conn: conn} do
@@ -25,7 +46,7 @@ defmodule HiveWeb.ForageLiveTest do
     end
 
     test "lets a signed-in user submit a request and shows it in the list", %{conn: conn} do
-      conn = sign_in(conn, "alice@example.com")
+      {conn, _user} = sign_in(conn, "alice@example.com")
 
       {:ok, view, _html} = live(conn, ~p"/forage/feature-requests/new")
 
@@ -45,8 +66,8 @@ defmodule HiveWeb.ForageLiveTest do
       assert html =~ "Submitted by alice@example.com"
     end
 
-    test "surfaces validation errors without navigating", %{conn: conn} do
-      conn = sign_in(conn, "alice@example.com")
+    test "surfaces validation errors with interpolated bindings", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "alice@example.com")
 
       {:ok, view, _html} = live(conn, ~p"/forage/feature-requests/new")
 
@@ -57,7 +78,8 @@ defmodule HiveWeb.ForageLiveTest do
         )
         |> render_submit()
 
-      assert html =~ "should be at least"
+      assert html =~ "should be at least 10 character(s)"
+      refute html =~ "%{count}"
     end
   end
 
@@ -74,7 +96,7 @@ defmodule HiveWeb.ForageLiveTest do
     end
 
     test "grafana alerts render for members", %{conn: conn} do
-      conn = sign_in(conn, "pedro@tuist.dev")
+      {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
       {:ok, _view, html} = live(conn, ~p"/forage/grafana-alerts")
 
