@@ -21,6 +21,8 @@ config :hive, HiveWeb.Endpoint,
   secret_key_base: "8PVwuyIpKT4kmnC7zb3f91MhGqLXN/FVOq1Q1gysnwrEPB4JjG2WsOcL29eGx/BF",
   server: false
 
+config :hive, dev_routes: true
+
 config :logger, level: :warning
 
 config :phoenix, :plug_init_mode, :runtime

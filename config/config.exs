@@ -13,7 +13,8 @@ config :hive, HiveWeb.Endpoint,
     formats: [html: HiveWeb.ErrorHTML, json: HiveWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Hive.PubSub
+  pubsub_server: Hive.PubSub,
+  live_view: [signing_salt: "kY3hN2pQ"]
 
 config :esbuild,
   version: "0.25.4",
@@ -42,10 +43,15 @@ config :phoenix, :json_library, Jason
 # which runtime.exs populates from env vars. Without a compile-time
 # entry here the strategy isn't registered and `/auth/:provider`
 # fails with "could not be started".
+#
+# GitHub has no OIDC discovery document, so it can't go through Oidcc;
+# it uses its own strategy. Its credentials live in
+# `:ueberauth, Ueberauth.Strategy.Github.OAuth`, set by runtime.exs.
 config :ueberauth, Ueberauth,
   providers: [
     google: {Ueberauth.Strategy.Oidcc, [issuer: :google, scopes: ["openid", "profile", "email"]]},
-    oidc: {Ueberauth.Strategy.Oidcc, [issuer: :oidc, scopes: ["openid", "profile", "email"]]}
+    oidc: {Ueberauth.Strategy.Oidcc, [issuer: :oidc, scopes: ["openid", "profile", "email"]]},
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
   ]
 
 # Issuers + per-strategy credentials are populated at runtime by

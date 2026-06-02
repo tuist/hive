@@ -6,13 +6,17 @@ defmodule HiveWeb.PageHTML do
   alias Hive.Auth
   alias HiveWeb.Layouts
 
+  @dev_login? Application.compile_env(:hive, :dev_routes, false)
+
   def login_page(conn, opts) do
     assigns = %{
       conn: conn,
       error: Keyword.get(opts, :error),
       product_name: Auth.product_name(),
       auth_enabled?: Auth.private?(),
-      providers: Auth.providers()
+      providers: Auth.providers(),
+      dev_login?: @dev_login?,
+      csrf_token: Plug.CSRFProtection.get_csrf_token()
     }
 
     ~H"""
@@ -63,6 +67,15 @@ defmodule HiveWeb.PageHTML do
                 size="medium"
               />
             </div>
+            <form :if={@dev_login?} method="post" action={~p"/dev/login"} data-part="oauth">
+              <input type="hidden" name="_csrf_token" value={@csrf_token} />
+              <.button
+                type="submit"
+                label="Sign in as test user"
+                variant="primary"
+                size="medium"
+              />
+            </form>
           </div>
         </div>
         <div data-part="background" aria-hidden="true">
@@ -70,47 +83,6 @@ defmodule HiveWeb.PageHTML do
           <div data-part="bottom-left-gradient"></div>
         </div>
       </main>
-    </Layouts.app>
-    """
-  end
-
-  def app_page(conn) do
-    user = Auth.current_user(conn) || %{"name" => "Guest", "email" => nil}
-    user_name = user["name"] || user["email"] || "Guest"
-
-    assigns = %{
-      conn: conn,
-      auth_enabled?: Auth.private?(),
-      csrf_token: Plug.CSRFProtection.get_csrf_token(),
-      product_name: Auth.product_name(),
-      user_email: user["email"],
-      user_name: user_name,
-      avatar_color: if(user_name == "Guest", do: "gray", else: "purple"),
-      current_path: conn.request_path
-    }
-
-    ~H"""
-    <Layouts.app title={@product_name}>
-      <Layouts.dashboard
-        product_name={@product_name}
-        user_name={@user_name}
-        user_email={@user_email}
-        avatar_color={@avatar_color}
-        auth_enabled?={@auth_enabled?}
-        csrf_token={@csrf_token}
-        current_path={@current_path}
-      >
-        <h1>Overview</h1>
-        <.card icon="checkup_list" title="Getting started">
-          <.card_section>
-            <ul>
-              <li>Configure authentication through environment variables.</li>
-              <li>Deploy with the Helm chart and provide provider secrets.</li>
-              <li>Replace placeholder modules with real product workflows.</li>
-            </ul>
-          </.card_section>
-        </.card>
-      </Layouts.dashboard>
     </Layouts.app>
     """
   end

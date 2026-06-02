@@ -4,6 +4,7 @@ defmodule HiveWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -19,6 +20,20 @@ defmodule HiveWeb.Router do
 
     get "/login", AuthController, :new
     post "/logout", AuthController, :delete
+
+    if Application.compile_env(:hive, :dev_routes, false) do
+      post "/dev/login", AuthController, :dev_login
+    end
+
+    live_session :forage,
+      on_mount: HiveWeb.ForageLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/forage/feature-requests", ForageLive.FeatureRequests
+      live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
+      live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
+      live "/forage/feedback", ForageLive.Placeholder, :feedback
+      live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
+    end
 
     scope "/auth" do
       pipe_through :oauth

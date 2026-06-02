@@ -9,6 +9,7 @@ defmodule HiveWeb do
 
       import Plug.Conn
       import Phoenix.Controller
+      import Phoenix.LiveView.Router
       import Phoenix.VerifiedRoutes
 
       unquote(verified_routes())
@@ -23,6 +24,17 @@ defmodule HiveWeb do
 
       import Plug.Conn
       import HiveWeb.Gettext
+
+      unquote(verified_routes())
+    end
+  end
+
+  def live_view do
+    quote do
+      use Phoenix.LiveView
+
+      import HiveWeb.Gettext
+      use Noora
 
       unquote(verified_routes())
     end

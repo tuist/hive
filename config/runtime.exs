@@ -87,8 +87,13 @@ oidc_client_secret = System.get_env("HIVE_OIDC_CLIENT_SECRET")
 oidc_display_name = System.get_env("HIVE_OIDC_DISPLAY_NAME", "Identity provider")
 oidc_allowed = parse_domains.(System.get_env("HIVE_OIDC_ALLOWED_DOMAINS"))
 
+github_client_id = System.get_env("HIVE_GITHUB_CLIENT_ID")
+github_client_secret = System.get_env("HIVE_GITHUB_CLIENT_SECRET")
+github_allowed = parse_domains.(System.get_env("HIVE_GITHUB_ALLOWED_DOMAINS"))
+
 google_configured? = present?.(google_client_id) and present?.(google_client_secret)
 oidc_configured? = present?.(oidc_issuer) and present?.(oidc_client_id)
+github_configured? = present?.(github_client_id) and present?.(github_client_secret)
 
 # Pre-filter the Google account picker with `hd=` when a single allowed
 # domain is configured (Google's hosted-domain hint).
@@ -148,6 +153,14 @@ ueberauth_oidcc_providers =
 
 config :ueberauth_oidcc, :providers, ueberauth_oidcc_providers
 
+# GitHub's strategy reads its credentials from this key at request time.
+# Only set it when configured so the strategy stays dormant otherwise.
+if github_configured? do
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: github_client_id,
+    client_secret: github_client_secret
+end
+
 # Display metadata + domain allowlists for each enabled provider. Hive
 # consults this in the login page (button labels) and after Ueberauth's
 # callback succeeds (domain check). Only providers that match an
@@ -168,11 +181,19 @@ hive_providers =
       acc
     end
   end)
+  |> then(fn acc ->
+    if github_configured? do
+      [{:github, %{display_name: "GitHub", allowed_domains: github_allowed}} | acc]
+    else
+      acc
+    end
+  end)
   |> Enum.reverse()
 
 config :hive, :auth,
   visibility: System.get_env("HIVE_VISIBILITY", "public"),
-  providers: hive_providers
+  providers: hive_providers,
+  org_domains: parse_domains.(System.get_env("HIVE_ORG_DOMAINS"))
 
 if config_env() == :prod do
   database_url =
