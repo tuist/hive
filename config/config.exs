@@ -13,7 +13,8 @@ config :hive, HiveWeb.Endpoint,
     formats: [html: HiveWeb.ErrorHTML, json: HiveWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Hive.PubSub
+  pubsub_server: Hive.PubSub,
+  live_view: [signing_salt: "kY3hN2pQ"]
 
 config :esbuild,
   version: "0.25.4",

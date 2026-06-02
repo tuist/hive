@@ -10,15 +10,16 @@ Phoenix application that hosts Tuist's agentic product orchestration. MPL-2.0 li
 - **HTTP**: Bandit
 - **Database**: PostgreSQL via Ecto
 - **Frontend**: Phoenix HTML + Noora design system; esbuild bundles `assets/`
-- **No LiveView yet** — pages are server-rendered HTML from controllers
+- **LiveView** powers the forage section (`lib/hive_web/live/`); login is still server-rendered HTML from a controller
 - **Tool versions** pinned in `mise.toml`
 
 ## Layout
 
 - `lib/hive/` — domain modules (currently just `auth.ex`, `repo.ex`, `application.ex`, `release.ex`)
 - `lib/hive_web/` — web layer
-  - `components/layouts.ex` — `Layouts.app` (HTML shell) + `Layouts.dashboard` (header + sidebar + content slot)
-  - `controllers/page_html.ex` — login + dashboard pages (raw HEEx, no LiveView)
+  - `components/layouts.ex` — `Layouts.app` (controller HTML shell) + `Layouts.root` (LiveView root layout) + `Layouts.dashboard` (header + sidebar + content slot)
+  - `live/forage_live/` — LiveViews for the forage section; `components/forage_components.ex` holds their presentational markup; authorization is a LetMe policy (`lib/hive/forage/policy.ex`)
+  - `controllers/page_html.ex` — login page (raw HEEx, controller-rendered)
   - `auth_controller.ex` — unified OIDC flow at `/auth/:provider` (start + callback)
   - `plugs/require_authenticated.ex` — gates routes when `Auth.enabled?()`
 - `assets/css/app.css` — imports Noora's CSS; Hive-specific styling layered on top

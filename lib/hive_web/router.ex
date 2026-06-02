@@ -25,12 +25,15 @@ defmodule HiveWeb.Router do
       post "/dev/login", AuthController, :dev_login
     end
 
-    get "/forage/feature-requests", ForageController, :feature_requests
-    get "/forage/feature-requests/new", ForageController, :new_feature_request
-    post "/forage/feature-requests", ForageController, :create_feature_request
-    get "/forage/bug-reports", ForageController, :bug_reports
-    get "/forage/feedback", ForageController, :feedback
-    get "/forage/grafana-alerts", ForageController, :grafana_alerts
+    live_session :forage,
+      on_mount: HiveWeb.ForageLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/forage/feature-requests", ForageLive.FeatureRequests
+      live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
+      live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
+      live "/forage/feedback", ForageLive.Placeholder, :feedback
+      live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
+    end
 
     scope "/auth" do
       pipe_through :oauth
