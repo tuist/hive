@@ -28,6 +28,8 @@ defmodule HiveWeb.AuthControllerTest do
 
     response = html_response(conn, 200)
     assert response =~ "Log in to Hive"
+    assert response =~ ~s|property="og:image"|
+    assert response =~ ~s|name="twitter:card" content="summary_large_image"|
     assert response =~ "Continue with Google"
     assert response =~ "Continue with Example IDP"
     assert response =~ ~s|href="/auth/google"|

@@ -6,6 +6,7 @@ defmodule HiveWeb.Layouts do
   embed_templates "layouts/*"
 
   attr :title, :string, required: true
+  attr :open_graph, :map, default: nil
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -16,6 +17,7 @@ defmodule HiveWeb.Layouts do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{@title}</title>
+        <.open_graph_meta open_graph={@open_graph} />
         <link rel="icon" type="image/png" href={~p"/images/logo.png"} />
         <link rel="stylesheet" href="/assets/js/app.css" />
       </head>
@@ -23,6 +25,30 @@ defmodule HiveWeb.Layouts do
         {render_slot(@inner_block)}
       </body>
     </html>
+    """
+  end
+
+  attr :open_graph, :map, default: nil
+
+  def open_graph_meta(%{open_graph: nil} = assigns) do
+    ~H"""
+    """
+  end
+
+  def open_graph_meta(assigns) do
+    ~H"""
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={@open_graph.title} />
+    <meta property="og:description" content={@open_graph.description} />
+    <meta property="og:url" content={@open_graph.url} />
+    <meta property="og:image" content={@open_graph.image} />
+    <meta property="og:image:type" content={HiveWeb.OpenGraph.content_type()} />
+    <meta property="og:image:width" content={@open_graph.image_width} />
+    <meta property="og:image:height" content={@open_graph.image_height} />
+    <meta name="twitter:card" content={@open_graph.twitter_card} />
+    <meta name="twitter:title" content={@open_graph.title} />
+    <meta name="twitter:description" content={@open_graph.description} />
+    <meta name="twitter:image" content={@open_graph.image} />
     """
   end
 

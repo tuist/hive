@@ -7,6 +7,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   alias Hive.Forage.FeatureRequest
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,6 +17,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
       {:ok,
        socket
        |> assign(:page_title, "New feature request · #{socket.assigns.product_name}")
+       |> assign(OpenGraph.assigns(OpenGraph.new_feature_request_page()))
        |> assign_form(Forage.change_feature_request())}
     else
       {:ok,

@@ -6,16 +6,19 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
   alias Hive.Forage
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
 
   @impl true
   def mount(_params, _session, socket) do
     source = Forage.get_source!(:feature_requests)
+    feature_requests = Forage.list_feature_requests()
 
     {:ok,
      socket
      |> assign(:page_title, "Feature requests · #{socket.assigns.product_name}")
+     |> assign(OpenGraph.assigns(OpenGraph.feature_requests_page(feature_requests)))
      |> assign(:source, source)
-     |> assign(:feature_requests, Forage.list_feature_requests())}
+     |> assign(:feature_requests, feature_requests)}
   end
 
   @impl true

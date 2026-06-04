@@ -38,6 +38,16 @@ defmodule Hive.ObjectStorage do
     end
   end
 
+  def stream_object(key, chunk_fun, opts \\ [])
+      when is_binary(key) and is_function(chunk_fun, 1) do
+    request(:get, key,
+      config: Keyword.get(opts, :config),
+      request: Keyword.get(opts, :request, &Req.request/1),
+      stream: chunk_fun,
+      success_statuses: [200]
+    )
+  end
+
   def head_object(key, opts \\ []) when is_binary(key) do
     request(:head, key, Keyword.put(opts, :success_statuses, [200]))
   end
@@ -135,6 +145,7 @@ defmodule Hive.ObjectStorage do
     headers = Keyword.get(opts, :headers, [])
     success_statuses = Keyword.fetch!(opts, :success_statuses)
     url = object_url(config, key)
+    stream = Keyword.get(opts, :stream)
 
     request = [
       method: method,
@@ -142,6 +153,13 @@ defmodule Hive.ObjectStorage do
       body: body,
       headers: signed_headers(config, method, url, body, headers)
     ]
+
+    request =
+      if stream do
+        Keyword.put(request, :into, stream_into(stream))
+      else
+        request
+      end
 
     request_fun = Keyword.get(opts, :request, &Req.request/1)
 
@@ -155,6 +173,15 @@ defmodule Hive.ObjectStorage do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp stream_into(stream) do
+    fn {:data, data}, {req, resp} ->
+      case stream.(data) do
+        :ok -> {:cont, {req, resp}}
+        :halt -> {:halt, {req, resp}}
+      end
     end
   end
 

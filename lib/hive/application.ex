@@ -10,6 +10,7 @@ defmodule Hive.Application do
       Hive.Repo,
       {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Hive.PubSub},
+      {DynamicSupervisor, name: Hive.OpenGraphSupervisor, strategy: :one_for_one},
       HiveWeb.Endpoint
     ]
 

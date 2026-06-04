@@ -11,6 +11,7 @@ defmodule HiveWeb.ForageLive.Placeholder do
   alias Hive.Forage
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
 
   @impl true
   def mount(_params, _session, socket), do: {:ok, socket}
@@ -23,6 +24,7 @@ defmodule HiveWeb.ForageLive.Placeholder do
       {:noreply,
        socket
        |> assign(:page_title, "#{source.label} · #{socket.assigns.product_name}")
+       |> assign(OpenGraph.assigns(OpenGraph.forage_source_page(source)))
        |> assign(:source, source)}
     else
       {:noreply, redirect(socket, to: ~p"/forage/feature-requests")}
