@@ -355,7 +355,7 @@ defmodule HiveWeb.OpenGraph do
 
   defp browser_pool_size do
     :hive
-    |> Application.get_env(:open_graph, [])
+    |> Application.get_env(:og_images, [])
     |> Keyword.get(:browser_pool_size, 2)
     |> case do
       pool_size when is_integer(pool_size) and pool_size > 0 -> pool_size
@@ -364,7 +364,7 @@ defmodule HiveWeb.OpenGraph do
   end
 
   defp maybe_put_chrome_path(opts) do
-    case Application.get_env(:hive, :open_graph, [])[:chrome_path] do
+    case Application.get_env(:hive, :og_images, [])[:chrome_path] do
       path when is_binary(path) and path != "" -> Keyword.put(opts, :chrome_path, path)
       _other -> opts
     end

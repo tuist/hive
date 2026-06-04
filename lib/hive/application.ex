@@ -3,11 +3,9 @@ defmodule Hive.Application do
 
   use Application
 
-  @start_open_graph_browser_pool Application.compile_env(
-                                   :hive,
-                                   :start_open_graph_browser_pool,
-                                   true
-                                 )
+  @start_og_images_browser_pool :hive
+                                |> Application.compile_env(:og_images, [])
+                                |> Keyword.get(:start_browser_pool, true)
 
   @impl true
   def start(_type, _args) do
@@ -32,7 +30,7 @@ defmodule Hive.Application do
   end
 
   defp maybe_add_open_graph_browser_pool(children) do
-    if @start_open_graph_browser_pool do
+    if @start_og_images_browser_pool do
       List.insert_at(children, -1, HiveWeb.OpenGraph.browser_pool_child_spec())
     else
       children
