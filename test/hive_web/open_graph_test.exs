@@ -13,8 +13,19 @@ defmodule HiveWeb.OpenGraphTest do
     def configured?, do: false
   end
 
+  defp open_graph_data do
+    %{
+      description: "Description",
+      eyebrow: "Forage",
+      highlights: ["One", "Two", "Three"],
+      id: "sample-page",
+      path: "/sample",
+      title: "Sample"
+    }
+  end
+
   test "hash changes when rendered data changes" do
-    data = OpenGraph.login_page()
+    data = open_graph_data()
 
     assert OpenGraph.hash(data) != OpenGraph.hash(%{data | description: "Different copy"})
     assert OpenGraph.path(data) == "/open-graph/#{data.id}/#{OpenGraph.hash(data)}"
@@ -22,7 +33,7 @@ defmodule HiveWeb.OpenGraphTest do
   end
 
   test "assigns include absolute social metadata" do
-    data = OpenGraph.login_page()
+    data = open_graph_data()
 
     assert [
              open_graph: %{
@@ -30,7 +41,7 @@ defmodule HiveWeb.OpenGraphTest do
                image: image,
                image_height: 1080,
                image_width: 1920,
-               title: "Log in to Hive | Hive",
+               title: "Sample | Hive",
                twitter_card: "summary_large_image",
                url: url
              }
@@ -42,7 +53,7 @@ defmodule HiveWeb.OpenGraphTest do
   end
 
   test "serve generates and stores the image when object storage misses", %{conn: conn} do
-    data = OpenGraph.login_page()
+    data = open_graph_data()
     parent = self()
 
     conn =
@@ -66,7 +77,7 @@ defmodule HiveWeb.OpenGraphTest do
   end
 
   test "serve streams an existing object storage image", %{conn: conn} do
-    data = OpenGraph.login_page()
+    data = open_graph_data()
     parent = self()
 
     conn =
@@ -93,7 +104,7 @@ defmodule HiveWeb.OpenGraphTest do
 
   test "serve generates without storing when object storage is disabled", %{conn: conn} do
     conn =
-      OpenGraph.serve(conn, OpenGraph.login_page(),
+      OpenGraph.serve(conn, open_graph_data(),
         storage: DisabledStorage,
         generator: fn _data -> "generated-jpeg" end
       )

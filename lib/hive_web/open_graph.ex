@@ -6,12 +6,10 @@ defmodule HiveWeb.OpenGraph do
   import Plug.Conn
 
   alias Hive.Auth
-  alias Hive.Forage
   alias Hive.ObjectStorage
   alias HiveWeb.Endpoint
 
   @browser_pool HiveWeb.OpenGraph.BrowserPool
-  @browser_supervisor Hive.OpenGraphSupervisor
   @content_type "image/jpeg"
   @height 1080
   @quality 95
@@ -22,75 +20,9 @@ defmodule HiveWeb.OpenGraph do
   def height, do: @height
   def width, do: @width
 
-  def login_page do
-    %{
-      description:
-        "Sign in to submit public ideas and help turn product signals into actionable work.",
-      eyebrow: Auth.product_name(),
-      highlights: ["OIDC sign-in", "Public by default", "Organization-aware"],
-      id: "login",
-      path: "/login",
-      title: "Log in to #{Auth.product_name()}"
-    }
+  def browser_pool_child_spec do
+    Browse.child_spec(@browser_pool, browser_pool_opts())
   end
-
-  def feature_requests_page(feature_requests) do
-    stats = feature_request_stats(feature_requests)
-
-    %{
-      description: "Public product ideas submitted by authenticated users.",
-      eyebrow: "Forage",
-      highlights: [
-        "#{stats.total} total requests",
-        "#{stats.open} open",
-        "#{stats.contributors} contributors"
-      ],
-      id: "forage-feature-requests",
-      path: "/forage/feature-requests",
-      title: "Feature requests"
-    }
-  end
-
-  def new_feature_request_page do
-    %{
-      description: "Capture a public idea that can become workable product direction.",
-      eyebrow: "Forage",
-      highlights: ["Public ideas", "Actionable context", "Contributor signal"],
-      id: "forage-feature-requests-new",
-      path: "/forage/feature-requests/new",
-      title: "New feature request"
-    }
-  end
-
-  def forage_source_page(source) do
-    %{
-      description: source.description,
-      eyebrow: "Forage",
-      highlights: source_highlights(source),
-      id: "forage-#{source_slug(source)}",
-      path: source.path,
-      title: source.label
-    }
-  end
-
-  def page("login"), do: {:ok, login_page()}
-
-  def page("forage-feature-requests") do
-    {:ok, feature_requests_page(Forage.list_feature_requests())}
-  end
-
-  def page("forage-feature-requests-new"), do: {:ok, new_feature_request_page()}
-
-  def page("forage-" <> source_slug) do
-    Forage.sources()
-    |> Enum.find(&(source_slug(&1) == source_slug))
-    |> case do
-      nil -> :error
-      source -> {:ok, forage_source_page(source)}
-    end
-  end
-
-  def page(_page_id), do: :error
 
   def assigns(data) do
     [
@@ -410,29 +342,7 @@ defmodule HiveWeb.OpenGraph do
   end
 
   defp render_with_browser(html) do
-    with :ok <- ensure_browser_pool_started() do
-      Carta.render(@browser_pool, html, width: @width, height: @height, quality: @quality)
-    end
-  end
-
-  defp ensure_browser_pool_started do
-    cond do
-      Process.whereis(@browser_pool) ->
-        :ok
-
-      is_nil(Process.whereis(@browser_supervisor)) ->
-        {:error, :browser_supervisor_not_started}
-
-      true ->
-        @browser_pool
-        |> Browse.child_spec(browser_pool_opts())
-        |> then(&DynamicSupervisor.start_child(@browser_supervisor, &1))
-        |> case do
-          {:ok, _pid} -> :ok
-          {:error, {:already_started, _pid}} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-    end
+    Carta.render(@browser_pool, html, width: @width, height: @height, quality: @quality)
   end
 
   defp browser_pool_opts do
@@ -498,36 +408,6 @@ defmodule HiveWeb.OpenGraph do
     |> Phoenix.HTML.html_escape()
     |> Phoenix.HTML.Safe.to_iodata()
     |> IO.iodata_to_binary()
-  end
-
-  defp feature_request_stats(feature_requests) do
-    %{
-      total: length(feature_requests),
-      open: Enum.count(feature_requests, &(&1.status == :open)),
-      contributors:
-        feature_requests
-        |> Enum.map(& &1.user_id)
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq()
-        |> length()
-    }
-  end
-
-  defp source_highlights(source) do
-    [
-      source_visibility(source.visibility),
-      if(source.creatable?, do: "Contributor submissions", else: "Read-only signals"),
-      "Forage source"
-    ]
-  end
-
-  defp source_visibility(:organization), do: "Organization visible"
-  defp source_visibility(_visibility), do: "Public source"
-
-  defp source_slug(source) do
-    source.id
-    |> Atom.to_string()
-    |> String.replace("_", "-")
   end
 
   defp normalize(%{} = map) do

@@ -13,6 +13,23 @@ defmodule HiveWeb.ForageLive.Placeholder do
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
+  def open_graph(source) do
+    %{
+      description: source.description,
+      eyebrow: "Forage",
+      highlights: source_highlights(source),
+      id: "forage-#{open_graph_slug(source)}",
+      path: source.path,
+      title: source.label
+    }
+  end
+
+  def open_graph_slug(source) do
+    source.id
+    |> Atom.to_string()
+    |> String.replace("_", "-")
+  end
+
   @impl true
   def mount(_params, _session, socket), do: {:ok, socket}
 
@@ -24,7 +41,7 @@ defmodule HiveWeb.ForageLive.Placeholder do
       {:noreply,
        socket
        |> assign(:page_title, "#{source.label} · #{socket.assigns.product_name}")
-       |> assign(OpenGraph.assigns(OpenGraph.forage_source_page(source)))
+       |> assign(OpenGraph.assigns(open_graph(source)))
        |> assign(:source, source)}
     else
       {:noreply, redirect(socket, to: ~p"/forage/feature-requests")}
@@ -49,4 +66,15 @@ defmodule HiveWeb.ForageLive.Placeholder do
     </Layouts.dashboard>
     """
   end
+
+  defp source_highlights(source) do
+    [
+      source_visibility(source.visibility),
+      if(source.creatable?, do: "Contributor submissions", else: "Read-only signals"),
+      "Forage source"
+    ]
+  end
+
+  defp source_visibility(:organization), do: "Organization visible"
+  defp source_visibility(_visibility), do: "Public source"
 end

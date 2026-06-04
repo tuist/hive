@@ -9,8 +9,20 @@ defmodule HiveWeb.PageHTML do
 
   @dev_login? Application.compile_env(:hive, :dev_routes, false)
 
+  def open_graph do
+    %{
+      description:
+        "Sign in to submit public ideas and help turn product signals into actionable work.",
+      eyebrow: Auth.product_name(),
+      highlights: ["OIDC sign-in", "Public by default", "Organization-aware"],
+      id: "login",
+      path: "/login",
+      title: "Log in to #{Auth.product_name()}"
+    }
+  end
+
   def login_page(conn, opts) do
-    open_graph = OpenGraph.assigns(OpenGraph.login_page())[:open_graph]
+    open_graph = OpenGraph.assigns(open_graph())[:open_graph]
 
     assigns = %{
       conn: conn,
