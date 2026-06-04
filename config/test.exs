@@ -22,6 +22,7 @@ config :hive, HiveWeb.Endpoint,
   server: false
 
 config :hive, dev_routes: true
+config :hive, :og_images, start_browser_pool: false
 
 config :logger, level: :warning
 

@@ -6,16 +6,36 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
   alias Hive.Forage
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
+
+  def open_graph(feature_requests) do
+    stats = feature_request_stats(feature_requests)
+
+    %{
+      description: "Public product ideas submitted by authenticated users.",
+      eyebrow: "Forage",
+      highlights: [
+        "#{stats.total} total requests",
+        "#{stats.open} open",
+        "#{stats.contributors} contributors"
+      ],
+      id: "forage-feature-requests",
+      path: "/forage/feature-requests",
+      title: "Feature requests"
+    }
+  end
 
   @impl true
   def mount(_params, _session, socket) do
     source = Forage.get_source!(:feature_requests)
+    feature_requests = Forage.list_feature_requests()
 
     {:ok,
      socket
      |> assign(:page_title, "Feature requests · #{socket.assigns.product_name}")
+     |> assign(OpenGraph.assigns(open_graph(feature_requests)))
      |> assign(:source, source)
-     |> assign(:feature_requests, Forage.list_feature_requests())}
+     |> assign(:feature_requests, feature_requests)}
   end
 
   @impl true
@@ -39,5 +59,18 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
       />
     </Layouts.dashboard>
     """
+  end
+
+  defp feature_request_stats(feature_requests) do
+    %{
+      total: length(feature_requests),
+      open: Enum.count(feature_requests, &(&1.status == :open)),
+      contributors:
+        feature_requests
+        |> Enum.map(& &1.user_id)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
+        |> length()
+    }
   end
 end

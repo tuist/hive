@@ -7,6 +7,18 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   alias Hive.Forage.FeatureRequest
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
+
+  def open_graph do
+    %{
+      description: "Capture a public idea that can become workable product direction.",
+      eyebrow: "Forage",
+      highlights: ["Public ideas", "Actionable context", "Contributor signal"],
+      id: "forage-feature-requests-new",
+      path: "/forage/feature-requests/new",
+      title: "New feature request"
+    }
+  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,6 +28,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
       {:ok,
        socket
        |> assign(:page_title, "New feature request · #{socket.assigns.product_name}")
+       |> assign(OpenGraph.assigns(open_graph()))
        |> assign_form(Forage.change_feature_request())}
     else
       {:ok,

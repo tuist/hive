@@ -5,10 +5,25 @@ defmodule HiveWeb.PageHTML do
 
   alias Hive.Auth
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
 
   @dev_login? Application.compile_env(:hive, :dev_routes, false)
 
+  def open_graph do
+    %{
+      description:
+        "Sign in to submit public ideas and help turn product signals into actionable work.",
+      eyebrow: Auth.product_name(),
+      highlights: ["OIDC sign-in", "Public by default", "Organization-aware"],
+      id: "login",
+      path: "/login",
+      title: "Log in to #{Auth.product_name()}"
+    }
+  end
+
   def login_page(conn, opts) do
+    open_graph = OpenGraph.assigns(open_graph())[:open_graph]
+
     assigns = %{
       conn: conn,
       error: Keyword.get(opts, :error),
@@ -16,11 +31,12 @@ defmodule HiveWeb.PageHTML do
       auth_enabled?: Auth.private?(),
       providers: Auth.providers(),
       dev_login?: @dev_login?,
-      csrf_token: Plug.CSRFProtection.get_csrf_token()
+      csrf_token: Plug.CSRFProtection.get_csrf_token(),
+      open_graph: open_graph
     }
 
     ~H"""
-    <Layouts.app title={"Sign in · #{@product_name}"}>
+    <Layouts.app title={"Sign in · #{@product_name}"} open_graph={@open_graph}>
       <main id="login">
         <div data-part="frame">
           <div data-part="content">
