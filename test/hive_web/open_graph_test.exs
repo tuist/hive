@@ -1,7 +1,10 @@
 defmodule HiveWeb.OpenGraphTest do
   use HiveWeb.ConnCase, async: true
 
+  alias Hive.Forage
+  alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
+  alias HiveWeb.PageHTML
 
   defmodule EnabledStorage do
     def enabled?, do: true
@@ -50,6 +53,23 @@ defmodule HiveWeb.OpenGraphTest do
     assert description == data.description
     assert image =~ OpenGraph.path(data)
     assert url =~ data.path
+  end
+
+  test "page OpenGraph data is compatible with the renderer contract" do
+    feature_requests = [
+      %{status: :open, user_id: "alice"},
+      %{status: :open, user_id: "alice"},
+      %{status: :closed, user_id: nil}
+    ]
+
+    page_data = [
+      PageHTML.open_graph(),
+      ForageLive.FeatureRequests.open_graph(feature_requests),
+      ForageLive.NewFeatureRequest.open_graph()
+      | Enum.map(Forage.sources(), &ForageLive.Placeholder.open_graph/1)
+    ]
+
+    Enum.each(page_data, &assert_open_graph_contract/1)
   end
 
   test "serve generates and stores the image when object storage misses", %{conn: conn} do
@@ -127,5 +147,45 @@ defmodule HiveWeb.OpenGraphTest do
     assert html =~ "&lt;unsafe&gt;"
     assert html =~ "Description with &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"
     assert html =~ "<main class=\"card\">"
+  end
+
+  defp assert_open_graph_contract(data) do
+    assert %{
+             description: description,
+             eyebrow: eyebrow,
+             highlights: highlights,
+             id: id,
+             path: path,
+             title: title
+           } = data
+
+    assert is_binary(description) and description != ""
+    assert is_binary(eyebrow) and eyebrow != ""
+    assert is_list(highlights) and highlights != []
+    assert Enum.all?(highlights, &is_binary/1)
+    assert is_binary(id) and id != ""
+    assert is_binary(path) and String.starts_with?(path, "/")
+    assert is_binary(title) and title != ""
+
+    assert is_binary(OpenGraph.hash(data))
+    assert OpenGraph.path(data) =~ "/open-graph/#{id}/"
+    assert OpenGraph.object_key(data) =~ "open-graph/#{id}/"
+    assert OpenGraph.render_html(data) =~ title
+
+    assert [
+             open_graph: %{
+               description: ^description,
+               image: image,
+               image_height: 1080,
+               image_width: 1920,
+               title: meta_title,
+               twitter_card: "summary_large_image",
+               url: url
+             }
+           ] = OpenGraph.assigns(data)
+
+    assert image =~ OpenGraph.path(data)
+    assert meta_title =~ title
+    assert url =~ path
   end
 end
