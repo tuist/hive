@@ -1,8 +1,8 @@
-defmodule HiveWeb.ForageLive.HooksTest do
+defmodule HiveWeb.DashboardLive.HooksTest do
   use Hive.DataCase, async: true
 
   alias Hive.Accounts
-  alias HiveWeb.ForageLive.Hooks
+  alias HiveWeb.DashboardLive.Hooks
 
   defp socket, do: %Phoenix.LiveView.Socket{}
 

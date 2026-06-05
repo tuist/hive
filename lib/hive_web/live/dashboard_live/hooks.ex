@@ -1,9 +1,9 @@
-defmodule HiveWeb.ForageLive.Hooks do
+defmodule HiveWeb.DashboardLive.Hooks do
   @moduledoc """
-  on_mount hook shared by the forage LiveViews. Loads the current user
-  from the session and assigns the chrome that `Layouts.dashboard`
-  needs, plus a handle_params hook that tracks the current path for the
-  sidebar's active state.
+  on_mount hook shared by LiveViews rendered inside the dashboard layout.
+  It loads the current user from the session and assigns the chrome that
+  `Layouts.dashboard` needs, plus a handle_params hook that tracks the
+  current path for the sidebar's active state.
   """
 
   import Phoenix.Component
@@ -17,7 +17,7 @@ defmodule HiveWeb.ForageLive.Hooks do
     socket =
       socket
       |> assign_chrome(session)
-      |> attach_hook(:forage_current_path, :handle_params, &put_current_path/3)
+      |> attach_hook(:dashboard_current_path, :handle_params, &put_current_path/3)
 
     {:cont, socket}
   end

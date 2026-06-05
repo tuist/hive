@@ -26,13 +26,19 @@ defmodule HiveWeb.Router do
     end
 
     live_session :forage,
-      on_mount: HiveWeb.ForageLive.Hooks,
+      on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/forage/feature-requests", ForageLive.FeatureRequests
       live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
       live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
       live "/forage/feedback", ForageLive.Placeholder, :feedback
       live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
+    end
+
+    live_session :settings,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/settings/products", SettingsLive.Products
     end
 
     scope "/auth" do

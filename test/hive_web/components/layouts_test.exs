@@ -107,5 +107,19 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "/forage/feature-requests"
       assert html =~ "/forage/bug-reports"
     end
+
+    test "shows product settings to signed-in users" do
+      html = render_dashboard(assigns(%{signed_in?: true, current_path: "/settings/products"}))
+
+      assert html =~ "Settings"
+      assert html =~ "Products"
+      assert html =~ "/settings/products"
+    end
+
+    test "hides settings from guests" do
+      html = render_dashboard(assigns(%{signed_in?: false}))
+
+      refute html =~ "/settings/products"
+    end
   end
 end

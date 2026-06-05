@@ -112,6 +112,24 @@ defmodule HiveWeb.Layouts do
               />
             </div>
           </details>
+          <details :if={@signed_in?} data-part="settings" open>
+            <summary data-part="trigger">
+              <.tab_menu_vertical label="Settings">
+                <:icon_left><.icon name="settings" /></:icon_left>
+                <:icon_right>
+                  <span data-part="indicator"><.chevron_down /></span>
+                </:icon_right>
+              </.tab_menu_vertical>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                label="Products"
+                icon="package"
+                href={~p"/settings/products"}
+                selected={String.starts_with?(@current_path, ~p"/settings/products")}
+              />
+            </div>
+          </details>
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}
