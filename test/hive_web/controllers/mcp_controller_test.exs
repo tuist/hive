@@ -22,7 +22,7 @@ defmodule HiveWeb.MCPControllerTest do
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> post(~p"/mcp", Jason.encode!(%{}))
+        |> post(~p"/mcp", JSON.encode!(%{}))
 
       assert json_response(conn, 401) == %{
                "error" => "invalid_token",
@@ -68,7 +68,7 @@ defmodule HiveWeb.MCPControllerTest do
   defp post_mcp(conn, body) do
     conn
     |> put_req_header("content-type", "application/json")
-    |> post(~p"/mcp", Jason.encode!(body))
+    |> post(~p"/mcp", JSON.encode!(body))
   end
 
   defp oauth_access_token!(email, scope) do

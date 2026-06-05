@@ -20,7 +20,7 @@ defmodule Hive.MCP.Components.Tools.WhoamiTest do
              ]
            } = response
 
-    assert Jason.decode!(text) == %{
+    assert JSON.decode!(text) == %{
              "id" => user.id,
              "email" => "alice@example.com",
              "role" => "member"

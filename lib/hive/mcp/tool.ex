@@ -24,6 +24,6 @@ defmodule Hive.MCP.Tool do
   end
 
   def json_response(data) do
-    EMCP.Tool.response([%{"type" => "text", "text" => Jason.encode!(data)}])
+    EMCP.Tool.response([%{"type" => "text", "text" => JSON.encode!(data)}])
   end
 end
