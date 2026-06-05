@@ -58,6 +58,7 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
   attr :signed_in?, :boolean, default: false
+  attr :settings_enabled?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
@@ -135,6 +136,24 @@ defmodule HiveWeb.Layouts do
                 icon={source.icon}
                 href={source.path}
                 selected={String.starts_with?(@current_path, source.path)}
+              />
+            </div>
+          </details>
+          <details :if={@settings_enabled?} data-part="settings" open>
+            <summary data-part="trigger">
+              <.tab_menu_vertical label="Settings">
+                <:icon_left><.icon name="settings" /></:icon_left>
+                <:icon_right>
+                  <span data-part="indicator"><.chevron_down /></span>
+                </:icon_right>
+              </.tab_menu_vertical>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                label="Products"
+                icon="package"
+                href={~p"/settings/products"}
+                selected={String.starts_with?(@current_path, ~p"/settings/products")}
               />
             </div>
           </details>

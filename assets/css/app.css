@@ -4,6 +4,7 @@
 @import "./components/account_dropdown.css";
 @import "./routes/login.css";
 @import "./routes/forage.css";
+@import "./routes/settings.css";
 
 :root {
   color-scheme: light;

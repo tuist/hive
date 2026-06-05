@@ -3,6 +3,8 @@ import Ecto.Query
 alias Hive.Accounts
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
+alias Hive.Products
+alias Hive.Products.Product
 alias Hive.Repo
 
 feature_requests = [
@@ -55,5 +57,42 @@ Enum.each(feature_requests, fn {email, attrs} ->
       })
 
     {:ok, _feature_request} = Forage.create_feature_request(attrs, user)
+  end
+end)
+
+products = [
+  %{
+    "name" => "Hive",
+    "description" => "Agentic product orchestration for one organization.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "hive"
+  },
+  %{
+    "name" => "Tuist",
+    "description" =>
+      "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Noora",
+    "description" => "Design system components shared across Tuist products.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Atlas",
+    "description" => "A product boundary without a GitHub repository connected yet."
+  }
+]
+
+Enum.each(products, fn attrs ->
+  exists? =
+    Product
+    |> where([product], product.name == ^attrs["name"])
+    |> Repo.exists?()
+
+  unless exists? do
+    {:ok, _product} = Products.create_product(attrs)
   end
 end)
