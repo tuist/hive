@@ -36,6 +36,13 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+config :boruta, Boruta.Oauth,
+  repo: Hive.Repo,
+  contexts: [
+    resource_owners: Hive.OAuth.ResourceOwners
+  ],
+  issuer: "http://localhost"
+
 # Ueberauth's plug reads the providers list at plug-init time (which is
 # compile-time in prod). Declare every possible provider here with just
 # the strategy module + static options; ueberauth_oidcc looks up its

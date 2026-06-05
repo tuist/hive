@@ -9,6 +9,8 @@ defmodule Hive.Application do
 
   @impl true
   def start(_type, _args) do
+    ensure_mcp_session_store_started()
+
     children =
       [
         HiveWeb.Telemetry,
@@ -35,5 +37,13 @@ defmodule Hive.Application do
     else
       children
     end
+  end
+
+  defp ensure_mcp_session_store_started do
+    if :ets.whereis(EMCP.SessionStore.ETS) == :undefined do
+      EMCP.SessionStore.ETS.init()
+    end
+
+    HiveWeb.Plugs.OAuthRegistrationRateLimit.init_table()
   end
 end

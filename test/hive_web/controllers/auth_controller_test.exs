@@ -109,4 +109,14 @@ defmodule HiveWeb.AuthControllerTest do
     user = Accounts.get_user(user_id)
     assert user.email == "test@hive.dev"
   end
+
+  test "POST /dev/login redirects to the stored return path", %{conn: conn} do
+    conn =
+      conn
+      |> Plug.Test.init_test_session(%{user_return_to: "/oauth2/authorize?client_id=client"})
+      |> post(~p"/dev/login")
+
+    assert redirected_to(conn) == "/oauth2/authorize?client_id=client"
+    refute get_session(conn, :user_return_to)
+  end
 end
