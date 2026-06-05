@@ -72,10 +72,13 @@ defmodule HiveWeb.AuthController do
   end
 
   defp sign_in(conn, user) do
+    return_to = get_session(conn, :user_return_to) || ~p"/"
+
     conn
     |> configure_session(renew: true)
     |> put_session(:user_id, user.id)
-    |> redirect(to: ~p"/")
+    |> delete_session(:user_return_to)
+    |> redirect(to: return_to)
   end
 
   defp safe_atom(key) when is_binary(key) do
