@@ -1,99 +1,106 @@
 defmodule HiveWeb.OAuth.AuthorizeControllerTest do
   use HiveWeb.ConnCase, async: true
-  use Mimic
 
-  alias Boruta.Oauth.AuthorizeResponse
-  alias Boruta.Oauth.Error
-  alias Boruta.Oauth.ResourceOwner
-  alias Hive.Accounts
-  alias Hive.Auth
+  alias Boruta.Ecto.Client
+  alias Boruta.Ecto.Token
+  alias Hive.Repo
 
   describe "GET /oauth2/authorize" do
     test "redirects anonymous users to login and stores the return path", %{conn: conn} do
-      stub(Auth, :current_user, fn _conn -> nil end)
-
       conn = get(conn, ~p"/oauth2/authorize?client_id=client&scope=mcp")
 
       assert redirected_to(conn) == ~p"/login"
       assert get_session(conn, :user_return_to) == "/oauth2/authorize?client_id=client&scope=mcp"
     end
 
-    test "authorizes signed-in users through Boruta", %{conn: conn} do
-      {:ok, user} =
-        Accounts.upsert_from_auth(%{
-          email: "alice@example.com",
-          provider: "test",
-          provider_uid: "alice@example.com"
-        })
+    test "renders a consent page for a signed-in user and valid client", %{conn: conn} do
+      {conn, user} = sign_in(conn, "alice@example.com")
+      client = oauth_client!()
 
-      stub(Auth, :current_user, fn _conn -> user end)
+      conn =
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&resource=http://www.example.com/mcp&state=state"
+        )
 
-      expect(Boruta.Oauth, :authorize, fn conn, %ResourceOwner{} = resource_owner, module ->
-        assert resource_owner.sub == user.id
-        assert resource_owner.username == user.email
-        assert module == HiveWeb.OAuth.AuthorizeController
+      response = html_response(conn, 200)
 
-        Plug.Conn.send_resp(conn, 204, "")
-      end)
+      assert response =~ "Authorize MCP test client"
+      assert response =~ "alice@example.com"
+      assert response =~ "http://client.example/callback"
+      assert response =~ "mcp"
+      refute Repo.exists?(Token)
+      assert user.email == "alice@example.com"
+    end
 
-      conn = get(conn, ~p"/oauth2/authorize?client_id=client&scope=mcp")
+    test "issues an authorization code after consent approval", %{conn: conn} do
+      {conn, user} = sign_in(conn, "alice@example.com")
+      client = oauth_client!()
 
-      assert response(conn, 204) == ""
+      conn =
+        post(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&resource=http://www.example.com/mcp&state=state",
+          %{"decision" => "approve"}
+        )
+
+      uri = redirected_to(conn) |> URI.parse()
+      query = URI.decode_query(uri.query)
+
+      assert %{scheme: "http", host: "client.example", path: "/callback"} = uri
+      assert query["state"] == "state"
+
+      assert %Token{
+               type: "code",
+               sub: sub,
+               scope: "mcp",
+               resource: "http://www.example.com/mcp",
+               redirect_uri: "http://client.example/callback",
+               client_id: client_id
+             } = Repo.get_by(Token, value: query["code"])
+
+      assert sub == user.id
+      assert client_id == client.id
+    end
+
+    test "does not issue an authorization code when consent is denied", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "alice@example.com")
+      client = oauth_client!()
+
+      conn =
+        post(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&resource=http://www.example.com/mcp&state=state",
+          %{"decision" => "deny"}
+        )
+
+      assert html_response(conn, 403) =~ "OAuth authorization was denied."
+      refute Repo.exists?(Token)
+    end
+
+    test "returns an OAuth JSON error for a signed-in invalid request", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "alice@example.com")
+
+      conn = get(conn, ~p"/oauth2/authorize?client_id=not-a-client")
+
+      assert json_response(conn, 400) == %{
+               "error" => "invalid_request",
+               "error_description" =>
+                 "Request is not a valid OAuth request. Need a response_type param."
+             }
     end
   end
 
-  test "authorize_success/2 redirects to Boruta's redirect URL" do
-    conn = build_conn()
-
-    response = %AuthorizeResponse{
-      type: :code,
-      redirect_uri: "http://client.example/callback",
-      code: %Boruta.Oauth.Token{type: "code", value: "code"},
-      state: "state"
-    }
-
-    conn = HiveWeb.OAuth.AuthorizeController.authorize_success(conn, response)
-
-    assert redirected_to(conn) == "http://client.example/callback?code=code&state=state"
-  end
-
-  test "authorize_error/2 returns JSON errors without a redirect format" do
-    conn = build_conn()
-
-    conn =
-      HiveWeb.OAuth.AuthorizeController.authorize_error(conn, %Error{
-        status: :bad_request,
-        error: :invalid_request,
-        error_description: "Invalid request."
+  defp oauth_client! do
+    {:ok, client} =
+      %Client{}
+      |> Client.create_changeset(%{
+        name: "MCP test client",
+        redirect_uris: ["http://client.example/callback"],
+        supported_grant_types: ["authorization_code", "refresh_token"]
       })
+      |> Repo.insert()
 
-    assert json_response(conn, 400) == %{
-             "error" => "invalid_request",
-             "error_description" => "Invalid request."
-           }
-  end
-
-  test "authorize_error/2 redirects formatted OAuth errors" do
-    conn = build_conn()
-
-    conn =
-      HiveWeb.OAuth.AuthorizeController.authorize_error(conn, %Error{
-        status: :bad_request,
-        error: :invalid_request,
-        error_description: "Invalid request.",
-        format: :query,
-        redirect_uri: "http://client.example/callback",
-        state: "state"
-      })
-
-    uri = redirected_to(conn) |> URI.parse()
-
-    assert %{scheme: "http", host: "client.example", path: "/callback"} = uri
-
-    assert URI.decode_query(uri.query) == %{
-             "error" => "invalid_request",
-             "error_description" => "Invalid request.",
-             "state" => "state"
-           }
+    client
   end
 end

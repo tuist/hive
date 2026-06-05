@@ -22,5 +22,19 @@ defmodule HiveWeb.OAuth.RegistrationControllerTest do
       assert response["grant_types"] == ["authorization_code", "refresh_token"]
       assert response["token_endpoint_auth_method"] == "none"
     end
+
+    test "rejects jwks_uri to avoid server-side URL fetching", %{conn: conn} do
+      conn =
+        post(conn, ~p"/oauth2/register", %{
+          "client_name" => "hive-mcp-client",
+          "redirect_uris" => ["http://localhost:1234/callback"],
+          "jwks_uri" => "http://169.254.169.254/latest/meta-data"
+        })
+
+      assert json_response(conn, 400) == %{
+               "error" => "invalid_client_metadata",
+               "error_description" => "jwks_uri is not supported. Provide inline jwks instead."
+             }
+    end
   end
 end

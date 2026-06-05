@@ -8,6 +8,7 @@ defmodule HiveWeb.Plugs.MCPAuthentication do
   alias Hive.Accounts
   alias HiveWeb.RequestOrigin
 
+  @mcp_path "/mcp"
   @resource_metadata_path "/.well-known/oauth-protected-resource/mcp"
 
   def init(opts), do: opts
@@ -18,6 +19,7 @@ defmodule HiveWeb.Plugs.MCPAuthentication do
            Boruta.Ecto.AccessTokens.get_by(value: token_value),
          :ok <- Token.ensure_valid(token),
          true <- scope_allowed?(scope),
+         true <- resource_allowed?(conn, token),
          user when not is_nil(user) <- Accounts.get_user(user_id) do
       assign(conn, :current_user, user)
     else
@@ -36,6 +38,10 @@ defmodule HiveWeb.Plugs.MCPAuthentication do
     do: "mcp" in String.split(scope, " ", trim: true)
 
   defp scope_allowed?(_scope), do: false
+
+  defp resource_allowed?(conn, %Token{resource: resource}) do
+    resource == "#{RequestOrigin.from_conn(conn)}#{@mcp_path}"
+  end
 
   defp unauthorized(conn) do
     conn

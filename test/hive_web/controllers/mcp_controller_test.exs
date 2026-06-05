@@ -35,7 +35,7 @@ defmodule HiveWeb.MCPControllerTest do
     end
 
     test "accepts a valid Boruta access token with the mcp scope", %{conn: conn} do
-      token = oauth_access_token!("alice@example.com", "mcp")
+      token = oauth_access_token!("alice@example.com", "mcp", "http://www.example.com/mcp")
 
       conn =
         conn
@@ -51,7 +51,21 @@ defmodule HiveWeb.MCPControllerTest do
     end
 
     test "rejects a valid Boruta access token without the mcp scope", %{conn: conn} do
-      token = oauth_access_token!("alice@example.com", "profile")
+      token = oauth_access_token!("alice@example.com", "profile", "http://www.example.com/mcp")
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{token.value}")
+        |> post_mcp(@initialize)
+
+      assert json_response(conn, 401) == %{
+               "error" => "invalid_token",
+               "error_description" => "Missing or invalid access token."
+             }
+    end
+
+    test "rejects a valid Boruta access token for another resource", %{conn: conn} do
+      token = oauth_access_token!("alice@example.com", "mcp", "http://www.example.com/other")
 
       conn =
         conn
@@ -71,7 +85,7 @@ defmodule HiveWeb.MCPControllerTest do
     |> post(~p"/mcp", JSON.encode!(body))
   end
 
-  defp oauth_access_token!(email, scope) do
+  defp oauth_access_token!(email, scope, resource) do
     {:ok, user} =
       Accounts.upsert_from_auth(%{
         email: email,
@@ -97,6 +111,7 @@ defmodule HiveWeb.MCPControllerTest do
         client_id: client.id,
         sub: user.id,
         scope: scope,
+        resource: resource,
         access_token_ttl: 60
       })
       |> Repo.insert()

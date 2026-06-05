@@ -28,6 +28,7 @@ oauth_issuer =
   System.get_env("HIVE_OAUTH_ISSUER") ||
     case config_env() do
       :prod -> "https://#{System.get_env("PHX_HOST", "hive.tuist.dev")}"
+      :test -> "http://www.example.com"
       _ -> "http://localhost:#{port}"
     end
 

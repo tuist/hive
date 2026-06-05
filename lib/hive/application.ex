@@ -43,5 +43,7 @@ defmodule Hive.Application do
     if :ets.whereis(EMCP.SessionStore.ETS) == :undefined do
       EMCP.SessionStore.ETS.init()
     end
+
+    HiveWeb.Plugs.OAuthRegistrationRateLimit.init_table()
   end
 end

@@ -17,6 +17,10 @@ defmodule HiveWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :oauth_registration do
+    plug HiveWeb.Plugs.OAuthRegistrationRateLimit
+  end
+
   pipeline :mcp do
     plug HiveWeb.Plugs.MCPAuthentication
   end
@@ -39,9 +43,14 @@ defmodule HiveWeb.Router do
     end
 
     scope "/oauth2", OAuth do
-      pipe_through :json_api
+      pipe_through [:json_api]
 
       post "/token", TokenController, :token
+    end
+
+    scope "/oauth2", OAuth do
+      pipe_through [:json_api, :oauth_registration]
+
       post "/register", RegistrationController, :register
     end
 
@@ -52,6 +61,7 @@ defmodule HiveWeb.Router do
 
     scope "/oauth2", OAuth do
       get "/authorize", AuthorizeController, :authorize
+      post "/authorize", AuthorizeController, :approve
     end
 
     if Application.compile_env(:hive, :dev_routes, false) do

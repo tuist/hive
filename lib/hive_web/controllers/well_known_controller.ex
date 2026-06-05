@@ -38,6 +38,7 @@ defmodule HiveWeb.WellKnownController do
       grant_types_supported: ["authorization_code", "refresh_token"],
       response_types_supported: ["code"],
       code_challenge_methods_supported: ["S256"],
+      resource_parameter_supported: true,
       scopes_supported: ["mcp"],
       token_endpoint_auth_methods_supported: [
         "none",

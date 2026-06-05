@@ -17,9 +17,17 @@ defmodule HiveWeb.OAuth.RegistrationController do
     "response_types" => :response_types,
     "token_endpoint_auth_method" => :token_endpoint_auth_method,
     "jwks" => :jwks,
-    "jwks_uri" => :jwks_uri,
     "metadata" => :metadata
   }
+
+  def register(conn, %{"jwks_uri" => _jwks_uri}) do
+    conn
+    |> put_status(:bad_request)
+    |> json(%{
+      error: "invalid_client_metadata",
+      error_description: "jwks_uri is not supported. Provide inline jwks instead."
+    })
+  end
 
   def register(conn, params) do
     Boruta.Openid.register_client(conn, normalize_registration_params(params), __MODULE__)
