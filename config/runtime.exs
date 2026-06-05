@@ -78,6 +78,13 @@ config :hive, :object_storage,
     force_path_style: parse_boolean.(System.get_env("HIVE_S3_FORCE_PATH_STYLE"))
   ]
 
+config :hive, :github_app,
+  app_id: System.get_env("HIVE_GITHUB_APP_ID"),
+  installation_id: System.get_env("HIVE_GITHUB_APP_INSTALLATION_ID"),
+  private_key: System.get_env("HIVE_GITHUB_APP_PRIVATE_KEY"),
+  webhook_secret: System.get_env("HIVE_GITHUB_WEBHOOK_SECRET"),
+  api_url: System.get_env("HIVE_GITHUB_API_URL", "https://api.github.com")
+
 if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
 end

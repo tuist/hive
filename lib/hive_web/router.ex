@@ -13,6 +13,16 @@ defmodule HiveWeb.Router do
     plug Ueberauth
   end
 
+  pipeline :webhook do
+    plug :accepts, ["json"]
+  end
+
+  scope "/webhooks", HiveWeb do
+    pipe_through :webhook
+
+    post "/github", GitHubWebhookController, :create
+  end
+
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
 

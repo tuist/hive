@@ -6,3 +6,4 @@ Ecto.Adapters.SQL.Sandbox.mode(Hive.Repo, :manual)
 # (process-local), keeping parallelism safe.
 Mimic.copy(Hive.Auth)
 Mimic.copy(Hive.GitHub.Repositories)
+Mimic.copy(Hive.GitHub.Webhooks)
