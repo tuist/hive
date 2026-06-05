@@ -3,6 +3,7 @@ defmodule HiveWeb.SettingsLive.Products do
 
   use HiveWeb, :live_view
 
+  alias Hive.Auth
   alias Hive.GitHub.Repositories
   alias Hive.Products
   alias Hive.Products.Product
@@ -11,7 +12,7 @@ defmodule HiveWeb.SettingsLive.Products do
 
   @impl true
   def mount(_params, _session, socket) do
-    if socket.assigns.signed_in? do
+    if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
       {:ok,
        socket
        |> assign(:page_title, "Products · #{socket.assigns.product_name}")
@@ -24,7 +25,7 @@ defmodule HiveWeb.SettingsLive.Products do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Log in to configure products.")
+       |> put_flash(:error, "You don't have access to configure products.")
        |> redirect(to: ~p"/login")}
     end
   end
@@ -165,6 +166,7 @@ defmodule HiveWeb.SettingsLive.Products do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
+      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}

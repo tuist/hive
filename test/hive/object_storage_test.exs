@@ -52,6 +52,35 @@ defmodule Hive.ObjectStorageTest do
              ObjectStorage.get_object("notes/demo.txt", config: @config, request: request)
   end
 
+  test "stream_object streams response chunks through the request callback" do
+    parent = self()
+
+    request = fn request ->
+      assert request[:method] == :get
+      assert request[:url] == "https://fsn1.your-objectstorage.com/hive-test/images/card.png"
+      assert is_function(request[:into], 2)
+
+      assert {:cont, {%{}, %{}}} = request[:into].({:data, "image"}, {%{}, %{}})
+      assert {:cont, {%{}, %{}}} = request[:into].({:data, "-bytes"}, {%{}, %{}})
+
+      {:ok, %{status: 200, body: nil, headers: [{"content-type", "image/png"}]}}
+    end
+
+    assert {:ok, %{status: 200}} =
+             ObjectStorage.stream_object(
+               "images/card.png",
+               fn chunk ->
+                 send(parent, {:chunk, chunk})
+                 :ok
+               end,
+               config: @config,
+               request: request
+             )
+
+    assert_received {:chunk, "image"}
+    assert_received {:chunk, "-bytes"}
+  end
+
   test "delete_object accepts no-content responses" do
     request = fn request ->
       assert request[:method] == :delete

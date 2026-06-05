@@ -25,6 +25,7 @@ defmodule HiveWeb.Router do
 
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
+    get "/open-graph/:page_id/:hash", OpenGraphController, :show
 
     pipe_through :browser
 

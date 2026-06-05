@@ -1,10 +1,37 @@
 defmodule HiveWeb.SettingsLive.ProductsTest do
   use HiveWeb.ConnCase, async: true
 
+  alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.GitHub.Repositories
+  alias HiveWeb.SettingsLive.Products
 
   test "redirects guests to login", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/settings/products")
+  end
+
+  test "redirects signed-in contributors" do
+    {:ok, user} =
+      Accounts.upsert_from_auth(%{
+        email: "contributor@example.com",
+        provider: "test",
+        provider_uid: "contributor"
+      })
+
+    Mimic.stub(Auth, :member?, fn ^user -> false end)
+
+    socket = %Phoenix.LiveView.Socket{
+      assigns: %{
+        __changed__: %{},
+        signed_in?: true,
+        current_user: user,
+        product_name: "Hive",
+        flash: %{}
+      }
+    }
+
+    assert {:ok, socket} = Products.mount(%{}, %{}, socket)
+    assert {:redirect, %{to: "/login"}} = socket.redirected
   end
 
   test "renders the products settings page for signed-in users", %{conn: conn} do

@@ -20,7 +20,7 @@ defmodule HiveWeb.CacheBodyReader do
         {:ok, body, conn}
 
       {:more, body, conn} ->
-        read_body(conn, opts, [body | acc])
+        {:more, body, conn}
 
       {:error, reason} ->
         {:error, reason}

@@ -33,6 +33,7 @@ defmodule HiveWeb.LayoutsTest do
         avatar_color={@avatar_color}
         auth_enabled?={@auth_enabled?}
         signed_in?={@signed_in?}
+        settings_enabled?={@settings_enabled?}
         csrf_token={@csrf_token}
         current_path={@current_path}
         forage_sources={@forage_sources}
@@ -51,6 +52,7 @@ defmodule HiveWeb.LayoutsTest do
           avatar_color: "purple",
           auth_enabled?: false,
           signed_in?: true,
+          settings_enabled?: true,
           csrf_token: "csrf-token-123",
           current_path: "/forage/feature-requests",
           forage_sources: [
@@ -108,16 +110,23 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "/forage/bug-reports"
     end
 
-    test "shows product settings to signed-in users" do
-      html = render_dashboard(assigns(%{signed_in?: true, current_path: "/settings/products"}))
+    test "shows product settings when settings are enabled" do
+      html =
+        render_dashboard(
+          assigns(%{
+            signed_in?: true,
+            settings_enabled?: true,
+            current_path: "/settings/products"
+          })
+        )
 
       assert html =~ "Settings"
       assert html =~ "Products"
       assert html =~ "/settings/products"
     end
 
-    test "hides settings from guests" do
-      html = render_dashboard(assigns(%{signed_in?: false}))
+    test "hides settings when settings are disabled" do
+      html = render_dashboard(assigns(%{signed_in?: true, settings_enabled?: false}))
 
       refute html =~ "/settings/products"
     end
