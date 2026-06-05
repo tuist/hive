@@ -29,6 +29,10 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert response =~ "alice@example.com"
       assert response =~ "http://client.example/callback"
       assert response =~ "mcp"
+      assert response =~ ~s(data-part="client-info")
+      assert response =~ ~s(data-part="form")
+      assert response =~ ~s(data-part="approve-button")
+      assert response =~ ~s(data-part="deny-button")
       refute Repo.exists?(Token)
       assert user.email == "alice@example.com"
     end

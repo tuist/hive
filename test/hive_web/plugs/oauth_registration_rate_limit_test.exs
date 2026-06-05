@@ -6,7 +6,7 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimitTest do
   describe "call/2" do
     test "allows requests within the window limit" do
       conn = registration_conn()
-      opts = OAuthRegistrationRateLimit.init([])
+      opts = OAuthRegistrationRateLimit.init(now: fn -> 1_800 end)
 
       for _ <- 1..20 do
         refute OAuthRegistrationRateLimit.call(conn, opts).halted
@@ -15,7 +15,7 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimitTest do
 
     test "rejects requests over the window limit" do
       conn = registration_conn()
-      opts = OAuthRegistrationRateLimit.init([])
+      opts = OAuthRegistrationRateLimit.init(now: fn -> 1_800 end)
 
       for _ <- 1..20 do
         OAuthRegistrationRateLimit.call(conn, opts)

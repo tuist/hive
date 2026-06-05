@@ -19,10 +19,10 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimit do
     :ok
   end
 
-  def call(conn, _opts) do
+  def call(conn, opts) do
     init_table()
 
-    case increment(conn) do
+    case increment(conn, opts) do
       count when count <= @limit ->
         conn
 
@@ -37,10 +37,17 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimit do
     end
   end
 
-  defp increment(conn) do
-    key = {client_identifier(conn), System.system_time(:second) |> div(@window_seconds)}
+  defp increment(conn, opts) do
+    key = {client_identifier(conn), current_bucket(opts)}
 
     :ets.update_counter(@table, key, {2, 1}, {key, 0})
+  end
+
+  defp current_bucket(opts) do
+    now = Keyword.get(opts, :now, fn -> System.system_time(:second) end)
+
+    now.()
+    |> div(@window_seconds)
   end
 
   defp client_identifier(conn) do

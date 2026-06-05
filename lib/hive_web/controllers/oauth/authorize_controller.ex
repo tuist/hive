@@ -96,18 +96,18 @@ defmodule HiveWeb.OAuth.AuthorizeController do
 
     """
     <main id="oauth-consent">
-      <h1>Authorize #{html_escape(client_name)}</h1>
-      <p>Allow this client to access Hive MCP as #{html_escape(authorization.resource_owner.username)}?</p>
-      <dl>
-        <dt>Redirect URI</dt>
-        <dd>#{html_escape(redirect_uri)}</dd>
-        <dt>Scopes</dt>
-        <dd>#{html_escape(scope)}</dd>
+      <h1 data-part="title">Authorize #{html_escape(client_name)}</h1>
+      <p data-part="description">Allow this client to access Hive MCP as #{html_escape(authorization.resource_owner.username)}?</p>
+      <dl data-part="client-info">
+        <dt data-part="client-info-label">Redirect URI</dt>
+        <dd data-part="client-info-value">#{html_escape(redirect_uri)}</dd>
+        <dt data-part="client-info-label">Scopes</dt>
+        <dd data-part="client-info-value">#{html_escape(scope)}</dd>
       </dl>
-      <form method="post" action="#{html_escape(current_path(conn))}">
+      <form data-part="form" method="post" action="#{html_escape(current_path(conn))}">
         <input type="hidden" name="_csrf_token" value="#{html_escape(Plug.CSRFProtection.get_csrf_token())}" />
-        <button type="submit" name="decision" value="approve">Allow</button>
-        <button type="submit" name="decision" value="deny">Deny</button>
+        <button data-part="approve-button" type="submit" name="decision" value="approve">Allow</button>
+        <button data-part="deny-button" type="submit" name="decision" value="deny">Deny</button>
       </form>
     </main>
     """
