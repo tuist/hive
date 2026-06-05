@@ -9,6 +9,8 @@ defmodule Hive.Application do
 
   @impl true
   def start(_type, _args) do
+    ensure_mcp_session_store_started()
+
     children =
       [
         HiveWeb.Telemetry,
@@ -34,6 +36,12 @@ defmodule Hive.Application do
       List.insert_at(children, -1, HiveWeb.OpenGraph.browser_pool_child_spec())
     else
       children
+    end
+  end
+
+  defp ensure_mcp_session_store_started do
+    if :ets.whereis(EMCP.SessionStore.ETS) == :undefined do
+      EMCP.SessionStore.ETS.init()
     end
   end
 end

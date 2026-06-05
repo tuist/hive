@@ -8,14 +8,24 @@ defmodule Hive.OAuth.ResourceOwners do
   alias Hive.Repo
 
   @impl Boruta.Oauth.ResourceOwners
-  def get_by(username: username) when is_binary(username) do
+  def get_by(attrs) when is_list(attrs) do
+    cond do
+      username = attrs[:username] ->
+        get_by_username(username)
+
+      sub = attrs[:sub] ->
+        get_by_sub(sub)
+    end
+  end
+
+  defp get_by_username(username) when is_binary(username) do
     case Repo.get_by(User, email: User.normalize_email(username)) do
       %User{} = user -> {:ok, resource_owner(user)}
       nil -> {:error, "User not found."}
     end
   end
 
-  def get_by(sub: sub) when is_binary(sub) do
+  defp get_by_sub(sub) when is_binary(sub) do
     case Repo.get(User, sub) do
       %User{} = user -> {:ok, resource_owner(user)}
       nil -> {:error, "User not found."}

@@ -24,6 +24,15 @@ defmodule Hive.OAuth.ResourceOwnersTest do
       assert sub == user.id
     end
 
+    test "ignores extra Boruta lookup attributes when finding by subject" do
+      {:ok, user} = signed_in("alice@example.com")
+
+      assert {:ok, %ResourceOwner{sub: sub, username: "alice@example.com"}} =
+               ResourceOwners.get_by(sub: user.id, scope: "mcp")
+
+      assert sub == user.id
+    end
+
     test "returns an error for an unknown username" do
       assert ResourceOwners.get_by(username: "nobody@example.com") == {:error, "User not found."}
     end
