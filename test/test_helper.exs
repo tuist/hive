@@ -6,3 +6,5 @@ Ecto.Adapters.SQL.Sandbox.mode(Hive.Repo, :manual)
 # (process-local), keeping parallelism safe.
 Mimic.copy(Hive.Auth)
 Mimic.copy(HiveWeb.OpenGraph)
+Mimic.copy(Boruta.Oauth)
+Mimic.copy(Boruta.Openid)

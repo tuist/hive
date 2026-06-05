@@ -13,14 +13,56 @@ defmodule HiveWeb.Router do
     plug Ueberauth
   end
 
+  pipeline :json_api do
+    plug :accepts, ["json"]
+  end
+
+  pipeline :oauth_registration do
+    plug HiveWeb.Plugs.OAuthRegistrationRateLimit
+  end
+
+  pipeline :mcp do
+    plug HiveWeb.Plugs.MCPAuthentication
+  end
+
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
     get "/open-graph/:page_id/:hash", OpenGraphController, :show
+
+    scope "/.well-known" do
+      pipe_through :json_api
+
+      get "/oauth-authorization-server", WellKnownController, :oauth_authorization_server
+      get "/oauth-protected-resource", WellKnownController, :oauth_protected_resource
+
+      get "/oauth-protected-resource/*resource_path",
+          WellKnownController,
+          :oauth_protected_resource
+
+      get "/mcp/server-card.json", WellKnownController, :mcp_server_card
+    end
+
+    scope "/oauth2", OAuth do
+      pipe_through [:json_api]
+
+      post "/token", TokenController, :token
+    end
+
+    scope "/oauth2", OAuth do
+      pipe_through [:json_api, :oauth_registration]
+
+      post "/register", RegistrationController, :register
+    end
 
     pipe_through :browser
 
     get "/login", AuthController, :new
     post "/logout", AuthController, :delete
+
+    scope "/oauth2", OAuth do
+      get "/authorize", AuthorizeController, :authorize
+      post "/authorize", AuthorizeController, :approve
+    end
 
     if Application.compile_env(:hive, :dev_routes, false) do
       post "/dev/login", AuthController, :dev_login
@@ -45,5 +87,11 @@ defmodule HiveWeb.Router do
     pipe_through HiveWeb.Plugs.RequireAuthenticated
 
     get "/", PageController, :home
+  end
+
+  scope "/" do
+    pipe_through :mcp
+
+    forward "/mcp", EMCP.Transport.StreamableHTTP, server: Hive.MCP.Server
   end
 end
