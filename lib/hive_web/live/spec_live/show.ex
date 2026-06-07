@@ -10,11 +10,12 @@ defmodule HiveWeb.SpecLive.Show do
 
   def open_graph(spec) do
     %{
-      description: "#{status_label(spec.status)} · #{source_label(spec)}",
-      eyebrow: "Spec",
+      author: author_data(spec),
+      description: spec_summary(spec),
+      eyebrow: "Spec #{spec_number(spec)}",
       highlights: [
+        spec_number(spec),
         "#{length(spec.comments)} comments",
-        source_label(spec),
         status_label(spec.status)
       ],
       id: "spec-#{spec.id}",
@@ -95,6 +96,24 @@ defmodule HiveWeb.SpecLive.Show do
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
 
+  defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
+  defp spec_number(_spec), do: "#?"
+
+  defp spec_summary(%{summary: summary}) when is_binary(summary) and summary != "", do: summary
+  defp spec_summary(spec), do: "#{status_label(spec.status)} · #{source_label(spec)}"
+
+  defp author_data(%{created_by_user: %{email: email}}) when is_binary(email) do
+    handle =
+      email
+      |> String.split("@", parts: 2)
+      |> List.first()
+      |> then(&"@#{&1}")
+
+    %{handle: handle, initials: String.first(handle |> String.trim_leading("@")) || "?"}
+  end
+
+  defp author_data(_spec), do: nil
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -105,6 +124,7 @@ defmodule HiveWeb.SpecLive.Show do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
+      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}

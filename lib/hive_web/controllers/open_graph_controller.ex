@@ -5,6 +5,7 @@ defmodule HiveWeb.OpenGraphController do
 
   alias Hive.Forage
   alias Hive.Specs
+  alias HiveWeb.AccountLive
   alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
   alias HiveWeb.PageHTML
@@ -23,6 +24,7 @@ defmodule HiveWeb.OpenGraphController do
   end
 
   defp page("login"), do: {:ok, PageHTML.open_graph()}
+  defp page("account-identities"), do: {:ok, AccountLive.Identities.open_graph()}
 
   defp page("forage-feature-requests") do
     {:ok, ForageLive.FeatureRequests.open_graph(Forage.list_feature_requests())}

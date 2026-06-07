@@ -29,7 +29,8 @@
         white-space: nowrap;
       }
 
-      & [data-part="forage-sources"] {
+      & [data-part="forage-sources"],
+      & [data-part="settings"] {
         & > summary {
           cursor: pointer;
           list-style: none;

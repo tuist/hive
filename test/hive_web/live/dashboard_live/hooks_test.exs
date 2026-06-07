@@ -1,8 +1,8 @@
-defmodule HiveWeb.ForageLive.HooksTest do
+defmodule HiveWeb.DashboardLive.HooksTest do
   use Hive.DataCase, async: true
 
   alias Hive.Accounts
-  alias HiveWeb.ForageLive.Hooks
+  alias HiveWeb.DashboardLive.Hooks
 
   defp socket, do: %Phoenix.LiveView.Socket{}
 
@@ -12,6 +12,7 @@ defmodule HiveWeb.ForageLive.HooksTest do
 
       assert socket.assigns.current_user == nil
       assert socket.assigns.signed_in? == false
+      assert socket.assigns.settings_enabled? == false
       assert socket.assigns.user_name == "Guest"
       assert socket.assigns.user_email == nil
       assert socket.assigns.avatar_color == "gray"
@@ -33,6 +34,7 @@ defmodule HiveWeb.ForageLive.HooksTest do
 
       assert socket.assigns.current_user.id == user.id
       assert socket.assigns.signed_in? == true
+      assert socket.assigns.settings_enabled? == true
       assert socket.assigns.user_name == "alice@example.com"
       assert socket.assigns.user_email == "alice@example.com"
       assert socket.assigns.avatar_color == "purple"

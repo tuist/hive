@@ -61,7 +61,7 @@ defmodule HiveWeb.SpecComponents do
               <div data-part="spec-table-cell">
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
-                  <strong>{spec.title}</strong>
+                  <strong>{spec_number(spec)} {spec.title}</strong>
                   <p>{preview(spec.body)}</p>
                 </div>
               </div>
@@ -98,7 +98,7 @@ defmodule HiveWeb.SpecComponents do
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label="Spec" color="information" style="light-fill" />
+          <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
           <h1>{@spec.title}</h1>
           <p>{source_label(@spec)}</p>
         </div>
@@ -324,6 +324,9 @@ defmodule HiveWeb.SpecComponents do
 
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
+
+  defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
+  defp spec_number(_spec), do: "#?"
 
   defp status_label(status),
     do: status |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()

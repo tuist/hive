@@ -58,6 +58,7 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
   attr :signed_in?, :boolean, default: false
+  attr :settings_enabled?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
@@ -66,56 +67,14 @@ defmodule HiveWeb.Layouts do
   def dashboard(assigns) do
     ~H"""
     <main class="layout">
-      <header class="headerbar">
-        <a data-part="left-section" href="/">
-          <div data-part="brand">
-            <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
-            <span data-part="title">{@product_name}</span>
-          </div>
-        </a>
-        <div data-part="right-section">
-          <div :if={@signed_in?} class="account-dropdown">
-            <button data-part="trigger" type="button">
-              <.avatar
-                id="current-user-avatar"
-                name={@user_name}
-                color={@avatar_color}
-                size="small"
-              />
-              <span data-part="account-name">{@user_name}</span>
-              <.chevron_down />
-            </button>
-            <div data-part="content">
-              <div data-part="header">
-                <.avatar
-                  id="current-user-menu-avatar"
-                  name={@user_name}
-                  color={@avatar_color}
-                  size="medium"
-                />
-                <div data-part="identity">
-                  <span data-part="name">{@user_name}</span>
-                  <span :if={@user_email} data-part="email">{@user_email}</span>
-                </div>
-              </div>
-              <form method="post" action="/logout" data-part="actions">
-                <input type="hidden" name="_csrf_token" value={@csrf_token} />
-                <button type="submit">
-                  <.logout />
-                  <span>Log out</span>
-                </button>
-              </form>
-            </div>
-          </div>
-          <.button
-            :if={!@signed_in?}
-            label="Sign in"
-            href={~p"/login"}
-            variant="primary"
-            size="medium"
-          />
-        </div>
-      </header>
+      <.headerbar
+        product_name={@product_name}
+        user_name={@user_name}
+        user_email={@user_email}
+        avatar_color={@avatar_color}
+        signed_in?={@signed_in?}
+        csrf_token={@csrf_token}
+      />
       <.line_divider />
       <section data-part="main">
         <.sidebar>
@@ -144,12 +103,131 @@ defmodule HiveWeb.Layouts do
             href={~p"/specs"}
             selected={String.starts_with?(@current_path, "/specs")}
           />
+          <details :if={@settings_enabled?} data-part="settings" open>
+            <summary data-part="trigger">
+              <.tab_menu_vertical label="Settings">
+                <:icon_left><.icon name="settings" /></:icon_left>
+                <:icon_right>
+                  <span data-part="indicator"><.chevron_down /></span>
+                </:icon_right>
+              </.tab_menu_vertical>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                label="Products"
+                icon="package"
+                href={~p"/settings/products"}
+                selected={String.starts_with?(@current_path, ~p"/settings/products")}
+              />
+            </div>
+          </details>
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}
         </section>
       </section>
     </main>
+    """
+  end
+
+  attr :product_name, :string, required: true
+  attr :user_name, :string, required: true
+  attr :user_email, :string, default: nil
+  attr :avatar_color, :string, required: true
+  attr :signed_in?, :boolean, default: false
+  attr :csrf_token, :string, required: true
+  attr :current_path, :string, default: "/"
+  slot :inner_block, required: true
+
+  def account(assigns) do
+    ~H"""
+    <main class="layout">
+      <.headerbar
+        product_name={@product_name}
+        user_name={@user_name}
+        user_email={@user_email}
+        avatar_color={@avatar_color}
+        signed_in?={@signed_in?}
+        csrf_token={@csrf_token}
+      />
+      <.line_divider />
+      <section data-part="main">
+        <.sidebar>
+          <.sidebar_item
+            label="Identities"
+            icon="user"
+            href={~p"/account/identities"}
+            selected={String.starts_with?(@current_path, ~p"/account/identities")}
+          />
+        </.sidebar>
+        <section data-part="content">
+          {render_slot(@inner_block)}
+        </section>
+      </section>
+    </main>
+    """
+  end
+
+  attr :product_name, :string, required: true
+  attr :user_name, :string, required: true
+  attr :user_email, :string, default: nil
+  attr :avatar_color, :string, required: true
+  attr :signed_in?, :boolean, default: false
+  attr :csrf_token, :string, required: true
+
+  defp headerbar(assigns) do
+    ~H"""
+    <header class="headerbar">
+      <a data-part="left-section" href="/">
+        <div data-part="brand">
+          <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
+          <span data-part="title">{@product_name}</span>
+        </div>
+      </a>
+      <div data-part="right-section">
+        <div :if={@signed_in?} class="account-dropdown">
+          <button data-part="trigger" type="button">
+            <.avatar id="current-user-avatar" name={@user_name} color={@avatar_color} size="small" />
+            <span data-part="account-name">{@user_name}</span>
+            <.chevron_down />
+          </button>
+          <div data-part="content">
+            <div data-part="header">
+              <.avatar
+                id="current-user-menu-avatar"
+                name={@user_name}
+                color={@avatar_color}
+                size="medium"
+              />
+              <div data-part="identity">
+                <span data-part="name">{@user_name}</span>
+                <span :if={@user_email} data-part="email">{@user_email}</span>
+              </div>
+            </div>
+            <div data-part="actions">
+              <a href={~p"/account/identities"}>
+                <.user />
+                <span>Account</span>
+              </a>
+            </div>
+            <form method="post" action="/logout" data-part="actions">
+              <input type="hidden" name="_csrf_token" value={@csrf_token} />
+              <button type="submit">
+                <.logout />
+                <span>Log out</span>
+              </button>
+            </form>
+          </div>
+        </div>
+        <.button
+          :if={!@signed_in?}
+          label="Sign in"
+          href={~p"/login"}
+          variant="primary"
+          size="medium"
+        />
+      </div>
+    </header>
     """
   end
 end

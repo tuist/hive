@@ -13,7 +13,7 @@ defmodule HiveWeb.OpenGraph do
   @content_type "image/jpeg"
   @height 1080
   @quality 95
-  @version "v2"
+  @version "v3"
   @width 1920
 
   def content_type, do: @content_type
@@ -199,9 +199,34 @@ defmodule HiveWeb.OpenGraph do
             line-height: 1.26;
           }
 
+          .author {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 42px;
+            color: #333948;
+            font-size: 34px;
+            font-weight: 650;
+          }
+
+          .author-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 68px;
+            height: 68px;
+            border: 1px solid rgba(37, 42, 51, 0.1);
+            border-radius: 999px;
+            background: #ffffff;
+            color: #775aff;
+            font-size: 30px;
+            font-weight: 760;
+            text-transform: uppercase;
+          }
+
           .footer {
             display: flex;
-            align-items: end;
+            align-items: center;
             justify-content: space-between;
             gap: 64px;
             margin-top: auto;
@@ -239,6 +264,9 @@ defmodule HiveWeb.OpenGraph do
           }
 
           .path {
+            display: flex;
+            align-items: center;
+            min-height: 72px;
             color: #788296;
             font-size: 28px;
             font-weight: 560;
@@ -259,6 +287,7 @@ defmodule HiveWeb.OpenGraph do
               <p class="eyebrow">#{escape(data.eyebrow)}</p>
               <h1>#{escape(data.title)}</h1>
               <p class="description">#{escape(data.description)}</p>
+              #{author_markup(data)}
             </section>
 
             <footer class="footer">
@@ -380,6 +409,17 @@ defmodule HiveWeb.OpenGraph do
       data_uri -> ~s(<img src="#{data_uri}" alt="" />)
     end
   end
+
+  defp author_markup(%{author: %{handle: handle, initials: initials}}) do
+    """
+    <div class="author">
+      <span class="author-avatar">#{escape(initials)}</span>
+      <span>#{escape(handle)}</span>
+    </div>
+    """
+  end
+
+  defp author_markup(_data), do: ""
 
   defp logo_data_uri do
     case File.read(logo_path()) do

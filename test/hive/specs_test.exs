@@ -42,6 +42,7 @@ defmodule Hive.SpecsTest do
                )
 
       spec = Specs.get_spec!(spec.id)
+      assert is_integer(spec.number)
       assert spec.status == :draft
       assert spec.lock_version == 1
       assert spec.source_feature_request.id == feature_request.id
@@ -55,6 +56,20 @@ defmodule Hive.SpecsTest do
     test "rejects guests" do
       assert Specs.create_spec(%{"title" => "Nope", "body" => "This should not persist."}, nil) ==
                {:error, :unauthorized}
+    end
+
+    test "validates the agent-written summary" do
+      assert {:error, changeset} =
+               Specs.create_spec(
+                 %{
+                   "title" => "Nope",
+                   "body" => "This should not persist.",
+                   "summary" => "This summary has an em dash — reject it."
+                 },
+                 user()
+               )
+
+      assert {"cannot contain em dashes", []} = changeset.errors[:summary]
     end
   end
 

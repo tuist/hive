@@ -12,6 +12,11 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
         "id" => %{"type" => "string"},
         "title" => %{"type" => "string"},
         "body" => %{"type" => "string"},
+        "summary" => %{
+          "type" => "string",
+          "description" =>
+            "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
+        },
         "status" => %{"type" => "string"},
         "expected_revision" => %{"type" => "integer"}
       }
@@ -42,7 +47,7 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
   end
 
   defp update(conn, spec, args) do
-    attrs = Map.take(args, ["title", "body", "status"])
+    attrs = Map.take(args, ["title", "body", "summary", "status"])
 
     case Specs.update_spec(spec, attrs, conn.assigns.current_user) do
       {:ok, spec} ->

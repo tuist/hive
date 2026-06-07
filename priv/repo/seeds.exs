@@ -1,13 +1,36 @@
 import Ecto.Query
 
 alias Hive.Accounts
+alias Hive.Accounts.UserIdentity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
+alias Hive.Products
+alias Hive.Products.Product
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
 alias Hive.Specs.Revision
 alias Hive.Specs.Spec
+
+account_identities = [
+  {"test@hive.dev", "google", "google-test-hive-dev"},
+  {"maya@example.com", "google", "google-maya-example"},
+  {"maya@example.com", "github", "github-maya-example"}
+]
+
+UserIdentity
+|> where([identity], identity.provider == "github")
+|> where([identity], identity.provider_uid == "github-test-hive-dev")
+|> Repo.delete_all()
+
+Enum.each(account_identities, fn {email, provider, provider_uid} ->
+  {:ok, _user} =
+    Accounts.upsert_from_auth(%{
+      email: email,
+      provider: provider,
+      provider_uid: provider_uid
+    })
+end)
 
 feature_requests = [
   {
@@ -68,6 +91,8 @@ specs = [
     source_title: "Import feature requests from GitHub Discussions",
     attrs: %{
       "title" => "GitHub Discussions forage import",
+      "summary" =>
+        "Import public GitHub Discussions into Forage while preserving source metadata for reviewers.",
       "body" => """
       Connect a GitHub Discussions category as a forage source so public product ideas flow into Hive without manual copying.
 
@@ -83,7 +108,8 @@ specs = [
     comments: [
       {"jon@example.com",
        "This should keep the source URL visible on the forage item and the spec."},
-      {"Guest", "It would help if imported items linked back to the discussion comments too."}
+      {"guest@example.com",
+       "It would help if imported items linked back to the discussion comments too."}
     ]
   },
   %{
@@ -91,6 +117,8 @@ specs = [
     source_title: "Group forage by source and priority",
     attrs: %{
       "title" => "Forage source and priority grouping",
+      "summary" =>
+        "Group incoming forage by source and urgency without making every alert become a spec.",
       "body" => """
       Add lightweight grouping to Forage so reviewers can scan incoming work by source and urgency without losing the current source-specific pages.
 
@@ -113,6 +141,8 @@ specs = [
     source_title: "Let users subscribe to feature request updates",
     attrs: %{
       "title" => "Feature request subscriptions",
+      "summary" =>
+        "Let authenticated requesters subscribe to feature request updates and follow converted specs.",
       "body" => """
       Let authenticated requesters subscribe to updates on feature requests they care about.
 
@@ -134,6 +164,8 @@ specs = [
     author: "sam@example.com",
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
+      "summary" =>
+        "Support local spec editing through MCP with revision checks and stale update handling.",
       "body" => """
       Make specs comfortable to edit from local tools through MCP by exposing pull, edit, and push operations with revision checks.
 
@@ -228,4 +260,41 @@ Enum.each(specs, fn seed ->
       {:ok, _comment} = Specs.add_comment(spec, comment_attrs, comment_user)
     end
   end)
+end)
+
+products = [
+  %{
+    "name" => "Hive",
+    "description" => "Agentic product orchestration for one organization.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "hive"
+  },
+  %{
+    "name" => "Tuist",
+    "description" =>
+      "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Noora",
+    "description" => "Design system components shared across Tuist products.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Atlas",
+    "description" => "A product boundary without a GitHub repository connected yet."
+  }
+]
+
+Enum.each(products, fn attrs ->
+  exists? =
+    Product
+    |> where([product], product.name == ^attrs["name"])
+    |> Repo.exists?()
+
+  unless exists? do
+    {:ok, _product} = Products.create_product(attrs)
+  end
 end)

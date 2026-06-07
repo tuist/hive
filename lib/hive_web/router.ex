@@ -25,6 +25,12 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.MCPAuthentication
   end
 
+  scope "/webhooks", HiveWeb do
+    pipe_through :json_api
+
+    post "/github", GitHubWebhookController, :create
+  end
+
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
     get "/open-graph/:page_id/:hash", OpenGraphController, :show
@@ -69,7 +75,7 @@ defmodule HiveWeb.Router do
     end
 
     live_session :forage,
-      on_mount: HiveWeb.ForageLive.Hooks,
+      on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/forage/feature-requests", ForageLive.FeatureRequests
       live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
@@ -80,6 +86,18 @@ defmodule HiveWeb.Router do
       live "/specs/new", SpecLive.New
       live "/specs/:id", SpecLive.Show
       live "/specs/:id/edit", SpecLive.Edit
+    end
+
+    live_session :settings,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/settings/products", SettingsLive.Products
+    end
+
+    live_session :account,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/account/identities", AccountLive.Identities
     end
 
     scope "/auth" do

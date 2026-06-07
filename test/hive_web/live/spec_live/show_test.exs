@@ -29,6 +29,11 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     conn = get(conn, ~p"/specs/#{spec.id}")
     assert html_response(conn, 200) =~ ~s|property="og:image"|
+
+    spec = Specs.get_spec!(spec.id)
+    open_graph = HiveWeb.SpecLive.Show.open_graph(spec)
+    assert open_graph.eyebrow == "Spec ##{spec.number}"
+    assert open_graph.author == %{handle: "@alice", initials: "a"}
   end
 
   test "requires authentication to comment", %{conn: conn} do

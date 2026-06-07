@@ -6,8 +6,10 @@ defmodule Hive.MCP.Components.Tools.Specs do
   def spec_json(%Spec{} = spec) do
     %{
       id: spec.id,
+      number: spec.number,
       title: spec.title,
       body: spec.body,
+      summary: spec.summary,
       status: Atom.to_string(spec.status),
       revision: spec.lock_version,
       source_forage_item:

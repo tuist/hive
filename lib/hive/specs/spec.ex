@@ -10,8 +10,10 @@ defmodule Hive.Specs.Spec do
   @statuses [:draft, :proposed, :accepted, :in_progress, :shipped, :archived]
 
   schema "specs" do
+    field :number, :integer, read_after_writes: true
     field :title, :string
     field :body, :string
+    field :summary, :string
     field :status, Ecto.Enum, values: @statuses, default: :draft
     field :lock_version, :integer, default: 1
 
@@ -28,11 +30,21 @@ defmodule Hive.Specs.Spec do
 
   def changeset(spec, attrs) do
     spec
-    |> cast(attrs, [:title, :body, :status, :source_feature_request_id])
+    |> cast(attrs, [:title, :body, :summary, :status, :source_feature_request_id])
     |> validate_required([:title, :body, :status])
     |> validate_length(:title, max: 160)
+    |> validate_length(:summary, max: 280)
     |> validate_length(:body, min: 10, max: 20_000)
     |> validate_inclusion(:status, @statuses)
+    |> validate_change(:summary, fn
+      :summary, summary when is_binary(summary) ->
+        if String.contains?(summary, "—"),
+          do: [summary: "cannot contain em dashes"],
+          else: []
+
+      :summary, _summary ->
+        []
+    end)
     |> foreign_key_constraint(:source_feature_request_id)
   end
 

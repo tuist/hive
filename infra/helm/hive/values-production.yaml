@@ -41,6 +41,14 @@ externalSecrets:
       remoteRef: "hive-github-oauth/username"
     HIVE_GITHUB_CLIENT_SECRET:
       remoteRef: "hive-github-oauth/credential"
+    HIVE_GITHUB_APP_ID:
+      remoteRef: "hive-github-app/app-id"
+    HIVE_GITHUB_APP_INSTALLATION_ID:
+      remoteRef: "hive-github-app/installation-id"
+    HIVE_GITHUB_APP_PRIVATE_KEY:
+      remoteRef: "hive-github-app/private-key"
+    HIVE_GITHUB_WEBHOOK_SECRET:
+      remoteRef: "hive-github-app/webhook-secret"
     HIVE_S3_BUCKET:
       remoteRef: "hive-object-storage/bucket"
     HIVE_S3_REGION:

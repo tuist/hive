@@ -11,6 +11,11 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
       "properties" => %{
         "title" => %{"type" => "string"},
         "body" => %{"type" => "string"},
+        "summary" => %{
+          "type" => "string",
+          "description" =>
+            "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
+        },
         "status" => %{"type" => "string"},
         "source_feature_request_id" => %{"type" => "string"}
       }
@@ -29,7 +34,7 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
   def call(conn, args) do
     attrs =
       args
-      |> Map.take(["title", "body", "status", "source_feature_request_id"])
+      |> Map.take(["title", "body", "summary", "status", "source_feature_request_id"])
       |> Map.put_new("status", "draft")
 
     case Specs.create_spec(attrs, conn.assigns.current_user) do

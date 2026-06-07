@@ -33,11 +33,14 @@ defmodule Hive.MCP.Components.Tools.SpecsTest do
     created =
       CreateSpec.call(conn(user), %{
         "title" => "GitHub sign-in",
-        "body" => "Add GitHub sign-in for requesters."
+        "body" => "Add GitHub sign-in for requesters.",
+        "summary" => "Let requesters authenticate with GitHub."
       })
       |> response_json()
 
-    assert %{"spec" => %{"id" => id, "revision" => 1}} = created
+    assert %{"spec" => %{"id" => id, "number" => number, "revision" => 1}} = created
+    assert is_integer(number)
+    assert created["spec"]["summary"] == "Let requesters authenticate with GitHub."
     assert [%{"revision" => 1, "title" => "GitHub sign-in"}] = created["spec"]["revisions"]
 
     listed = ListSpecs.call(conn(user), %{}) |> response_json()
@@ -52,11 +55,13 @@ defmodule Hive.MCP.Components.Tools.SpecsTest do
         "expected_revision" => 1,
         "title" => "GitHub OAuth",
         "body" => "Updated proposal.",
+        "summary" => "Use OAuth to authenticate requesters through GitHub.",
         "status" => "proposed"
       })
       |> response_json()
 
     assert updated["spec"]["title"] == "GitHub OAuth"
+    assert updated["spec"]["summary"] == "Use OAuth to authenticate requesters through GitHub."
     assert updated["spec"]["revision"] == 2
     assert Enum.map(updated["spec"]["revisions"], & &1["revision"]) == [2, 1]
 
