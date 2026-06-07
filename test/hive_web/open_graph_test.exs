@@ -2,6 +2,7 @@ defmodule HiveWeb.OpenGraphTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Forage
+  alias HiveWeb.AccountLive
   alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
   alias HiveWeb.PageHTML
@@ -64,6 +65,7 @@ defmodule HiveWeb.OpenGraphTest do
 
     page_data = [
       PageHTML.open_graph(),
+      AccountLive.Identities.open_graph(),
       ForageLive.FeatureRequests.open_graph(feature_requests),
       ForageLive.NewFeatureRequest.open_graph()
       | Enum.map(Forage.sources(), &ForageLive.Placeholder.open_graph/1)
