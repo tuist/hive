@@ -6,7 +6,14 @@ defmodule Hive.MCP.ServerTest do
   test "returns a server with the Hive tools" do
     server = Server.server()
 
-    assert Map.keys(server.tools) == ["whoami"]
+    assert Map.keys(server.tools) == [
+             "add_spec_comment",
+             "create_spec",
+             "get_spec",
+             "list_specs",
+             "update_spec",
+             "whoami"
+           ]
   end
 
   test "every tool exposes review hints" do

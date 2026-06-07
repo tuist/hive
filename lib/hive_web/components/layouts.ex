@@ -138,6 +138,12 @@ defmodule HiveWeb.Layouts do
               />
             </div>
           </details>
+          <.sidebar_item
+            label="Specs"
+            icon="file_text"
+            href={~p"/specs"}
+            selected={String.starts_with?(@current_path, "/specs")}
+          />
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}

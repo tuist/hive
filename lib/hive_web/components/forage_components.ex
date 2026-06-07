@@ -11,6 +11,7 @@ defmodule HiveWeb.ForageComponents do
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
   attr :signed_in?, :boolean, required: true
+  attr :can_create_spec?, :boolean, default: false
 
   def feature_requests(assigns) do
     assigns = assign(assigns, :stats, stats(assigns.feature_requests))
@@ -51,9 +52,17 @@ defmodule HiveWeb.ForageComponents do
                   label={status_label(feature_request.status)}
                   color={status_color(feature_request.status)}
                   style="light-fill"
+                  size="large"
                   dot={true}
                 />
-                <.badge label="Public" color="success" style="light-fill" />
+                <.badge label="Public" color="success" style="light-fill" size="large" />
+                <.button
+                  :if={@can_create_spec?}
+                  label="Create spec"
+                  href={~p"/specs/new?source_feature_request_id=#{feature_request.id}"}
+                  size="small"
+                  variant="secondary"
+                />
               </div>
             </article>
           </div>

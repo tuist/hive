@@ -4,9 +4,11 @@ defmodule HiveWeb.OpenGraphController do
   use HiveWeb, :controller
 
   alias Hive.Forage
+  alias Hive.Specs
   alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
   alias HiveWeb.PageHTML
+  alias HiveWeb.SpecLive
 
   def show(conn, %{"page_id" => page_id, "hash" => hash}) do
     with {:ok, data} <- page(page_id),
@@ -27,6 +29,22 @@ defmodule HiveWeb.OpenGraphController do
   end
 
   defp page("forage-feature-requests-new"), do: {:ok, ForageLive.NewFeatureRequest.open_graph()}
+
+  defp page("specs"), do: {:ok, SpecLive.Index.open_graph(Specs.list_specs(status: :draft))}
+
+  defp page("specs-new"), do: {:ok, SpecLive.New.open_graph()}
+
+  defp page("specs-edit-" <> spec_id) do
+    {:ok, SpecLive.Edit.open_graph(Specs.get_spec!(spec_id))}
+  rescue
+    Ecto.NoResultsError -> :error
+  end
+
+  defp page("spec-" <> spec_id) do
+    {:ok, SpecLive.Show.open_graph(Specs.get_spec!(spec_id))}
+  rescue
+    Ecto.NoResultsError -> :error
+  end
 
   defp page("forage-" <> source_slug) do
     Forage.sources()

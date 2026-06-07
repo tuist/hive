@@ -76,6 +76,10 @@ defmodule HiveWeb.Router do
       live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
       live "/forage/feedback", ForageLive.Placeholder, :feedback
       live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
+      live "/specs", SpecLive.Index
+      live "/specs/new", SpecLive.New
+      live "/specs/:id", SpecLive.Show
+      live "/specs/:id/edit", SpecLive.Edit
     end
 
     scope "/auth" do

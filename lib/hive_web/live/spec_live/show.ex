@@ -1,0 +1,123 @@
+defmodule HiveWeb.SpecLive.Show do
+  @moduledoc false
+
+  use HiveWeb, :live_view
+
+  alias Hive.Specs
+  alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
+  alias HiveWeb.SpecComponents
+
+  def open_graph(spec) do
+    %{
+      description: "#{status_label(spec.status)} · #{source_label(spec)}",
+      eyebrow: "Spec",
+      highlights: [
+        "#{length(spec.comments)} comments",
+        source_label(spec),
+        status_label(spec.status)
+      ],
+      id: "spec-#{spec.id}",
+      path: "/specs/#{spec.id}",
+      title: spec.title
+    }
+  end
+
+  @impl true
+  def mount(%{"id" => id}, _session, socket) do
+    spec = Specs.get_spec!(id)
+
+    {:ok,
+     socket
+     |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
+     |> assign(OpenGraph.assigns(open_graph(spec)))
+     |> assign(:spec, spec)
+     |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
+     |> assign(:expanded_revision_rows, [])
+     |> assign_comment_form(Specs.change_comment())}
+  end
+
+  @impl true
+  def handle_event("toggle-expand", %{"row-key" => row_key}, socket) do
+    expanded_rows = socket.assigns.expanded_revision_rows
+
+    expanded_rows =
+      if row_key in expanded_rows do
+        List.delete(expanded_rows, row_key)
+      else
+        [row_key | expanded_rows]
+      end
+
+    {:noreply, assign(socket, :expanded_revision_rows, expanded_rows)}
+  end
+
+  @impl true
+  def handle_event("comment", %{"comment" => params}, socket) do
+    case Specs.add_comment(socket.assigns.spec, params, socket.assigns.current_user) do
+      {:ok, _comment} ->
+        spec = Specs.get_spec!(socket.assigns.spec.id)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Comment added.")
+         |> assign(:spec, spec)
+         |> assign(OpenGraph.assigns(open_graph(spec)))
+         |> assign_comment_form(Specs.change_comment())}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "Sign in to comment.")}
+
+      {:error, changeset} ->
+        {:noreply, assign_comment_form(socket, Map.put(changeset, :action, :validate))}
+    end
+  end
+
+  defp assign_comment_form(socket, changeset) do
+    assign(socket, :comment_form, to_form(interpolate_errors(changeset), as: :comment))
+  end
+
+  defp interpolate_errors(%Ecto.Changeset{} = changeset) do
+    Map.update!(changeset, :errors, fn errors -> Enum.map(errors, &interpolate_error/1) end)
+  end
+
+  defp interpolate_error({field, {message, opts}}) do
+    interpolated =
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+
+    {field, {interpolated, opts}}
+  end
+
+  defp status_label(status),
+    do: status |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+
+  defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
+  defp source_label(_spec), do: "Created directly"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.dashboard
+      product_name={@product_name}
+      user_name={@user_name}
+      user_email={@user_email}
+      avatar_color={@avatar_color}
+      auth_enabled?={@auth_enabled?}
+      signed_in?={@signed_in?}
+      csrf_token={@csrf_token}
+      current_path={@current_path}
+      forage_sources={@forage_sources}
+    >
+      <SpecComponents.show
+        spec={@spec}
+        comment_form={@comment_form}
+        can_edit?={@can_edit?}
+        signed_in?={@signed_in?}
+        user_name={@user_name}
+        expanded_revision_rows={@expanded_revision_rows}
+      />
+    </Layouts.dashboard>
+    """
+  end
+end
