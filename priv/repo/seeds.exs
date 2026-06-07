@@ -1,11 +1,32 @@
 import Ecto.Query
 
 alias Hive.Accounts
+alias Hive.Accounts.UserIdentity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
 alias Hive.Products
 alias Hive.Products.Product
 alias Hive.Repo
+
+account_identities = [
+  {"test@hive.dev", "google", "google-test-hive-dev"},
+  {"maya@example.com", "google", "google-maya-example"},
+  {"maya@example.com", "github", "github-maya-example"}
+]
+
+UserIdentity
+|> where([identity], identity.provider == "github")
+|> where([identity], identity.provider_uid == "github-test-hive-dev")
+|> Repo.delete_all()
+
+Enum.each(account_identities, fn {email, provider, provider_uid} ->
+  {:ok, _user} =
+    Accounts.upsert_from_auth(%{
+      email: email,
+      provider: provider,
+      provider_uid: provider_uid
+    })
+end)
 
 feature_requests = [
   {

@@ -90,6 +90,12 @@ defmodule HiveWeb.Router do
       live "/settings/products", SettingsLive.Products
     end
 
+    live_session :account,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/account/identities", AccountLive.Identities
+    end
+
     scope "/auth" do
       pipe_through :oauth
       get "/:provider", AuthController, :request

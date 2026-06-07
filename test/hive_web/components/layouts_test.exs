@@ -43,6 +43,22 @@ defmodule HiveWeb.LayoutsTest do
       """)
     end
 
+    defp render_account(assigns) do
+      rendered_to_string(~H"""
+      <Layouts.account
+        product_name={@product_name}
+        user_name={@user_name}
+        user_email={@user_email}
+        avatar_color={@avatar_color}
+        signed_in?={@signed_in?}
+        csrf_token={@csrf_token}
+        current_path={@current_path}
+      >
+        <p>Account content</p>
+      </Layouts.account>
+      """)
+    end
+
     defp assigns(overrides \\ %{}) do
       Map.merge(
         %{
@@ -86,6 +102,8 @@ defmodule HiveWeb.LayoutsTest do
 
       assert html =~ "account-dropdown"
       assert html =~ "alice@example.com"
+      assert html =~ ~s(href="/account/identities")
+      assert html =~ "Account"
       assert html =~ ~s(action="/logout")
       assert html =~ "csrf-token-123"
       assert html =~ "Log out"
@@ -99,6 +117,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Sign in"
       refute html =~ "account-dropdown"
       refute html =~ "Log out"
+      refute html =~ ~s(href="/account/identities")
     end
 
     test "lists the visible forage sources" do
@@ -128,6 +147,25 @@ defmodule HiveWeb.LayoutsTest do
     test "hides settings when settings are disabled" do
       html = render_dashboard(assigns(%{signed_in?: true, settings_enabled?: false}))
 
+      refute html =~ "/settings/products"
+    end
+
+    test "does not show account navigation in the dashboard sidebar" do
+      html = render_dashboard(assigns(%{signed_in?: true, current_path: "/account/identities"}))
+
+      assert html =~ ~s(href="/account/identities")
+      refute html =~ ~s(<span data-part="label">Identities</span>)
+    end
+  end
+
+  describe "account/1" do
+    test "renders account content with account sidebar navigation" do
+      html = render_account(assigns(%{current_path: "/account/identities"}))
+
+      assert html =~ "Account content"
+      assert html =~ "Identities"
+      assert html =~ "/account/identities"
+      refute html =~ "Feature requests"
       refute html =~ "/settings/products"
     end
   end
