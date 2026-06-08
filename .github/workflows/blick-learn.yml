@@ -20,7 +20,7 @@ env:
 jobs:
   learn:
     name: Learn
-    runs-on: ubuntu-24.04
+    runs-on: tuist-linux
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -33,7 +33,7 @@ jobs:
 
       - name: Install blick and opencode
         run: |
-          mise use -g github:tuist/blick@0.9.0
+          mise use -g github:tuist/blick@0.10.0
           mise use -g npm:opencode-ai
 
       - name: Run blick learn

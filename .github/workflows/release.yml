@@ -38,7 +38,7 @@ env:
 jobs:
   check-releases:
     name: Check for releasable changes
-    runs-on: ubuntu-latest
+    runs-on: tuist-linux
     timeout-minutes: 10
     outputs:
       server-should-release: ${{ steps.server-check.outputs.should-release }}
@@ -148,7 +148,7 @@ jobs:
     name: Release server image
     needs: check-releases
     if: needs.check-releases.outputs.server-should-release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: tuist-linux
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -226,7 +226,7 @@ jobs:
     name: Release Helm chart
     needs: check-releases
     if: needs.check-releases.outputs.helm-should-release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: tuist-linux
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -312,7 +312,7 @@ jobs:
       needs.check-releases.outputs.should-release-any == 'true' &&
       (needs.release-server.result == 'success' || needs.release-server.result == 'skipped') &&
       (needs.release-helm.result == 'success' || needs.release-helm.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: tuist-linux
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

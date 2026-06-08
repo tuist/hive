@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: namespace-profile-default-with-volume
+    runs-on: tuist-linux
 
     steps:
       - uses: actions/checkout@v6
@@ -43,7 +43,7 @@ jobs:
 
   format:
     name: Format
-    runs-on: namespace-profile-default-with-volume
+    runs-on: tuist-linux
     needs: build
 
     steps:
@@ -71,7 +71,7 @@ jobs:
 
   credo:
     name: Credo
-    runs-on: namespace-profile-default-with-volume
+    runs-on: tuist-linux
     needs: build
 
     steps:
@@ -99,7 +99,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: namespace-profile-default-with-volume
+    runs-on: tuist-linux
     needs: build
 
     services:
