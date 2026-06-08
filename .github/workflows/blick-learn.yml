@@ -33,7 +33,7 @@ jobs:
 
       - name: Install blick and opencode
         run: |
-          mise use -g github:tuist/blick@0.9.0
+          mise use -g github:tuist/blick@0.10.0
           mise use -g npm:opencode-ai
 
       - name: Run blick learn
