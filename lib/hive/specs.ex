@@ -143,20 +143,7 @@ defmodule Hive.Specs do
 
   def create_spec(attrs, %User{} = user) do
     if can_create?(user) do
-      Repo.transaction(fn ->
-        with {:ok, spec} <-
-               %Spec{}
-               |> Spec.changeset(attrs)
-               |> Changeset.put_change(:created_by_user_id, user.id)
-               |> Changeset.put_change(:updated_by_user_id, user.id)
-               |> Repo.insert(),
-             {:ok, spec} <- put_products(spec, attrs),
-             {:ok, _revision} <- create_revision(spec, user) do
-          spec
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+      Repo.transaction(fn -> create_spec_transaction(attrs, user) end)
     else
       {:error, :unauthorized}
     end
@@ -166,19 +153,7 @@ defmodule Hive.Specs do
 
   def update_spec(%Spec{} = spec, attrs, %User{} = user) do
     if can_edit?(spec, user) do
-      Repo.transaction(fn ->
-        with {:ok, spec} <-
-               spec
-               |> Spec.update_changeset(attrs)
-               |> Changeset.put_change(:updated_by_user_id, user.id)
-               |> Repo.update(stale_error_field: :lock_version),
-             {:ok, spec} <- put_products(spec, attrs),
-             {:ok, _revision} <- create_revision(spec, user) do
-          spec
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+      Repo.transaction(fn -> update_spec_transaction(spec, attrs, user) end)
       |> case do
         {:ok, spec} -> {:ok, spec}
         {:error, reason} -> {:error, reason}
@@ -189,6 +164,35 @@ defmodule Hive.Specs do
   end
 
   def update_spec(_spec, _attrs, _user), do: {:error, :unauthorized}
+
+  defp create_spec_transaction(attrs, user) do
+    with {:ok, spec} <-
+           %Spec{}
+           |> Spec.changeset(attrs)
+           |> Changeset.put_change(:created_by_user_id, user.id)
+           |> Changeset.put_change(:updated_by_user_id, user.id)
+           |> Repo.insert(),
+         {:ok, spec} <- put_products(spec, attrs),
+         {:ok, _revision} <- create_revision(spec, user) do
+      spec
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  defp update_spec_transaction(spec, attrs, user) do
+    with {:ok, spec} <-
+           spec
+           |> Spec.update_changeset(attrs)
+           |> Changeset.put_change(:updated_by_user_id, user.id)
+           |> Repo.update(stale_error_field: :lock_version),
+         {:ok, spec} <- put_products(spec, attrs),
+         {:ok, _revision} <- create_revision(spec, user) do
+      spec
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
 
   def change_comment(comment \\ %Comment{}, attrs \\ %{}) do
     Comment.changeset(comment, attrs)
