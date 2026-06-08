@@ -9,7 +9,10 @@ defmodule Hive.MCP.Components.Tools.AddSpecComment do
       "type" => "object",
       "required" => ["spec_id", "body"],
       "properties" => %{
-        "spec_id" => %{"type" => "string"},
+        "spec_id" => %{
+          "type" => "string",
+          "description" => "Spec UUID, public number, or /specs/:number URL."
+        },
         "body" => %{"type" => "string"},
         "author_name" => %{"type" => "string"}
       }
@@ -24,7 +27,7 @@ defmodule Hive.MCP.Components.Tools.AddSpecComment do
 
   @impl EMCP.Tool
   def call(conn, %{"spec_id" => spec_id} = args) do
-    spec = Specs.get_spec!(spec_id)
+    spec = Specs.get_spec_by_reference!(spec_id)
 
     if Specs.can_view?(spec, conn.assigns.current_user) do
       case Specs.add_comment(
@@ -35,19 +38,14 @@ defmodule Hive.MCP.Components.Tools.AddSpecComment do
         {:ok, _comment} ->
           Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
+        {:error, :unauthorized} ->
+          Tool.json_response(%{error: "unauthorized"})
+
         {:error, changeset} ->
-          Tool.json_response(%{error: "invalid", details: errors(changeset)})
+          Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
       end
     else
       Tool.json_response(%{error: "not_found"})
     end
-  end
-
-  defp errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
   end
 end

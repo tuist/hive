@@ -9,7 +9,10 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
       "type" => "object",
       "required" => ["id", "expected_revision"],
       "properties" => %{
-        "id" => %{"type" => "string"},
+        "id" => %{
+          "type" => "string",
+          "description" => "Spec UUID, public number, or /specs/:number URL."
+        },
         "title" => %{"type" => "string"},
         "body" => %{"type" => "string"},
         "summary" => %{
@@ -42,7 +45,7 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
 
   @impl EMCP.Tool
   def call(conn, %{"id" => id, "expected_revision" => expected_revision} = args) do
-    spec = Specs.get_spec!(id)
+    spec = Specs.get_spec_by_reference!(id)
 
     cond do
       not Specs.can_view?(spec, conn.assigns.current_user) ->
@@ -71,15 +74,7 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
         Tool.json_response(%{error: "unauthorized"})
 
       {:error, changeset} ->
-        Tool.json_response(%{error: "invalid", details: errors(changeset)})
+        Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end
-  end
-
-  defp errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
   end
 end

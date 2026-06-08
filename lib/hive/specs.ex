@@ -74,6 +74,46 @@ defmodule Hive.Specs do
     end
   end
 
+  def get_spec_by_reference!(reference) when is_integer(reference),
+    do: get_spec_by_number!(reference)
+
+  def get_spec_by_reference!(reference) when is_binary(reference) do
+    reference
+    |> reference_identifier()
+    |> case do
+      identifier when identifier == "" ->
+        raise Ecto.NoResultsError, queryable: Spec
+
+      identifier ->
+        if public_number?(identifier),
+          do: get_spec_by_number!(identifier),
+          else: get_spec!(identifier)
+    end
+  end
+
+  defp reference_identifier(reference) do
+    reference = String.trim(reference)
+
+    case URI.parse(reference) do
+      %URI{path: path} when is_binary(path) and path != "" ->
+        path
+        |> String.split("/", trim: true)
+        |> spec_path_number()
+        |> Kernel.||(reference)
+
+      _uri ->
+        reference
+    end
+  end
+
+  defp spec_path_number(["specs", number | _rest]), do: number
+  defp spec_path_number([_segment | rest]), do: spec_path_number(rest)
+  defp spec_path_number([]), do: nil
+
+  defp public_number?(identifier) do
+    match?({_number, ""}, Integer.parse(identifier))
+  end
+
   defp preload_spec(query) do
     comments_query =
       from(comment in Comment, order_by: [asc: comment.inserted_at], preload: [user: :identities])

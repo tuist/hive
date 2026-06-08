@@ -44,15 +44,17 @@ defmodule Hive.MCP.Components.Tools.SpecsTest do
     assert created["spec"]["visibility"] == "public"
     assert [%{"revision" => 1, "title" => "GitHub sign-in"}] = created["spec"]["revisions"]
 
+    spec_url = "https://hive.test/specs/#{number}"
+
     listed = ListSpecs.call(conn(user), %{}) |> response_json()
     assert [%{"id" => ^id}] = listed["specs"]
 
-    fetched = GetSpec.call(conn(user), %{"id" => id}) |> response_json()
+    fetched = GetSpec.call(conn(user), %{"id" => spec_url}) |> response_json()
     assert fetched["spec"]["title"] == "GitHub sign-in"
 
     updated =
       UpdateSpec.call(conn(user), %{
-        "id" => id,
+        "id" => "/specs/#{number}",
         "expected_revision" => 1,
         "title" => "GitHub OAuth",
         "body" => "Updated proposal.",
@@ -67,11 +69,25 @@ defmodule Hive.MCP.Components.Tools.SpecsTest do
     assert Enum.map(updated["spec"]["revisions"], & &1["revision"]) == [2, 1]
 
     commented =
-      AddSpecComment.call(conn(user), %{"spec_id" => id, "body" => "This looks ready."})
+      AddSpecComment.call(conn(user), %{"spec_id" => spec_url, "body" => "This looks ready."})
       |> response_json()
 
     assert [%{"body" => "This looks ready.", "author" => "alice@example.com"}] =
              commented["spec"]["comments"]
+  end
+
+  test "requires authentication to comment on a public spec" do
+    user = user()
+    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    response =
+      AddSpecComment.call(conn(nil), %{
+        "spec_id" => "https://hive.test/specs/#{spec.number}",
+        "body" => "Anonymous comment."
+      })
+      |> response_json()
+
+    assert response["error"] == "unauthorized"
   end
 
   test "rejects stale local edits" do

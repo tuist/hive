@@ -8,7 +8,10 @@ defmodule Hive.MCP.Components.Tools.GetSpec do
       "type" => "object",
       "required" => ["id"],
       "properties" => %{
-        "id" => %{"type" => "string"}
+        "id" => %{
+          "type" => "string",
+          "description" => "Spec UUID, public number, or /specs/:number URL."
+        }
       }
     }
 
@@ -21,7 +24,7 @@ defmodule Hive.MCP.Components.Tools.GetSpec do
 
   @impl EMCP.Tool
   def call(conn, %{"id" => id}) do
-    spec = Specs.get_spec!(id)
+    spec = Specs.get_spec_by_reference!(id)
 
     if Specs.can_view?(spec, conn.assigns.current_user) do
       Tool.json_response(%{spec: SpecTool.spec_json(spec)})

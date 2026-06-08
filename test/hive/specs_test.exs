@@ -94,6 +94,21 @@ defmodule Hive.SpecsTest do
     end
   end
 
+  describe "get_spec_by_reference!/1" do
+    test "accepts UUIDs, public numbers, and shared spec URLs" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      assert Specs.get_spec_by_reference!(spec.id).id == spec.id
+      assert Specs.get_spec_by_reference!(Integer.to_string(spec.number)).id == spec.id
+      assert Specs.get_spec_by_reference!("/specs/#{spec.number}").id == spec.id
+      assert Specs.get_spec_by_reference!("https://hive.test/specs/#{spec.number}").id == spec.id
+
+      assert Specs.get_spec_by_reference!("https://hive.test/specs/#{spec.number}/edit").id ==
+               spec.id
+    end
+  end
+
   describe "list_specs/1" do
     test "filters specs by status" do
       user = user()
