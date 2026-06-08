@@ -15,12 +15,14 @@ alias Hive.Specs.Spec
 account_identities = [
   {"test@hive.dev", "google", "google-test-hive-dev"},
   {"maya@example.com", "google", "google-maya-example"},
-  {"maya@example.com", "github", "github-maya-example"}
+  {"maya@example.com", "github", "github-maya-example"},
+  {"octo@example.com", "github", "github-octo-example"},
+  {"oidc@example.com", "oidc", "oidc-example"}
 ]
 
 UserIdentity
-|> where([identity], identity.provider == "github")
-|> where([identity], identity.provider_uid == "github-test-hive-dev")
+|> where([identity], identity.provider in ["dev", "seed"])
+|> where([identity], identity.provider_uid in ["dev", "test@hive.dev", "maya@example.com"])
 |> Repo.delete_all()
 
 Enum.each(account_identities, fn {email, provider, provider_uid} ->
@@ -74,12 +76,14 @@ Enum.each(feature_requests, fn {email, attrs} ->
     |> Repo.exists?()
 
   unless exists? do
-    {:ok, user} =
-      Accounts.upsert_from_auth(%{
-        email: email,
-        provider: "seed",
-        provider_uid: email
-      })
+    user =
+      Accounts.get_user_by_email(email) ||
+        Accounts.upsert_from_auth(%{
+          email: email,
+          provider: "seed",
+          provider_uid: email
+        })
+        |> then(fn {:ok, user} -> user end)
 
     {:ok, _feature_request} = Forage.create_feature_request(attrs, user)
   end
