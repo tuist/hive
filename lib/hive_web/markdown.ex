@@ -50,9 +50,18 @@ defmodule HiveWeb.Markdown do
   end
 
   defp link(text) do
-    Regex.replace(~r/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/, text, fn _match, label, url ->
-      ~s(<a href="#{url}" rel="noopener noreferrer" target="_blank">#{label}</a>)
+    Regex.replace(~r/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/, text, fn match, label, url ->
+      if safe_link_url?(url) do
+        ~s(<a href="#{url}" rel="noopener noreferrer" target="_blank">#{label}</a>)
+      else
+        match
+      end
     end)
+  end
+
+  defp safe_link_url?(url) do
+    not String.contains?(url, ["\"", "'", "&quot;", "&#39;", "&#x27;"]) and
+      not String.match?(url, ~r/[\x00-\x1F\x7F]/)
   end
 
   defp escape(text) do
