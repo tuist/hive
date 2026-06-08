@@ -46,7 +46,11 @@ defmodule HiveWeb.SpecLive.Index do
     active_filters =
       Operations.decode_filters_from_query(params, socket.assigns.available_filters)
 
-    specs = Specs.list_specs(status: status_filter(active_filters))
+    specs =
+      Specs.list_specs(
+        status: status_filter(active_filters),
+        user: socket.assigns.current_user
+      )
 
     {:noreply,
      socket

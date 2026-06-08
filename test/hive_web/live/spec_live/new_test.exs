@@ -2,6 +2,7 @@ defmodule HiveWeb.SpecLive.NewTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Forage
+  alias Hive.Products
 
   test "redirects guests away from the new spec form", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/specs"}}} = live(conn, ~p"/specs/new")
@@ -9,8 +10,11 @@ defmodule HiveWeb.SpecLive.NewTest do
 
   test "creates a direct spec", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
+    {:ok, product} = Products.create_product(%{name: "Hive app"})
 
-    {:ok, view, _html} = live(conn, ~p"/specs/new")
+    {:ok, view, html} = live(conn, ~p"/specs/new")
+
+    assert html =~ "Hive app"
 
     result =
       view
@@ -18,7 +22,8 @@ defmodule HiveWeb.SpecLive.NewTest do
         spec: %{
           title: "GitHub sign-in",
           body: "Add GitHub sign-in for requesters.",
-          status: "proposed"
+          status: "proposed",
+          product_ids: [product.id]
         }
       )
       |> render_submit()
@@ -28,6 +33,7 @@ defmodule HiveWeb.SpecLive.NewTest do
     assert html =~ "GitHub sign-in"
     assert html =~ "Add GitHub sign-in for requesters."
     assert html =~ "Created directly"
+    assert html =~ "Hive app"
   end
 
   test "prefills a spec from a feature request source", %{conn: conn} do

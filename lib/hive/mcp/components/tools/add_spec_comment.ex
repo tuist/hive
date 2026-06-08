@@ -26,16 +26,20 @@ defmodule Hive.MCP.Components.Tools.AddSpecComment do
   def call(conn, %{"spec_id" => spec_id} = args) do
     spec = Specs.get_spec!(spec_id)
 
-    case Specs.add_comment(
-           spec,
-           Map.take(args, ["body", "author_name"]),
-           conn.assigns.current_user
-         ) do
-      {:ok, _comment} ->
-        Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
+    if Specs.can_view?(spec, conn.assigns.current_user) do
+      case Specs.add_comment(
+             spec,
+             Map.take(args, ["body", "author_name"]),
+             conn.assigns.current_user
+           ) do
+        {:ok, _comment} ->
+          Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
-      {:error, changeset} ->
-        Tool.json_response(%{error: "invalid", details: errors(changeset)})
+        {:error, changeset} ->
+          Tool.json_response(%{error: "invalid", details: errors(changeset)})
+      end
+    else
+      Tool.json_response(%{error: "not_found"})
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Hive.Specs do
   alias Ecto.Changeset
   alias Hive.Accounts.User
   alias Hive.Auth
+  alias Hive.Products.Product
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
@@ -15,16 +16,20 @@ defmodule Hive.Specs do
 
   def can_create?(user), do: Auth.member?(user)
   def can_edit?(_spec, user), do: Auth.member?(user)
-  def can_comment?(_spec, %User{}), do: true
+  def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
   def can_comment?(_spec, _user), do: false
+  def can_view?(%Spec{visibility: :private}, user), do: Auth.member?(user)
+  def can_view?(%Spec{}, _user), do: true
 
   def list_specs(opts \\ []) do
     status = Keyword.get(opts, :status)
+    user = Keyword.get(opts, :user)
 
     Spec
     |> maybe_filter_by_status(status)
+    |> maybe_filter_by_visibility(user)
     |> order_by([spec], desc: spec.updated_at)
-    |> preload([:source_feature_request, :created_by_user, :updated_by_user])
+    |> preload([:source_feature_request, :created_by_user, :updated_by_user, :products])
     |> Repo.all()
   end
 
@@ -42,7 +47,34 @@ defmodule Hive.Specs do
 
   defp maybe_filter_by_status(query, _status), do: query
 
+  defp maybe_filter_by_visibility(query, user) do
+    if Auth.member?(user) do
+      query
+    else
+      where(query, [spec], spec.visibility == :public)
+    end
+  end
+
   def get_spec!(id) do
+    Spec
+    |> preload_spec()
+    |> Repo.get!(id)
+  end
+
+  def get_spec_by_number!(number) when is_integer(number) do
+    Spec
+    |> preload_spec()
+    |> Repo.get_by!(number: number)
+  end
+
+  def get_spec_by_number!(number) when is_binary(number) do
+    case Integer.parse(number) do
+      {number, ""} -> get_spec_by_number!(number)
+      _invalid -> raise Ecto.NoResultsError, queryable: Spec
+    end
+  end
+
+  defp preload_spec(query) do
     comments_query =
       from(comment in Comment, order_by: [asc: comment.inserted_at], preload: [user: :identities])
 
@@ -52,19 +84,21 @@ defmodule Hive.Specs do
         preload: [user: :identities]
       )
 
-    Spec
-    |> preload([
+    preload(query, [
       :source_feature_request,
       :created_by_user,
       :updated_by_user,
+      :products,
       comments: ^comments_query,
       revisions: ^revisions_query
     ])
-    |> Repo.get!(id)
   end
 
   def change_spec(spec \\ %Spec{}, attrs \\ %{}) do
-    Spec.changeset(spec, attrs)
+    spec
+    |> preload_products()
+    |> Spec.changeset(attrs)
+    |> maybe_put_existing_product_ids(attrs)
   end
 
   def create_spec(attrs, %User{} = user) do
@@ -76,6 +110,7 @@ defmodule Hive.Specs do
                |> Changeset.put_change(:created_by_user_id, user.id)
                |> Changeset.put_change(:updated_by_user_id, user.id)
                |> Repo.insert(),
+             {:ok, spec} <- put_products(spec, attrs),
              {:ok, _revision} <- create_revision(spec, user) do
           spec
         else
@@ -97,6 +132,7 @@ defmodule Hive.Specs do
                |> Spec.update_changeset(attrs)
                |> Changeset.put_change(:updated_by_user_id, user.id)
                |> Repo.update(stale_error_field: :lock_version),
+             {:ok, spec} <- put_products(spec, attrs),
              {:ok, _revision} <- create_revision(spec, user) do
           spec
         else
@@ -146,5 +182,59 @@ defmodule Hive.Specs do
       user_id: user.id
     })
     |> Repo.insert()
+  end
+
+  defp preload_products(%Spec{} = spec), do: Repo.preload(spec, :products)
+
+  defp maybe_put_existing_product_ids(changeset, attrs) do
+    if product_ids_present?(attrs) do
+      changeset
+    else
+      products = get_field_or_loaded_assoc(changeset.data, :products)
+      Changeset.put_change(changeset, :product_ids, Enum.map(products, & &1.id))
+    end
+  end
+
+  defp get_field_or_loaded_assoc(spec, assoc) do
+    case Map.fetch!(spec, assoc) do
+      %Ecto.Association.NotLoaded{} -> []
+      values -> values
+    end
+  end
+
+  defp put_products(%Spec{} = spec, attrs) do
+    if product_ids_present?(attrs) do
+      product_ids = normalized_product_ids(attrs)
+      products = Repo.all(from(product in Product, where: product.id in ^product_ids))
+
+      if length(products) == length(product_ids) do
+        spec
+        |> Repo.preload(:products)
+        |> Changeset.change()
+        |> Changeset.put_assoc(:products, products)
+        |> Repo.update()
+      else
+        {:error,
+         spec
+         |> Spec.changeset(attrs)
+         |> Changeset.add_error(:product_ids, "contains unknown products")}
+      end
+    else
+      {:ok, spec}
+    end
+  end
+
+  defp product_ids_present?(attrs) when is_map(attrs) do
+    Map.has_key?(attrs, "product_ids") or Map.has_key?(attrs, :product_ids)
+  end
+
+  defp product_ids_present?(_attrs), do: false
+
+  defp normalized_product_ids(attrs) do
+    attrs
+    |> Map.get("product_ids", Map.get(attrs, :product_ids, []))
+    |> List.wrap()
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
   end
 end

@@ -19,11 +19,11 @@ defmodule Hive.MCP.Components.Tools.ListSpecs do
   def description, do: "List Hive specs, optionally filtered by status."
 
   @impl EMCP.Tool
-  def call(_conn, args) do
+  def call(conn, args) do
     status = args["status"]
 
     specs =
-      Specs.list_specs()
+      Specs.list_specs(user: conn.assigns.current_user)
       |> Enum.filter(fn spec -> is_nil(status) or Atom.to_string(spec.status) == status end)
 
     Tool.json_response(%{specs: Enum.map(specs, &SpecTool.spec_json/1)})

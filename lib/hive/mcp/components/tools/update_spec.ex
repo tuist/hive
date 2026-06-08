@@ -18,6 +18,15 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
             "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
         },
         "status" => %{"type" => "string"},
+        "visibility" => %{
+          "type" => "string",
+          "description" => "Spec visibility. Use public or private."
+        },
+        "product_ids" => %{
+          "type" => "array",
+          "items" => %{"type" => "string"},
+          "description" => "Product IDs to associate with the spec."
+        },
         "expected_revision" => %{"type" => "integer"}
       }
     }
@@ -35,19 +44,24 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
   def call(conn, %{"id" => id, "expected_revision" => expected_revision} = args) do
     spec = Specs.get_spec!(id)
 
-    if spec.lock_version == expected_revision do
-      update(conn, spec, args)
-    else
-      Tool.json_response(%{
-        error: "stale_revision",
-        current_revision: spec.lock_version,
-        spec: SpecTool.spec_json(spec)
-      })
+    cond do
+      not Specs.can_view?(spec, conn.assigns.current_user) ->
+        Tool.json_response(%{error: "not_found"})
+
+      spec.lock_version == expected_revision ->
+        update(conn, spec, args)
+
+      true ->
+        Tool.json_response(%{
+          error: "stale_revision",
+          current_revision: spec.lock_version,
+          spec: SpecTool.spec_json(spec)
+        })
     end
   end
 
   defp update(conn, spec, args) do
-    attrs = Map.take(args, ["title", "body", "summary", "status"])
+    attrs = Map.take(args, ["title", "body", "summary", "status", "visibility", "product_ids"])
 
     case Specs.update_spec(spec, attrs, conn.assigns.current_user) do
       {:ok, spec} ->

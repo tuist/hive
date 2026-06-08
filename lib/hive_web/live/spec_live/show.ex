@@ -16,26 +16,34 @@ defmodule HiveWeb.SpecLive.Show do
       highlights: [
         spec_number(spec),
         "#{length(spec.comments)} comments",
+        visibility_label(spec.visibility),
         status_label(spec.status)
       ],
-      id: "spec-#{spec.id}",
-      path: "/specs/#{spec.id}",
+      id: "spec-#{spec.number}",
+      path: "/specs/#{spec.number}",
       title: spec.title
     }
   end
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
-    spec = Specs.get_spec!(id)
+  def mount(%{"number" => number}, _session, socket) do
+    spec = Specs.get_spec_by_number!(number)
 
-    {:ok,
-     socket
-     |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
-     |> assign(OpenGraph.assigns(open_graph(spec)))
-     |> assign(:spec, spec)
-     |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
-     |> assign(:expanded_revision_rows, [])
-     |> assign_comment_form(Specs.change_comment())}
+    if Specs.can_view?(spec, socket.assigns.current_user) do
+      {:ok,
+       socket
+       |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
+       |> assign(OpenGraph.assigns(open_graph(spec)))
+       |> assign(:spec, spec)
+       |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
+       |> assign(:expanded_revision_rows, [])
+       |> assign_comment_form(Specs.change_comment())}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, "Only organization members can view this private spec.")
+       |> redirect(to: ~p"/specs")}
+    end
   end
 
   @impl true
@@ -96,11 +104,17 @@ defmodule HiveWeb.SpecLive.Show do
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
 
+  defp visibility_label(:private), do: "Private"
+  defp visibility_label(_visibility), do: "Public"
+
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
   defp spec_number(_spec), do: "#?"
 
   defp spec_summary(%{summary: summary}) when is_binary(summary) and summary != "", do: summary
-  defp spec_summary(spec), do: "#{status_label(spec.status)} · #{source_label(spec)}"
+
+  defp spec_summary(spec),
+    do:
+      "#{visibility_label(spec.visibility)} · #{status_label(spec.status)} · #{source_label(spec)}"
 
   defp author_data(%{created_by_user: %{email: email}}) when is_binary(email) do
     handle =

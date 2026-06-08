@@ -36,14 +36,26 @@ defmodule HiveWeb.OpenGraphController do
 
   defp page("specs-new"), do: {:ok, SpecLive.New.open_graph()}
 
-  defp page("specs-edit-" <> spec_id) do
-    {:ok, SpecLive.Edit.open_graph(Specs.get_spec!(spec_id))}
+  defp page("specs-edit-" <> number) do
+    spec = Specs.get_spec_by_number!(number)
+
+    if Specs.can_view?(spec, nil) do
+      {:ok, SpecLive.Edit.open_graph(spec)}
+    else
+      :error
+    end
   rescue
     Ecto.NoResultsError -> :error
   end
 
-  defp page("spec-" <> spec_id) do
-    {:ok, SpecLive.Show.open_graph(Specs.get_spec!(spec_id))}
+  defp page("spec-" <> number) do
+    spec = Specs.get_spec_by_number!(number)
+
+    if Specs.can_view?(spec, nil) do
+      {:ok, SpecLive.Show.open_graph(spec)}
+    else
+      :error
+    end
   rescue
     Ecto.NoResultsError -> :error
   end

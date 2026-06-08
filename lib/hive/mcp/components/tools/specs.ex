@@ -11,7 +11,15 @@ defmodule Hive.MCP.Components.Tools.Specs do
       body: spec.body,
       summary: spec.summary,
       status: Atom.to_string(spec.status),
+      visibility: Atom.to_string(spec.visibility),
       revision: spec.lock_version,
+      products:
+        Enum.map((Ecto.assoc_loaded?(spec.products) && spec.products) || [], fn product ->
+          %{
+            id: product.id,
+            name: product.name
+          }
+        end),
       source_forage_item:
         if spec.source_feature_request do
           %{

@@ -85,10 +85,48 @@ Enum.each(feature_requests, fn {email, attrs} ->
   end
 end)
 
+products = [
+  %{
+    "name" => "Hive",
+    "description" => "Agentic product orchestration for one organization.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "hive"
+  },
+  %{
+    "name" => "Tuist",
+    "description" =>
+      "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Noora",
+    "description" => "Design system components shared across Tuist products.",
+    "github_repository_owner" => "tuist",
+    "github_repository_name" => "tuist"
+  },
+  %{
+    "name" => "Atlas",
+    "description" => "A product boundary without a GitHub repository connected yet."
+  }
+]
+
+Enum.each(products, fn attrs ->
+  exists? =
+    Product
+    |> where([product], product.name == ^attrs["name"])
+    |> Repo.exists?()
+
+  unless exists? do
+    {:ok, _product} = Products.create_product(attrs)
+  end
+end)
+
 specs = [
   %{
     author: "maya@example.com",
     source_title: "Import feature requests from GitHub Discussions",
+    product_names: ["Hive"],
     attrs: %{
       "title" => "GitHub Discussions forage import",
       "summary" =>
@@ -115,10 +153,12 @@ specs = [
   %{
     author: "jon@example.com",
     source_title: "Group forage by source and priority",
+    product_names: ["Hive", "Noora"],
     attrs: %{
       "title" => "Forage source and priority grouping",
       "summary" =>
         "Group incoming forage by source and urgency without making every alert become a spec.",
+      "visibility" => "private",
       "body" => """
       Add lightweight grouping to Forage so reviewers can scan incoming work by source and urgency without losing the current source-specific pages.
 
@@ -139,6 +179,7 @@ specs = [
   %{
     author: "priya@example.com",
     source_title: "Let users subscribe to feature request updates",
+    product_names: ["Hive"],
     attrs: %{
       "title" => "Feature request subscriptions",
       "summary" =>
@@ -162,6 +203,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
+    product_names: ["Hive", "Tuist"],
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
       "summary" =>
@@ -184,6 +226,18 @@ specs = [
   }
 ]
 
+spec_needs_update? = fn spec, attrs ->
+  spec = Repo.preload(spec, :products)
+  product_ids = Map.get(attrs, "product_ids", [])
+
+  spec.title != attrs["title"] or
+    spec.body != attrs["body"] or
+    spec.summary != attrs["summary"] or
+    Atom.to_string(spec.status) != attrs["status"] or
+    Atom.to_string(spec.visibility) != Map.get(attrs, "visibility", "public") or
+    Enum.sort(Enum.map(spec.products, & &1.id)) != Enum.sort(product_ids)
+end
+
 Enum.each(specs, fn seed ->
   {:ok, user} =
     Accounts.upsert_from_auth(%{
@@ -201,6 +255,13 @@ Enum.each(specs, fn seed ->
         feature_request = Repo.get_by!(FeatureRequest, title: source_title)
         Map.put(seed.attrs, "source_feature_request_id", feature_request.id)
     end
+    |> Map.put_new("visibility", "public")
+    |> Map.put(
+      "product_ids",
+      seed
+      |> Map.get(:product_names, [])
+      |> Enum.map(fn name -> Repo.get_by!(Product, name: name).id end)
+    )
 
   spec =
     case Repo.get_by(Spec, title: seed.attrs["title"]) do
@@ -209,7 +270,12 @@ Enum.each(specs, fn seed ->
         spec
 
       spec ->
-        spec
+        if spec_needs_update?.(spec, attrs) do
+          {:ok, spec} = Specs.update_spec(spec, attrs, user)
+          spec
+        else
+          spec
+        end
     end
 
   revision_exists? =
@@ -260,41 +326,4 @@ Enum.each(specs, fn seed ->
       {:ok, _comment} = Specs.add_comment(spec, comment_attrs, comment_user)
     end
   end)
-end)
-
-products = [
-  %{
-    "name" => "Hive",
-    "description" => "Agentic product orchestration for one organization.",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "hive"
-  },
-  %{
-    "name" => "Tuist",
-    "description" =>
-      "Developer tools for generating, maintaining, and optimizing Xcode projects.",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "tuist"
-  },
-  %{
-    "name" => "Noora",
-    "description" => "Design system components shared across Tuist products.",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "tuist"
-  },
-  %{
-    "name" => "Atlas",
-    "description" => "A product boundary without a GitHub repository connected yet."
-  }
-]
-
-Enum.each(products, fn attrs ->
-  exists? =
-    Product
-    |> where([product], product.name == ^attrs["name"])
-    |> Repo.exists?()
-
-  unless exists? do
-    {:ok, _product} = Products.create_product(attrs)
-  end
 end)

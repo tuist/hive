@@ -3,6 +3,7 @@ defmodule HiveWeb.SpecLive.Edit do
 
   use HiveWeb, :live_view
 
+  alias Hive.Products
   alias Hive.Specs
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -13,28 +14,29 @@ defmodule HiveWeb.SpecLive.Edit do
       description: "Edit an existing product proposal.",
       eyebrow: "Spec",
       highlights: ["Editable proposal", "Optimistic locking", "Member only"],
-      id: "specs-edit-#{spec.id}",
-      path: "/specs/#{spec.id}/edit",
+      id: "specs-edit-#{spec.number}",
+      path: "/specs/#{spec.number}/edit",
       title: "Edit #{spec.title}"
     }
   end
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
-    spec = Specs.get_spec!(id)
+  def mount(%{"number" => number}, _session, socket) do
+    spec = Specs.get_spec_by_number!(number)
 
     if Specs.can_edit?(spec, socket.assigns.current_user) do
       {:ok,
        socket
        |> assign(:page_title, "Edit #{spec.title} · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph(spec)))
+       |> assign(:products, Products.list_products())
        |> assign(:spec, spec)
        |> assign_form(Specs.change_spec(spec))}
     else
       {:ok,
        socket
        |> put_flash(:error, "Only organization members can edit specs.")
-       |> redirect(to: ~p"/specs/#{spec.id}")}
+       |> redirect(to: ~p"/specs/#{spec.number}")}
     end
   end
 
@@ -54,7 +56,7 @@ defmodule HiveWeb.SpecLive.Edit do
         {:noreply,
          socket
          |> put_flash(:info, "Spec updated.")
-         |> push_navigate(to: ~p"/specs/#{spec.id}")}
+         |> push_navigate(to: ~p"/specs/#{spec.number}")}
 
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "Only organization members can edit specs.")}
@@ -109,6 +111,7 @@ defmodule HiveWeb.SpecLive.Edit do
         form={@form}
         title="Edit spec"
         action_label="Save spec"
+        products={@products}
         source={@spec.source_feature_request}
       />
     </Layouts.dashboard>

@@ -1,7 +1,9 @@
 defmodule HiveWeb.SpecLive.ShowTest do
   use HiveWeb.ConnCase, async: true
+  use Mimic
 
   alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.Specs
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
@@ -17,7 +19,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
         user
       )
 
-    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.id}")
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
 
     assert html =~ "GitHub sign-in"
     assert html =~ "<h3>Proposal</h3>"
@@ -27,7 +29,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Draft history"
     assert html =~ "Revision 1"
 
-    conn = get(conn, ~p"/specs/#{spec.id}")
+    conn = get(conn, ~p"/specs/#{spec.number}")
     assert html_response(conn, 200) =~ ~s|property="og:image"|
 
     spec = Specs.get_spec!(spec.id)
@@ -42,10 +44,29 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, spec} =
       Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
 
-    {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs/#{spec.id}")
+    {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs/#{spec.number}")
 
     assert html =~ "Sign in to comment"
     refute html =~ ~s|data-part="comment-form"|
+  end
+
+  test "blocks private specs from contributors", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Private spec", "body" => "Initial proposal.", "visibility" => "private"},
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    assert {:error, {:redirect, %{to: "/specs"}}} =
+             live(contributor_conn, ~p"/specs/#{spec.number}")
   end
 
   test "allows signed-in users to comment", %{conn: conn} do
@@ -54,7 +75,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, spec} =
       Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
 
-    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.id}")
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
 
     html =
       view
@@ -85,7 +106,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, _comment} = Specs.add_comment(spec, %{"body" => "From GitHub."}, github_user)
     {:ok, _comment} = Specs.add_comment(spec, %{"body" => "From email."}, user)
 
-    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.id}")
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
 
     assert html =~ "https://avatars.githubusercontent.com/u/12345?v=4"
     assert html =~ "https://www.gravatar.com/avatar/"
@@ -97,7 +118,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, spec} =
       Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
 
-    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.id}/edit")
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}/edit")
 
     result =
       view
@@ -139,7 +160,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     spec = Specs.get_spec!(spec.id)
     revision = Enum.find(spec.revisions, &(&1.revision == 2))
 
-    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.id}")
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
 
     html = render_click(view, "toggle-expand", %{"row-key" => "revision-#{revision.id}"})
 

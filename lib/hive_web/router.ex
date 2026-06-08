@@ -84,8 +84,8 @@ defmodule HiveWeb.Router do
       live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
       live "/specs", SpecLive.Index
       live "/specs/new", SpecLive.New
-      live "/specs/:id", SpecLive.Show
-      live "/specs/:id/edit", SpecLive.Edit
+      live "/specs/:number", SpecLive.Show
+      live "/specs/:number/edit", SpecLive.Edit
     end
 
     live_session :settings,

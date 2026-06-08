@@ -17,6 +17,15 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
             "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
         },
         "status" => %{"type" => "string"},
+        "visibility" => %{
+          "type" => "string",
+          "description" => "Spec visibility. Use public or private."
+        },
+        "product_ids" => %{
+          "type" => "array",
+          "items" => %{"type" => "string"},
+          "description" => "Product IDs to associate with the spec."
+        },
         "source_feature_request_id" => %{"type" => "string"}
       }
     }
@@ -34,8 +43,17 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
   def call(conn, args) do
     attrs =
       args
-      |> Map.take(["title", "body", "summary", "status", "source_feature_request_id"])
+      |> Map.take([
+        "title",
+        "body",
+        "summary",
+        "status",
+        "visibility",
+        "product_ids",
+        "source_feature_request_id"
+      ])
       |> Map.put_new("status", "draft")
+      |> Map.put_new("visibility", "public")
 
     case Specs.create_spec(attrs, conn.assigns.current_user) do
       {:ok, spec} ->

@@ -41,6 +41,7 @@ defmodule Hive.MCP.Components.Tools.SpecsTest do
     assert %{"spec" => %{"id" => id, "number" => number, "revision" => 1}} = created
     assert is_integer(number)
     assert created["spec"]["summary"] == "Let requesters authenticate with GitHub."
+    assert created["spec"]["visibility"] == "public"
     assert [%{"revision" => 1, "title" => "GitHub sign-in"}] = created["spec"]["revisions"]
 
     listed = ListSpecs.call(conn(user), %{}) |> response_json()

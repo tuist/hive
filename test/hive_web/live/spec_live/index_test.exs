@@ -1,6 +1,8 @@
 defmodule HiveWeb.SpecLive.IndexTest do
   use HiveWeb.ConnCase, async: true
+  use Mimic
 
+  alias Hive.Auth
   alias Hive.Specs
 
   test "renders the empty state and OpenGraph metadata", %{conn: conn} do
@@ -53,5 +55,36 @@ defmodule HiveWeb.SpecLive.IndexTest do
     assert html =~ "Accepted proposal"
     refute html =~ "Draft proposal"
     assert html =~ "Accepted"
+  end
+
+  test "hides private specs from contributors", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+
+    {:ok, _public} =
+      Specs.create_spec(
+        %{"title" => "Public proposal", "body" => "Initial proposal.", "visibility" => "public"},
+        member
+      )
+
+    {:ok, _private} =
+      Specs.create_spec(
+        %{
+          "title" => "Private proposal",
+          "body" => "Initial proposal.",
+          "visibility" => "private"
+        },
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    {:ok, _view, html} = live(contributor_conn, ~p"/specs")
+
+    assert html =~ "Public proposal"
+    refute html =~ "Private proposal"
   end
 end

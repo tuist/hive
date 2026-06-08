@@ -1,8 +1,11 @@
 defmodule Hive.SpecsTest do
   use Hive.DataCase, async: true
+  use Mimic
 
   alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.Forage
+  alias Hive.Products
   alias Hive.Repo
   alias Hive.Specs
 
@@ -71,6 +74,24 @@ defmodule Hive.SpecsTest do
 
       assert {"cannot contain em dashes", []} = changeset.errors[:summary]
     end
+
+    test "associates specs with products" do
+      user = user()
+      {:ok, product} = Products.create_product(%{name: "Hive"})
+
+      assert {:ok, spec} =
+               Specs.create_spec(
+                 %{
+                   "title" => "GitHub sign-in",
+                   "body" => "Add GitHub sign-in for requesters.",
+                   "product_ids" => [product.id]
+                 },
+                 user
+               )
+
+      spec = Specs.get_spec!(spec.id)
+      assert Enum.map(spec.products, & &1.name) == ["Hive"]
+    end
   end
 
   describe "list_specs/1" do
@@ -87,6 +108,34 @@ defmodule Hive.SpecsTest do
       assert Enum.map(Specs.list_specs(status: :draft), & &1.id) == [draft.id]
       assert Enum.map(Specs.list_specs(status: :accepted), & &1.id) == [accepted.id]
       assert Enum.map(Specs.list_specs(status: {:not, :draft}), & &1.id) == [accepted.id]
+    end
+
+    test "hides private specs from non-members" do
+      member = user("member@tuist.dev")
+      contributor = user("contributor@example.com")
+
+      {:ok, public} =
+        Specs.create_spec(
+          %{"title" => "Public", "body" => "Initial proposal.", "visibility" => "public"},
+          member
+        )
+
+      {:ok, private} =
+        Specs.create_spec(
+          %{"title" => "Private", "body" => "Initial proposal.", "visibility" => "private"},
+          member
+        )
+
+      stub(Auth, :member?, fn
+        %{email: "member@tuist.dev"} -> true
+        _user -> false
+      end)
+
+      assert Specs.list_specs(user: member) |> Enum.map(& &1.id) |> Enum.sort() ==
+               Enum.sort([private.id, public.id])
+
+      assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [public.id]
+      assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public.id]
     end
   end
 
@@ -121,6 +170,36 @@ defmodule Hive.SpecsTest do
       assert {:error, changeset} = Specs.update_spec(stale_spec, %{"title" => "Local edit"}, user)
       assert [lock_version: {"is stale", [stale: true]}] = changeset.errors
     end
+
+    test "updates associated products" do
+      user = user()
+      {:ok, hive} = Products.create_product(%{name: "Hive"})
+      {:ok, noora} = Products.create_product(%{name: "Noora"})
+
+      {:ok, spec} =
+        Specs.create_spec(
+          %{
+            "title" => "Draft",
+            "body" => "Initial proposal.",
+            "product_ids" => [hive.id]
+          },
+          user
+        )
+
+      assert {:ok, spec} =
+               Specs.update_spec(
+                 spec,
+                 %{
+                   "title" => "Draft",
+                   "body" => "Initial proposal.",
+                   "product_ids" => [noora.id]
+                 },
+                 user
+               )
+
+      spec = Specs.get_spec!(spec.id)
+      assert Enum.map(spec.products, & &1.name) == ["Noora"]
+    end
   end
 
   describe "comments" do
@@ -136,6 +215,27 @@ defmodule Hive.SpecsTest do
       spec = Specs.get_spec!(spec.id)
       assert Enum.map(spec.comments, & &1.body) == ["Ship it."]
       assert Enum.at(spec.comments, 0).user.email == user.email
+    end
+
+    test "rejects comments on private specs from non-members" do
+      member = user("member@tuist.dev")
+      contributor = user("contributor@example.com")
+
+      {:ok, spec} =
+        Specs.create_spec(
+          %{"title" => "Private", "body" => "Initial proposal.", "visibility" => "private"},
+          member
+        )
+
+      stub(Auth, :member?, fn
+        %{email: "member@tuist.dev"} -> true
+        _user -> false
+      end)
+
+      assert Specs.add_comment(spec, %{"body" => "Can I see this?"}, contributor) ==
+               {:error, :unauthorized}
+
+      assert {:ok, _comment} = Specs.add_comment(spec, %{"body" => "Member note."}, member)
     end
   end
 end

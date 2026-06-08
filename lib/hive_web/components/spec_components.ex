@@ -55,19 +55,30 @@ defmodule HiveWeb.SpecComponents do
             :if={@specs != []}
             id="specs-table"
             rows={@specs}
-            row_navigate={fn spec -> ~p"/specs/#{spec.id}" end}
+            row_navigate={fn spec -> ~p"/specs/#{spec.number}" end}
           >
             <:col :let={spec} label="Spec">
               <div data-part="spec-table-cell">
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
                   <strong>{spec_number(spec)} {spec.title}</strong>
-                  <p>{preview(spec.body)}</p>
+                  <p>{visibility_label(spec.visibility)} · {preview(spec.body)}</p>
                 </div>
               </div>
             </:col>
             <:col :let={spec} label="Source">
               <span data-part="spec-table-source">{source_label(spec)}</span>
+            </:col>
+            <:col :let={spec} label="Products">
+              <div data-part="spec-table-products">
+                <.badge
+                  :for={product <- spec_products(spec)}
+                  label={product.name}
+                  color="neutral"
+                  style="light-fill"
+                />
+                <span :if={spec_products(spec) == []}>No products</span>
+              </div>
             </:col>
             <:col :let={spec} label="Status">
               <.badge_cell
@@ -100,12 +111,20 @@ defmodule HiveWeb.SpecComponents do
         <div data-part="title-group">
           <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
           <h1>{@spec.title}</h1>
-          <p>{source_label(@spec)}</p>
+          <p>{visibility_label(@spec.visibility)} · {source_label(@spec)}</p>
+          <div :if={spec_products(@spec) != []} data-part="product-list">
+            <.badge
+              :for={product <- spec_products(@spec)}
+              label={product.name}
+              color="neutral"
+              style="light-fill"
+            />
+          </div>
         </div>
         <div :if={@can_edit?} data-part="header-actions">
           <.button
             label="Edit"
-            href={~p"/specs/#{@spec.id}/edit"}
+            href={~p"/specs/#{@spec.number}/edit"}
             size="medium"
             variant="primary"
           >
@@ -247,6 +266,7 @@ defmodule HiveWeb.SpecComponents do
   attr :form, :any, required: true
   attr :title, :string, required: true
   attr :action_label, :string, required: true
+  attr :products, :list, required: true
   attr :source, :map, default: nil
 
   def spec_form(assigns) do
@@ -294,6 +314,32 @@ defmodule HiveWeb.SpecComponents do
                 </option>
               </select>
             </label>
+            <label data-part="select-field">
+              <span>Visibility</span>
+              <select name={@form[:visibility].name} id={@form[:visibility].id}>
+                <option
+                  :for={visibility <- Hive.Specs.Spec.visibilities()}
+                  value={visibility}
+                  selected={Phoenix.HTML.Form.normalize_value("select", @form[:visibility].value) == Atom.to_string(visibility)}
+                >
+                  {visibility_label(visibility)}
+                </option>
+              </select>
+            </label>
+            <fieldset data-part="checkbox-group">
+              <legend>Products</legend>
+              <input type="hidden" name="spec[product_ids][]" value="" />
+              <label :for={product <- @products} data-part="checkbox-option">
+                <input
+                  type="checkbox"
+                  name="spec[product_ids][]"
+                  value={product.id}
+                  checked={product_selected?(@form, product.id)}
+                />
+                <span>{product.name}</span>
+              </label>
+              <p :if={@products == []}>Create products in Settings before linking them to specs.</p>
+            </fieldset>
             <input
               :if={@form[:source_feature_request_id].value}
               type="hidden"
@@ -324,6 +370,20 @@ defmodule HiveWeb.SpecComponents do
 
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
+
+  defp visibility_label(:private), do: "Private"
+  defp visibility_label(_visibility), do: "Public"
+
+  defp spec_products(%{products: %Ecto.Association.NotLoaded{}}), do: []
+  defp spec_products(%{products: products}) when is_list(products), do: products
+  defp spec_products(_spec), do: []
+
+  defp product_selected?(form, product_id) do
+    form[:product_ids].value
+    |> List.wrap()
+    |> Enum.map(&to_string/1)
+    |> Enum.member?(product_id)
+  end
 
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
   defp spec_number(_spec), do: "#?"

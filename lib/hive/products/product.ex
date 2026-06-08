@@ -18,6 +18,10 @@ defmodule Hive.Products.Product do
       join_through: Hive.Products.ProductRepository,
       join_keys: [product_id: :id, github_repository_id: :id]
 
+    many_to_many :specs, Hive.Specs.Spec,
+      join_through: "products_specs",
+      join_keys: [product_id: :id, spec_id: :id]
+
     timestamps(type: :utc_datetime)
   end
 

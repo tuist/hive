@@ -4,6 +4,7 @@ defmodule HiveWeb.SpecLive.New do
   use HiveWeb, :live_view
 
   alias Hive.Forage
+  alias Hive.Products
   alias Hive.Specs
   alias Hive.Specs.Spec
   alias HiveWeb.Layouts
@@ -29,13 +30,14 @@ defmodule HiveWeb.SpecLive.New do
       attrs =
         case source do
           nil ->
-            %{"status" => "draft"}
+            %{"status" => "draft", "visibility" => "public"}
 
           source ->
             %{
               "title" => source.title,
               "body" => source.description,
               "status" => "draft",
+              "visibility" => "public",
               "source_feature_request_id" => source.id
             }
         end
@@ -44,6 +46,7 @@ defmodule HiveWeb.SpecLive.New do
        socket
        |> assign(:page_title, "New spec · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph()))
+       |> assign(:products, Products.list_products())
        |> assign(:source, source)
        |> assign_form(Specs.change_spec(%Spec{}, attrs))}
     else
@@ -70,7 +73,7 @@ defmodule HiveWeb.SpecLive.New do
         {:noreply,
          socket
          |> put_flash(:info, "Spec created.")
-         |> push_navigate(to: ~p"/specs/#{spec.id}")}
+         |> push_navigate(to: ~p"/specs/#{spec.number}")}
 
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "Only organization members can create specs.")}
@@ -122,6 +125,7 @@ defmodule HiveWeb.SpecLive.New do
         form={@form}
         title="New spec"
         action_label="Create spec"
+        products={@products}
         source={@source}
       />
     </Layouts.dashboard>

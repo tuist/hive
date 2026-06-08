@@ -20,7 +20,13 @@ defmodule Hive.MCP.Components.Tools.GetSpec do
   def description, do: "Fetch one Hive spec with comments and its current revision."
 
   @impl EMCP.Tool
-  def call(_conn, %{"id" => id}) do
-    Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(id))})
+  def call(conn, %{"id" => id}) do
+    spec = Specs.get_spec!(id)
+
+    if Specs.can_view?(spec, conn.assigns.current_user) do
+      Tool.json_response(%{spec: SpecTool.spec_json(spec)})
+    else
+      Tool.json_response(%{error: "not_found"})
+    end
   end
 end
