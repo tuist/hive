@@ -59,8 +59,10 @@ defmodule HiveWeb.OpenGraphControllerTest do
     assert response(conn, 200) == "jpeg"
   end
 
-  test "GET /open-graph/spec-:number/:hash rejects private specs", %{conn: conn} do
-    {_conn, user} = sign_in(conn, "alice@example.com")
+  test "GET /open-graph/spec-:number/:hash rejects private specs for anonymous users", %{
+    conn: conn
+  } do
+    {_signed_conn, user} = sign_in(conn, "alice@example.com")
 
     {:ok, spec} =
       Specs.create_spec(
@@ -77,5 +79,30 @@ defmodule HiveWeb.OpenGraphControllerTest do
     conn = get(conn, OpenGraph.path(data))
 
     assert response(conn, 404) == "Not found"
+  end
+
+  test "GET /open-graph/spec-:number/:hash serves private specs for members", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Private proposal",
+          "body" => "Initial proposal.",
+          "visibility" => "private"
+        },
+        user
+      )
+
+    data = SpecLive.Show.open_graph(Specs.get_spec!(spec.id))
+    spec_id = "spec-#{spec.number}"
+
+    stub(OpenGraph, :serve, fn conn, %{id: ^spec_id} ->
+      Plug.Conn.send_resp(conn, 200, "jpeg")
+    end)
+
+    conn = get(conn, OpenGraph.path(data))
+
+    assert response(conn, 200) == "jpeg"
   end
 end

@@ -9,6 +9,10 @@ defmodule HiveWeb.Router do
     plug :put_secure_browser_headers
   end
 
+  pipeline :session do
+    plug :fetch_session
+  end
+
   pipeline :oauth do
     plug Ueberauth
   end
@@ -33,7 +37,12 @@ defmodule HiveWeb.Router do
 
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
-    get "/open-graph/:page_id/:hash", OpenGraphController, :show
+
+    scope "/" do
+      pipe_through :session
+
+      get "/open-graph/:page_id/:hash", OpenGraphController, :show
+    end
 
     scope "/.well-known" do
       pipe_through :json_api
