@@ -28,84 +28,47 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
   }
 
-  & [data-part="identities-card"],
   & [data-part="providers-card"] {
     width: 100%;
     overflow-x: hidden;
   }
 
-  & [data-part="identities-section"],
   & [data-part="providers-section"] {
     display: flex;
     flex-direction: column;
-    gap: var(--noora-spacing-6);
+    gap: var(--noora-spacing-8);
   }
 
-  & [data-provider-uid] [data-part="label"] {
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
-  }
+  & [data-part="providers-table"] .noora-table {
+    width: 100%;
 
-  & [data-part="provider-list"] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--noora-spacing-3);
-  }
+    & th:nth-child(1),
+    & td:nth-child(1) {
+      width: 50%;
+    }
 
-  & [data-part="provider-cell"] {
-    display: flex;
-    align-items: center;
-    gap: var(--noora-spacing-3);
-    min-width: 0;
-  }
+    /* Right-align the trailing status/action column. */
+    & th:last-child {
+      text-align: right;
+    }
 
-  & [data-part="provider-icon"] {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    color: var(--noora-surface-label-primary);
-
-    & svg {
-      width: 100%;
-      height: 100%;
+    & td:last-child [data-part="cell"] {
+      justify-content: flex-end;
     }
   }
 
-  & [data-part="provider-row"] {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--noora-spacing-4);
-    border: 1px solid var(--noora-surface-border-primary);
-    border-radius: var(--noora-radius-medium);
-    padding: var(--noora-spacing-4);
+  /* Dim providers the instance does not offer so actionable rows lead. */
+  & [data-part="cell"][data-state="unconfigured"] {
+    & [data-part="icon"],
+    & [data-part="label"] {
+      color: var(--noora-surface-label-disabled);
+    }
   }
 
-  & [data-part="provider-main"] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--noora-spacing-1);
-    min-width: 0;
-  }
-
-  & [data-part="provider-name"] {
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
-  }
-
-  & [data-part="provider-state"],
-  & [data-part="provider-message"] {
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-  }
-
-  @media (max-width: 720px) {
-    & [data-part="provider-row"] {
-      align-items: flex-start;
+  @media (max-width: 960px) {
+    & [data-part="page-header"] {
       flex-direction: column;
+      align-items: stretch;
     }
   }
 }

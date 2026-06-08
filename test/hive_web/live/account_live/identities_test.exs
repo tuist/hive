@@ -62,6 +62,23 @@ defmodule HiveWeb.AccountLive.IdentitiesTest do
     assert html =~ ~s(href="/auth/github")
   end
 
+  test "shows GitHub as unavailable when its OAuth provider is not configured", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "alice@example.com")
+
+    Mimic.stub(Auth, :providers, fn ->
+      [
+        google: %{display_name: "Google", allowed_domains: []}
+      ]
+    end)
+
+    {:ok, _view, html} = live(conn, ~p"/account/identities")
+
+    assert html =~ "GitHub"
+    assert html =~ "Not configured"
+    assert html =~ "GitHub sign-in is not enabled for this Hive instance"
+    refute html =~ ~s(href="/auth/github")
+  end
+
   test "open graph data follows the page contract" do
     data = Identities.open_graph()
 
