@@ -137,6 +137,7 @@ defmodule HiveWeb.OpenGraphTest do
   test "render_html escapes page data and includes the card content" do
     html =
       OpenGraph.render_html(%{
+        author: %{handle: "@unsafe", initials: "<u>"},
         description: ~s|Description with <script>alert("x")</script>|,
         eyebrow: "Forage",
         highlights: ["<unsafe>", "Public source"],
@@ -146,6 +147,8 @@ defmodule HiveWeb.OpenGraphTest do
       })
 
     assert html =~ "Unsafe &lt;title&gt;"
+    assert html =~ "@unsafe"
+    assert html =~ "&lt;u&gt;"
     assert html =~ "&lt;unsafe&gt;"
     assert html =~ "Description with &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"
     assert html =~ "<main class=\"card\">"

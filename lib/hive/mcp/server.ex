@@ -5,6 +5,11 @@ defmodule Hive.MCP.Server do
     name: "hive",
     version: "0.1.0",
     tools: [
-      Hive.MCP.Components.Tools.Whoami
+      Hive.MCP.Components.Tools.Whoami,
+      Hive.MCP.Components.Tools.ListSpecs,
+      Hive.MCP.Components.Tools.GetSpec,
+      Hive.MCP.Components.Tools.CreateSpec,
+      Hive.MCP.Components.Tools.UpdateSpec,
+      Hive.MCP.Components.Tools.AddSpecComment
     ]
 end

@@ -4,6 +4,7 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
   use HiveWeb, :live_view
 
   alias Hive.Forage
+  alias Hive.Specs
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -35,7 +36,8 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
      |> assign(:page_title, "Feature requests · #{socket.assigns.product_name}")
      |> assign(OpenGraph.assigns(open_graph(feature_requests)))
      |> assign(:source, source)
-     |> assign(:feature_requests, feature_requests)}
+     |> assign(:feature_requests, feature_requests)
+     |> assign(:can_create_spec?, Specs.can_create?(socket.assigns.current_user))}
   end
 
   @impl true
@@ -57,6 +59,7 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
         source={@source}
         feature_requests={@feature_requests}
         signed_in?={@signed_in?}
+        can_create_spec?={@can_create_spec?}
       />
     </Layouts.dashboard>
     """

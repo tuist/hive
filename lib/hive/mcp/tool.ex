@@ -26,4 +26,12 @@ defmodule Hive.MCP.Tool do
   def json_response(data) do
     EMCP.Tool.response([%{"type" => "text", "text" => JSON.encode!(data)}])
   end
+
+  def changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
 end

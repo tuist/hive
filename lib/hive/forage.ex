@@ -74,6 +74,12 @@ defmodule Hive.Forage do
     |> Repo.all()
   end
 
+  def get_feature_request!(id) do
+    FeatureRequest
+    |> preload(:user)
+    |> Repo.get!(id)
+  end
+
   def change_feature_request(feature_request \\ %FeatureRequest{}, attrs \\ %{}) do
     FeatureRequest.changeset(feature_request, attrs)
   end
