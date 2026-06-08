@@ -45,6 +45,15 @@ defmodule HiveWeb.PageHTML do
               <h1 data-part="title">Log in to {@product_name}</h1>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
+            <form :if={@dev_login?} method="post" action={~p"/dev/login"} data-part="oauth">
+              <input type="hidden" name="_csrf_token" value={@csrf_token} />
+              <.button
+                type="submit"
+                label="Sign in as test user"
+                variant="primary"
+                size="medium"
+              />
+            </form>
             <div :if={@providers != []} data-part="oauth">
               <.button
                 :for={{key, meta} <- @providers}
@@ -83,15 +92,6 @@ defmodule HiveWeb.PageHTML do
                 size="medium"
               />
             </div>
-            <form :if={@dev_login?} method="post" action={~p"/dev/login"} data-part="oauth">
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
-              <.button
-                type="submit"
-                label="Sign in as test user"
-                variant="primary"
-                size="medium"
-              />
-            </form>
           </div>
         </div>
         <div data-part="background" aria-hidden="true">

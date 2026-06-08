@@ -89,12 +89,22 @@ defmodule HiveWeb.AuthControllerTest do
 
   test "GET /login offers a test-user sign in when dev routes are enabled", %{conn: conn} do
     stub(Auth, :private?, fn -> false end)
-    stub(Auth, :providers, fn -> [] end)
+
+    stub(Auth, :providers, fn ->
+      [
+        google: %{display_name: "Google", allowed_domains: []},
+        github: %{display_name: "GitHub", allowed_domains: []}
+      ]
+    end)
 
     conn = get(conn, ~p"/login")
 
     response = html_response(conn, 200)
     assert response =~ "Sign in as test user"
+    assert response =~ "Continue with Google"
+    assert response =~ "Continue with GitHub"
+    refute response =~ "Sign in as Google + GitHub user"
+    refute response =~ "Sign in as GitHub-only user"
     assert response =~ ~s|action="/dev/login"|
   end
 
@@ -106,6 +116,23 @@ defmodule HiveWeb.AuthControllerTest do
     user_id = get_session(conn, :user_id)
     assert user_id
 
+    user = Accounts.get_user(user_id)
+    assert user.email == "test@hive.dev"
+  end
+
+  test "POST /dev/login ignores requested personas", %{conn: conn} do
+    {:ok, _user} =
+      Accounts.upsert_from_auth(%{
+        email: "maya@example.com",
+        provider: "google",
+        provider_uid: "google-maya-example"
+      })
+
+    conn = post(conn, ~p"/dev/login", %{"email" => "maya@example.com"})
+
+    assert redirected_to(conn) == ~p"/"
+
+    user_id = get_session(conn, :user_id)
     user = Accounts.get_user(user_id)
     assert user.email == "test@hive.dev"
   end

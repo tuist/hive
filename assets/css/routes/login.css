@@ -71,6 +71,10 @@
     gap: var(--noora-spacing-4);
     width: 100%;
 
+    & form {
+      width: 100%;
+    }
+
     & .noora-button {
       width: 100%;
     }

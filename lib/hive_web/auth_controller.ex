@@ -51,11 +51,17 @@ defmodule HiveWeb.AuthController do
   def dev_login(conn, _params) do
     if Application.get_env(:hive, :dev_routes, false) do
       {:ok, user} =
-        Accounts.upsert_from_auth(%{
-          email: "test@hive.dev",
-          provider: "dev",
-          provider_uid: "dev"
-        })
+        case Accounts.get_user_by_email("test@hive.dev") do
+          nil ->
+            Accounts.upsert_from_auth(%{
+              email: "test@hive.dev",
+              provider: "dev",
+              provider_uid: "test@hive.dev"
+            })
+
+          user ->
+            {:ok, user}
+        end
 
       sign_in(conn, user)
     else
