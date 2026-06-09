@@ -3,7 +3,9 @@ defmodule HiveWeb.AuthControllerTest do
   use Mimic
 
   alias Hive.Accounts
+  alias Hive.Accounts.UserIdentity
   alias Hive.Auth
+  alias Hive.Repo
 
   test "GET / redirects to login when the instance is private", %{conn: conn} do
     stub(Auth, :private?, fn -> true end)
@@ -145,5 +147,70 @@ defmodule HiveWeb.AuthControllerTest do
 
     assert redirected_to(conn) == "/oauth2/authorize?client_id=client"
     refute get_session(conn, :user_return_to)
+  end
+
+  test "GET /auth/:provider/callback links the provider to the signed-in user", %{conn: conn} do
+    {conn, user} = sign_in(conn, "link-provider-user@example.com")
+
+    stub(Auth, :provider, fn :github ->
+      %{display_name: "GitHub", allowed_domains: []}
+    end)
+
+    stub(Auth, :check_domain, fn _provider, _email -> :ok end)
+
+    conn =
+      conn
+      |> Phoenix.Controller.fetch_flash([])
+      |> assign_ueberauth("github", "link-provider-gh", "private-github-email@example.com")
+      |> HiveWeb.AuthController.callback(%{"provider" => "github"})
+
+    assert redirected_to(conn) == ~p"/account/identities"
+    assert get_session(conn, :user_id) == user.id
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) == "GitHub is connected to your account."
+
+    assert %UserIdentity{user_id: user_id} =
+             Repo.get_by(UserIdentity, provider: "github", provider_uid: "link-provider-gh")
+
+    assert user_id == user.id
+  end
+
+  test "GET /auth/:provider/callback does not move another user's identity", %{conn: conn} do
+    {:ok, owner} =
+      Accounts.upsert_from_auth(%{
+        email: "identity-owner@example.com",
+        provider: "github",
+        provider_uid: "identity-owner-gh"
+      })
+
+    {conn, user} = sign_in(conn, "identity-candidate@example.com")
+
+    stub(Auth, :provider, fn :github ->
+      %{display_name: "GitHub", allowed_domains: []}
+    end)
+
+    stub(Auth, :check_domain, fn _provider, _email -> :ok end)
+
+    conn =
+      conn
+      |> Phoenix.Controller.fetch_flash([])
+      |> assign_ueberauth("github", "identity-owner-gh", "identity-candidate@example.com")
+      |> HiveWeb.AuthController.callback(%{"provider" => "github"})
+
+    assert redirected_to(conn) == ~p"/account/identities"
+    assert get_session(conn, :user_id) == user.id
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+             "GitHub is already connected to another account."
+
+    assert %UserIdentity{user_id: owner_id} =
+             Repo.get_by(UserIdentity, provider: "github", provider_uid: "identity-owner-gh")
+
+    assert owner_id == owner.id
+  end
+
+  defp assign_ueberauth(conn, _provider, uid, email) do
+    auth = %Ueberauth.Auth{uid: uid, info: %Ueberauth.Auth.Info{email: email}}
+
+    assign(conn, :ueberauth_auth, auth)
   end
 end

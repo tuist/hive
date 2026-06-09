@@ -24,20 +24,20 @@ defmodule HiveWeb.AuthController do
 
     with key when is_atom(key) <- safe_atom(provider_key),
          provider when not is_nil(provider) <- Auth.provider(key),
-         :ok <- Auth.check_domain(provider, email || ""),
-         {:ok, user} <-
-           Accounts.upsert_from_auth(%{
-             email: email,
-             provider: provider_key,
-             provider_uid: to_string(auth.uid)
-           }) do
-      sign_in(conn, user)
+         :ok <- Auth.check_domain(provider, email || "") do
+      auth_attrs = %{
+        email: email,
+        provider: provider_key,
+        provider_uid: to_string(auth.uid)
+      }
+
+      case current_user(conn) do
+        nil -> sign_in_from_auth(conn, auth_attrs)
+        user -> link_identity(conn, user, auth_attrs, provider.display_name)
+      end
     else
       {:error, :domain_not_allowed} ->
         unauthorized(conn, "Your account isn't from an allowed domain for this instance.")
-
-      {:error, %Ecto.Changeset{}} ->
-        unauthorized(conn, "We couldn't read a usable email from your account.")
 
       _ ->
         unauthorized(conn, "Unknown identity provider.")
@@ -85,6 +85,41 @@ defmodule HiveWeb.AuthController do
     |> put_session(:user_id, user.id)
     |> delete_session(:user_return_to)
     |> redirect(to: return_to)
+  end
+
+  defp sign_in_from_auth(conn, attrs) do
+    case Accounts.upsert_from_auth(attrs) do
+      {:ok, user} ->
+        sign_in(conn, user)
+
+      {:error, %Ecto.Changeset{}} ->
+        unauthorized(conn, "We couldn't read a usable email from your account.")
+    end
+  end
+
+  defp link_identity(conn, user, attrs, provider_name) do
+    case Accounts.link_identity(user, attrs) do
+      {:ok, user} ->
+        conn
+        |> configure_session(renew: true)
+        |> put_session(:user_id, user.id)
+        |> put_flash(:info, "#{provider_name} is connected to your account.")
+        |> redirect(to: ~p"/account/identities")
+
+      {:error, :identity_already_linked} ->
+        conn
+        |> put_flash(:error, "#{provider_name} is already connected to another account.")
+        |> redirect(to: ~p"/account/identities")
+
+      {:error, %Ecto.Changeset{}} ->
+        unauthorized(conn, "We couldn't connect that identity to your account.")
+    end
+  end
+
+  defp current_user(conn) do
+    conn
+    |> get_session(:user_id)
+    |> Accounts.get_user()
   end
 
   defp safe_atom(key) when is_binary(key) do
