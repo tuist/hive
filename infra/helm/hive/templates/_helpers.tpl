@@ -22,6 +22,11 @@ app.kubernetes.io/name: {{ include "hive.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
+{{- define "hive.webSelectorLabels" -}}
+{{ include "hive.selectorLabels" . }}
+app.kubernetes.io/component: web
+{{- end -}}
+
 {{- define "hive.appSecretName" -}}
 {{- if .Values.secrets.existingSecret -}}
 {{ .Values.secrets.existingSecret }}

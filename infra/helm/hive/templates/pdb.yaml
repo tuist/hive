@@ -9,5 +9,5 @@ spec:
   minAvailable: {{ .Values.pdb.minAvailable }}
   selector:
     matchLabels:
-      {{- include "hive.selectorLabels" . | nindent 6 }}
+      {{- include "hive.webSelectorLabels" . | nindent 6 }}
 {{- end }}

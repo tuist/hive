@@ -170,6 +170,9 @@ vector:
     region: ""
     bucket: ""
     prefix: "vector"
+  externalSecrets:
+    s3RegionKey: HIVE_S3_REGION
+    s3BucketKey: HIVE_S3_BUCKET
   cache:
     size: 20Gi
     # Empty string lets the cluster default storage class be used.
