@@ -48,6 +48,23 @@ defmodule Hive.Accounts do
     end)
   end
 
+  @doc """
+  Links an authenticated provider identity to an existing user.
+
+  This is used from the account settings flow, where the person is
+  already signed in and is connecting another provider. An identity that
+  belongs to another user is left untouched.
+  """
+  def link_identity(%User{} = user, %{provider: provider, provider_uid: provider_uid}) do
+    Repo.transaction(fn ->
+      case upsert_identity(user, provider, provider_uid) do
+        {:ok, %UserIdentity{user_id: user_id}} when user_id == user.id -> user
+        {:ok, %UserIdentity{}} -> Repo.rollback(:identity_already_linked)
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
   defp upsert_user(email) do
     case get_user_by_email(email || "") do
       nil -> %User{} |> User.changeset(%{email: email}) |> Repo.insert()
