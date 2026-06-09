@@ -129,8 +129,16 @@ spec:
               mountPath: {{ .Values.vector.cache.mountPath }}
       volumes:
         - name: config
+          {{- if .Values.externalSecrets.enabled }}
+          secret:
+            secretName: {{ $appSecret }}
+            items:
+              - key: vector.yaml
+                path: vector.yaml
+          {{- else }}
           configMap:
             name: {{ include "hive.vectorName" . }}-config
+          {{- end }}
         - name: cache
           persistentVolumeClaim:
             claimName: {{ include "hive.vectorName" . }}-cache
