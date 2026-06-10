@@ -93,6 +93,7 @@ products = [
   %{
     "name" => "Hive",
     "description" => "Agentic product orchestration for one organization.",
+    "visibility" => "public",
     "github_repository_owner" => "tuist",
     "github_repository_name" => "hive"
   },
@@ -100,18 +101,21 @@ products = [
     "name" => "Tuist",
     "description" =>
       "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    "visibility" => "public",
     "github_repository_owner" => "tuist",
     "github_repository_name" => "tuist"
   },
   %{
     "name" => "Noora",
     "description" => "Design system components shared across Tuist products.",
+    "visibility" => "public",
     "github_repository_owner" => "tuist",
     "github_repository_name" => "tuist"
   },
   %{
     "name" => "Atlas",
-    "description" => "A product boundary without a GitHub repository connected yet."
+    "description" => "A product boundary without a GitHub repository connected yet.",
+    "visibility" => "private"
   }
 ]
 

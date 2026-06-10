@@ -1,6 +1,7 @@
 defmodule Hive.MCP.Components.Tools.Specs do
   @moduledoc false
 
+  alias Hive.Specs, as: SpecContext
   alias Hive.Specs.Spec
 
   def spec_json(%Spec{} = spec) do
@@ -12,12 +13,14 @@ defmodule Hive.MCP.Components.Tools.Specs do
       summary: spec.summary,
       status: Atom.to_string(spec.status),
       visibility: Atom.to_string(spec.visibility),
+      effective_visibility: Atom.to_string(SpecContext.effective_visibility(spec)),
       revision: spec.lock_version,
       products:
         Enum.map((Ecto.assoc_loaded?(spec.products) && spec.products) || [], fn product ->
           %{
             id: product.id,
-            name: product.name
+            name: product.name,
+            visibility: Atom.to_string(product.visibility)
           }
         end),
       source_forage_item:

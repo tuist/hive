@@ -7,10 +7,12 @@ defmodule Hive.Products.Product do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+  @visibilities [:public, :private]
 
   schema "products" do
     field :name, :string
     field :description, :string
+    field :visibility, Ecto.Enum, values: @visibilities, default: :public
     field :github_repository_owner, :string, virtual: true
     field :github_repository_name, :string, virtual: true
 
@@ -25,16 +27,25 @@ defmodule Hive.Products.Product do
     timestamps(type: :utc_datetime)
   end
 
+  def visibilities, do: @visibilities
+
   def changeset(product, attrs) do
     product
-    |> cast(attrs, [:name, :description, :github_repository_owner, :github_repository_name])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :visibility,
+      :github_repository_owner,
+      :github_repository_name
+    ])
     |> normalize_string(:name)
     |> normalize_string(:description)
     |> normalize_string(:github_repository_owner, &String.downcase/1)
     |> normalize_string(:github_repository_name, &String.downcase/1)
-    |> validate_required([:name])
+    |> validate_required([:name, :visibility])
     |> validate_length(:name, max: 120)
     |> validate_length(:description, max: 500)
+    |> validate_inclusion(:visibility, @visibilities)
     |> validate_repository_fields()
     |> unique_constraint(:name)
   end

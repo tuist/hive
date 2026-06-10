@@ -51,6 +51,7 @@ defmodule HiveWeb.SettingsLive.ProductsTest do
 
     assert html =~ ~s(id="new-product-modal")
     assert html =~ "New product"
+    assert html =~ "Visibility"
     assert html =~ "GitHub repository"
   end
 
@@ -79,6 +80,7 @@ defmodule HiveWeb.SettingsLive.ProductsTest do
         "product" => %{
           "name" => "Hive",
           "description" => "Product orchestration",
+          "visibility" => "private",
           "github_repository_owner" => "tuist",
           "github_repository_name" => "hive"
         }
@@ -86,6 +88,7 @@ defmodule HiveWeb.SettingsLive.ProductsTest do
 
     assert html =~ "Hive"
     assert html =~ "Product orchestration"
+    assert html =~ "Private"
     assert html =~ "tuist/hive"
   end
 

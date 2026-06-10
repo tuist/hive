@@ -152,6 +152,63 @@ defmodule Hive.SpecsTest do
       assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [public.id]
       assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public.id]
     end
+
+    test "uses spec visibility before product visibility" do
+      member = user("member@tuist.dev")
+      contributor = user("contributor@example.com")
+      {:ok, public_product} = Products.create_product(%{name: "Hive", visibility: "public"})
+      {:ok, private_product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+      {:ok, public_spec_on_private_product} =
+        Specs.create_spec(
+          %{
+            "title" => "Public spec",
+            "body" => "Initial proposal.",
+            "visibility" => "public",
+            "product_ids" => [private_product.id]
+          },
+          member
+        )
+
+      {:ok, private_spec_on_public_product} =
+        Specs.create_spec(
+          %{
+            "title" => "Private spec",
+            "body" => "Initial proposal.",
+            "visibility" => "private",
+            "product_ids" => [public_product.id]
+          },
+          member
+        )
+
+      stub(Auth, :member?, fn
+        %{email: "member@tuist.dev"} -> true
+        _user -> false
+      end)
+
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_product.id), member)
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_product.id), contributor)
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_product.id), nil)
+      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_product.id), contributor)
+      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_product.id), nil)
+
+      assert Specs.effective_visibility(Specs.get_spec!(public_spec_on_private_product.id)) ==
+               :public
+
+      assert Specs.effective_visibility(Specs.get_spec!(private_spec_on_public_product.id)) ==
+               :private
+
+      assert Specs.list_specs(user: member) |> Enum.map(& &1.id) |> Enum.sort() ==
+               Enum.sort([private_spec_on_public_product.id, public_spec_on_private_product.id])
+
+      assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [
+               public_spec_on_private_product.id
+             ]
+
+      assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [
+               public_spec_on_private_product.id
+             ]
+    end
   end
 
   describe "update_spec/3" do

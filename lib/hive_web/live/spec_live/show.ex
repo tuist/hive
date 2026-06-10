@@ -16,7 +16,7 @@ defmodule HiveWeb.SpecLive.Show do
       highlights: [
         spec_number(spec),
         "#{length(spec.comments)} comments",
-        visibility_label(spec.visibility),
+        visibility_label(Specs.effective_visibility(spec)),
         status_label(spec.status)
       ],
       id: "spec-#{spec.number}",
@@ -114,7 +114,7 @@ defmodule HiveWeb.SpecLive.Show do
 
   defp spec_summary(spec),
     do:
-      "#{visibility_label(spec.visibility)} · #{status_label(spec.status)} · #{source_label(spec)}"
+      "#{visibility_label(Specs.effective_visibility(spec))} · #{status_label(spec.status)} · #{source_label(spec)}"
 
   defp author_data(%{created_by_user: %{email: email}}) when is_binary(email) do
     handle =

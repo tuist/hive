@@ -11,6 +11,7 @@ defmodule Hive.ProductsTest do
       changeset = Products.change_product(%Product{}, %{name: "Hive"})
 
       assert changeset.valid?
+      assert get_field(changeset, :visibility) == :public
     end
 
     test "requires a name" do
@@ -18,6 +19,13 @@ defmodule Hive.ProductsTest do
 
       refute changeset.valid?
       assert {"can't be blank", _} = changeset.errors[:name]
+    end
+
+    test "rejects unknown visibility" do
+      changeset = Products.change_product(%Product{}, %{name: "Hive", visibility: "internal"})
+
+      refute changeset.valid?
+      assert {"is invalid", _} = changeset.errors[:visibility]
     end
 
     test "requires repository owner and name together" do
@@ -57,7 +65,14 @@ defmodule Hive.ProductsTest do
       assert {:ok, product} = Products.create_product(%{name: "Hive"})
 
       assert product.name == "Hive"
+      assert product.visibility == :public
       assert product.github_repositories == []
+    end
+
+    test "creates a private product" do
+      assert {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+      assert product.visibility == :private
     end
 
     test "creates a product with a GitHub repository" do
@@ -129,6 +144,91 @@ defmodule Hive.ProductsTest do
       assert atlas.name == "Atlas"
       assert forge.name == "Forge"
       assert [%GitHubRepository{name: "forge"}] = forge.github_repositories
+    end
+  end
+
+  describe "get_product!/1" do
+    test "returns a product with repositories preloaded" do
+      assert {:ok, product} =
+               Products.create_product(%{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "hive"
+               })
+
+      assert product = Products.get_product!(product.id)
+      assert [%GitHubRepository{owner: "tuist", name: "hive"}] = product.github_repositories
+    end
+  end
+
+  describe "update_product/2" do
+    test "updates product fields" do
+      assert {:ok, product} = Products.create_product(%{name: "Atlas"})
+
+      assert {:ok, product} =
+               Products.update_product(product, %{
+                 name: "Atlas Cloud",
+                 description: "Internal product planning.",
+                 visibility: "private"
+               })
+
+      assert product.name == "Atlas Cloud"
+      assert product.description == "Internal product planning."
+      assert product.visibility == :private
+    end
+
+    test "replaces a product repository" do
+      assert {:ok, product} =
+               Products.create_product(%{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "hive"
+               })
+
+      assert {:ok, product} =
+               Products.update_product(product, %{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "tuist"
+               })
+
+      assert [%GitHubRepository{owner: "tuist", name: "tuist"}] = product.github_repositories
+      assert Repo.aggregate(ProductRepository, :count) == 1
+    end
+
+    test "clears a product repository when repository fields are empty" do
+      assert {:ok, product} =
+               Products.create_product(%{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "hive"
+               })
+
+      assert {:ok, product} =
+               Products.update_product(product, %{
+                 name: "Hive",
+                 github_repository_owner: "",
+                 github_repository_name: ""
+               })
+
+      assert product.github_repositories == []
+      assert Repo.aggregate(ProductRepository, :count) == 0
+    end
+
+    test "keeps repositories when repository fields are omitted" do
+      assert {:ok, product} =
+               Products.create_product(%{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "hive"
+               })
+
+      assert {:ok, product} =
+               Products.update_product(product, %{name: "Hive app", visibility: "private"})
+
+      assert product.name == "Hive app"
+      assert product.visibility == :private
+      assert [%GitHubRepository{owner: "tuist", name: "hive"}] = product.github_repositories
     end
   end
 end

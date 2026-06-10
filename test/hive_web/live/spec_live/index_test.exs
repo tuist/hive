@@ -3,6 +3,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
   use Mimic
 
   alias Hive.Auth
+  alias Hive.Products
   alias Hive.Specs
 
   test "renders the empty state and OpenGraph metadata", %{conn: conn} do
@@ -17,13 +18,23 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   test "lists specs and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
+    {:ok, product} = Products.create_product(%{name: "Hive"})
 
     {:ok, _spec} =
-      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
+      Specs.create_spec(
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Initial proposal.",
+          "product_ids" => [product.id]
+        },
+        user
+      )
 
     {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs")
 
     assert html =~ "GitHub sign-in"
+    assert html =~ "Hive"
+    assert html =~ ~s(data-size="large")
     refute html =~ "New spec"
 
     {:ok, _view, html} = live(conn, ~p"/specs")
@@ -86,5 +97,31 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     assert html =~ "Public proposal"
     refute html =~ "Private proposal"
+  end
+
+  test "shows public specs attached to private products to contributors", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+    {:ok, private_product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+    {:ok, _spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Public product proposal",
+          "body" => "Initial proposal.",
+          "visibility" => "public",
+          "product_ids" => [private_product.id]
+        },
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    {:ok, _view, html} = live(contributor_conn, ~p"/specs")
+
+    assert html =~ "Public product proposal"
   end
 end
