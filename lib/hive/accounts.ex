@@ -47,14 +47,18 @@ defmodule Hive.Accounts do
           identity |> Repo.preload(:user) |> Map.fetch!(:user)
 
         nil ->
-          with {:ok, user} <- upsert_user(email),
-               {:ok, _identity} <- insert_identity(user, provider, provider_uid) do
-            user
-          else
-            {:error, changeset} -> Repo.rollback(changeset)
-          end
+          create_user_with_identity(email, provider, provider_uid)
       end
     end)
+  end
+
+  defp create_user_with_identity(email, provider, provider_uid) do
+    with {:ok, user} <- upsert_user(email),
+         {:ok, _identity} <- insert_identity(user, provider, provider_uid) do
+      user
+    else
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
   end
 
   @doc """
