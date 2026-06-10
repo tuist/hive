@@ -1,8 +1,8 @@
 defmodule Hive.GitHub.RepositoriesTest do
   use ExUnit.Case, async: true
 
+  alias Hive.GitHub.Client.Config
   alias Hive.GitHub.Repositories
-  alias Hive.GitHub.Repositories.Config
 
   describe "search_accessible_repositories/2" do
     test "returns not configured when GitHub App credentials are missing" do
