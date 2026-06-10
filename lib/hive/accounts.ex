@@ -39,11 +39,17 @@ defmodule Hive.Accounts do
   """
   def upsert_from_auth(%{email: email, provider: provider, provider_uid: provider_uid}) do
     Repo.transaction(fn ->
-      with {:ok, user} <- upsert_user(email),
-           {:ok, _identity} <- upsert_identity(user, provider, provider_uid) do
-        user
-      else
-        {:error, changeset} -> Repo.rollback(changeset)
+      case get_identity(provider, provider_uid) do
+        %UserIdentity{} = identity ->
+          identity |> Repo.preload(:user) |> Map.fetch!(:user)
+
+        nil ->
+          with {:ok, user} <- upsert_user(email),
+               {:ok, _identity} <- upsert_identity(user, provider, provider_uid) do
+            user
+          else
+            {:error, changeset} -> Repo.rollback(changeset)
+          end
       end
     end)
   end
@@ -73,7 +79,7 @@ defmodule Hive.Accounts do
   end
 
   defp upsert_identity(user, provider, provider_uid) do
-    case Repo.get_by(UserIdentity, provider: provider, provider_uid: provider_uid) do
+    case get_identity(provider, provider_uid) do
       nil ->
         %UserIdentity{}
         |> UserIdentity.changeset(%{
@@ -86,5 +92,9 @@ defmodule Hive.Accounts do
       identity ->
         {:ok, identity}
     end
+  end
+
+  defp get_identity(provider, provider_uid) do
+    Repo.get_by(UserIdentity, provider: provider, provider_uid: provider_uid)
   end
 end
