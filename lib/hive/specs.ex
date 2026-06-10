@@ -22,7 +22,8 @@ defmodule Hive.Specs do
   def can_view?(%Spec{} = spec, user),
     do: Auth.member?(user) or effective_visibility(spec) == :public
 
-  def effective_visibility(%Spec{visibility: :private}), do: :private
+  def effective_visibility(%Spec{visibility: visibility}) when visibility in [:public, :private],
+    do: visibility
 
   def effective_visibility(%Spec{} = spec) do
     if has_private_product?(spec), do: :private, else: :public
@@ -69,7 +70,8 @@ defmodule Hive.Specs do
       where(
         query,
         [spec],
-        spec.visibility == :public and spec.id not in subquery(private_product_spec_ids)
+        spec.visibility == :public or
+          (is_nil(spec.visibility) and spec.id not in subquery(private_product_spec_ids))
       )
     end
   end

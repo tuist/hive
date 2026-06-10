@@ -89,27 +89,17 @@ defmodule HiveWeb.SpecLive.IndexTest do
     refute html =~ "Private proposal"
   end
 
-  test "hides specs inherited from private products from contributors", %{conn: conn} do
+  test "shows public specs attached to private products to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, public_product} = Products.create_product(%{name: "Hive", visibility: "public"})
     {:ok, private_product} = Products.create_product(%{name: "Atlas", visibility: "private"})
 
-    {:ok, _public} =
+    {:ok, _spec} =
       Specs.create_spec(
         %{
           "title" => "Public product proposal",
           "body" => "Initial proposal.",
-          "product_ids" => [public_product.id]
-        },
-        member
-      )
-
-    {:ok, _private_product} =
-      Specs.create_spec(
-        %{
-          "title" => "Private product proposal",
-          "body" => "Initial proposal.",
+          "visibility" => "public",
           "product_ids" => [private_product.id]
         },
         member
@@ -123,6 +113,5 @@ defmodule HiveWeb.SpecLive.IndexTest do
     {:ok, _view, html} = live(contributor_conn, ~p"/specs")
 
     assert html =~ "Public product proposal"
-    refute html =~ "Private product proposal"
   end
 end

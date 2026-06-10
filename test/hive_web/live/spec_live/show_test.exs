@@ -70,7 +70,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
              live(contributor_conn, ~p"/specs/#{spec.number}")
   end
 
-  test "blocks specs inherited from private products from contributors", %{conn: conn} do
+  test "shows public specs attached to private products to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
     {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
@@ -78,8 +78,9 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Private product spec",
+          "title" => "Public product spec",
           "body" => "Initial proposal.",
+          "visibility" => "public",
           "product_ids" => [product.id]
         },
         member
@@ -90,19 +91,20 @@ defmodule HiveWeb.SpecLive.ShowTest do
       _user -> false
     end)
 
-    assert {:error, {:redirect, %{to: "/specs"}}} =
-             live(contributor_conn, ~p"/specs/#{spec.number}")
+    assert {:ok, _view, html} = live(contributor_conn, ~p"/specs/#{spec.number}")
+    assert html =~ "Public product spec"
   end
 
-  test "labels specs inherited from private products as private for members", %{conn: conn} do
+  test "labels public specs attached to private products as public for members", %{conn: conn} do
     {conn, member} = sign_in(conn, "member@tuist.dev")
     {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Private product spec",
+          "title" => "Public product spec",
           "body" => "Initial proposal.",
+          "visibility" => "public",
           "product_ids" => [product.id]
         },
         member
@@ -110,7 +112,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
 
-    assert html =~ "Private · Created directly"
+    assert html =~ "Public · Created directly"
   end
 
   test "allows signed-in users to comment", %{conn: conn} do
