@@ -7,10 +7,12 @@ defmodule Hive.Products.GitHubRepository do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+  @visibilities [:public, :private]
 
   schema "github_repositories" do
     field :owner, :string
     field :name, :string
+    field :visibility, Ecto.Enum, values: @visibilities, default: :public
 
     many_to_many :products, Hive.Products.Product,
       join_through: Hive.Products.ProductRepository,
@@ -19,12 +21,14 @@ defmodule Hive.Products.GitHubRepository do
     timestamps(type: :utc_datetime)
   end
 
+  def visibilities, do: @visibilities
+
   def changeset(repository, attrs) do
     repository
-    |> cast(attrs, [:owner, :name])
+    |> cast(attrs, [:owner, :name, :visibility])
     |> normalize_string(:owner)
     |> normalize_string(:name)
-    |> validate_required([:owner, :name])
+    |> validate_required([:owner, :name, :visibility])
     |> validate_length(:owner, max: 39)
     |> validate_length(:name, max: 100)
     |> validate_format(:owner, ~r/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/,
@@ -33,6 +37,7 @@ defmodule Hive.Products.GitHubRepository do
     |> validate_format(:name, ~r/^[a-z0-9._-]+$/,
       message: "must be a valid GitHub repository name"
     )
+    |> validate_inclusion(:visibility, @visibilities)
     |> unique_constraint([:owner, :name])
   end
 

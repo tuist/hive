@@ -135,6 +135,11 @@ defmodule HiveWeb.SettingsComponents do
                 name="product[github_repository_name]"
                 value={selected_repository_name(@selected_repository)}
               />
+              <input
+                type="hidden"
+                name="product[github_repository_visibility]"
+                value={selected_repository_visibility(@selected_repository)}
+              />
 
               <.text_input
                 field={@form[:name]}
@@ -308,6 +313,7 @@ defmodule HiveWeb.SettingsComponents do
               phx-value-owner={repository.owner}
               phx-value-name={repository.name}
               phx-value-description={repository.description}
+              phx-value-visibility={repository.visibility}
               data-selected={selected_repository?(@selected_repository, repository)}
             >
               <:left_icon><.brand_github /></:left_icon>
@@ -417,4 +423,11 @@ defmodule HiveWeb.SettingsComponents do
 
   defp selected_repository_name(nil), do: nil
   defp selected_repository_name(repository), do: repository.name
+
+  defp selected_repository_visibility(nil), do: nil
+
+  defp selected_repository_visibility(%{visibility: visibility}) when not is_nil(visibility),
+    do: Atom.to_string(visibility)
+
+  defp selected_repository_visibility(_repository), do: nil
 end

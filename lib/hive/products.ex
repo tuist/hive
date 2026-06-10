@@ -127,7 +127,9 @@ defmodule Hive.Products do
   defp get_or_create_github_repository(repo, attrs) do
     case repo.get_by(GitHubRepository, owner: attrs.owner, name: attrs.name) do
       %GitHubRepository{} = repository ->
-        {:ok, repository}
+        repository
+        |> GitHubRepository.changeset(attrs)
+        |> repo.update()
 
       nil ->
         %GitHubRepository{}

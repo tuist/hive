@@ -77,7 +77,8 @@ defmodule HiveWeb.SettingsLive.Products do
     repository = %Repositories{
       owner: owner,
       name: name,
-      description: Map.get(params, "description")
+      description: Map.get(params, "description"),
+      visibility: parse_visibility(Map.get(params, "visibility"))
     }
 
     {:noreply,
@@ -118,6 +119,11 @@ defmodule HiveWeb.SettingsLive.Products do
   defp repository_query(%{"value" => value}), do: value
   defp repository_query(%{"repository_query" => value}), do: value
   defp repository_query(_params), do: ""
+
+  defp parse_visibility("public"), do: :public
+  defp parse_visibility("private"), do: :private
+  defp parse_visibility(value) when is_atom(value), do: value
+  defp parse_visibility(_value), do: :public
 
   defp repository_search_error({:not_configured, _missing}) do
     "GitHub App repository search is not configured."

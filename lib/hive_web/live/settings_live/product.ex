@@ -66,7 +66,8 @@ defmodule HiveWeb.SettingsLive.Product do
     repository = %Repositories{
       owner: owner,
       name: name,
-      description: Map.get(params, "description")
+      description: Map.get(params, "description"),
+      visibility: parse_visibility(Map.get(params, "visibility"))
     }
 
     {:noreply,
@@ -116,9 +117,18 @@ defmodule HiveWeb.SettingsLive.Product do
         nil
 
       repository ->
-        %Repositories{owner: repository.owner, name: repository.name}
+        %Repositories{
+          owner: repository.owner,
+          name: repository.name,
+          visibility: repository.visibility
+        }
     end
   end
+
+  defp parse_visibility("public"), do: :public
+  defp parse_visibility("private"), do: :private
+  defp parse_visibility(value) when is_atom(value), do: value
+  defp parse_visibility(_value), do: :public
 
   defp repository_query(nil), do: ""
   defp repository_query(repository), do: Repositories.full_name(repository)
