@@ -56,9 +56,16 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
 
   @impl true
   def handle_params(params, uri, socket) do
-    params = default_filter_params(params)
-    uri = URI.parse(uri)
+    merged_params = default_filter_params(params)
 
+    if merged_params == params do
+      apply_filters(merged_params, URI.parse(uri), socket)
+    else
+      {:noreply, push_patch(socket, to: ~p"/forage/github-issues?#{merged_params}")}
+    end
+  end
+
+  defp apply_filters(params, uri, socket) do
     active_filters =
       Operations.decode_filters_from_query(params, socket.assigns.available_filters)
 

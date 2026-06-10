@@ -55,7 +55,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     seed_issue!(product, number: 7, title: "Crash on launch", body: "Detail")
 
-    {:ok, _view, html} = live(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
     assert html =~ "GitHub issues"
     assert html =~ "Crash on launch"
@@ -65,12 +65,22 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   test "shows the empty state when a member has no products with repositories", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
-    {:ok, _view, html} = live(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
     assert html =~ "No open issues to show"
   end
 
-  test "defaults to the open state filter when the URL has no params", %{conn: conn} do
+  test "the bare URL redirects to one with the default state=open filter", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "pedro@tuist.dev")
+
+    assert {:error, {:live_redirect, %{to: target}}} =
+             live(conn, ~p"/forage/github-issues")
+
+    assert target =~ "filter_state_op="
+    assert target =~ "filter_state_val=open"
+  end
+
+  test "lands on state=open and shows the State chip", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
@@ -85,7 +95,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     seed_issue!(product, number: 1, title: "Still open")
 
-    {:ok, _view, html} = live(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
     assert html =~ "Still open"
     assert html =~ "State"
@@ -210,9 +220,16 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     seed_issue!(public_product, number: 2, title: "Public issue", body: "Open")
 
-    {:ok, _view, html} = live(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
     assert html =~ "Public issue"
     refute html =~ "Private issue"
+  end
+
+  defp follow_default_filter(conn, path) do
+    case live(conn, path) do
+      {:error, {:live_redirect, %{to: target}}} -> live(conn, target)
+      other -> other
+    end
   end
 end
