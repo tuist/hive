@@ -11,9 +11,8 @@ defmodule HiveWeb.SettingsComponents do
 
   attr :products, :list, required: true
   attr :form, :any, required: true
-  attr :repository_query, :string, required: true
   attr :repository_options, :list, required: true
-  attr :repository_search_error, :string, default: nil
+  attr :repository_load_error, :string, default: nil
   attr :selected_repository, :any, default: nil
 
   def products(assigns) do
@@ -31,9 +30,8 @@ defmodule HiveWeb.SettingsComponents do
         <:actions>
           <.new_product_modal
             form={@form}
-            repository_query={@repository_query}
             repository_options={@repository_options}
-            repository_search_error={@repository_search_error}
+            repository_load_error={@repository_load_error}
             selected_repository={@selected_repository}
           />
         </:actions>
@@ -105,9 +103,8 @@ defmodule HiveWeb.SettingsComponents do
 
   attr :product, :map, required: true
   attr :form, :any, required: true
-  attr :repository_query, :string, required: true
   attr :repository_options, :list, required: true
-  attr :repository_search_error, :string, default: nil
+  attr :repository_load_error, :string, default: nil
   attr :selected_repository, :any, default: nil
 
   def product_detail(assigns) do
@@ -166,6 +163,7 @@ defmodule HiveWeb.SettingsComponents do
                   id="product-repository-dropdown"
                   label={selected_repository_label(@selected_repository)}
                   data-part="repository-dropdown"
+                  on_open_change="repository_dropdown_open_change"
                 >
                   <:icon>
                     <.brand_github />
@@ -173,13 +171,9 @@ defmodule HiveWeb.SettingsComponents do
                   <:search>
                     <input
                       id="product-repository-search"
-                      name="repository_query"
                       type="search"
-                      value={@repository_query}
                       placeholder="Search repositories..."
                       data-part="search-input"
-                      phx-keyup="search_repositories"
-                      phx-debounce="300"
                     />
                   </:search>
                   <.dropdown_item
@@ -192,6 +186,7 @@ defmodule HiveWeb.SettingsComponents do
                     phx-value-owner={repository.owner}
                     phx-value-name={repository.name}
                     phx-value-description={repository.description}
+                    phx-value-visibility={repository.visibility}
                     data-selected={selected_repository?(@selected_repository, repository)}
                   >
                     <:left_icon><.brand_github /></:left_icon>
@@ -217,8 +212,8 @@ defmodule HiveWeb.SettingsComponents do
                   />
                 </div>
 
-                <div :if={@repository_search_error} data-part="repository-message" data-tone="error">
-                  {@repository_search_error}
+                <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
+                  {@repository_load_error}
                 </div>
               </div>
 
@@ -263,6 +258,11 @@ defmodule HiveWeb.SettingsComponents do
           name="product[github_repository_name]"
           value={selected_repository_name(@selected_repository)}
         />
+        <input
+          type="hidden"
+          name="product[github_repository_visibility]"
+          value={selected_repository_visibility(@selected_repository)}
+        />
 
         <.text_input
           field={@form[:name]}
@@ -294,13 +294,9 @@ defmodule HiveWeb.SettingsComponents do
             <:search>
               <input
                 id="repository-search"
-                name="repository_query"
                 type="search"
-                value={@repository_query}
                 placeholder="Search repositories..."
                 data-part="search-input"
-                phx-keyup="search_repositories"
-                phx-debounce="300"
               />
             </:search>
             <.dropdown_item
@@ -339,8 +335,8 @@ defmodule HiveWeb.SettingsComponents do
             />
           </div>
 
-          <div :if={@repository_search_error} data-part="repository-message" data-tone="error">
-            {@repository_search_error}
+          <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
+            {@repository_load_error}
           </div>
         </div>
       </.form>

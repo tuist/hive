@@ -1,6 +1,6 @@
 defmodule Hive.GitHub.Repositories do
   @moduledoc """
-  Searches repositories visible to the configured GitHub App installation.
+  Lists repositories visible to the configured GitHub App installation.
   """
 
   alias Hive.GitHub.Client
@@ -12,16 +12,10 @@ defmodule Hive.GitHub.Repositories do
   defdelegate config(opts \\ []), to: Client
   defdelegate configured?, to: Client
 
-  def search_accessible_repositories(query, opts \\ []) do
-    query = normalize_query(query)
-
+  def list_accessible_repositories(opts \\ []) do
     with {:ok, config} <- Client.config(opts),
-         {:ok, token} <- Client.installation_token(config, opts),
-         {:ok, repositories} <- list_installation_repositories(config, token, opts) do
-      {:ok,
-       repositories
-       |> Enum.filter(&matches?(&1, query))
-       |> Enum.take(20)}
+         {:ok, token} <- Client.installation_token(config, opts) do
+      list_installation_repositories(config, token, opts)
     end
   end
 
@@ -76,21 +70,4 @@ defmodule Hive.GitHub.Repositories do
 
   defp visibility_from_api(true), do: :private
   defp visibility_from_api(_other), do: :public
-
-  defp matches?(_repository, ""), do: true
-
-  defp matches?(repository, query) do
-    repository
-    |> full_name()
-    |> String.downcase()
-    |> String.contains?(query)
-  end
-
-  defp normalize_query(query) when is_binary(query) do
-    query
-    |> String.trim()
-    |> String.downcase()
-  end
-
-  defp normalize_query(_query), do: ""
 end

@@ -4,17 +4,17 @@ defmodule Hive.GitHub.RepositoriesTest do
   alias Hive.GitHub.Client.Config
   alias Hive.GitHub.Repositories
 
-  describe "search_accessible_repositories/2" do
+  describe "list_accessible_repositories/1" do
     test "returns not configured when GitHub App credentials are missing" do
       assert {:error, {:not_configured, missing}} =
-               Repositories.search_accessible_repositories("hive", config: %Config{})
+               Repositories.list_accessible_repositories(config: %Config{})
 
       assert :app_id in missing
       assert :installation_id in missing
       assert :private_key in missing
     end
 
-    test "lists installation repositories and filters them by full name" do
+    test "lists every installation repository" do
       config = %Config{
         app_id: "123",
         installation_id: "456",
@@ -53,15 +53,16 @@ defmodule Hive.GitHub.RepositoriesTest do
          }}
       end
 
-      assert {:ok, [repository]} =
-               Repositories.search_accessible_repositories("hiv",
+      assert {:ok, [hive, tuist]} =
+               Repositories.list_accessible_repositories(
                  config: config,
                  installation_token: "installation-token",
                  request: request
                )
 
-      assert Repositories.full_name(repository) == "tuist/hive"
-      assert repository.description == "Product orchestration"
+      assert Repositories.full_name(hive) == "tuist/hive"
+      assert hive.description == "Product orchestration"
+      assert Repositories.full_name(tuist) == "tuist/tuist"
     end
 
     test "returns GitHub API errors" do
@@ -77,7 +78,7 @@ defmodule Hive.GitHub.RepositoriesTest do
       end
 
       assert {:error, {:unexpected_status, 403, %{"message" => "Forbidden"}}} =
-               Repositories.search_accessible_repositories("hive",
+               Repositories.list_accessible_repositories(
                  config: config,
                  installation_token: "installation-token",
                  request: request
