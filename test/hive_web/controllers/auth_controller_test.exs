@@ -174,6 +174,38 @@ defmodule HiveWeb.AuthControllerTest do
     assert user_id == user.id
   end
 
+  test "GET /auth/:provider/callback signs in the linked user when GitHub has no email", %{
+    conn: conn
+  } do
+    {:ok, user} =
+      Accounts.upsert_from_auth(%{
+        email: "linked-google-owner@example.com",
+        provider: "google",
+        provider_uid: "linked-google-owner"
+      })
+
+    assert {:ok, _user} =
+             Accounts.link_identity(user, %{
+               provider: "github",
+               provider_uid: "linked-github-owner"
+             })
+
+    stub(Auth, :provider, fn :github ->
+      %{display_name: "GitHub", allowed_domains: []}
+    end)
+
+    stub(Auth, :check_domain, fn _provider, "" -> :ok end)
+
+    conn =
+      conn
+      |> Plug.Test.init_test_session(%{})
+      |> assign_ueberauth("github", "linked-github-owner", nil)
+      |> HiveWeb.AuthController.callback(%{"provider" => "github"})
+
+    assert redirected_to(conn) == ~p"/"
+    assert get_session(conn, :user_id) == user.id
+  end
+
   test "GET /auth/:provider/callback does not move another user's identity", %{conn: conn} do
     {:ok, owner} =
       Accounts.upsert_from_auth(%{

@@ -2,6 +2,7 @@ defmodule Hive.AccountsTest do
   use Hive.DataCase, async: true
 
   alias Hive.Accounts
+  alias Hive.Accounts.User
   alias Hive.Accounts.UserIdentity
 
   describe "upsert_from_auth/1" do
@@ -44,6 +45,45 @@ defmodule Hive.AccountsTest do
 
       assert first.id == again.id
       assert Repo.aggregate(UserIdentity, :count) == 1
+    end
+
+    test "signing in with a linked identity returns its owner when the email differs" do
+      {:ok, user} = signed_in("google-owner@example.com")
+
+      assert {:ok, _user} =
+               Accounts.link_identity(user, %{provider: "github", provider_uid: "linked-gh"})
+
+      assert {:ok, signed_in_user} =
+               Accounts.upsert_from_auth(%{
+                 email: "github-public@example.com",
+                 provider: "github",
+                 provider_uid: "linked-gh"
+               })
+
+      assert signed_in_user.id == user.id
+      assert Repo.aggregate(User, :count) == 1
+      assert Repo.aggregate(UserIdentity, :count) == 2
+    end
+
+    test "signing in with a linked identity does not require an email" do
+      {:ok, user} = signed_in("private-email-owner@example.com")
+
+      assert {:ok, _user} =
+               Accounts.link_identity(user, %{
+                 provider: "github",
+                 provider_uid: "private-email-gh"
+               })
+
+      assert {:ok, signed_in_user} =
+               Accounts.upsert_from_auth(%{
+                 email: nil,
+                 provider: "github",
+                 provider_uid: "private-email-gh"
+               })
+
+      assert signed_in_user.id == user.id
+      assert Repo.aggregate(User, :count) == 1
+      assert Repo.aggregate(UserIdentity, :count) == 2
     end
 
     test "rejects a blank email" do

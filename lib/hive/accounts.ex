@@ -6,7 +6,8 @@ defmodule Hive.Accounts do
   context owns the `users` record we resolve on every successful login,
   plus the `user_identities` linking each provider login back to that
   user. A single person can sign in through several providers and still
-  map to one user (matched by email).
+  map to one user: an already-linked identity resolves straight to its
+  owner, and only a never-seen identity falls back to matching by email.
   """
 
   alias Hive.Accounts.User
@@ -33,19 +34,31 @@ defmodule Hive.Accounts do
 
   @doc """
   Resolves an authenticated identity to a user, creating the user and/or
-  the identity record as needed. The user is matched by email; the
-  identity by `{provider, provider_uid}`. Runs in a transaction so a
-  login never leaves a user without its identity.
+  the identity record as needed. An existing identity (matched by
+  `{provider, provider_uid}`) resolves directly to its owner, so a
+  provider that omits or changes the email still lands on the right user.
+  Only a never-seen identity matches (or creates) a user by email. Runs
+  in a transaction so a login never leaves a user without its identity.
   """
   def upsert_from_auth(%{email: email, provider: provider, provider_uid: provider_uid}) do
     Repo.transaction(fn ->
-      with {:ok, user} <- upsert_user(email),
-           {:ok, _identity} <- upsert_identity(user, provider, provider_uid) do
-        user
-      else
-        {:error, changeset} -> Repo.rollback(changeset)
+      case get_identity(provider, provider_uid) do
+        %UserIdentity{} = identity ->
+          identity |> Repo.preload(:user) |> Map.fetch!(:user)
+
+        nil ->
+          create_user_with_identity(email, provider, provider_uid)
       end
     end)
+  end
+
+  defp create_user_with_identity(email, provider, provider_uid) do
+    with {:ok, user} <- upsert_user(email),
+         {:ok, _identity} <- insert_identity(user, provider, provider_uid) do
+      user
+    else
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
   end
 
   @doc """
@@ -73,18 +86,23 @@ defmodule Hive.Accounts do
   end
 
   defp upsert_identity(user, provider, provider_uid) do
-    case Repo.get_by(UserIdentity, provider: provider, provider_uid: provider_uid) do
-      nil ->
-        %UserIdentity{}
-        |> UserIdentity.changeset(%{
-          provider: provider,
-          provider_uid: provider_uid,
-          user_id: user.id
-        })
-        |> Repo.insert()
-
-      identity ->
-        {:ok, identity}
+    case get_identity(provider, provider_uid) do
+      nil -> insert_identity(user, provider, provider_uid)
+      identity -> {:ok, identity}
     end
+  end
+
+  defp insert_identity(user, provider, provider_uid) do
+    %UserIdentity{}
+    |> UserIdentity.changeset(%{
+      provider: provider,
+      provider_uid: provider_uid,
+      user_id: user.id
+    })
+    |> Repo.insert()
+  end
+
+  defp get_identity(provider, provider_uid) do
+    Repo.get_by(UserIdentity, provider: provider, provider_uid: provider_uid)
   end
 end
