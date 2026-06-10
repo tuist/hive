@@ -60,6 +60,14 @@ defmodule Hive.Auth do
     providers() |> Enum.find_value(fn {k, meta} -> if k == key, do: meta end)
   end
 
+  @doc "Ueberauth strategy configuration for a single provider, or `nil` if missing."
+  def ueberauth_provider(key) when is_atom(key) do
+    :ueberauth
+    |> Application.get_env(Ueberauth, [])
+    |> Keyword.get(:providers, [])
+    |> Keyword.get(key)
+  end
+
   @doc """
   Checks an authenticated email against a provider's allowed-domains
   list. Returns `:ok` when allowed (or when no list is set), or

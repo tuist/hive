@@ -9,10 +9,18 @@ defmodule HiveWeb.AuthController do
     html(conn, Phoenix.HTML.Safe.to_iodata(PageHTML.login_page(conn, error: nil)))
   end
 
-  # Ueberauth's plug handles the redirect to the IdP before this action
-  # runs; it should never actually execute.
-  def request(conn, _params) do
-    unauthorized(conn, "The login attempt could not be started.")
+  # Ueberauth's plug normally handles the redirect to the IdP before this
+  # action runs. Keep a fallback here so a configured provider still starts
+  # when the plug route table falls through.
+  def request(conn, %{"provider" => provider_key}) do
+    with key when is_atom(key) <- safe_atom(provider_key),
+         provider when not is_nil(provider) <- Auth.provider(key),
+         ueberauth_provider when not is_nil(ueberauth_provider) <-
+           Auth.ueberauth_provider(key) do
+      Ueberauth.run_request(conn, provider_key, ueberauth_provider)
+    else
+      _ -> unauthorized(conn, "The login attempt could not be started.")
+    end
   end
 
   def callback(%{assigns: %{ueberauth_failure: _failure}} = conn, _params) do

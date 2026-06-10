@@ -7,6 +7,18 @@ defmodule HiveWeb.AuthControllerTest do
   alias Hive.Auth
   alias Hive.Repo
 
+  defmodule RedirectStrategy do
+    use Ueberauth.Strategy, ignores_csrf_attack: true
+
+    import Phoenix.Controller, only: [redirect: 2]
+
+    def handle_request!(conn) do
+      conn
+      |> redirect(external: "https://github.example.test/login/oauth/authorize")
+      |> halt()
+    end
+  end
+
   test "GET / redirects to login when the instance is private", %{conn: conn} do
     stub(Auth, :private?, fn -> true end)
     stub(Auth, :current_user, fn _conn -> nil end)
@@ -147,6 +159,21 @@ defmodule HiveWeb.AuthControllerTest do
 
     assert redirected_to(conn) == "/oauth2/authorize?client_id=client"
     refute get_session(conn, :user_return_to)
+  end
+
+  test "GET /auth/:provider falls back to starting a configured provider", %{conn: conn} do
+    stub(Auth, :provider, fn :github ->
+      %{display_name: "GitHub", allowed_domains: []}
+    end)
+
+    stub(Auth, :ueberauth_provider, fn :github ->
+      {RedirectStrategy, []}
+    end)
+
+    conn = HiveWeb.AuthController.request(conn, %{"provider" => "github"})
+
+    assert redirected_to(conn) == "https://github.example.test/login/oauth/authorize"
+    assert conn.halted
   end
 
   test "GET /auth/:provider/callback links the provider to the signed-in user", %{conn: conn} do
