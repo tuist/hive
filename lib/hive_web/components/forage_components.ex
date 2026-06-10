@@ -8,6 +8,9 @@ defmodule HiveWeb.ForageComponents do
 
   use HiveWeb, :html
 
+  alias Hive.Forage.GitHubIssue
+  alias Hive.Products.GitHubRepository
+
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
   attr :signed_in?, :boolean, required: true
@@ -123,6 +126,105 @@ defmodule HiveWeb.ForageComponents do
 
   attr :source, :map, required: true
   attr :signed_in?, :boolean, required: true
+  attr :entries, :list, required: true
+  attr :stats, :map, required: true
+  attr :available_filters, :list, required: true
+  attr :active_filters, :list, required: true
+
+  def github_issues(assigns) do
+    ~H"""
+    <section id="forage">
+      <.forage_header source={@source} signed_in?={@signed_in?} />
+
+      <div data-part="widgets">
+        <.forage_widget title={String.capitalize(@stats.state_label)} value={@stats.total} legend="primary" />
+        <.forage_widget title="Repositories" value={@stats.repositories} legend="secondary" />
+        <.forage_widget title="Products" value={@stats.products} legend="tertiary" />
+      </div>
+
+      <.card icon={@source.icon} title={@source.label}>
+        <.card_section>
+          <div data-part="filters">
+            <.filter_dropdown
+              id="github-issues-filter"
+              label="Filter"
+              available_filters={@available_filters}
+              active_filters={@active_filters}
+              on_select="add_filter"
+            />
+          </div>
+          <div :if={@active_filters != []} data-part="active-filters">
+            <.active_filter :for={filter <- @active_filters} filter={filter} />
+          </div>
+
+          <div :if={@entries == []} data-part="empty-state">
+            <div data-part="empty-icon"><.icon name={@source.icon} /></div>
+            <h2>No {@stats.state_label} to show</h2>
+            <p>
+              Connect a GitHub repository to a product in
+              <a href={~p"/settings/products"}>Settings → Products</a>
+              and matching issues will appear here once they have been synced.
+            </p>
+          </div>
+
+          <div :if={@entries != []} data-part="issue-list">
+            <article :for={{product, repository, issue} <- @entries} data-part="issue-row">
+              <div data-part="issue-copy">
+                <h2>
+                  <a
+                    href={GitHubIssue.html_url(%{issue | github_repository: repository})}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {issue.title}
+                  </a>
+                </h2>
+                <p :if={issue_excerpt(issue.body)}>{issue_excerpt(issue.body)}</p>
+                <div data-part="issue-meta-row">
+                  <.badge
+                    label={GitHubRepository.full_name(repository)}
+                    color="neutral"
+                    style="light-fill"
+                    size="large"
+                  >
+                    <:icon><.brand_github /></:icon>
+                  </.badge>
+                  <.badge
+                    label={product.name}
+                    color="information"
+                    style="light-fill"
+                    size="large"
+                  />
+                </div>
+              </div>
+              <div data-part="issue-actions">
+                <.badge
+                  label={"##{issue.number}"}
+                  color="neutral"
+                  style="light-fill"
+                  size="large"
+                />
+                <.button
+                  label="View on GitHub"
+                  href={GitHubIssue.html_url(%{issue | github_repository: repository})}
+                  size="small"
+                  variant="secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <:icon_left><.brand_github /></:icon_left>
+                </.button>
+              </div>
+            </article>
+          </div>
+        </.card_section>
+      </.card>
+    </section>
+    """
+  end
+
+  attr :source, :map, required: true
+  attr :signed_in?, :boolean, required: true
 
   def placeholder(assigns) do
     ~H"""
@@ -207,4 +309,25 @@ defmodule HiveWeb.ForageComponents do
     do: "Submitted by #{email}"
 
   defp requester_label(_feature_request), do: "Submitted anonymously"
+
+  defp issue_excerpt(nil), do: nil
+  defp issue_excerpt(""), do: nil
+
+  defp issue_excerpt(body) when is_binary(body) do
+    body
+    |> String.split("\n", trim: true)
+    |> Enum.find(&(String.trim(&1) != ""))
+    |> case do
+      nil ->
+        nil
+
+      line ->
+        line
+        |> String.trim()
+        |> truncate(240)
+    end
+  end
+
+  defp truncate(string, limit) when byte_size(string) <= limit, do: string
+  defp truncate(string, limit), do: String.slice(string, 0, limit) <> "…"
 end

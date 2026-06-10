@@ -90,6 +90,7 @@ defmodule HiveWeb.Router do
       live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
       live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
       live "/forage/feedback", ForageLive.Placeholder, :feedback
+      live "/forage/github-issues", ForageLive.GitHubIssues
       live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
       live "/specs", SpecLive.Index
       live "/specs/new", SpecLive.New
