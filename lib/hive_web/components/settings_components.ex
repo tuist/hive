@@ -158,6 +158,7 @@ defmodule HiveWeb.SettingsComponents do
                   id="product-repository-dropdown"
                   label={selected_repository_label(@selected_repository)}
                   data-part="repository-dropdown"
+                  on_open_change="repository_dropdown_open_change"
                 >
                   <:icon>
                     <.brand_github />

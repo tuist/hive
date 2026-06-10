@@ -13,14 +13,13 @@ defmodule HiveWeb.SettingsLive.Products do
   @impl true
   def mount(_params, _session, socket) do
     if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
-      {repository_options, repository_load_error} = load_repositories()
-
       {:ok,
        socket
        |> assign(:page_title, "Products · #{socket.assigns.product_name}")
        |> assign(:products, Products.list_products())
-       |> assign(:repository_options, repository_options)
-       |> assign(:repository_load_error, repository_load_error)
+       |> assign(:repository_options, [])
+       |> assign(:repository_load_error, nil)
+       |> assign(:repository_options_loaded?, false)
        |> assign(:selected_repository, nil)
        |> assign_form(Products.change_product())}
     else
@@ -35,6 +34,10 @@ defmodule HiveWeb.SettingsLive.Products do
   def handle_event("close_new_product", _params, socket) do
     {:noreply,
      socket |> reset_new_product() |> push_event("close-modal", %{id: "new-product-modal"})}
+  end
+
+  def handle_event("new_product_modal_open_change", %{"open" => true}, socket) do
+    {:noreply, ensure_repositories_loaded(socket)}
   end
 
   def handle_event("new_product_modal_open_change", %{"open" => false}, socket) do
@@ -86,11 +89,20 @@ defmodule HiveWeb.SettingsLive.Products do
     end
   end
 
-  defp load_repositories do
-    case Repositories.list_accessible_repositories() do
-      {:ok, repositories} -> {repositories, nil}
-      {:error, reason} -> {[], repository_load_error(reason)}
-    end
+  defp ensure_repositories_loaded(%{assigns: %{repository_options_loaded?: true}} = socket),
+    do: socket
+
+  defp ensure_repositories_loaded(socket) do
+    {repository_options, repository_load_error} =
+      case Repositories.list_accessible_repositories() do
+        {:ok, repositories} -> {repositories, nil}
+        {:error, reason} -> {[], repository_load_error(reason)}
+      end
+
+    socket
+    |> assign(:repository_options, repository_options)
+    |> assign(:repository_load_error, repository_load_error)
+    |> assign(:repository_options_loaded?, true)
   end
 
   defp repository_load_error({:not_configured, _missing}) do

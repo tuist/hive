@@ -14,14 +14,14 @@ defmodule HiveWeb.SettingsLive.Product do
     if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
       product = Products.get_product!(id)
       selected_repository = selected_repository(product)
-      {repository_options, repository_load_error} = load_repositories()
 
       {:ok,
        socket
        |> assign(:page_title, "#{product.name} · Products · #{socket.assigns.product_name}")
        |> assign(:product, product)
-       |> assign(:repository_options, repository_options)
-       |> assign(:repository_load_error, repository_load_error)
+       |> assign(:repository_options, [])
+       |> assign(:repository_load_error, nil)
+       |> assign(:repository_options_loaded?, false)
        |> assign(:selected_repository, selected_repository)
        |> assign_form(Products.change_product(product))}
     else
@@ -56,6 +56,14 @@ defmodule HiveWeb.SettingsLive.Product do
     {:noreply, assign(socket, :selected_repository, nil)}
   end
 
+  def handle_event("repository_dropdown_open_change", %{"open" => true}, socket) do
+    {:noreply, ensure_repositories_loaded(socket)}
+  end
+
+  def handle_event("repository_dropdown_open_change", _params, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("save", %{"product" => params}, socket) do
     case Products.update_product(socket.assigns.product, params) do
       {:ok, product} ->
@@ -87,11 +95,20 @@ defmodule HiveWeb.SettingsLive.Product do
     end
   end
 
-  defp load_repositories do
-    case Repositories.list_accessible_repositories() do
-      {:ok, repositories} -> {repositories, nil}
-      {:error, reason} -> {[], repository_load_error(reason)}
-    end
+  defp ensure_repositories_loaded(%{assigns: %{repository_options_loaded?: true}} = socket),
+    do: socket
+
+  defp ensure_repositories_loaded(socket) do
+    {repository_options, repository_load_error} =
+      case Repositories.list_accessible_repositories() do
+        {:ok, repositories} -> {repositories, nil}
+        {:error, reason} -> {[], repository_load_error(reason)}
+      end
+
+    socket
+    |> assign(:repository_options, repository_options)
+    |> assign(:repository_load_error, repository_load_error)
+    |> assign(:repository_options_loaded?, true)
   end
 
   defp repository_load_error({:not_configured, _missing}) do

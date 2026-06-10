@@ -3,6 +3,7 @@ defmodule HiveWeb.SettingsLive.ProductsTest do
 
   alias Hive.Accounts
   alias Hive.Auth
+  alias Hive.GitHub.Repositories
   alias HiveWeb.SettingsLive.Products
 
   test "redirects guests to login", %{conn: conn} do
@@ -54,10 +55,22 @@ defmodule HiveWeb.SettingsLive.ProductsTest do
     assert html =~ "GitHub repository"
   end
 
-  test "creates a product from the selected repository", %{conn: conn} do
+  test "loads repositories when the modal opens and creates a product from the selection", %{
+    conn: conn
+  } do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, view, _html} = live(conn, ~p"/settings/products")
+    {:ok, view, html} = live(conn, ~p"/settings/products")
+    refute html =~ "tuist/hive"
+
+    Mimic.stub(Repositories, :list_accessible_repositories, fn ->
+      {:ok, [%Repositories{owner: "tuist", name: "hive", description: "Product orchestration"}]}
+    end)
+
+    Mimic.allow(Repositories, self(), view.pid)
+
+    html = render_hook(view, "new_product_modal_open_change", %{"open" => true})
+    assert html =~ "tuist/hive"
 
     assert render_click(view, "select_repository", %{
              "owner" => "tuist",
