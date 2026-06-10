@@ -99,6 +99,7 @@ spec:
               value: {{ .Values.host | quote }}
             - name: PORT
               value: {{ .Values.service.targetPort | quote }}
+            {{- include "hive.conduktSandboxEnv" . | nindent 12 }}
             {{- if and .Values.vector.enabled (not (hasKey .Values.env "HIVE_OPENDATA_VECTOR_URL")) }}
             - name: HIVE_OPENDATA_VECTOR_URL
               value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}

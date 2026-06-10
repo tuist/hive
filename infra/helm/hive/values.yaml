@@ -202,3 +202,51 @@ vector:
       periodSeconds: 15
       timeoutSeconds: 3
       failureThreshold: 3
+
+# Optional Condukt Kubernetes sandbox support. When enabled, Hive can configure
+# Condukt agents so their filesystem and shell tools run inside dedicated pods
+# rather than the Hive web container. The chart renders a separate namespace,
+# a sandbox ServiceAccount, and namespaced RBAC that lets Hive create, exec into,
+# patch, list, and delete only those sandbox pods.
+conduktSandbox:
+  enabled: false
+  # Defaults to `<release>-condukt-sandbox`.
+  namespace: ""
+  createNamespace: true
+  image:
+    repository: ghcr.io/tuist/hive-condukt-sandbox
+    tag: latest
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    # Defaults to `<release>-condukt-sandbox`.
+    name: ""
+    create: true
+  pod:
+    activeDeadlineSeconds: 14400
+    readyTimeoutMilliseconds: 120000
+    heartbeatIntervalMilliseconds: 60000
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+  networkPolicy:
+    # Enables Condukt's per-session egress sidecar and grants Hive the extra
+    # Secret + NetworkPolicy verbs Condukt needs to create those resources.
+    enabled: false
+    image: ""
+    allowedHosts: []
+  runtimeClass:
+    # Renders the Kata RuntimeClass that Tuist uses for Linux runner isolation.
+    # Condukt 1.6.x does not expose runtimeClassName on its Kubernetes sandbox
+    # pod spec yet, so this only prepares the cluster primitive.
+    enabled: false
+    name: kata-qemu
+    handler: kata-qemu
+    nodeSelector:
+      katacontainers.io/kata-runtime: "true"
+    overhead:
+      cpu: 50m
+      memory: 100Mi

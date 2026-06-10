@@ -92,3 +92,17 @@ vector:
     storageClass: hcloud-volumes
     diskCapacityBytes: 42949672960
     memoryCapacityBytes: 536870912
+
+conduktSandbox:
+  enabled: true
+  namespace: hive-condukt-sandbox
+  image:
+    repository: ghcr.io/tuist/hive-condukt-sandbox
+  pod:
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        cpu: "4"
+        memory: 8Gi

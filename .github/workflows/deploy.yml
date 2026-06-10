@@ -23,6 +23,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: tuist/hive
+  SANDBOX_IMAGE_NAME: tuist/hive-condukt-sandbox
   HELM_CHART_PATH: infra/helm/hive
   HELM_RELEASE_NAME: hive
   NAMESPACE: hive-production
@@ -54,8 +55,17 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.image_tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=hive
+          cache-to: type=gha,mode=max,scope=hive
+      - uses: docker/build-push-action@v7
+        with:
+          context: infra/condukt-sandbox-image
+          file: infra/condukt-sandbox-image/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.REGISTRY }}/${{ env.SANDBOX_IMAGE_NAME }}:${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha,scope=hive-condukt-sandbox
+          cache-to: type=gha,mode=max,scope=hive-condukt-sandbox
 
   deploy:
     name: Deploy
@@ -111,6 +121,7 @@ jobs:
             --namespace "$NAMESPACE" --create-namespace \
             --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
+            --set conduktSandbox.image.tag="${{ needs.build.outputs.image_tag }}" \
             --rollback-on-failure --timeout 15m --wait
       - name: Diagnostics on failure
         if: failure()
@@ -136,6 +147,10 @@ jobs:
           echo "::group::external secrets"
           kubectl -n "$NAMESPACE" get externalsecret 2>&1 || true
           kubectl -n "$NAMESPACE" describe externalsecret 2>&1 || true
+          echo "::endgroup::"
+          echo "::group::condukt sandbox"
+          kubectl get namespace hive-condukt-sandbox 2>&1 || true
+          kubectl -n hive-condukt-sandbox get serviceaccount,role,rolebinding,externalsecret,pods 2>&1 || true
           echo "::endgroup::"
       - name: Smoke test
         run: |

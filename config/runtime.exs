@@ -54,6 +54,25 @@ parse_boolean = fn value ->
   value in ~w(true 1)
 end
 
+parse_integer = fn value, default ->
+  case value do
+    nil -> default
+    "" -> default
+    value -> String.to_integer(value)
+  end
+end
+
+parse_list = fn
+  nil ->
+    []
+
+  value when is_binary(value) ->
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+end
+
 object_storage_provider =
   "HIVE_OBJECT_STORAGE_PROVIDER"
   |> System.get_env("none")
@@ -87,6 +106,98 @@ config :hive, :object_storage,
     public_base_url: System.get_env("HIVE_S3_PUBLIC_BASE_URL"),
     force_path_style: parse_boolean.(System.get_env("HIVE_S3_FORCE_PATH_STYLE"))
   ]
+
+condukt_sandbox_backend =
+  "HIVE_CONDUKT_SANDBOX"
+  |> System.get_env("local")
+  |> String.trim()
+  |> String.downcase()
+  |> case do
+    "" ->
+      :local
+
+    "local" ->
+      :local
+
+    "disabled" ->
+      :local
+
+    "kubernetes" ->
+      :kubernetes
+
+    "k8s" ->
+      :kubernetes
+
+    backend ->
+      raise """
+      unsupported HIVE_CONDUKT_SANDBOX=#{backend}.
+      Supported values are: local, kubernetes
+      """
+  end
+
+resource_section = fn cpu, memory ->
+  []
+  |> then(fn acc -> if present?.(cpu), do: [{:cpu, cpu} | acc], else: acc end)
+  |> then(fn acc -> if present?.(memory), do: [{:memory, memory} | acc], else: acc end)
+  |> Map.new()
+end
+
+condukt_resource_requests =
+  resource_section.(
+    System.get_env("HIVE_CONDUKT_SANDBOX_CPU_REQUEST"),
+    System.get_env("HIVE_CONDUKT_SANDBOX_MEMORY_REQUEST")
+  )
+
+condukt_resource_limits =
+  resource_section.(
+    System.get_env("HIVE_CONDUKT_SANDBOX_CPU_LIMIT"),
+    System.get_env("HIVE_CONDUKT_SANDBOX_MEMORY_LIMIT")
+  )
+
+condukt_resources =
+  %{}
+  |> then(fn acc ->
+    if map_size(condukt_resource_requests) > 0 do
+      Map.put(acc, :requests, condukt_resource_requests)
+    else
+      acc
+    end
+  end)
+  |> then(fn acc ->
+    if map_size(condukt_resource_limits) > 0 do
+      Map.put(acc, :limits, condukt_resource_limits)
+    else
+      acc
+    end
+  end)
+
+condukt_network_policy =
+  if parse_boolean.(System.get_env("HIVE_CONDUKT_SANDBOX_NETWORK_POLICY")) do
+    allowed_hosts = parse_list.(System.get_env("HIVE_CONDUKT_SANDBOX_NETWORK_POLICY_ALLOW"))
+    rules = if allowed_hosts == [], do: [], else: [allow: allowed_hosts]
+
+    [rules: rules, default: :deny]
+  end
+
+condukt_heartbeat_interval =
+  case System.get_env("HIVE_CONDUKT_SANDBOX_HEARTBEAT_INTERVAL_MS") do
+    "false" -> false
+    value -> parse_integer.(value, 60_000)
+  end
+
+config :hive, :condukt_sandbox,
+  backend: condukt_sandbox_backend,
+  namespace: System.get_env("HIVE_CONDUKT_SANDBOX_NAMESPACE", "default"),
+  image: System.get_env("HIVE_CONDUKT_SANDBOX_IMAGE", "debian:bookworm-slim"),
+  service_account: System.get_env("HIVE_CONDUKT_SANDBOX_SERVICE_ACCOUNT"),
+  cwd: System.get_env("HIVE_CONDUKT_SANDBOX_CWD", "/workspace"),
+  active_deadline_seconds:
+    parse_integer.(System.get_env("HIVE_CONDUKT_SANDBOX_ACTIVE_DEADLINE_SECONDS"), 4 * 60 * 60),
+  ready_timeout: parse_integer.(System.get_env("HIVE_CONDUKT_SANDBOX_READY_TIMEOUT_MS"), 120_000),
+  heartbeat_interval: condukt_heartbeat_interval,
+  resources: condukt_resources,
+  network_policy: condukt_network_policy,
+  network_policy_image: System.get_env("HIVE_CONDUKT_SANDBOX_NETWORK_POLICY_IMAGE")
 
 config :hive, :github_app,
   app_id: System.get_env("HIVE_GITHUB_APP_ID"),

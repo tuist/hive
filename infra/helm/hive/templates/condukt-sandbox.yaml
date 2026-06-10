@@ -1,0 +1,119 @@
+{{- if .Values.conduktSandbox.enabled }}
+{{- $namespace := include "hive.conduktSandboxNamespace" . }}
+{{- $sandboxSA := include "hive.conduktSandboxServiceAccountName" . }}
+{{- $roleName := printf "%s-condukt-sandbox" (include "hive.fullname" .) }}
+{{- if .Values.conduktSandbox.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $namespace | quote }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+  annotations:
+    helm.sh/resource-policy: keep
+---
+{{- end }}
+{{- if .Values.conduktSandbox.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $sandboxSA }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+automountServiceAccountToken: false
+{{- if .Values.image.pullSecretName }}
+imagePullSecrets:
+  - name: {{ .Values.image.pullSecretName }}
+{{- end }}
+---
+{{- end }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $roleName }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "create", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  {{- if .Values.conduktSandbox.networkPolicy.enabled }}
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "create", "patch", "update", "delete"]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $roleName }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hive.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $roleName }}
+{{- if and .Values.externalSecrets.enabled .Values.externalSecrets.pullSecret.enabled .Values.image.pullSecretName }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ .Values.image.pullSecretName }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+spec:
+  refreshInterval: {{ .Values.externalSecrets.refreshInterval | quote }}
+  secretStoreRef:
+    name: {{ .Values.externalSecrets.storeRef.name }}
+    kind: {{ .Values.externalSecrets.storeRef.kind }}
+  target:
+    name: {{ .Values.image.pullSecretName }}
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/dockerconfigjson
+      engineVersion: v2
+      data:
+        .dockerconfigjson: "{{ `{{ .dockerconfigjson | b64dec }}` }}"
+  data:
+    - secretKey: dockerconfigjson
+      remoteRef:
+        key: "{{ .Values.externalSecrets.pullSecret.item }}/{{ .Values.externalSecrets.pullSecret.field }}"
+{{- end }}
+{{- if .Values.conduktSandbox.runtimeClass.enabled }}
+---
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: {{ .Values.conduktSandbox.runtimeClass.name }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+    app.kubernetes.io/component: condukt-sandbox
+handler: {{ .Values.conduktSandbox.runtimeClass.handler }}
+scheduling:
+  nodeSelector:
+    {{- toYaml .Values.conduktSandbox.runtimeClass.nodeSelector | nindent 4 }}
+overhead:
+  podFixed:
+    cpu: {{ .Values.conduktSandbox.runtimeClass.overhead.cpu | quote }}
+    memory: {{ .Values.conduktSandbox.runtimeClass.overhead.memory | quote }}
+{{- end }}
+{{- end }}
