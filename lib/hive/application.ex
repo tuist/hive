@@ -7,10 +7,6 @@ defmodule Hive.Application do
                                 |> Application.compile_env(:og_images, [])
                                 |> Keyword.get(:start_browser_pool, true)
 
-  @start_github_issue_syncer :hive
-                             |> Application.compile_env(:forage_github_issues, [])
-                             |> Keyword.get(:start_syncer, true)
-
   @impl true
   def start(_type, _args) do
     ensure_mcp_session_store_started()
@@ -21,10 +17,10 @@ defmodule Hive.Application do
         Hive.Repo,
         {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Hive.PubSub},
-        HiveWeb.Endpoint
+        HiveWeb.Endpoint,
+        Hive.Forage.GitHubIssueSyncer
       ]
       |> maybe_add_open_graph_browser_pool()
-      |> maybe_add_github_issue_syncer()
 
     opts = [strategy: :one_for_one, name: Hive.Supervisor]
     Supervisor.start_link(children, opts)
@@ -39,14 +35,6 @@ defmodule Hive.Application do
   defp maybe_add_open_graph_browser_pool(children) do
     if @start_og_images_browser_pool do
       List.insert_at(children, -1, HiveWeb.OpenGraph.browser_pool_child_spec())
-    else
-      children
-    end
-  end
-
-  defp maybe_add_github_issue_syncer(children) do
-    if @start_github_issue_syncer do
-      children ++ [Hive.Forage.GitHubIssueSyncer]
     else
       children
     end
