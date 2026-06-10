@@ -4,6 +4,7 @@ defmodule HiveWeb.SpecComponents do
   use HiveWeb, :html
 
   alias Hive.Specs
+  alias Hive.Specs.Spec
   alias HiveWeb.Markdown
 
   attr :specs, :list, required: true
@@ -77,8 +78,11 @@ defmodule HiveWeb.SpecComponents do
                   label={product.name}
                   color="neutral"
                   style="light-fill"
+                  size="large"
                 />
-                <span :if={spec_products(spec) == []}>No products</span>
+                <span :if={spec_products(spec) == []} data-part="empty-products">
+                  No products
+                </span>
               </div>
             </:col>
             <:col :let={spec} label="Status">
@@ -303,30 +307,8 @@ defmodule HiveWeb.SpecComponents do
               required={true}
               show_required={true}
             />
-            <label data-part="select-field">
-              <span>Status</span>
-              <select name={@form[:status].name} id={@form[:status].id}>
-                <option
-                  :for={status <- Hive.Specs.Spec.statuses()}
-                  value={status}
-                  selected={Phoenix.HTML.Form.normalize_value("select", @form[:status].value) == Atom.to_string(status)}
-                >
-                  {status_label(status)}
-                </option>
-              </select>
-            </label>
-            <label data-part="select-field">
-              <span>Visibility</span>
-              <select name={@form[:visibility].name} id={@form[:visibility].id}>
-                <option
-                  :for={visibility <- Hive.Specs.Spec.visibilities()}
-                  value={visibility}
-                  selected={Phoenix.HTML.Form.normalize_value("select", @form[:visibility].value) == Atom.to_string(visibility)}
-                >
-                  {visibility_label(visibility)}
-                </option>
-              </select>
-            </label>
+            <.status_select form={@form} id="spec-status" />
+            <.visibility_select form={@form} id="spec-visibility" />
             <fieldset data-part="checkbox-group">
               <legend>Products</legend>
               <input type="hidden" name="spec[product_ids][]" value="" />
@@ -372,8 +354,62 @@ defmodule HiveWeb.SpecComponents do
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
 
+  attr :form, :any, required: true
+  attr :id, :string, required: true
+
+  defp status_select(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :value,
+        Phoenix.HTML.Form.normalize_value("select", assigns.form[:status].value)
+      )
+
+    ~H"""
+    <div data-part="select-field">
+      <span>Status</span>
+      <.select id={@id} name={@form[:status].name} value={@value} label="Choose status">
+        <:item
+          :for={status <- Spec.statuses()}
+          value={Atom.to_string(status)}
+          label={status_label(status)}
+        />
+      </.select>
+    </div>
+    """
+  end
+
+  attr :form, :any, required: true
+  attr :id, :string, required: true
+
+  defp visibility_select(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :value,
+        Phoenix.HTML.Form.normalize_value("select", assigns.form[:visibility].value)
+      )
+
+    ~H"""
+    <div data-part="select-field">
+      <span>Visibility</span>
+      <.select id={@id} name={@form[:visibility].name} value={@value} label="Choose visibility">
+        <:item
+          :for={visibility <- Spec.visibilities()}
+          value={Atom.to_string(visibility)}
+          label={visibility_label(visibility)}
+          icon={visibility_icon(visibility)}
+        />
+      </.select>
+    </div>
+    """
+  end
+
   defp visibility_label(:private), do: "Private"
   defp visibility_label(_visibility), do: "Public"
+
+  defp visibility_icon(:private), do: "lock"
+  defp visibility_icon(_visibility), do: "world"
 
   defp spec_products(%{products: %Ecto.Association.NotLoaded{}}), do: []
   defp spec_products(%{products: products}) when is_list(products), do: products

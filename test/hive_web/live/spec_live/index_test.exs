@@ -18,13 +18,23 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   test "lists specs and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
+    {:ok, product} = Products.create_product(%{name: "Hive"})
 
     {:ok, _spec} =
-      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
+      Specs.create_spec(
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Initial proposal.",
+          "product_ids" => [product.id]
+        },
+        user
+      )
 
     {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs")
 
     assert html =~ "GitHub sign-in"
+    assert html =~ "Hive"
+    assert html =~ ~s(data-size="large")
     refute html =~ "New spec"
 
     {:ok, _view, html} = live(conn, ~p"/specs")

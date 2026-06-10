@@ -129,6 +129,7 @@ YAML
 - Prefer editing existing files over creating new ones; keep modules small and domain-focused.
 - No comments unless the *why* is non-obvious. Don't restate what well-named code does.
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
+- Use Noora dropdown/select components for user-facing dropdowns instead of native browser `<select>` controls.
 - Do not add Back buttons to pages. The browser already provides back navigation; prefer clear page hierarchy and contextual links only when they go to a specific destination other than browser history.
 - Every user-facing HTML page should include OpenGraph metadata with an image. Define the page-specific OpenGraph data in the controller or LiveView that owns the page, pass it through `OpenGraph.assigns/1` for LiveViews, or pass `open_graph:` into `Layouts.app` for controller-rendered pages.
 - Tests live under `test/hive_web/...` mirroring `lib/hive_web/...` paths.
