@@ -2,7 +2,6 @@ defmodule HiveWeb.SettingsLive.ProductTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Auth
-  alias Hive.GitHub.Repositories
   alias Hive.Products
 
   test "redirects guests to login", %{conn: conn} do
@@ -66,7 +65,7 @@ defmodule HiveWeb.SettingsLive.ProductTest do
     assert html =~ "Private"
   end
 
-  test "searches and replaces the product repository", %{conn: conn} do
+  test "replaces the product repository via the dropdown", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
     {:ok, product} =
@@ -76,14 +75,7 @@ defmodule HiveWeb.SettingsLive.ProductTest do
         github_repository_name: "hive"
       })
 
-    Mimic.stub(Repositories, :search_accessible_repositories, fn "tuist" ->
-      {:ok, [%Repositories{owner: "tuist", name: "tuist", description: "Tuist monorepo"}]}
-    end)
-
     {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
-    Mimic.allow(Repositories, self(), view.pid)
-
-    assert render_keyup(view, "search_repositories", %{"value" => "tuist"}) =~ "tuist/tuist"
 
     assert render_click(view, "select_repository", %{
              "owner" => "tuist",

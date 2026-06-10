@@ -16,9 +16,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         %{
           form: to_form(Products.change_product(), as: :product),
           products: [],
-          repository_query: "",
           repository_options: [],
-          repository_search_error: nil,
+          repository_load_error: nil,
           selected_repository: nil
         },
         overrides
@@ -33,9 +32,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         <SettingsComponents.products
           products={@products}
           form={@form}
-          repository_query={@repository_query}
           repository_options={@repository_options}
-          repository_search_error={@repository_search_error}
+          repository_load_error={@repository_load_error}
           selected_repository={@selected_repository}
         />
         """)
@@ -50,7 +48,6 @@ defmodule HiveWeb.SettingsComponentsTest do
     test "renders the new product modal with repository options" do
       assigns =
         assigns(%{
-          repository_query: "tuist",
           repository_options: [
             %Repositories{owner: "tuist", name: "hive", description: "Product orchestration"}
           ],
@@ -66,9 +63,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         <SettingsComponents.products
           products={@products}
           form={@form}
-          repository_query={@repository_query}
           repository_options={@repository_options}
-          repository_search_error={@repository_search_error}
+          repository_load_error={@repository_load_error}
           selected_repository={@selected_repository}
         />
         """)
@@ -101,9 +97,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         <SettingsComponents.products
           products={@products}
           form={@form}
-          repository_query={@repository_query}
           repository_options={@repository_options}
-          repository_search_error={@repository_search_error}
+          repository_load_error={@repository_load_error}
           selected_repository={@selected_repository}
         />
         """)
@@ -137,9 +132,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         <SettingsComponents.product_detail
           product={@product}
           form={@form}
-          repository_query={@repository_query}
           repository_options={@repository_options}
-          repository_search_error={@repository_search_error}
+          repository_load_error={@repository_load_error}
           selected_repository={@selected_repository}
         />
         """)
