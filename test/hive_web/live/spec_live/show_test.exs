@@ -4,6 +4,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
   alias Hive.Accounts
   alias Hive.Auth
+  alias Hive.Products
   alias Hive.Specs
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
@@ -67,6 +68,49 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     assert {:error, {:redirect, %{to: "/specs"}}} =
              live(contributor_conn, ~p"/specs/#{spec.number}")
+  end
+
+  test "blocks specs inherited from private products from contributors", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+    {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Private product spec",
+          "body" => "Initial proposal.",
+          "product_ids" => [product.id]
+        },
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    assert {:error, {:redirect, %{to: "/specs"}}} =
+             live(contributor_conn, ~p"/specs/#{spec.number}")
+  end
+
+  test "labels specs inherited from private products as private for members", %{conn: conn} do
+    {conn, member} = sign_in(conn, "member@tuist.dev")
+    {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Private product spec",
+          "body" => "Initial proposal.",
+          "product_ids" => [product.id]
+        },
+        member
+      )
+
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ "Private · Created directly"
   end
 
   test "allows signed-in users to comment", %{conn: conn} do

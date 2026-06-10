@@ -18,8 +18,15 @@ defmodule Hive.Specs do
   def can_edit?(_spec, user), do: Auth.member?(user)
   def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
   def can_comment?(_spec, _user), do: false
-  def can_view?(%Spec{visibility: :private}, user), do: Auth.member?(user)
-  def can_view?(%Spec{}, _user), do: true
+
+  def can_view?(%Spec{} = spec, user),
+    do: Auth.member?(user) or effective_visibility(spec) == :public
+
+  def effective_visibility(%Spec{visibility: :private}), do: :private
+
+  def effective_visibility(%Spec{} = spec) do
+    if has_private_product?(spec), do: :private, else: :public
+  end
 
   def list_specs(opts \\ []) do
     status = Keyword.get(opts, :status)
@@ -51,7 +58,19 @@ defmodule Hive.Specs do
     if Auth.member?(user) do
       query
     else
-      where(query, [spec], spec.visibility == :public)
+      private_product_spec_ids =
+        from(product in Product,
+          join: product_spec in "products_specs",
+          on: product_spec.product_id == product.id,
+          where: product.visibility == :private,
+          select: product_spec.spec_id
+        )
+
+      where(
+        query,
+        [spec],
+        spec.visibility == :public and spec.id not in subquery(private_product_spec_ids)
+      )
     end
   end
 
@@ -245,6 +264,23 @@ defmodule Hive.Specs do
       values -> values
     end
   end
+
+  defp has_private_product?(%Spec{products: %Ecto.Association.NotLoaded{}, id: id})
+       when is_binary(id) do
+    Repo.exists?(
+      from(product in Product,
+        join: product_spec in "products_specs",
+        on: product_spec.product_id == product.id,
+        where: product_spec.spec_id == ^id and product.visibility == :private
+      )
+    )
+  end
+
+  defp has_private_product?(%Spec{products: products}) when is_list(products) do
+    Enum.any?(products, &(&1.visibility == :private))
+  end
+
+  defp has_private_product?(_spec), do: false
 
   defp put_products(%Spec{} = spec, attrs) do
     if product_ids_present?(attrs) do

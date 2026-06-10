@@ -101,6 +101,7 @@ defmodule HiveWeb.Router do
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/settings/products", SettingsLive.Products
+      live "/settings/products/:id", SettingsLive.Product
     end
 
     live_session :account,

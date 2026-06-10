@@ -3,6 +3,7 @@ defmodule HiveWeb.SpecComponents do
 
   use HiveWeb, :html
 
+  alias Hive.Specs
   alias HiveWeb.Markdown
 
   attr :specs, :list, required: true
@@ -62,7 +63,7 @@ defmodule HiveWeb.SpecComponents do
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
                   <strong>{spec_number(spec)} {spec.title}</strong>
-                  <p>{visibility_label(spec.visibility)} · {preview(spec.body)}</p>
+                  <p>{visibility_label(Specs.effective_visibility(spec))} · {preview(spec.body)}</p>
                 </div>
               </div>
             </:col>
@@ -111,7 +112,7 @@ defmodule HiveWeb.SpecComponents do
         <div data-part="title-group">
           <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
           <h1>{@spec.title}</h1>
-          <p>{visibility_label(@spec.visibility)} · {source_label(@spec)}</p>
+          <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
           <div :if={spec_products(@spec) != []} data-part="product-list">
             <.badge
               :for={product <- spec_products(@spec)}

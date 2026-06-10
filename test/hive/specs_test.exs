@@ -152,6 +152,50 @@ defmodule Hive.SpecsTest do
       assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [public.id]
       assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public.id]
     end
+
+    test "hides specs attached to private products from non-members" do
+      member = user("member@tuist.dev")
+      contributor = user("contributor@example.com")
+      {:ok, public_product} = Products.create_product(%{name: "Hive", visibility: "public"})
+      {:ok, private_product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+
+      {:ok, public_spec} =
+        Specs.create_spec(
+          %{
+            "title" => "Public product spec",
+            "body" => "Initial proposal.",
+            "product_ids" => [public_product.id]
+          },
+          member
+        )
+
+      {:ok, private_product_spec} =
+        Specs.create_spec(
+          %{
+            "title" => "Private product spec",
+            "body" => "Initial proposal.",
+            "product_ids" => [private_product.id]
+          },
+          member
+        )
+
+      stub(Auth, :member?, fn
+        %{email: "member@tuist.dev"} -> true
+        _user -> false
+      end)
+
+      assert Specs.can_view?(Specs.get_spec!(private_product_spec.id), member)
+      refute Specs.can_view?(Specs.get_spec!(private_product_spec.id), contributor)
+      refute Specs.can_view?(Specs.get_spec!(private_product_spec.id), nil)
+      assert Specs.effective_visibility(Specs.get_spec!(public_spec.id)) == :public
+      assert Specs.effective_visibility(Specs.get_spec!(private_product_spec.id)) == :private
+
+      assert Specs.list_specs(user: member) |> Enum.map(& &1.id) |> Enum.sort() ==
+               Enum.sort([private_product_spec.id, public_spec.id])
+
+      assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [public_spec.id]
+      assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public_spec.id]
+    end
   end
 
   describe "update_spec/3" do
