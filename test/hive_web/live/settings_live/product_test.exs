@@ -66,7 +66,7 @@ defmodule HiveWeb.SettingsLive.ProductTest do
     assert html =~ "Private"
   end
 
-  test "searches and replaces the product repository", %{conn: conn} do
+  test "loads repositories on dropdown open and replaces the product repository", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
     {:ok, product} =
@@ -76,14 +76,17 @@ defmodule HiveWeb.SettingsLive.ProductTest do
         github_repository_name: "hive"
       })
 
-    Mimic.stub(Repositories, :search_accessible_repositories, fn "tuist" ->
+    {:ok, view, html} = live(conn, ~p"/settings/products/#{product.id}")
+    refute html =~ "tuist/tuist"
+
+    Mimic.stub(Repositories, :list_accessible_repositories, fn ->
       {:ok, [%Repositories{owner: "tuist", name: "tuist", description: "Tuist monorepo"}]}
     end)
 
-    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
     Mimic.allow(Repositories, self(), view.pid)
 
-    assert render_keyup(view, "search_repositories", %{"value" => "tuist"}) =~ "tuist/tuist"
+    html = render_hook(view, "repository_dropdown_open_change", %{"open" => true})
+    assert html =~ "tuist/tuist"
 
     assert render_click(view, "select_repository", %{
              "owner" => "tuist",

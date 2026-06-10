@@ -1,6 +1,6 @@
 defmodule Hive.GitHub.Repositories do
   @moduledoc """
-  Searches repositories visible to the configured GitHub App installation.
+  Lists repositories visible to the configured GitHub App installation.
   """
 
   @api_version "2022-11-28"
@@ -14,16 +14,10 @@ defmodule Hive.GitHub.Repositories do
 
   defstruct [:owner, :name, :description]
 
-  def search_accessible_repositories(query, opts \\ []) do
-    query = normalize_query(query)
-
+  def list_accessible_repositories(opts \\ []) do
     with {:ok, config} <- config(opts),
-         {:ok, token} <- installation_token(config, opts),
-         {:ok, repositories} <- list_installation_repositories(config, token, opts) do
-      {:ok,
-       repositories
-       |> Enum.filter(&matches?(&1, query))
-       |> Enum.take(20)}
+         {:ok, token} <- installation_token(config, opts) do
+      list_installation_repositories(config, token, opts)
     end
   end
 
@@ -184,23 +178,6 @@ defmodule Hive.GitHub.Repositories do
       {"user-agent", "hive"}
     ]
   end
-
-  defp matches?(_repository, ""), do: true
-
-  defp matches?(repository, query) do
-    repository
-    |> full_name()
-    |> String.downcase()
-    |> String.contains?(query)
-  end
-
-  defp normalize_query(query) when is_binary(query) do
-    query
-    |> String.trim()
-    |> String.downcase()
-  end
-
-  defp normalize_query(_query), do: ""
 
   defp normalize_api_url(nil), do: "https://api.github.com"
 
