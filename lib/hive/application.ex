@@ -17,7 +17,8 @@ defmodule Hive.Application do
         Hive.Repo,
         {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Hive.PubSub},
-        HiveWeb.Endpoint
+        HiveWeb.Endpoint,
+        Hive.Forage.GitHubIssueSyncer
       ]
       |> maybe_add_open_graph_browser_pool()
 

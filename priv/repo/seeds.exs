@@ -5,6 +5,7 @@ alias Hive.Accounts.UserIdentity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
 alias Hive.Products
+alias Hive.Products.GitHubRepository
 alias Hive.Products.Product
 alias Hive.Repo
 alias Hive.Specs
@@ -127,6 +128,55 @@ Enum.each(products, fn attrs ->
 
   unless exists? do
     {:ok, _product} = Products.create_product(attrs)
+  end
+end)
+
+github_issue_fixtures = [
+  {"tuist", "hive",
+   [
+     %{
+       number: 101,
+       title: "Surface forage source counts in the sidebar",
+       body:
+         "Show the number of open feature requests, bug reports, and GitHub issues per source so reviewers can scan workload without opening every page."
+     },
+     %{
+       number: 102,
+       title: "Allow specs to link multiple forage sources",
+       body:
+         "A single spec can be driven by both a feature request and a bug report. Today only one source can be attached. Capture all of them on the spec detail page."
+     },
+     %{
+       number: 103,
+       title: "Render GitHub issue body as Markdown",
+       body:
+         "Most issue bodies use Markdown for code blocks and lists. Render them as Markdown in the forage view so the excerpt is useful at a glance."
+     }
+   ]},
+  {"tuist", "tuist",
+   [
+     %{
+       number: 7421,
+       title: "Improve cache hit rate for binary frameworks",
+       body:
+         "The remote cache misses for binary frameworks more often than it should. Investigate the cache key inputs to see whether build settings outside the project file are unintentionally part of the key."
+     },
+     %{
+       number: 7422,
+       title: "Document `tuist install` in the getting started guide",
+       body:
+         "Newcomers reach for `tuist install` before `tuist generate` once Swift Package dependencies are involved. The guide should mention it earlier."
+     }
+   ]}
+]
+
+Enum.each(github_issue_fixtures, fn {owner, name, entries} ->
+  case Repo.get_by(GitHubRepository, owner: owner, name: name) do
+    nil ->
+      :skip
+
+    %GitHubRepository{} = repository ->
+      Forage.reconcile_repository_github_issues(repository, entries)
   end
 end)
 
