@@ -100,7 +100,7 @@ defmodule HiveWeb.Layouts do
           <.sidebar_item
             label="Specs"
             icon="file_text"
-            href={~p"/specs"}
+            href={~p"/specs?filter_status_op===&filter_status_val=draft"}
             selected={String.starts_with?(@current_path, "/specs")}
           />
           <details :if={@settings_enabled?} data-part="settings" open>
