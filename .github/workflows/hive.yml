@@ -3,8 +3,14 @@ name: Hive
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

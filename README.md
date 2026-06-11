@@ -32,7 +32,8 @@ your products.
 
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance at
-<https://hive.tuist.dev>, or self-host your own.
+<https://hive.tuist.dev>, or self-host your own. The documentation
+site lives at <https://docs.hive.tuist.dev>.
 
 ## Self-hosting
 
