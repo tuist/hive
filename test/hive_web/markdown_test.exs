@@ -29,6 +29,23 @@ defmodule HiveWeb.MarkdownTest do
     refute rendered =~ "<script>"
   end
 
+  test "strips inline event handlers from img tags" do
+    rendered = html(~S|<img src=x onerror="alert(1)">|)
+
+    refute rendered =~ "onerror"
+    refute rendered =~ "alert(1)"
+  end
+
+  test "escapes HTML-special characters in plain text" do
+    rendered = html("1 < 2 && 3 > 2")
+
+    refute rendered =~ "<2"
+    refute rendered =~ "&&"
+    assert rendered =~ "&lt;"
+    assert rendered =~ "&gt;"
+    assert rendered =~ "&amp;"
+  end
+
   test "downshifts headings by one level so the spec body never emits an h1" do
     rendered = html("# Top\n\n## Nested")
 

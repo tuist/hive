@@ -15,7 +15,7 @@ defmodule HiveWeb.Markdown do
       alerts: true
     ],
     parse: [smart: true, relaxed_autolinks: true],
-    render: [unsafe: false, escape: false, hardbreaks: false],
+    render: [unsafe: false, hardbreaks: false],
     syntax_highlight: [
       formatter:
         {:html_inline,
