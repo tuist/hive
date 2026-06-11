@@ -196,22 +196,6 @@ defmodule HiveWeb.SettingsComponents do
                   </.dropdown_item>
                 </.dropdown>
 
-                <div :if={@selected_repository} data-part="selected-repository">
-                  <.badge
-                    label={RepositoryOption.full_name(@selected_repository)}
-                    color="neutral"
-                    style="light-fill"
-                  >
-                    <:icon><.brand_github /></:icon>
-                  </.badge>
-                  <.button
-                    label="Clear"
-                    size="small"
-                    variant="secondary"
-                    phx-click="clear_repository"
-                  />
-                </div>
-
                 <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
                   {@repository_load_error}
                 </div>
@@ -318,22 +302,6 @@ defmodule HiveWeb.SettingsComponents do
               </:right_icon>
             </.dropdown_item>
           </.dropdown>
-
-          <div :if={@selected_repository} data-part="selected-repository">
-            <.badge
-              label={RepositoryOption.full_name(@selected_repository)}
-              color="neutral"
-              style="light-fill"
-            >
-              <:icon><.brand_github /></:icon>
-            </.badge>
-            <.button
-              label="Clear"
-              size="small"
-              variant="secondary"
-              phx-click="clear_repository"
-            />
-          </div>
 
           <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
             {@repository_load_error}
