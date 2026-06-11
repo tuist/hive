@@ -19,7 +19,7 @@ work in one place:
 - **Specs** capture intent, decisions, and the surface area of a piece
   of work in a form both humans and agents can read.
 - **Forage** ingests operational signals such as Grafana alerts and
-  threads them per product, so the same view that holds the plan also
+  threads them per meadow, so the same view that holds the plan also
   holds the operational reality.
 - **Authentication** is delegated to OIDC providers so any team's
   identity setup works without bespoke integrations.
