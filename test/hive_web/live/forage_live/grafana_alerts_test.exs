@@ -4,8 +4,8 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
 
   alias Hive.Auth
   alias Hive.Forage.Grafana
-  alias Hive.Products
-  alias Hive.Products.Webhooks
+  alias Hive.Meadows
+  alias Hive.Meadows.Webhooks
 
   test "redirects guests away from the organization-only source", %{conn: conn} do
     Mimic.stub(Auth, :member?, fn _ -> false end)
@@ -23,15 +23,15 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
     assert html =~ "No Grafana alerts yet"
   end
 
-  test "lists ingested alerts with product and status", %{conn: conn} do
+  test "lists ingested alerts with meadow and status", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
     {:ok, {webhook, _}} =
-      Webhooks.create(product, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
 
     {:ok, [_]} =
-      Grafana.ingest(product, webhook, %{
+      Grafana.ingest(meadow, webhook, %{
         "status" => "firing",
         "alerts" => [
           %{

@@ -6,77 +6,77 @@ defmodule HiveWeb.SettingsComponents do
   use HiveWeb, :html
 
   alias Hive.GitHub.Repositories, as: RepositoryOption
-  alias Hive.Products.GitHubRepository
-  alias Hive.Products.Product
-  alias Hive.Products.Webhook
+  alias Hive.Meadows.GitHubRepository
+  alias Hive.Meadows.Meadow
+  alias Hive.Meadows.Webhook
 
-  attr :products, :list, required: true
+  attr :meadows, :list, required: true
   attr :form, :any, required: true
   attr :repository_options, :list, required: true
   attr :repository_load_error, :string, default: nil
   attr :selected_repository, :any, default: nil
 
-  def products(assigns) do
+  def meadows(assigns) do
     ~H"""
     <section id="settings">
       <div data-part="page-header">
         <div data-part="title-group">
           <.badge label="Settings" color="information" style="light-fill" />
-          <h1>Products</h1>
-          <p>Configure the products this Hive instance can plan and route work for.</p>
+          <h1>Meadows</h1>
+          <p>Configure the meadows this Hive instance can plan and route work for.</p>
         </div>
       </div>
 
-      <.card icon="apps" title="Products" data-part="products-card">
+      <.card icon="apps" title="Meadows" data-part="meadows-card">
         <:actions>
-          <.new_product_modal
+          <.new_meadow_modal
             form={@form}
             repository_options={@repository_options}
             repository_load_error={@repository_load_error}
             selected_repository={@selected_repository}
           />
         </:actions>
-        <.card_section data-part="products-section">
-          <div data-part="products-table">
+        <.card_section data-part="meadows-section">
+          <div data-part="meadows-table">
             <.table
-              id="products-table"
-              rows={@products}
-              row_key={fn product -> "product-#{product.id || product.name}" end}
-              row_navigate={fn product -> ~p"/settings/products/#{product.id}" end}
+              id="meadows-table"
+              rows={@meadows}
+              row_key={fn meadow -> "meadow-#{meadow.id || meadow.name}" end}
+              row_navigate={fn meadow -> ~p"/settings/meadows/#{meadow.id}" end}
             >
-              <:col :let={product} label="Product">
+              <:col :let={meadow} label="Meadow">
                 <.text_and_description_cell
-                  label={product.name}
-                  description={product_description(product)}
+                  label={meadow.name}
+                  description={meadow_description(meadow)}
                 />
               </:col>
-              <:col :let={product} label="Visibility">
+              <:col :let={meadow} label="Visibility">
                 <div data-part="cell" data-type="badge">
                   <.badge
-                    label={visibility_label(product.visibility)}
-                    color={visibility_color(product.visibility)}
+                    label={visibility_label(meadow.visibility)}
+                    color={visibility_color(meadow.visibility)}
                     style="light-fill"
                     size="large"
                   >
                     <:icon>
-                      <.lock :if={product.visibility == :private} />
-                      <.world :if={product.visibility != :private} />
+                      <.lock :if={meadow.visibility == :private} />
+                      <.world :if={meadow.visibility != :private} />
                     </:icon>
                   </.badge>
                 </div>
               </:col>
-              <:col :let={product} label="Repositories">
+              <:col :let={meadow} label="Repositories">
                 <div data-part="cell" data-type="badge">
                   <div data-part="repository-cell">
                     <.badge
-                      :if={product.github_repositories == []}
+                      :if={meadow.github_repositories == []}
                       label="No repository"
                       color="neutral"
                       style="light-fill"
                       size="large"
                     />
                     <.badge
-                      :for={repository <- product.github_repositories}
+                      :for={repository <- meadow.github_repositories}
                       label={GitHubRepository.full_name(repository)}
                       color="neutral"
                       style="light-fill"
@@ -90,8 +90,8 @@ defmodule HiveWeb.SettingsComponents do
               <:empty_state>
                 <.table_empty_state
                   icon="package"
-                  title="No products configured"
-                  subtitle="Create the first product to give Hive a product boundary."
+                  title="No meadows configured"
+                  subtitle="Create the first meadow to give Hive a meadow boundary."
                 />
               </:empty_state>
             </.table>
@@ -102,7 +102,7 @@ defmodule HiveWeb.SettingsComponents do
     """
   end
 
-  attr :product, :map, required: true
+  attr :meadow, :map, required: true
   attr :form, :any, required: true
   attr :repository_options, :list, required: true
   attr :repository_load_error, :string, default: nil
@@ -113,34 +113,34 @@ defmodule HiveWeb.SettingsComponents do
   attr :selected_source, :atom, default: :grafana
   attr :created_webhook_url, :string, default: nil
 
-  def product_detail(assigns) do
+  def meadow_detail(assigns) do
     ~H"""
     <section id="settings">
       <div data-part="page-header">
         <div data-part="title-group">
           <.badge label="Settings" color="information" style="light-fill" />
-          <h1>{@product.name}</h1>
-          <p>{product_description(@product)}</p>
+          <h1>{@meadow.name}</h1>
+          <p>{meadow_description(@meadow)}</p>
         </div>
       </div>
 
-      <div data-part="product-detail-layout">
-        <.card icon="package" title="Product">
+      <div data-part="meadow-detail-layout">
+        <.card icon="package" title="Meadow">
           <.card_section>
             <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
               <input
                 type="hidden"
-                name="product[github_repository_owner]"
+                name="meadow[github_repository_owner]"
                 value={selected_repository_owner(@selected_repository)}
               />
               <input
                 type="hidden"
-                name="product[github_repository_name]"
+                name="meadow[github_repository_name]"
                 value={selected_repository_name(@selected_repository)}
               />
               <input
                 type="hidden"
-                name="product[github_repository_visibility]"
+                name="meadow[github_repository_visibility]"
                 value={selected_repository_visibility(@selected_repository)}
               />
 
@@ -154,19 +154,19 @@ defmodule HiveWeb.SettingsComponents do
               <.text_area
                 field={@form[:description]}
                 label="Description"
-                placeholder="What this product covers inside the organization."
+                placeholder="What this meadow covers inside the organization."
                 max_length={500}
                 rows={4}
               />
 
-              <.visibility_select form={@form} id="product-visibility" />
+              <.visibility_select form={@form} id="meadow-visibility" />
 
               <div data-part="repository-selector">
-                <label data-part="field-label" for="product-repository-search">
+                <label data-part="field-label" for="meadow-repository-search">
                   GitHub repository
                 </label>
                 <.dropdown
-                  id="product-repository-dropdown"
+                  id="meadow-repository-dropdown"
                   label={selected_repository_label(@selected_repository)}
                   data-part="repository-dropdown"
                   on_open_change="repository_dropdown_open_change"
@@ -176,7 +176,7 @@ defmodule HiveWeb.SettingsComponents do
                   </:icon>
                   <:search>
                     <input
-                      id="product-repository-search"
+                      id="meadow-repository-search"
                       type="search"
                       placeholder="Search repositories..."
                       data-part="search-input"
@@ -208,14 +208,14 @@ defmodule HiveWeb.SettingsComponents do
               </div>
 
               <div data-part="form-actions">
-                <.button label="Save product" size="medium" variant="primary" />
+                <.button label="Save meadow" size="medium" variant="primary" />
               </div>
             </.form>
           </.card_section>
         </.card>
 
         <.webhooks_card
-          product={@product}
+          meadow={@meadow}
           webhooks={@webhooks}
           webhook_form={@webhook_form}
           webhook_sources={@webhook_sources}
@@ -227,7 +227,7 @@ defmodule HiveWeb.SettingsComponents do
     """
   end
 
-  attr :product, :map, required: true
+  attr :meadow, :map, required: true
   attr :webhooks, :list, required: true
   attr :webhook_form, :any, required: true
   attr :webhook_sources, :list, required: true
@@ -348,7 +348,7 @@ defmodule HiveWeb.SettingsComponents do
         <.text_input
           field={@webhook_form[:name]}
           label="Name"
-          placeholder="Grafana production"
+          placeholder="Grafana meadowion"
           required={true}
           show_required={true}
         />
@@ -407,39 +407,39 @@ defmodule HiveWeb.SettingsComponents do
 
   defp format_short_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%Y-%m-%d %H:%M UTC")
 
-  defp new_product_modal(assigns) do
+  defp new_meadow_modal(assigns) do
     ~H"""
     <.modal
-      id="new-product-modal"
-      title="New product"
-      description="Connect the product to an optional GitHub repository."
+      id="new-meadow-modal"
+      title="New meadow"
+      description="Connect the meadow to an optional GitHub repository."
       header_type="icon"
       header_size="large"
-      on_dismiss="close_new_product"
-      on_open_change="new_product_modal_open_change"
+      on_dismiss="close_new_meadow"
+      on_open_change="new_meadow_modal_open_change"
     >
       <:trigger :let={attrs}>
-        <.button label="Add product" size="medium" variant="primary" {attrs}>
+        <.button label="Add meadow" size="medium" variant="primary" {attrs}>
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
       <:header_icon>
         <.package />
       </:header_icon>
-      <.form id="new-product-form" for={@form} phx-submit="save" data-part="form">
+      <.form id="new-meadow-form" for={@form} phx-submit="save" data-part="form">
         <input
           type="hidden"
-          name="product[github_repository_owner]"
+          name="meadow[github_repository_owner]"
           value={selected_repository_owner(@selected_repository)}
         />
         <input
           type="hidden"
-          name="product[github_repository_name]"
+          name="meadow[github_repository_name]"
           value={selected_repository_name(@selected_repository)}
         />
         <input
           type="hidden"
-          name="product[github_repository_visibility]"
+          name="meadow[github_repository_visibility]"
           value={selected_repository_visibility(@selected_repository)}
         />
 
@@ -453,12 +453,12 @@ defmodule HiveWeb.SettingsComponents do
         <.text_area
           field={@form[:description]}
           label="Description"
-          placeholder="What this product covers inside the organization."
+          placeholder="What this meadow covers inside the organization."
           max_length={500}
           rows={4}
         />
 
-        <.visibility_select form={@form} id="new-product-visibility" />
+        <.visibility_select form={@form} id="new-meadow-visibility" />
 
         <div data-part="repository-selector">
           <label data-part="field-label" for="repository-search">GitHub repository</label>
@@ -510,15 +510,15 @@ defmodule HiveWeb.SettingsComponents do
               label="Cancel"
               variant="secondary"
               size="medium"
-              phx-click="close_new_product"
+              phx-click="close_new_meadow"
             />
           </:action>
           <:action>
             <.button
-              label="Create product"
+              label="Create meadow"
               size="medium"
               variant="primary"
-              form="new-product-form"
+              form="new-meadow-form"
             />
           </:action>
         </.modal_footer>
@@ -527,11 +527,11 @@ defmodule HiveWeb.SettingsComponents do
     """
   end
 
-  defp product_description(%{description: description}) when description in [nil, ""] do
+  defp meadow_description(%{description: description}) when description in [nil, ""] do
     "No description"
   end
 
-  defp product_description(%{description: description}), do: description
+  defp meadow_description(%{description: description}), do: description
 
   attr :form, :any, required: true
   attr :id, :string, required: true
@@ -549,7 +549,7 @@ defmodule HiveWeb.SettingsComponents do
       <span>Visibility</span>
       <.select id={@id} name={@form[:visibility].name} value={@value} label="Choose visibility">
         <:item
-          :for={visibility <- Product.visibilities()}
+          :for={visibility <- Meadow.visibilities()}
           value={Atom.to_string(visibility)}
           label={visibility_label(visibility)}
           icon={visibility_icon(visibility)}

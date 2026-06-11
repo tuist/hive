@@ -1,17 +1,17 @@
-defmodule HiveWeb.ProductWebhookControllerTest do
+defmodule HiveWeb.MeadowWebhookControllerTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Forage
-  alias Hive.Products
-  alias Hive.Products.Webhooks
+  alias Hive.Meadows
+  alias Hive.Meadows.Webhooks
 
   setup do
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
     {:ok, {webhook, token}} =
-      Webhooks.create(product, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, product: product, webhook: webhook, token: token}
+    {:ok, meadow: meadow, webhook: webhook, token: token}
   end
 
   test "POST accepts a valid Grafana payload and upserts alerts", ctx do
@@ -31,7 +31,7 @@ defmodule HiveWeb.ProductWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/products/#{ctx.product.id}/grafana/#{ctx.token}", body)
+      |> post(~p"/webhooks/meadows/#{ctx.meadow.id}/grafana/#{ctx.token}", body)
 
     assert response(conn, 202) == ""
     assert [_alert] = Forage.list_grafana_alerts()
@@ -41,7 +41,7 @@ defmodule HiveWeb.ProductWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/products/#{ctx.product.id}/grafana/hwh_nope", %{
+      |> post(~p"/webhooks/meadows/#{ctx.meadow.id}/grafana/hwh_nope", %{
         "status" => "firing",
         "alerts" => [%{"fingerprint" => "x"}]
       })
@@ -49,12 +49,12 @@ defmodule HiveWeb.ProductWebhookControllerTest do
     assert response(conn, 401) == ""
   end
 
-  test "POST 404s on an unknown product", ctx do
+  test "POST 404s on an unknown meadow", ctx do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> post(
-        ~p"/webhooks/products/00000000-0000-0000-0000-000000000000/grafana/#{ctx.token}",
+        ~p"/webhooks/meadows/00000000-0000-0000-0000-000000000000/grafana/#{ctx.token}",
         %{"status" => "firing", "alerts" => [%{"fingerprint" => "x"}]}
       )
 
@@ -65,7 +65,7 @@ defmodule HiveWeb.ProductWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/products/#{ctx.product.id}/grafana/#{ctx.token}", %{
+      |> post(~p"/webhooks/meadows/#{ctx.meadow.id}/grafana/#{ctx.token}", %{
         "status" => "firing"
       })
 
@@ -76,7 +76,7 @@ defmodule HiveWeb.ProductWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/products/#{ctx.product.id}/pagerduty/#{ctx.token}", %{
+      |> post(~p"/webhooks/meadows/#{ctx.meadow.id}/pagerduty/#{ctx.token}", %{
         "alerts" => []
       })
 

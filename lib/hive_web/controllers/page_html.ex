@@ -12,7 +12,7 @@ defmodule HiveWeb.PageHTML do
   def open_graph do
     %{
       description:
-        "Sign in to submit public ideas and help turn product signals into actionable work.",
+        "Sign in to submit public ideas and help turn meadow signals into actionable work.",
       eyebrow: Auth.product_name(),
       highlights: ["OIDC sign-in", "Public by default", "Organization-aware"],
       id: "login",

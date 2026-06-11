@@ -5,17 +5,17 @@ defmodule HiveWeb.SettingsComponentsTest do
   import Phoenix.LiveViewTest
 
   alias Hive.GitHub.Repositories
-  alias Hive.Products
-  alias Hive.Products.GitHubRepository
-  alias Hive.Products.Product
+  alias Hive.Meadows
+  alias Hive.Meadows.GitHubRepository
+  alias Hive.Meadows.Meadow
   alias HiveWeb.SettingsComponents
 
-  describe "products/1" do
+  describe "meadows/1" do
     defp assigns(overrides \\ %{}) do
       Map.merge(
         %{
-          form: to_form(Products.change_product(), as: :product),
-          products: [],
+          form: to_form(Meadows.change_meadow(), as: :meadow),
+          meadows: [],
           repository_options: [],
           repository_load_error: nil,
           selected_repository: nil
@@ -24,13 +24,13 @@ defmodule HiveWeb.SettingsComponentsTest do
       )
     end
 
-    test "renders the empty state and add product action" do
+    test "renders the empty state and add meadow action" do
       assigns = assigns()
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.products
-          products={@products}
+        <SettingsComponents.meadows
+          meadows={@meadows}
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -38,14 +38,14 @@ defmodule HiveWeb.SettingsComponentsTest do
         />
         """)
 
-      assert html =~ "Add product"
-      assert html =~ "No products configured"
+      assert html =~ "Add meadow"
+      assert html =~ "No meadows configured"
       assert html =~ ~s(class="noora-card")
-      assert html =~ ~s(id="products-table")
-      assert html =~ ~s(id="new-product-modal")
+      assert html =~ ~s(id="meadows-table")
+      assert html =~ ~s(id="new-meadow-modal")
     end
 
-    test "renders the new product modal with repository options" do
+    test "renders the new meadow modal with repository options" do
       assigns =
         assigns(%{
           repository_options: [
@@ -58,8 +58,8 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.products
-          products={@products}
+        <SettingsComponents.meadows
+          meadows={@meadows}
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -67,8 +67,8 @@ defmodule HiveWeb.SettingsComponentsTest do
         />
         """)
 
-      assert html =~ ~s(id="new-product-modal")
-      assert html =~ "New product"
+      assert html =~ ~s(id="new-meadow-modal")
+      assert html =~ "New meadow"
       assert html =~ "Visibility"
       assert html =~ "GitHub repository"
       assert html =~ "tuist/AXe"
@@ -78,27 +78,27 @@ defmodule HiveWeb.SettingsComponentsTest do
       assert repository_position(html, "tuist/Grafana") < repository_position(html, "tuist/sdk")
       assert html =~ ~s(data-label="tuist/Grafana Monitoring dashboards")
       assert html =~ ~s(class="noora-dropdown")
-      assert html =~ ~s(id="new-product-visibility")
-      assert html =~ ~s(name="product[visibility]")
-      assert html =~ ~s(name="product[github_repository_owner]")
-      assert html =~ ~s(name="product[github_repository_name]")
+      assert html =~ ~s(id="new-meadow-visibility")
+      assert html =~ ~s(name="meadow[visibility]")
+      assert html =~ ~s(name="meadow[github_repository_owner]")
+      assert html =~ ~s(name="meadow[github_repository_name]")
       assert html =~ ~s(phx-submit="save")
     end
 
-    test "renders configured products and repositories" do
-      product = %Product{
+    test "renders configured meadows and repositories" do
+      meadow = %Meadow{
         id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
         name: "Hive",
-        description: "Product orchestration",
+        description: "Meadow orchestration",
         github_repositories: [%GitHubRepository{owner: "tuist", name: "hive"}]
       }
 
-      assigns = assigns(%{products: [product]})
+      assigns = assigns(%{meadows: [meadow]})
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.products
-          products={@products}
+        <SettingsComponents.meadows
+          meadows={@meadows}
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -107,16 +107,16 @@ defmodule HiveWeb.SettingsComponentsTest do
         """)
 
       assert html =~ "Hive"
-      assert html =~ "Product orchestration"
+      assert html =~ "Meadow orchestration"
       assert html =~ "Public"
       assert html =~ "tuist/hive"
-      assert html =~ ~s(href="/settings/products/#{product.id}")
+      assert html =~ ~s(href="/settings/meadows/#{meadow.id}")
       assert html =~ ~s(data-type="badge")
       assert html =~ ~s(data-part="repository-cell")
     end
 
-    test "renders a product detail form" do
-      product = %Product{
+    test "renders a meadow detail form" do
+      meadow = %Meadow{
         id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
         name: "Atlas",
         description: "Internal planning.",
@@ -126,14 +126,14 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       assigns =
         assigns(%{
-          product: product,
-          form: to_form(Products.change_product(product), as: :product)
+          meadow: meadow,
+          form: to_form(Meadows.change_meadow(meadow), as: :meadow)
         })
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.product_detail
-          product={@product}
+        <SettingsComponents.meadow_detail
+          meadow={@meadow}
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -147,10 +147,10 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       assert html =~ "Atlas"
       assert html =~ "Internal planning."
-      assert html =~ "Save product"
+      assert html =~ "Save meadow"
       assert html =~ ~s(class="noora-dropdown")
-      assert html =~ ~s(id="product-visibility")
-      assert html =~ ~s(name="product[visibility]")
+      assert html =~ ~s(id="meadow-visibility")
+      assert html =~ ~s(name="meadow[visibility]")
       refute html =~ "Linked specs"
       refute html =~ "Back"
     end

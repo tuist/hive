@@ -1,12 +1,12 @@
-defmodule HiveWeb.SettingsLive.Products do
+defmodule HiveWeb.SettingsLive.Meadows do
   @moduledoc false
 
   use HiveWeb, :live_view
 
   alias Hive.Auth
   alias Hive.GitHub.Repositories
-  alias Hive.Products
-  alias Hive.Products.Product
+  alias Hive.Meadows
+  alias Hive.Meadows.Meadow
   alias HiveWeb.Layouts
   alias HiveWeb.SettingsComponents
 
@@ -15,49 +15,49 @@ defmodule HiveWeb.SettingsLive.Products do
     if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
       {:ok,
        socket
-       |> assign(:page_title, "Products · #{socket.assigns.product_name}")
-       |> assign(:products, Products.list_products())
+       |> assign(:page_title, "Meadows · #{socket.assigns.product_name}")
+       |> assign(:meadows, Meadows.list_meadows())
        |> assign(:repository_options, [])
        |> assign(:repository_load_error, nil)
        |> assign(:repository_options_loaded?, false)
        |> assign(:selected_repository, nil)
-       |> assign_form(Products.change_product())}
+       |> assign_form(Meadows.change_meadow())}
     else
       {:ok,
        socket
-       |> put_flash(:error, "You don't have access to configure products.")
+       |> put_flash(:error, "You don't have access to configure meadows.")
        |> redirect(to: ~p"/login")}
     end
   end
 
   @impl true
-  def handle_event("close_new_product", _params, socket) do
+  def handle_event("close_new_meadow", _params, socket) do
     {:noreply,
      socket
-     |> reset_new_product()
-     |> push_event("close-modal", %{id: "new-product-modal"})
-     |> push_event("reset-form", %{id: "new-product-form"})}
+     |> reset_new_meadow()
+     |> push_event("close-modal", %{id: "new-meadow-modal"})
+     |> push_event("reset-form", %{id: "new-meadow-form"})}
   end
 
-  def handle_event("new_product_modal_open_change", %{"open" => true}, socket) do
+  def handle_event("new_meadow_modal_open_change", %{"open" => true}, socket) do
     {:noreply, ensure_repositories_loaded(socket)}
   end
 
-  def handle_event("new_product_modal_open_change", %{"open" => false}, socket) do
+  def handle_event("new_meadow_modal_open_change", %{"open" => false}, socket) do
     {:noreply,
      socket
-     |> reset_new_product()
-     |> push_event("reset-form", %{id: "new-product-form"})}
+     |> reset_new_meadow()
+     |> push_event("reset-form", %{id: "new-meadow-form"})}
   end
 
-  def handle_event("new_product_modal_open_change", _params, socket) do
+  def handle_event("new_meadow_modal_open_change", _params, socket) do
     {:noreply, socket}
   end
 
-  def handle_event("validate", %{"product" => params}, socket) do
+  def handle_event("validate", %{"meadow" => params}, socket) do
     changeset =
-      %Product{}
-      |> Products.change_product(params)
+      %Meadow{}
+      |> Meadows.change_meadow(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
@@ -78,22 +78,22 @@ defmodule HiveWeb.SettingsLive.Products do
     {:noreply, assign(socket, :selected_repository, nil)}
   end
 
-  def handle_event("save", %{"product" => params}, socket) do
-    case Products.create_product(params) do
-      {:ok, _product} ->
+  def handle_event("save", %{"meadow" => params}, socket) do
+    case Meadows.create_meadow(params) do
+      {:ok, _meadow} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Product created.")
-         |> assign(:products, Products.list_products())
-         |> reset_new_product()
-         |> push_event("close-modal", %{id: "new-product-modal"})
-         |> push_event("reset-form", %{id: "new-product-form"})}
+         |> put_flash(:info, "Meadow created.")
+         |> assign(:meadows, Meadows.list_meadows())
+         |> reset_new_meadow()
+         |> push_event("close-modal", %{id: "new-meadow-modal"})
+         |> push_event("reset-form", %{id: "new-meadow-form"})}
 
       {:error, changeset} ->
         {:noreply,
          socket
          |> assign_form(Map.put(changeset, :action, :insert))
-         |> push_event("open-modal", %{id: "new-product-modal"})}
+         |> push_event("open-modal", %{id: "new-meadow-modal"})}
     end
   end
 
@@ -130,13 +130,13 @@ defmodule HiveWeb.SettingsLive.Products do
   defp repository_load_error(_reason), do: "GitHub repositories could not be loaded."
 
   defp assign_form(socket, changeset) do
-    assign(socket, :form, to_form(interpolate_errors(changeset), as: :product))
+    assign(socket, :form, to_form(interpolate_errors(changeset), as: :meadow))
   end
 
-  defp reset_new_product(socket) do
+  defp reset_new_meadow(socket) do
     socket
     |> assign(:selected_repository, nil)
-    |> assign_form(Products.change_product())
+    |> assign_form(Meadows.change_meadow())
   end
 
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
@@ -167,8 +167,8 @@ defmodule HiveWeb.SettingsLive.Products do
       current_path={@current_path}
       forage_sources={@forage_sources}
     >
-      <SettingsComponents.products
-        products={@products}
+      <SettingsComponents.meadows
+        meadows={@meadows}
         form={@form}
         repository_options={@repository_options}
         repository_load_error={@repository_load_error}

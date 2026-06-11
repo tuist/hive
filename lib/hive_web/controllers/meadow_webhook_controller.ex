@@ -1,9 +1,9 @@
-defmodule HiveWeb.ProductWebhookController do
+defmodule HiveWeb.MeadowWebhookController do
   @moduledoc """
-  Inbound webhook for product-scoped sources (currently Grafana).
+  Inbound webhook for meadow-scoped sources (currently Grafana).
 
-  The URL carries the product id, the source key, and a per-webhook
-  token: `/webhooks/products/:product_id/:source/:token`. The token is
+  The URL carries the meadow id, the source key, and a per-webhook
+  token: `/webhooks/meadows/:meadow_id/:source/:token`. The token is
   hashed and compared in constant time before the payload is parsed and
   upserted into forage.
   """
@@ -11,16 +11,16 @@ defmodule HiveWeb.ProductWebhookController do
   use HiveWeb, :controller
 
   alias Hive.Forage.Grafana
-  alias Hive.Products
-  alias Hive.Products.Webhook
-  alias Hive.Products.Webhooks
+  alias Hive.Meadows
+  alias Hive.Meadows.Webhook
+  alias Hive.Meadows.Webhooks
   alias Hive.Repo
 
-  def create(conn, %{"product_id" => product_id, "source" => source, "token" => token}) do
+  def create(conn, %{"meadow_id" => meadow_id, "source" => source, "token" => token}) do
     with {:ok, source_atom} <- parse_source(source),
-         {:ok, product} <- fetch_product(product_id),
-         %Webhook{} = webhook <- Webhooks.find_by_token(product.id, source_atom, token),
-         {:ok, _alerts} <- ingest(source_atom, product, webhook, conn.body_params) do
+         {:ok, meadow} <- fetch_meadow(meadow_id),
+         %Webhook{} = webhook <- Webhooks.find_by_token(meadow.id, source_atom, token),
+         {:ok, _alerts} <- ingest(source_atom, meadow, webhook, conn.body_params) do
       Webhooks.touch_last_used(webhook)
       send_resp(conn, :accepted, "")
     else
@@ -37,14 +37,14 @@ defmodule HiveWeb.ProductWebhookController do
     end
   end
 
-  defp fetch_product(id) do
-    case Repo.get(Products.Product, id) do
+  defp fetch_meadow(id) do
+    case Repo.get(Meadows.Meadow, id) do
       nil -> {:error, :not_found}
-      product -> {:ok, product}
+      meadow -> {:ok, meadow}
     end
   rescue
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
-  defp ingest(:grafana, product, webhook, payload), do: Grafana.ingest(product, webhook, payload)
+  defp ingest(:grafana, meadow, webhook, payload), do: Grafana.ingest(meadow, webhook, payload)
 end

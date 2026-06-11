@@ -21,10 +21,10 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
           "type" => "string",
           "description" => "Spec visibility. Use public or private."
         },
-        "product_ids" => %{
+        "meadow_ids" => %{
           "type" => "array",
           "items" => %{"type" => "string"},
-          "description" => "Product IDs to associate with the spec."
+          "description" => "Meadow IDs to associate with the spec."
         },
         "source_feature_request_id" => %{"type" => "string"}
       }
@@ -49,7 +49,7 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
         "summary",
         "status",
         "visibility",
-        "product_ids",
+        "meadow_ids",
         "source_feature_request_id"
       ])
       |> Map.put_new("status", "draft")

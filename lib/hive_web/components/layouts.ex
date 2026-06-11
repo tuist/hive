@@ -114,10 +114,10 @@ defmodule HiveWeb.Layouts do
             </summary>
             <div data-part="content">
               <.sidebar_item
-                label="Products"
+                label="Meadows"
                 icon="package"
-                href={~p"/settings/products"}
-                selected={String.starts_with?(@current_path, ~p"/settings/products")}
+                href={~p"/settings/meadows"}
+                selected={String.starts_with?(@current_path, ~p"/settings/meadows")}
               />
             </div>
           </details>

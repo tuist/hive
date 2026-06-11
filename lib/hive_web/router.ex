@@ -33,7 +33,7 @@ defmodule HiveWeb.Router do
     pipe_through :json_api
 
     post "/github", GitHubWebhookController, :create
-    post "/products/:product_id/:source/:token", ProductWebhookController, :create
+    post "/meadows/:meadow_id/:source/:token", MeadowWebhookController, :create
   end
 
   scope "/", HiveWeb do
@@ -102,8 +102,8 @@ defmodule HiveWeb.Router do
     live_session :settings,
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
-      live "/settings/products", SettingsLive.Products
-      live "/settings/products/:id", SettingsLive.Product
+      live "/settings/meadows", SettingsLive.Meadows
+      live "/settings/meadows/:id", SettingsLive.Meadow
     end
 
     live_session :account,

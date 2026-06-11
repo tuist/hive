@@ -1,4 +1,4 @@
-defmodule Hive.Products.GitHubRepository do
+defmodule Hive.Meadows.GitHubRepository do
   @moduledoc false
 
   use Ecto.Schema
@@ -14,9 +14,9 @@ defmodule Hive.Products.GitHubRepository do
     field :name, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
 
-    many_to_many :products, Hive.Products.Product,
-      join_through: Hive.Products.ProductRepository,
-      join_keys: [github_repository_id: :id, product_id: :id]
+    many_to_many :meadows, Hive.Meadows.Meadow,
+      join_through: Hive.Meadows.MeadowRepository,
+      join_keys: [github_repository_id: :id, meadow_id: :id]
 
     timestamps(type: :utc_datetime)
   end

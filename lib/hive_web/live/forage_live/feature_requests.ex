@@ -13,7 +13,7 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
     stats = feature_request_stats(feature_requests)
 
     %{
-      description: "Public product ideas submitted by authenticated users.",
+      description: "Public meadow ideas submitted by authenticated users.",
       eyebrow: "Forage",
       highlights: [
         "#{stats.total} total requests",

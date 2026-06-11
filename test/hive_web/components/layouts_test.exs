@@ -90,7 +90,7 @@ defmodule HiveWeb.LayoutsTest do
       )
     end
 
-    test "renders the product name and the slotted content" do
+    test "renders the meadow name and the slotted content" do
       html = render_dashboard(assigns())
 
       assert html =~ "Hive"
@@ -129,25 +129,25 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "/forage/bug-reports"
     end
 
-    test "shows product settings when settings are enabled" do
+    test "shows meadow settings when settings are enabled" do
       html =
         render_dashboard(
           assigns(%{
             signed_in?: true,
             settings_enabled?: true,
-            current_path: "/settings/products"
+            current_path: "/settings/meadows"
           })
         )
 
       assert html =~ "Settings"
-      assert html =~ "Products"
-      assert html =~ "/settings/products"
+      assert html =~ "Meadows"
+      assert html =~ "/settings/meadows"
     end
 
     test "hides settings when settings are disabled" do
       html = render_dashboard(assigns(%{signed_in?: true, settings_enabled?: false}))
 
-      refute html =~ "/settings/products"
+      refute html =~ "/settings/meadows"
     end
 
     test "does not show account navigation in the dashboard sidebar" do
@@ -166,7 +166,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Identities"
       assert html =~ "/account/identities"
       refute html =~ "Feature requests"
-      refute html =~ "/settings/products"
+      refute html =~ "/settings/meadows"
     end
   end
 end

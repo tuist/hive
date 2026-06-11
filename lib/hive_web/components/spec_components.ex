@@ -71,17 +71,17 @@ defmodule HiveWeb.SpecComponents do
             <:col :let={spec} label="Source">
               <span data-part="spec-table-source">{source_label(spec)}</span>
             </:col>
-            <:col :let={spec} label="Products">
-              <div data-part="spec-table-products">
+            <:col :let={spec} label="Meadows">
+              <div data-part="spec-table-meadows">
                 <.badge
-                  :for={product <- spec_products(spec)}
-                  label={product.name}
+                  :for={meadow <- spec_meadows(spec)}
+                  label={meadow.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
                 />
-                <span :if={spec_products(spec) == []} data-part="empty-products">
-                  No products
+                <span :if={spec_meadows(spec) == []} data-part="empty-meadows">
+                  No meadows
                 </span>
               </div>
             </:col>
@@ -117,10 +117,10 @@ defmodule HiveWeb.SpecComponents do
           <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
           <h1>{@spec.title}</h1>
           <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
-          <div :if={spec_products(@spec) != []} data-part="product-list">
+          <div :if={spec_meadows(@spec) != []} data-part="meadow-list">
             <.badge
-              :for={product <- spec_products(@spec)}
-              label={product.name}
+              :for={meadow <- spec_meadows(@spec)}
+              label={meadow.name}
               color="neutral"
               style="light-fill"
             />
@@ -280,7 +280,7 @@ defmodule HiveWeb.SpecComponents do
   attr :form, :any, required: true
   attr :title, :string, required: true
   attr :action_label, :string, required: true
-  attr :products, :list, required: true
+  attr :meadows, :list, required: true
   attr :source, :map, default: nil
 
   def spec_form(assigns) do
@@ -319,18 +319,18 @@ defmodule HiveWeb.SpecComponents do
             <.status_select form={@form} id="spec-status" />
             <.visibility_select form={@form} id="spec-visibility" />
             <fieldset data-part="checkbox-group">
-              <legend>Products</legend>
-              <input type="hidden" name="spec[product_ids][]" value="" />
-              <label :for={product <- @products} data-part="checkbox-option">
+              <legend>Meadows</legend>
+              <input type="hidden" name="spec[meadow_ids][]" value="" />
+              <label :for={meadow <- @meadows} data-part="checkbox-option">
                 <input
                   type="checkbox"
-                  name="spec[product_ids][]"
-                  value={product.id}
-                  checked={product_selected?(@form, product.id)}
+                  name="spec[meadow_ids][]"
+                  value={meadow.id}
+                  checked={meadow_selected?(@form, meadow.id)}
                 />
-                <span>{product.name}</span>
+                <span>{meadow.name}</span>
               </label>
-              <p :if={@products == []}>Create products in Settings before linking them to specs.</p>
+              <p :if={@meadows == []}>Create meadows in Settings before linking them to specs.</p>
             </fieldset>
             <input
               :if={@form[:source_feature_request_id].value}
@@ -446,15 +446,15 @@ defmodule HiveWeb.SpecComponents do
   defp visibility_icon(:private), do: "lock"
   defp visibility_icon(_visibility), do: "world"
 
-  defp spec_products(%{products: %Ecto.Association.NotLoaded{}}), do: []
-  defp spec_products(%{products: products}) when is_list(products), do: products
-  defp spec_products(_spec), do: []
+  defp spec_meadows(%{meadows: %Ecto.Association.NotLoaded{}}), do: []
+  defp spec_meadows(%{meadows: meadows}) when is_list(meadows), do: meadows
+  defp spec_meadows(_spec), do: []
 
-  defp product_selected?(form, product_id) do
-    form[:product_ids].value
+  defp meadow_selected?(form, meadow_id) do
+    form[:meadow_ids].value
     |> List.wrap()
     |> Enum.map(&to_string/1)
-    |> Enum.member?(product_id)
+    |> Enum.member?(meadow_id)
   end
 
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
