@@ -33,7 +33,10 @@ defmodule HiveWeb.SettingsLive.Products do
   @impl true
   def handle_event("close_new_product", _params, socket) do
     {:noreply,
-     socket |> reset_new_product() |> push_event("close-modal", %{id: "new-product-modal"})}
+     socket
+     |> reset_new_product()
+     |> push_event("close-modal", %{id: "new-product-modal"})
+     |> push_event("reset-form", %{id: "new-product-form"})}
   end
 
   def handle_event("new_product_modal_open_change", %{"open" => true}, socket) do
@@ -41,7 +44,10 @@ defmodule HiveWeb.SettingsLive.Products do
   end
 
   def handle_event("new_product_modal_open_change", %{"open" => false}, socket) do
-    {:noreply, reset_new_product(socket)}
+    {:noreply,
+     socket
+     |> reset_new_product()
+     |> push_event("reset-form", %{id: "new-product-form"})}
   end
 
   def handle_event("new_product_modal_open_change", _params, socket) do
@@ -80,7 +86,8 @@ defmodule HiveWeb.SettingsLive.Products do
          |> put_flash(:info, "Product created.")
          |> assign(:products, Products.list_products())
          |> reset_new_product()
-         |> push_event("close-modal", %{id: "new-product-modal"})}
+         |> push_event("close-modal", %{id: "new-product-modal"})
+         |> push_event("reset-form", %{id: "new-product-form"})}
 
       {:error, changeset} ->
         {:noreply,

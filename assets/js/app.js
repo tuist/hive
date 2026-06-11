@@ -16,3 +16,8 @@ const liveSocket = new LiveSocket("/live", Socket, {
 liveSocket.connect()
 
 window.liveSocket = liveSocket
+
+window.addEventListener("phx:reset-form", (event) => {
+  const form = document.getElementById(event.detail.id)
+  if (form instanceof HTMLFormElement) form.reset()
+})
