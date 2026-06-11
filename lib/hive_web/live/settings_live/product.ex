@@ -22,9 +22,9 @@ defmodule HiveWeb.SettingsLive.Product do
        socket
        |> assign(:page_title, "#{product.name} · Products · #{socket.assigns.product_name}")
        |> assign(:product, product)
-       |> assign(:repository_query, repository_query(selected_repository))
        |> assign(:repository_options, [])
-       |> assign(:repository_search_error, nil)
+       |> assign(:repository_load_error, nil)
+       |> assign(:repository_options_loaded?, false)
        |> assign(:selected_repository, selected_repository)
        |> assign(:webhook_sources, Webhook.sources())
        |> assign(:webhook_form, webhook_form())
@@ -50,48 +50,27 @@ defmodule HiveWeb.SettingsLive.Product do
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("search_repositories", params, socket) do
-    query = repository_search_query(params)
-
-    case Repositories.search_accessible_repositories(query) do
-      {:ok, repositories} ->
-        {:noreply,
-         socket
-         |> assign(:repository_query, query)
-         |> assign(:repository_options, repositories)
-         |> assign(:repository_search_error, nil)}
-
-      {:error, reason} ->
-        {:noreply,
-         socket
-         |> assign(:repository_query, query)
-         |> assign(:repository_options, [])
-         |> assign(:repository_search_error, repository_search_error(reason))}
-    end
-  end
-
   def handle_event("select_repository", %{"owner" => owner, "name" => name} = params, socket) do
     repository = %Repositories{
       owner: owner,
       name: name,
-      description: Map.get(params, "description")
+      description: Map.get(params, "description"),
+      visibility: parse_visibility(Map.get(params, "visibility"))
     }
 
-    {:noreply,
-     socket
-     |> assign(:repository_query, Repositories.full_name(repository))
-     |> assign(:selected_repository, repository)
-     |> assign(:repository_options, [])
-     |> assign(:repository_search_error, nil)}
+    {:noreply, assign(socket, :selected_repository, repository)}
   end
 
   def handle_event("clear_repository", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:repository_query, "")
-     |> assign(:selected_repository, nil)
-     |> assign(:repository_options, [])
-     |> assign(:repository_search_error, nil)}
+    {:noreply, assign(socket, :selected_repository, nil)}
+  end
+
+  def handle_event("repository_dropdown_open_change", %{"open" => true}, socket) do
+    {:noreply, ensure_repositories_loaded(socket)}
+  end
+
+  def handle_event("repository_dropdown_open_change", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("create_webhook", %{"webhook" => params}, socket) do
@@ -169,9 +148,6 @@ defmodule HiveWeb.SettingsLive.Product do
          |> put_flash(:info, "Product updated.")
          |> assign(:page_title, "#{product.name} · Products · #{socket.assigns.product_name}")
          |> assign(:product, product)
-         |> assign(:repository_query, repository_query(selected_repository))
-         |> assign(:repository_options, [])
-         |> assign(:repository_search_error, nil)
          |> assign(:selected_repository, selected_repository)
          |> assign_form(Products.change_product(product))}
 
@@ -188,27 +164,45 @@ defmodule HiveWeb.SettingsLive.Product do
         nil
 
       repository ->
-        %Repositories{owner: repository.owner, name: repository.name}
+        %Repositories{
+          owner: repository.owner,
+          name: repository.name,
+          visibility: repository.visibility
+        }
     end
   end
 
-  defp repository_query(nil), do: ""
-  defp repository_query(repository), do: Repositories.full_name(repository)
+  defp parse_visibility("public"), do: :public
+  defp parse_visibility("private"), do: :private
+  defp parse_visibility(value) when is_atom(value), do: value
+  defp parse_visibility(_value), do: :public
 
-  defp repository_search_query(%{"value" => value}), do: value
-  defp repository_search_query(%{"repository_query" => value}), do: value
-  defp repository_search_query(_params), do: ""
+  defp ensure_repositories_loaded(%{assigns: %{repository_options_loaded?: true}} = socket),
+    do: socket
 
-  defp repository_search_error({:not_configured, _missing}) do
-    "GitHub App repository search is not configured."
+  defp ensure_repositories_loaded(socket) do
+    {repository_options, repository_load_error} =
+      case Repositories.list_accessible_repositories() do
+        {:ok, repositories} -> {repositories, nil}
+        {:error, reason} -> {[], repository_load_error(reason)}
+      end
+
+    socket
+    |> assign(:repository_options, repository_options)
+    |> assign(:repository_load_error, repository_load_error)
+    |> assign(:repository_options_loaded?, true)
   end
 
-  defp repository_search_error({:unexpected_status, status, _body}) do
+  defp repository_load_error({:not_configured, _missing}) do
+    "GitHub App is not configured."
+  end
+
+  defp repository_load_error({:unexpected_status, status, _body}) do
     "GitHub returned #{status} while loading repositories."
   end
 
-  defp repository_search_error(:invalid_private_key), do: "GitHub App private key is invalid."
-  defp repository_search_error(_reason), do: "GitHub repositories could not be loaded."
+  defp repository_load_error(:invalid_private_key), do: "GitHub App private key is invalid."
+  defp repository_load_error(_reason), do: "GitHub repositories could not be loaded."
 
   defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(interpolate_errors(changeset), as: :product))
@@ -262,9 +256,8 @@ defmodule HiveWeb.SettingsLive.Product do
       <SettingsComponents.product_detail
         product={@product}
         form={@form}
-        repository_query={@repository_query}
         repository_options={@repository_options}
-        repository_search_error={@repository_search_error}
+        repository_load_error={@repository_load_error}
         selected_repository={@selected_repository}
         webhooks={@webhooks}
         webhook_form={@webhook_form}

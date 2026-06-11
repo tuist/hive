@@ -15,6 +15,7 @@ defmodule Hive.Products.Product do
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
     field :github_repository_owner, :string, virtual: true
     field :github_repository_name, :string, virtual: true
+    field :github_repository_visibility, Ecto.Enum, values: [:public, :private], virtual: true
 
     many_to_many :github_repositories, Hive.Products.GitHubRepository,
       join_through: Hive.Products.ProductRepository,
@@ -36,7 +37,8 @@ defmodule Hive.Products.Product do
       :description,
       :visibility,
       :github_repository_owner,
-      :github_repository_name
+      :github_repository_name,
+      :github_repository_visibility
     ])
     |> normalize_string(:name)
     |> normalize_string(:description)
@@ -53,8 +55,10 @@ defmodule Hive.Products.Product do
   def repository_attrs(%Ecto.Changeset{} = changeset) do
     owner = get_field(changeset, :github_repository_owner)
     name = get_field(changeset, :github_repository_name)
+    visibility = get_field(changeset, :github_repository_visibility) || :public
 
-    if present?(owner) and present?(name), do: %{owner: owner, name: name}
+    if present?(owner) and present?(name),
+      do: %{owner: owner, name: name, visibility: visibility}
   end
 
   defp validate_repository_fields(changeset) do

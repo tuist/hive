@@ -1,8 +1,11 @@
 defmodule Hive.ForageTest do
   use Hive.DataCase, async: true
+  use Mimic
 
   alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.Forage
+  alias Hive.Products
 
   defp user(attrs \\ %{}) do
     {:ok, user} =
@@ -15,6 +18,30 @@ defmodule Hive.ForageTest do
 
     user
   end
+
+  defp user_with_email(prefix) do
+    suffix = unique()
+    user(%{email: "#{prefix}-#{suffix}@example.com", provider_uid: "#{prefix}-#{suffix}"})
+  end
+
+  defp product_with_repo!(opts) do
+    suffix = unique()
+    visibility = Keyword.get(opts, :visibility, "public")
+    repo_visibility = Keyword.get(opts, :repo_visibility, "public")
+
+    {:ok, product} =
+      Products.create_product(%{
+        name: "forage-#{suffix}",
+        visibility: visibility,
+        github_repository_owner: "owner#{suffix}",
+        github_repository_name: "repo#{suffix}",
+        github_repository_visibility: repo_visibility
+      })
+
+    product
+  end
+
+  defp unique, do: System.unique_integer([:positive])
 
   describe "get_source!/1" do
     test "returns the source with the given id" do
@@ -42,6 +69,7 @@ defmodule Hive.ForageTest do
                :feature_requests,
                :bug_reports,
                :feedback,
+               :github_issues,
                :grafana_alerts
              ]
     end
@@ -58,6 +86,60 @@ defmodule Hive.ForageTest do
 
     test "organization sources are readable by members" do
       assert Forage.can_access?(Forage.get_source!(:grafana_alerts), user())
+    end
+
+    test "github_issues is hidden from guests when no public/public pair exists" do
+      product_with_repo!(visibility: "private", repo_visibility: "public")
+
+      refute Forage.can_access?(Forage.get_source!(:github_issues), nil)
+    end
+
+    test "github_issues is visible to guests when at least one public/public pair exists" do
+      product_with_repo!(visibility: "public", repo_visibility: "public")
+
+      assert Forage.can_access?(Forage.get_source!(:github_issues), nil)
+    end
+
+    test "github_issues is hidden from guests when the repo is private even if the product is public" do
+      product_with_repo!(visibility: "public", repo_visibility: "private")
+
+      refute Forage.can_access?(Forage.get_source!(:github_issues), nil)
+    end
+
+    test "github_issues is visible to members even when no products are connected" do
+      stub(Auth, :member?, fn _user -> true end)
+
+      assert Forage.can_access?(
+               Forage.get_source!(:github_issues),
+               user_with_email("forage-member")
+             )
+    end
+  end
+
+  describe "accessible_products_with_repositories/1" do
+    test "returns no pairs for a guest when every pair is gated by a private side" do
+      product_with_repo!(visibility: "public", repo_visibility: "private")
+
+      assert Forage.accessible_products_with_repositories(nil) == []
+    end
+
+    test "returns every pair to a member regardless of visibility" do
+      stub(Auth, :member?, fn _user -> true end)
+
+      product = product_with_repo!(visibility: "private", repo_visibility: "private")
+
+      assert [{%{name: name}, %{owner: owner, name: repo_name}}] =
+               Forage.accessible_products_with_repositories(user_with_email("forage-pairs"))
+
+      assert name == product.name
+      assert owner == hd(product.github_repositories).owner
+      assert repo_name == hd(product.github_repositories).name
+    end
+
+    test "skips products without a connected repository" do
+      {:ok, _} = Products.create_product(%{name: "forage-no-repo-#{unique()}"})
+
+      assert Forage.accessible_products_with_repositories(nil) == []
     end
   end
 

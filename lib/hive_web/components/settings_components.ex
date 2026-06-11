@@ -12,9 +12,8 @@ defmodule HiveWeb.SettingsComponents do
 
   attr :products, :list, required: true
   attr :form, :any, required: true
-  attr :repository_query, :string, required: true
   attr :repository_options, :list, required: true
-  attr :repository_search_error, :string, default: nil
+  attr :repository_load_error, :string, default: nil
   attr :selected_repository, :any, default: nil
 
   def products(assigns) do
@@ -32,9 +31,8 @@ defmodule HiveWeb.SettingsComponents do
         <:actions>
           <.new_product_modal
             form={@form}
-            repository_query={@repository_query}
             repository_options={@repository_options}
-            repository_search_error={@repository_search_error}
+            repository_load_error={@repository_load_error}
             selected_repository={@selected_repository}
           />
         </:actions>
@@ -106,9 +104,8 @@ defmodule HiveWeb.SettingsComponents do
 
   attr :product, :map, required: true
   attr :form, :any, required: true
-  attr :repository_query, :string, required: true
   attr :repository_options, :list, required: true
-  attr :repository_search_error, :string, default: nil
+  attr :repository_load_error, :string, default: nil
   attr :selected_repository, :any, default: nil
   attr :webhooks, :list, default: []
   attr :webhook_form, :any, default: nil
@@ -141,6 +138,11 @@ defmodule HiveWeb.SettingsComponents do
                 name="product[github_repository_name]"
                 value={selected_repository_name(@selected_repository)}
               />
+              <input
+                type="hidden"
+                name="product[github_repository_visibility]"
+                value={selected_repository_visibility(@selected_repository)}
+              />
 
               <.text_input
                 field={@form[:name]}
@@ -167,6 +169,7 @@ defmodule HiveWeb.SettingsComponents do
                   id="product-repository-dropdown"
                   label={selected_repository_label(@selected_repository)}
                   data-part="repository-dropdown"
+                  on_open_change="repository_dropdown_open_change"
                 >
                   <:icon>
                     <.brand_github />
@@ -174,17 +177,13 @@ defmodule HiveWeb.SettingsComponents do
                   <:search>
                     <input
                       id="product-repository-search"
-                      name="repository_query"
                       type="search"
-                      value={@repository_query}
                       placeholder="Search repositories..."
                       data-part="search-input"
-                      phx-keyup="search_repositories"
-                      phx-debounce="300"
                     />
                   </:search>
                   <.dropdown_item
-                    :for={repository <- @repository_options}
+                    :for={repository <- sorted_repository_options(@repository_options)}
                     value={RepositoryOption.full_name(repository)}
                     label={RepositoryOption.full_name(repository)}
                     description={repository.description}
@@ -193,33 +192,18 @@ defmodule HiveWeb.SettingsComponents do
                     phx-value-owner={repository.owner}
                     phx-value-name={repository.name}
                     phx-value-description={repository.description}
+                    data-label={repository_search_value(repository)}
+                    phx-value-visibility={repository.visibility}
                     data-selected={selected_repository?(@selected_repository, repository)}
                   >
-                    <:left_icon><.brand_github /></:left_icon>
                     <:right_icon :if={selected_repository?(@selected_repository, repository)}>
                       <.check />
                     </:right_icon>
                   </.dropdown_item>
                 </.dropdown>
 
-                <div :if={@selected_repository} data-part="selected-repository">
-                  <.badge
-                    label={RepositoryOption.full_name(@selected_repository)}
-                    color="neutral"
-                    style="light-fill"
-                  >
-                    <:icon><.brand_github /></:icon>
-                  </.badge>
-                  <.button
-                    label="Clear"
-                    size="small"
-                    variant="secondary"
-                    phx-click="clear_repository"
-                  />
-                </div>
-
-                <div :if={@repository_search_error} data-part="repository-message" data-tone="error">
-                  {@repository_search_error}
+                <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
+                  {@repository_load_error}
                 </div>
               </div>
 
@@ -453,6 +437,11 @@ defmodule HiveWeb.SettingsComponents do
           name="product[github_repository_name]"
           value={selected_repository_name(@selected_repository)}
         />
+        <input
+          type="hidden"
+          name="product[github_repository_visibility]"
+          value={selected_repository_visibility(@selected_repository)}
+        />
 
         <.text_input
           field={@form[:name]}
@@ -484,17 +473,13 @@ defmodule HiveWeb.SettingsComponents do
             <:search>
               <input
                 id="repository-search"
-                name="repository_query"
                 type="search"
-                value={@repository_query}
                 placeholder="Search repositories..."
                 data-part="search-input"
-                phx-keyup="search_repositories"
-                phx-debounce="300"
               />
             </:search>
             <.dropdown_item
-              :for={repository <- @repository_options}
+              :for={repository <- sorted_repository_options(@repository_options)}
               value={RepositoryOption.full_name(repository)}
               label={RepositoryOption.full_name(repository)}
               description={repository.description}
@@ -503,33 +488,18 @@ defmodule HiveWeb.SettingsComponents do
               phx-value-owner={repository.owner}
               phx-value-name={repository.name}
               phx-value-description={repository.description}
+              data-label={repository_search_value(repository)}
+              phx-value-visibility={repository.visibility}
               data-selected={selected_repository?(@selected_repository, repository)}
             >
-              <:left_icon><.brand_github /></:left_icon>
               <:right_icon :if={selected_repository?(@selected_repository, repository)}>
                 <.check />
               </:right_icon>
             </.dropdown_item>
           </.dropdown>
 
-          <div :if={@selected_repository} data-part="selected-repository">
-            <.badge
-              label={RepositoryOption.full_name(@selected_repository)}
-              color="neutral"
-              style="light-fill"
-            >
-              <:icon><.brand_github /></:icon>
-            </.badge>
-            <.button
-              label="Clear"
-              size="small"
-              variant="secondary"
-              phx-click="clear_repository"
-            />
-          </div>
-
-          <div :if={@repository_search_error} data-part="repository-message" data-tone="error">
-            {@repository_search_error}
+          <div :if={@repository_load_error} data-part="repository-message" data-tone="error">
+            {@repository_load_error}
           </div>
         </div>
       </.form>
@@ -601,6 +571,23 @@ defmodule HiveWeb.SettingsComponents do
   defp selected_repository_label(nil), do: "Choose a repository"
   defp selected_repository_label(repository), do: RepositoryOption.full_name(repository)
 
+  defp sorted_repository_options(repositories) do
+    Enum.sort_by(repositories, fn repository ->
+      repository
+      |> RepositoryOption.full_name()
+      |> String.downcase()
+    end)
+  end
+
+  defp repository_search_value(repository) do
+    [RepositoryOption.full_name(repository), repository.description]
+    |> Enum.filter(&present?/1)
+    |> Enum.join(" ")
+  end
+
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_value), do: false
+
   defp selected_repository?(nil, _repository), do: false
 
   defp selected_repository?(selected_repository, repository) do
@@ -612,4 +599,11 @@ defmodule HiveWeb.SettingsComponents do
 
   defp selected_repository_name(nil), do: nil
   defp selected_repository_name(repository), do: repository.name
+
+  defp selected_repository_visibility(nil), do: nil
+
+  defp selected_repository_visibility(%{visibility: visibility}) when not is_nil(visibility),
+    do: Atom.to_string(visibility)
+
+  defp selected_repository_visibility(_repository), do: nil
 end
