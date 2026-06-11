@@ -92,6 +92,24 @@ provide:
 - `HIVE_S3_PUBLIC_BASE_URL` (optional, used when public URLs should use a CDN or custom domain)
 - `HIVE_S3_FORCE_PATH_STYLE` (optional, `true` or `1`; useful for S3-compatible providers)
 
+### Inbound webhooks (Grafana alerts)
+
+Each product can have one or more inbound webhooks that external
+systems POST to. Operational signals (currently Grafana alerts) are
+ingested and surface under **Forage → Grafana alerts**, visible only to
+organization members.
+
+To create one, sign in as a member, open **Settings → Products → *your
+product***, and use **New webhook**. Hive generates a URL of the form
+`/webhooks/products/:product_id/:source/:token` and shows it once;
+copy it into the source. Hive stores only a SHA-256 hash of the token,
+so it can't be recovered later (delete and regenerate to rotate).
+
+Point a Grafana contact point of type **Webhook** at the URL using
+`POST` and `application/json`. Firing and resolved deliveries are
+threaded into one item per alert using Grafana's `fingerprint`, so
+status transitions update in place rather than creating duplicates.
+
 ### Vector database
 
 Hive can also point at an `opendata-vector` HTTP database for embedding search. Set

@@ -105,4 +105,34 @@ defmodule HiveWeb.SettingsLive.ProductTest do
 
     assert html =~ "tuist/tuist"
   end
+
+  test "creates a webhook from the modal form", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "alice@example.com")
+    {:ok, product} = Products.create_product(%{name: "Hive"})
+
+    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
+
+    html =
+      render_submit(view, "create_webhook", %{
+        "webhook" => %{"name" => "Grafana prod", "source" => "grafana"}
+      })
+
+    assert html =~ "Grafana prod"
+    assert html =~ "Webhook URL"
+    assert [_webhook] = Hive.Products.Webhooks.list_for_product(product)
+  end
+
+  test "deletes a webhook", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "alice@example.com")
+    {:ok, product} = Products.create_product(%{name: "Hive"})
+
+    {:ok, {webhook, _}} =
+      Hive.Products.Webhooks.create(product, %{"name" => "G", "source" => "grafana"})
+
+    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
+
+    render_click(view, "delete_webhook", %{"id" => webhook.id})
+
+    assert Hive.Products.Webhooks.list_for_product(product) == []
+  end
 end

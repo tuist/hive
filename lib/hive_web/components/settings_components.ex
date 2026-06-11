@@ -8,6 +8,7 @@ defmodule HiveWeb.SettingsComponents do
   alias Hive.GitHub.Repositories, as: RepositoryOption
   alias Hive.Products.GitHubRepository
   alias Hive.Products.Product
+  alias Hive.Products.Webhook
 
   attr :products, :list, required: true
   attr :form, :any, required: true
@@ -109,6 +110,11 @@ defmodule HiveWeb.SettingsComponents do
   attr :repository_options, :list, required: true
   attr :repository_search_error, :string, default: nil
   attr :selected_repository, :any, default: nil
+  attr :webhooks, :list, default: []
+  attr :webhook_form, :any, default: nil
+  attr :webhook_sources, :list, default: []
+  attr :selected_source, :atom, default: :grafana
+  attr :created_webhook_url, :string, default: nil
 
   def product_detail(assigns) do
     ~H"""
@@ -223,10 +229,199 @@ defmodule HiveWeb.SettingsComponents do
             </.form>
           </.card_section>
         </.card>
+
+        <.webhooks_card
+          product={@product}
+          webhooks={@webhooks}
+          webhook_form={@webhook_form}
+          webhook_sources={@webhook_sources}
+          selected_source={@selected_source}
+          created_webhook_url={@created_webhook_url}
+        />
       </div>
     </section>
     """
   end
+
+  attr :product, :map, required: true
+  attr :webhooks, :list, required: true
+  attr :webhook_form, :any, required: true
+  attr :webhook_sources, :list, required: true
+  attr :selected_source, :atom, required: true
+  attr :created_webhook_url, :string, default: nil
+
+  defp webhooks_card(assigns) do
+    ~H"""
+    <.card icon="bell" title="Webhooks" data-part="webhooks-card">
+      <:actions>
+        <.new_webhook_modal
+          webhook_form={@webhook_form}
+          webhook_sources={@webhook_sources}
+          selected_source={@selected_source}
+        />
+      </:actions>
+      <.card_section data-part="webhooks-section">
+        <p data-part="card-description">
+          Generate a URL that an external source can POST alerts to. The URL
+          carries a per-webhook token. Hive only keeps a hash, so the URL is
+          revealed once at creation. To rotate, delete a webhook and create
+          a new one.
+        </p>
+
+        <.alert
+          :if={@created_webhook_url}
+          status="success"
+          size="large"
+          title="Webhook URL"
+          data-part="created-webhook"
+        >
+          <p>Copy this now. It is shown only once.</p>
+          <code data-part="created-webhook-url">{@created_webhook_url}</code>
+          <:action>
+            <.button
+              label="Dismiss"
+              size="small"
+              variant="secondary"
+              phx-click="dismiss_created_webhook"
+            />
+          </:action>
+        </.alert>
+
+        <div :if={@webhooks == []} data-part="webhooks-empty">
+          <p>
+            No webhooks yet. Use <strong>New webhook</strong> to generate one.
+          </p>
+        </div>
+
+        <ul :if={@webhooks != []} data-part="webhook-list">
+          <li :for={webhook <- @webhooks} data-part="webhook-row">
+            <div data-part="webhook-copy">
+              <h3 data-part="webhook-name">{webhook.name}</h3>
+              <span data-part="webhook-meta">
+                Created {format_short_datetime(webhook.inserted_at)} ·
+                {last_used_label(webhook.last_used_at)}
+              </span>
+            </div>
+            <div data-part="webhook-meta-actions">
+              <.badge
+                label={Webhook.source_label(webhook.source)}
+                color="information"
+                style="light-fill"
+                size="large"
+              >
+                <:icon><.bell /></:icon>
+              </.badge>
+              <.button
+                label="Delete webhook"
+                size="large"
+                variant="secondary"
+                icon_only={true}
+                phx-click="delete_webhook"
+                phx-value-id={webhook.id}
+                data-confirm="Delete this webhook? The URL will stop working immediately."
+              >
+                <.trash />
+              </.button>
+            </div>
+          </li>
+        </ul>
+      </.card_section>
+    </.card>
+    """
+  end
+
+  attr :webhook_form, :any, required: true
+  attr :webhook_sources, :list, required: true
+  attr :selected_source, :atom, required: true
+
+  defp new_webhook_modal(assigns) do
+    ~H"""
+    <.modal
+      id="new-webhook-modal"
+      title="New webhook"
+      description="Generate a URL an external source can POST alerts to."
+      header_type="icon"
+      header_size="large"
+      on_dismiss="close_new_webhook"
+      on_open_change="new_webhook_modal_open_change"
+    >
+      <:trigger :let={attrs}>
+        <.button label="New webhook" size="medium" variant="primary" {attrs}>
+          <:icon_left><.circle_plus /></:icon_left>
+        </.button>
+      </:trigger>
+      <:header_icon>
+        <.bell />
+      </:header_icon>
+      <.form
+        id="new-webhook-form"
+        for={@webhook_form}
+        phx-submit="create_webhook"
+        data-part="form"
+      >
+        <input type="hidden" name="webhook[source]" value={Atom.to_string(@selected_source)} />
+
+        <.text_input
+          field={@webhook_form[:name]}
+          label="Name"
+          placeholder="Grafana production"
+          required={true}
+          show_required={true}
+        />
+
+        <div data-part="source-selector">
+          <label data-part="field-label" for="webhook-source-dropdown">Source</label>
+          <.dropdown
+            id="webhook-source-dropdown"
+            label={Webhook.source_label(@selected_source)}
+            data-part="source-dropdown"
+          >
+            <:icon><.bell /></:icon>
+            <.dropdown_item
+              :for={source <- @webhook_sources}
+              value={Atom.to_string(source)}
+              label={Webhook.source_label(source)}
+              size="large"
+              phx-click="select_webhook_source"
+              phx-value-source={Atom.to_string(source)}
+              data-selected={@selected_source == source}
+            >
+              <:left_icon><.bell /></:left_icon>
+              <:right_icon :if={@selected_source == source}><.check /></:right_icon>
+            </.dropdown_item>
+          </.dropdown>
+        </div>
+      </.form>
+      <:footer>
+        <.modal_footer>
+          <:action>
+            <.button
+              label="Cancel"
+              variant="secondary"
+              size="medium"
+              type="button"
+              phx-click="close_new_webhook"
+            />
+          </:action>
+          <:action>
+            <.button
+              label="Generate webhook"
+              size="medium"
+              variant="primary"
+              type="submit"
+              form="new-webhook-form"
+            />
+          </:action>
+        </.modal_footer>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  defp last_used_label(nil), do: "never used"
+  defp last_used_label(%DateTime{} = at), do: "last used #{format_short_datetime(at)}"
+
+  defp format_short_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%Y-%m-%d %H:%M UTC")
 
   defp new_product_modal(assigns) do
     ~H"""

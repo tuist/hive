@@ -8,6 +8,8 @@ defmodule HiveWeb.ForageComponents do
 
   use HiveWeb, :html
 
+  alias Hive.Forage.GrafanaAlert
+
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
   attr :signed_in?, :boolean, required: true
@@ -119,6 +121,84 @@ defmodule HiveWeb.ForageComponents do
       </.card>
     </section>
     """
+  end
+
+  attr :source, :map, required: true
+  attr :alerts, :list, required: true
+
+  def grafana_alerts(assigns) do
+    assigns = assign(assigns, :stats, grafana_stats(assigns.alerts))
+
+    ~H"""
+    <section id="forage">
+      <.forage_header source={@source} signed_in?={true} />
+
+      <div data-part="widgets">
+        <.forage_widget title="Active" value={@stats.firing} legend="primary" />
+        <.forage_widget title="Resolved" value={@stats.resolved} legend="secondary" />
+        <.forage_widget title="Products" value={@stats.products} legend="tertiary" />
+      </div>
+
+      <.card icon={@source.icon} title={@source.label}>
+        <.card_section>
+          <div :if={@alerts == []} data-part="empty-state">
+            <div data-part="empty-icon"><.bell /></div>
+            <h2>No Grafana alerts yet</h2>
+            <p>
+              Generate a webhook on a product in settings and point a Grafana
+              contact point at it. Firing and resolved deliveries will thread
+              into one item per alert.
+            </p>
+          </div>
+
+          <div :if={@alerts != []} data-part="request-list">
+            <article :for={alert <- @alerts} data-part="request-row">
+              <div data-part="request-copy">
+                <h2>{alert.title}</h2>
+                <p :if={alert.summary}>{alert.summary}</p>
+                <span data-part="requester">{grafana_meta(alert)}</span>
+              </div>
+              <div data-part="request-meta">
+                <.badge
+                  label={GrafanaAlert.status_label(alert.status)}
+                  color={GrafanaAlert.status_color(alert.status)}
+                  style="light-fill"
+                  size="large"
+                  dot={true}
+                />
+                <.badge
+                  :if={alert.product}
+                  label={alert.product.name}
+                  color="neutral"
+                  style="light-fill"
+                  size="large"
+                />
+                <.button
+                  :if={alert.generator_url}
+                  label="Open in Grafana"
+                  href={alert.generator_url}
+                  size="small"
+                  variant="secondary"
+                />
+              </div>
+            </article>
+          </div>
+        </.card_section>
+      </.card>
+    </section>
+    """
+  end
+
+  defp grafana_stats(alerts) do
+    %{
+      firing: Enum.count(alerts, &(&1.status == :firing)),
+      resolved: Enum.count(alerts, &(&1.status == :resolved)),
+      products: alerts |> Enum.map(& &1.product_id) |> Enum.uniq() |> length()
+    }
+  end
+
+  defp grafana_meta(alert) do
+    "Last received #{Calendar.strftime(alert.last_received_at, "%Y-%m-%d %H:%M UTC")}"
   end
 
   attr :source, :map, required: true

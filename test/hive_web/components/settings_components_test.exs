@@ -141,6 +141,10 @@ defmodule HiveWeb.SettingsComponentsTest do
           repository_options={@repository_options}
           repository_search_error={@repository_search_error}
           selected_repository={@selected_repository}
+          webhooks={[]}
+          webhook_form={to_form(%{"name" => "", "source" => "grafana"}, as: :webhook)}
+          webhook_sources={[:grafana]}
+          selected_source={:grafana}
         />
         """)
 
