@@ -61,7 +61,8 @@ defmodule HiveWeb.SettingsLive.Products do
     repository = %Repositories{
       owner: owner,
       name: name,
-      description: Map.get(params, "description")
+      description: Map.get(params, "description"),
+      visibility: parse_visibility(Map.get(params, "visibility"))
     }
 
     {:noreply, assign(socket, :selected_repository, repository)}
@@ -104,6 +105,11 @@ defmodule HiveWeb.SettingsLive.Products do
     |> assign(:repository_load_error, repository_load_error)
     |> assign(:repository_options_loaded?, true)
   end
+
+  defp parse_visibility("public"), do: :public
+  defp parse_visibility("private"), do: :private
+  defp parse_visibility(value) when is_atom(value), do: value
+  defp parse_visibility(_value), do: :public
 
   defp repository_load_error({:not_configured, _missing}) do
     "GitHub App is not configured."

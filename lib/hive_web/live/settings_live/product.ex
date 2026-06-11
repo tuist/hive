@@ -46,7 +46,8 @@ defmodule HiveWeb.SettingsLive.Product do
     repository = %Repositories{
       owner: owner,
       name: name,
-      description: Map.get(params, "description")
+      description: Map.get(params, "description"),
+      visibility: parse_visibility(Map.get(params, "visibility"))
     }
 
     {:noreply, assign(socket, :selected_repository, repository)}
@@ -91,9 +92,18 @@ defmodule HiveWeb.SettingsLive.Product do
         nil
 
       repository ->
-        %Repositories{owner: repository.owner, name: repository.name}
+        %Repositories{
+          owner: repository.owner,
+          name: repository.name,
+          visibility: repository.visibility
+        }
     end
   end
+
+  defp parse_visibility("public"), do: :public
+  defp parse_visibility("private"), do: :private
+  defp parse_visibility(value) when is_atom(value), do: value
+  defp parse_visibility(_value), do: :public
 
   defp ensure_repositories_loaded(%{assigns: %{repository_options_loaded?: true}} = socket),
     do: socket
