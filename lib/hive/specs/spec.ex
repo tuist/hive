@@ -7,7 +7,7 @@ defmodule Hive.Specs.Spec do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  @statuses [:draft, :proposed, :accepted, :in_progress, :shipped, :archived]
+  @statuses [:draft, :proposed, :approved, :paused, :rejected, :in_progress, :shipped, :archived]
   @visibilities [:public, :private]
 
   schema "specs" do

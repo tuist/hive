@@ -114,15 +114,15 @@ defmodule Hive.SpecsTest do
       user = user()
       {:ok, draft} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
 
-      {:ok, accepted} =
+      {:ok, approved} =
         Specs.create_spec(
-          %{"title" => "Accepted", "body" => "Accepted proposal.", "status" => "accepted"},
+          %{"title" => "Approved", "body" => "Approved proposal.", "status" => "approved"},
           user
         )
 
       assert Enum.map(Specs.list_specs(status: :draft), & &1.id) == [draft.id]
-      assert Enum.map(Specs.list_specs(status: :accepted), & &1.id) == [accepted.id]
-      assert Enum.map(Specs.list_specs(status: {:not, :draft}), & &1.id) == [accepted.id]
+      assert Enum.map(Specs.list_specs(status: :approved), & &1.id) == [approved.id]
+      assert Enum.map(Specs.list_specs(status: {:not, :draft}), & &1.id) == [approved.id]
     end
 
     test "hides private specs from non-members" do

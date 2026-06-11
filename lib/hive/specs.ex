@@ -43,17 +43,17 @@ defmodule Hive.Specs do
 
   defp maybe_filter_by_status(query, nil), do: query
 
-  defp maybe_filter_by_status(query, {:not, status})
-       when status in [:draft, :proposed, :accepted, :in_progress, :shipped, :archived] do
-    where(query, [spec], spec.status != ^status)
+  defp maybe_filter_by_status(query, {:not, status}) do
+    if status in Spec.statuses(),
+      do: where(query, [spec], spec.status != ^status),
+      else: query
   end
 
-  defp maybe_filter_by_status(query, status)
-       when status in [:draft, :proposed, :accepted, :in_progress, :shipped, :archived] do
-    where(query, [spec], spec.status == ^status)
+  defp maybe_filter_by_status(query, status) do
+    if status in Spec.statuses(),
+      do: where(query, [spec], spec.status == ^status),
+      else: query
   end
-
-  defp maybe_filter_by_status(query, _status), do: query
 
   defp maybe_filter_by_visibility(query, user) do
     if Auth.member?(user) do

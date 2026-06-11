@@ -61,6 +61,40 @@ defmodule HiveWeb.SpecLive.Show do
   end
 
   @impl true
+  def handle_event("set_status", %{"status" => status}, socket) do
+    spec = socket.assigns.spec
+
+    cond do
+      not socket.assigns.can_edit? ->
+        {:noreply, put_flash(socket, :error, "Only organization members can change spec status.")}
+
+      to_string(spec.status) == status ->
+        {:noreply, socket}
+
+      true ->
+        attrs = %{"status" => status, "lock_version" => spec.lock_version}
+
+        case Specs.update_spec(spec, attrs, socket.assigns.current_user) do
+          {:ok, updated} ->
+            spec = Specs.get_spec!(updated.id)
+
+            {:noreply,
+             socket
+             |> put_flash(:info, "Spec marked as #{status_label(spec.status)}.")
+             |> assign(:spec, spec)
+             |> assign(OpenGraph.assigns(open_graph(spec)))}
+
+          {:error, :unauthorized} ->
+            {:noreply,
+             put_flash(socket, :error, "Only organization members can change spec status.")}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Couldn't update the spec status.")}
+        end
+    end
+  end
+
+  @impl true
   def handle_event("comment", %{"comment" => params}, socket) do
     case Specs.add_comment(socket.assigns.spec, params, socket.assigns.current_user) do
       {:ok, _comment} ->

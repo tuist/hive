@@ -41,31 +41,37 @@ defmodule HiveWeb.SpecLive.IndexTest do
     assert html =~ "New spec"
   end
 
-  test "defaults to draft specs and filters through query params", %{conn: conn} do
+  test "shows all specs by default and filters through query params", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
 
     {:ok, _draft} =
       Specs.create_spec(%{"title" => "Draft proposal", "body" => "Initial proposal."}, user)
 
-    {:ok, _accepted} =
+    {:ok, _approved} =
       Specs.create_spec(
-        %{"title" => "Accepted proposal", "body" => "Accepted proposal.", "status" => "accepted"},
+        %{"title" => "Approved proposal", "body" => "Approved proposal.", "status" => "approved"},
         user
       )
 
     {:ok, _view, html} = live(conn, ~p"/specs")
 
     assert html =~ "Draft proposal"
-    refute html =~ "Accepted proposal"
+    assert html =~ "Approved proposal"
     assert html =~ "Status"
+
+    {:ok, _view, html} =
+      live(conn, ~p"/specs?filter_status_op===&filter_status_val=draft")
+
+    assert html =~ "Draft proposal"
+    refute html =~ "Approved proposal"
     assert html =~ "Draft"
 
     {:ok, _view, html} =
-      live(conn, ~p"/specs?filter_status_op===&filter_status_val=accepted")
+      live(conn, ~p"/specs?filter_status_op===&filter_status_val=approved")
 
-    assert html =~ "Accepted proposal"
+    assert html =~ "Approved proposal"
     refute html =~ "Draft proposal"
-    assert html =~ "Accepted"
+    assert html =~ "Approved"
   end
 
   test "hides private specs from contributors", %{conn: conn} do

@@ -41,9 +41,9 @@ defmodule HiveWeb.OpenGraphControllerTest do
     {:ok, _draft} =
       Specs.create_spec(%{"title" => "Draft proposal", "body" => "Initial proposal."}, user)
 
-    {:ok, _accepted} =
+    {:ok, _approved} =
       Specs.create_spec(
-        %{"title" => "Accepted proposal", "body" => "Accepted proposal.", "status" => "accepted"},
+        %{"title" => "Approved proposal", "body" => "Approved proposal.", "status" => "approved"},
         user
       )
 

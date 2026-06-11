@@ -169,7 +169,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     result =
       view
       |> form("form[data-part='form']",
-        spec: %{title: "GitHub OAuth", body: "Updated proposal.", status: "accepted"}
+        spec: %{title: "GitHub OAuth", body: "Updated proposal.", status: "approved"}
       )
       |> render_submit()
 
@@ -178,6 +178,47 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Updated proposal."
     assert html =~ "Revision 2"
     assert html =~ "Revision 1"
+  end
+
+  test "lets members flip the spec status from the show header", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Memory subsystem", "body" => "Initial proposal."}, user)
+
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    html = render_click(view, "set_status", %{"status" => "approved"})
+
+    assert html =~ "Approved"
+
+    refreshed = Specs.get_spec!(spec.id)
+    assert refreshed.status == :approved
+    assert Enum.any?(refreshed.revisions, &(&1.status == :approved))
+  end
+
+  test "rejects status changes from non-members", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Memory subsystem", "body" => "Initial proposal.", "visibility" => "public"},
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    {:ok, view, _html} = live(contributor_conn, ~p"/specs/#{spec.number}")
+
+    render_click(view, "set_status", %{"status" => "approved"})
+
+    refreshed = Specs.get_spec!(spec.id)
+    assert refreshed.status == :draft
+    refute Enum.any?(refreshed.revisions, &(&1.status == :approved))
   end
 
   test "expands revision rows to show a change summary", %{conn: conn} do

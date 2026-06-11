@@ -3,70 +3,42 @@ defmodule HiveWeb.Markdown do
 
   import Phoenix.HTML
 
+  @options [
+    extension: [
+      strikethrough: true,
+      tagfilter: true,
+      table: true,
+      autolink: true,
+      tasklist: true,
+      footnotes: true,
+      shortcodes: true,
+      alerts: true
+    ],
+    parse: [smart: true, relaxed_autolinks: true],
+    render: [unsafe: false, hardbreaks: false],
+    syntax_highlight: [
+      formatter:
+        {:html_inline,
+         theme: "github_light",
+         pre_class: "hive-codeblock",
+         italic: true,
+         include_highlights: true}
+    ],
+    sanitize: MDEx.Document.default_sanitize_options()
+  ]
+
   def render(markdown) when is_binary(markdown) do
     markdown
-    |> String.trim()
-    |> String.split(~r/\n{2,}/, trim: true)
-    |> Enum.map_join(&block_to_html/1)
+    |> MDEx.parse_document!(@options)
+    |> MDEx.traverse_and_update(&downshift_heading/1)
+    |> MDEx.to_html!(@options)
     |> raw()
   end
 
   def render(_markdown), do: raw("")
 
-  defp block_to_html("# " <> heading), do: "<h2>#{inline(heading)}</h2>"
-  defp block_to_html("## " <> heading), do: "<h3>#{inline(heading)}</h3>"
-  defp block_to_html("### " <> heading), do: "<h4>#{inline(heading)}</h4>"
+  defp downshift_heading(%MDEx.Heading{level: level} = node),
+    do: %{node | level: min(level + 1, 6)}
 
-  defp block_to_html(block) do
-    block
-    |> String.split("\n", trim: true)
-    |> Enum.chunk_by(&list_item?/1)
-    |> Enum.map_join(&lines_to_html/1)
-  end
-
-  defp lines_to_html([line | _lines] = lines) do
-    if list_item?(line) do
-      "<ul>#{Enum.map_join(lines, &list_item_to_html/1)}</ul>"
-    else
-      "<p>#{inline(Enum.join(lines, "\n"))}</p>"
-    end
-  end
-
-  defp list_item?(line), do: String.starts_with?(String.trim_leading(line), "- ")
-
-  defp list_item_to_html(line) do
-    item = line |> String.trim_leading() |> String.trim_leading("- ")
-    "<li>#{inline(item)}</li>"
-  end
-
-  defp inline(text) do
-    text
-    |> escape()
-    |> String.replace(~r/`([^`]+)`/, "<code>\\1</code>")
-    |> String.replace(~r/\*\*([^*]+)\*\*/, "<strong>\\1</strong>")
-    |> String.replace(~r/\*([^*]+)\*/, "<em>\\1</em>")
-    |> link()
-    |> String.replace("\n", "<br />")
-  end
-
-  defp link(text) do
-    Regex.replace(~r/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/, text, fn match, label, url ->
-      if safe_link_url?(url) do
-        ~s(<a href="#{url}" rel="noopener noreferrer" target="_blank">#{label}</a>)
-      else
-        match
-      end
-    end)
-  end
-
-  defp safe_link_url?(url) do
-    not String.contains?(url, ["\"", "'", "&quot;", "&#39;", "&#x27;"]) and
-      not String.match?(url, ~r/[\x00-\x1F\x7F]/)
-  end
-
-  defp escape(text) do
-    text
-    |> html_escape()
-    |> safe_to_string()
-  end
+  defp downshift_heading(node), do: node
 end

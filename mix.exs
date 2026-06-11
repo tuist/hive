@@ -47,6 +47,8 @@ defmodule Hive.MixProject do
       {:gettext, "~> 1.0", override: true},
       {:jason, "~> 1.2"},
       {:let_me, "~> 3.0"},
+      {:mdex, "~> 0.13"},
+      {:lumis, "~> 0.1"},
       {:noora, "~> 0.81"},
       {:req, "~> 0.5"},
       {:ex_aws_auth, "~> 1.3"},

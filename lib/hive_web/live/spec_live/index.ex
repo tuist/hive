@@ -41,7 +41,6 @@ defmodule HiveWeb.SpecLive.Index do
   @impl true
   def handle_params(params, uri, socket) do
     uri = URI.parse(uri)
-    params = default_filter_params(params)
 
     active_filters =
       Operations.decode_filters_from_query(params, socket.assigns.available_filters)
@@ -85,15 +84,6 @@ defmodule HiveWeb.SpecLive.Index do
         value: :draft
       }
     ]
-  end
-
-  defp default_filter_params(
-         %{"filter_status_op" => _operator, "filter_status_val" => _value} = params
-       ),
-       do: params
-
-  defp default_filter_params(params) do
-    Map.merge(params, %{"filter_status_op" => "==", "filter_status_val" => "draft"})
   end
 
   defp status_filter(active_filters) do
