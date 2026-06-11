@@ -28,10 +28,19 @@ defmodule Hive.MCP.Tool do
   end
 
   def changeset_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
+    Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
   end
+
+  defp translate_error({message, opts}) do
+    Enum.reduce(opts, message, &interpolate_option/2)
+  end
+
+  defp interpolate_option({key, value}, message) do
+    String.replace(message, "%{#{key}}", fn _ -> stringify_option(value) end)
+  end
+
+  defp stringify_option(value) when is_binary(value), do: value
+  defp stringify_option(value) when is_atom(value), do: Atom.to_string(value)
+  defp stringify_option(value) when is_number(value), do: to_string(value)
+  defp stringify_option(value), do: inspect(value)
 end

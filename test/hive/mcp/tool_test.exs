@@ -14,4 +14,14 @@ defmodule Hive.MCP.ToolTest do
              title: ["should be at most 5 character(s)"]
            }
   end
+
+  test "formats Ecto.Enum cast errors without crashing on parameterized type opts" do
+    types = %{
+      status: Ecto.ParameterizedType.init(Ecto.Enum, values: [:draft, :proposed, :approved])
+    }
+
+    changeset = Changeset.cast({%{}, types}, %{status: "bogus"}, [:status])
+
+    assert Tool.changeset_errors(changeset) == %{status: ["is invalid"]}
+  end
 end
