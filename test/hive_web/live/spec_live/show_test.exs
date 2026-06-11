@@ -197,6 +197,30 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert Enum.any?(refreshed.revisions, &(&1.status == :approved))
   end
 
+  test "rejects status changes from non-members", %{conn: conn} do
+    {_member_conn, member} = sign_in(conn, "member@tuist.dev")
+    {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Memory subsystem", "body" => "Initial proposal.", "visibility" => "public"},
+        member
+      )
+
+    stub(Auth, :member?, fn
+      %{email: "member@tuist.dev"} -> true
+      _user -> false
+    end)
+
+    {:ok, view, _html} = live(contributor_conn, ~p"/specs/#{spec.number}")
+
+    render_click(view, "set_status", %{"status" => "approved"})
+
+    refreshed = Specs.get_spec!(spec.id)
+    assert refreshed.status == :draft
+    refute Enum.any?(refreshed.revisions, &(&1.status == :approved))
+  end
+
   test "expands revision rows to show a change summary", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
 
