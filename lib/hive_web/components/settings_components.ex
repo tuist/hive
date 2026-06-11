@@ -172,7 +172,7 @@ defmodule HiveWeb.SettingsComponents do
                     />
                   </:search>
                   <.dropdown_item
-                    :for={repository <- @repository_options}
+                    :for={repository <- sorted_repository_options(@repository_options)}
                     value={RepositoryOption.full_name(repository)}
                     label={RepositoryOption.full_name(repository)}
                     description={repository.description}
@@ -181,9 +181,9 @@ defmodule HiveWeb.SettingsComponents do
                     phx-value-owner={repository.owner}
                     phx-value-name={repository.name}
                     phx-value-description={repository.description}
+                    data-label={repository_search_value(repository)}
                     data-selected={selected_repository?(@selected_repository, repository)}
                   >
-                    <:left_icon><.brand_github /></:left_icon>
                     <:right_icon :if={selected_repository?(@selected_repository, repository)}>
                       <.check />
                     </:right_icon>
@@ -289,7 +289,7 @@ defmodule HiveWeb.SettingsComponents do
               />
             </:search>
             <.dropdown_item
-              :for={repository <- @repository_options}
+              :for={repository <- sorted_repository_options(@repository_options)}
               value={RepositoryOption.full_name(repository)}
               label={RepositoryOption.full_name(repository)}
               description={repository.description}
@@ -298,9 +298,9 @@ defmodule HiveWeb.SettingsComponents do
               phx-value-owner={repository.owner}
               phx-value-name={repository.name}
               phx-value-description={repository.description}
+              data-label={repository_search_value(repository)}
               data-selected={selected_repository?(@selected_repository, repository)}
             >
-              <:left_icon><.brand_github /></:left_icon>
               <:right_icon :if={selected_repository?(@selected_repository, repository)}>
                 <.check />
               </:right_icon>
@@ -395,6 +395,23 @@ defmodule HiveWeb.SettingsComponents do
 
   defp selected_repository_label(nil), do: "Choose a repository"
   defp selected_repository_label(repository), do: RepositoryOption.full_name(repository)
+
+  defp sorted_repository_options(repositories) do
+    Enum.sort_by(repositories, fn repository ->
+      repository
+      |> RepositoryOption.full_name()
+      |> String.downcase()
+    end)
+  end
+
+  defp repository_search_value(repository) do
+    [RepositoryOption.full_name(repository), repository.description]
+    |> Enum.filter(&present?/1)
+    |> Enum.join(" ")
+  end
+
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_value), do: false
 
   defp selected_repository?(nil, _repository), do: false
 

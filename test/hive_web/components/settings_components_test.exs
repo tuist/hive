@@ -49,13 +49,11 @@ defmodule HiveWeb.SettingsComponentsTest do
       assigns =
         assigns(%{
           repository_options: [
-            %Repositories{owner: "tuist", name: "hive", description: "Product orchestration"}
+            %Repositories{owner: "tuist", name: "sdk", description: "Tuist SDK for Apple apps"},
+            %Repositories{owner: "tuist", name: "Grafana", description: "Monitoring dashboards"},
+            %Repositories{owner: "tuist", name: "AXe", description: "Simulator accessibility"}
           ],
-          selected_repository: %Repositories{
-            owner: "tuist",
-            name: "hive",
-            description: "Product orchestration"
-          }
+          selected_repository: nil
         })
 
       html =
@@ -73,12 +71,17 @@ defmodule HiveWeb.SettingsComponentsTest do
       assert html =~ "New product"
       assert html =~ "Visibility"
       assert html =~ "GitHub repository"
-      assert html =~ "tuist/hive"
+      assert html =~ "tuist/AXe"
+      assert html =~ "tuist/Grafana"
+      assert html =~ "tuist/sdk"
+      assert repository_position(html, "tuist/AXe") < repository_position(html, "tuist/Grafana")
+      assert repository_position(html, "tuist/Grafana") < repository_position(html, "tuist/sdk")
+      assert html =~ ~s(data-label="tuist/Grafana Monitoring dashboards")
       assert html =~ ~s(class="noora-dropdown")
       assert html =~ ~s(id="new-product-visibility")
       assert html =~ ~s(name="product[visibility]")
-      assert html =~ ~s(name="product[github_repository_owner]" value="tuist")
-      assert html =~ ~s(name="product[github_repository_name]" value="hive")
+      assert html =~ ~s(name="product[github_repository_owner]")
+      assert html =~ ~s(name="product[github_repository_name]")
       assert html =~ ~s(phx-submit="save")
     end
 
@@ -147,5 +150,10 @@ defmodule HiveWeb.SettingsComponentsTest do
       refute html =~ "Linked specs"
       refute html =~ "Back"
     end
+  end
+
+  defp repository_position(html, repository) do
+    {position, _length} = :binary.match(html, repository)
+    position
   end
 end
