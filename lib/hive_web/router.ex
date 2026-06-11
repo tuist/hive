@@ -33,6 +33,7 @@ defmodule HiveWeb.Router do
     pipe_through :json_api
 
     post "/github", GitHubWebhookController, :create
+    post "/products/:product_id/:source/:token", ProductWebhookController, :create
   end
 
   scope "/", HiveWeb do
@@ -91,7 +92,7 @@ defmodule HiveWeb.Router do
       live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
       live "/forage/feedback", ForageLive.Placeholder, :feedback
       live "/forage/github-issues", ForageLive.GitHubIssues
-      live "/forage/grafana-alerts", ForageLive.Placeholder, :grafana_alerts
+      live "/forage/grafana-alerts", ForageLive.GrafanaAlerts
       live "/specs", SpecLive.Index
       live "/specs/new", SpecLive.New
       live "/specs/:number", SpecLive.Show

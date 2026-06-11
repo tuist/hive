@@ -4,9 +4,12 @@ alias Hive.Accounts
 alias Hive.Accounts.UserIdentity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
+alias Hive.Forage.Grafana
 alias Hive.Products
 alias Hive.Products.GitHubRepository
 alias Hive.Products.Product
+alias Hive.Products.Webhook
+alias Hive.Products.Webhooks
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
@@ -384,4 +387,146 @@ Enum.each(specs, fn seed ->
       {:ok, _comment} = Specs.add_comment(spec, comment_attrs, comment_user)
     end
   end)
+end)
+
+product_webhooks = [
+  %{product_name: "Hive", name: "Seed Grafana", source: :grafana},
+  %{product_name: "Tuist", name: "Seed Grafana", source: :grafana}
+]
+
+Enum.each(product_webhooks, fn seed ->
+  product = Repo.get_by!(Product, name: seed.product_name)
+
+  exists? =
+    Webhook
+    |> where(
+      [webhook],
+      webhook.product_id == ^product.id and webhook.name == ^seed.name and
+        webhook.source == ^seed.source
+    )
+    |> Repo.exists?()
+
+  unless exists? do
+    {:ok, {_webhook, token}} =
+      Webhooks.create(product, %{
+        "name" => seed.name,
+        "source" => Atom.to_string(seed.source)
+      })
+
+    IO.puts(
+      "Seeded webhook for #{seed.product_name} (#{seed.source}). Token (shown once): #{token}"
+    )
+  end
+end)
+
+grafana_alert_seeds = [
+  %{
+    product_name: "Hive",
+    payload: %{
+      "status" => "firing",
+      "alerts" => [
+        %{
+          "status" => "firing",
+          "fingerprint" => "seed-hive-latency",
+          "labels" => %{
+            "alertname" => "HighRequestLatency",
+            "service" => "hive-web",
+            "severity" => "critical"
+          },
+          "annotations" => %{
+            "summary" => "Request latency over budget",
+            "description" => "p95 latency on hive-web is 820ms, above the 500ms budget."
+          },
+          "startsAt" => "2026-06-10T17:32:00Z",
+          "endsAt" => "0001-01-01T00:00:00Z",
+          "generatorURL" => "https://grafana.example/alert/hive-latency"
+        }
+      ]
+    }
+  },
+  %{
+    product_name: "Hive",
+    payload: %{
+      "status" => "firing",
+      "alerts" => [
+        %{
+          "status" => "firing",
+          "fingerprint" => "seed-hive-errors",
+          "labels" => %{
+            "alertname" => "ErrorRateSpike",
+            "service" => "hive-web",
+            "severity" => "warning"
+          },
+          "annotations" => %{
+            "summary" => "Error rate spike on hive-web",
+            "description" => "5xx rate climbed to 2.1% over the last 5 minutes."
+          },
+          "startsAt" => "2026-06-10T17:45:00Z",
+          "generatorURL" => "https://grafana.example/alert/hive-errors"
+        }
+      ]
+    }
+  },
+  %{
+    product_name: "Tuist",
+    payload: %{
+      "status" => "resolved",
+      "alerts" => [
+        %{
+          "status" => "resolved",
+          "fingerprint" => "seed-tuist-cache-hit",
+          "labels" => %{
+            "alertname" => "CacheHitRateLow",
+            "service" => "tuist-cache",
+            "severity" => "warning"
+          },
+          "annotations" => %{
+            "summary" => "Cache hit rate recovered",
+            "description" =>
+              "Tuist cache hit rate is back above 80% after dipping to 62% for ~12 minutes."
+          },
+          "startsAt" => "2026-06-10T16:10:00Z",
+          "endsAt" => "2026-06-10T16:22:00Z",
+          "generatorURL" => "https://grafana.example/alert/tuist-cache"
+        }
+      ]
+    }
+  },
+  %{
+    product_name: "Tuist",
+    payload: %{
+      "status" => "firing",
+      "alerts" => [
+        %{
+          "status" => "firing",
+          "fingerprint" => "seed-tuist-queue",
+          "labels" => %{
+            "alertname" => "BuildQueueBacklog",
+            "service" => "tuist-builds",
+            "severity" => "critical"
+          },
+          "annotations" => %{
+            "summary" => "Build queue backlog growing",
+            "description" =>
+              "Pending builds queue has grown to 142 jobs over the last 10 minutes."
+          },
+          "startsAt" => "2026-06-10T17:50:00Z",
+          "generatorURL" => "https://grafana.example/alert/tuist-queue"
+        }
+      ]
+    }
+  }
+]
+
+Enum.each(grafana_alert_seeds, fn seed ->
+  product = Repo.get_by!(Product, name: seed.product_name)
+
+  webhook =
+    Repo.one!(
+      from webhook in Webhook,
+        where: webhook.product_id == ^product.id and webhook.source == ^:grafana,
+        limit: 1
+    )
+
+  {:ok, _alerts} = Grafana.ingest(product, webhook, seed.payload)
 end)

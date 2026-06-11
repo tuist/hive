@@ -41,6 +41,108 @@
 
   & [data-part="product-detail-layout"] {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-7);
+  }
+
+  & [data-part="webhooks-card"] {
+    width: 100%;
+  }
+
+  & [data-part="card-description"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  }
+
+  & [data-part="created-webhook"] [data-part="created-webhook-url"] {
+    display: inline-block;
+    font-family: var(--noora-font-family-mono, monospace);
+    word-break: break-all;
+    color: var(--noora-surface-label-primary);
+  }
+
+  & [data-part="webhook-form"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-5);
+  }
+
+  & [data-part="webhooks-section"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-6);
+  }
+
+  & [data-part="webhooks-empty"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+  }
+
+  & [data-part="webhook-list"] {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  & [data-part="webhook-row"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--noora-spacing-6);
+    padding: var(--noora-spacing-5) 0;
+    border-bottom: 1px solid var(--noora-surface-border-primary);
+
+    &:first-child {
+      padding-top: 0;
+    }
+
+    &:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+  }
+
+  & [data-part="webhook-copy"] {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+    min-width: 0;
+  }
+
+  & [data-part="webhook-name"] {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-large);
+    margin: 0;
+  }
+
+  & [data-part="webhook-meta"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="webhook-meta-actions"] {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+  }
+
+  & [data-part="source-selector"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-3);
+  }
+
+  & [data-part="source-dropdown"] {
+    width: 100%;
+
+    & > [data-part="trigger"] {
+      width: 100%;
+    }
   }
 
   & [data-part="products-table"] .noora-table {

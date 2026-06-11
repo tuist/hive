@@ -9,6 +9,7 @@ defmodule Hive.Forage do
   alias Hive.Auth
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
+  alias Hive.Forage.Grafana
   alias Hive.Forage.Policy
   alias Hive.Products.GitHubRepository
   alias Hive.Products.Product
@@ -134,6 +135,8 @@ defmodule Hive.Forage do
     |> Ecto.Changeset.put_change(:user_id, user.id)
     |> Repo.insert()
   end
+
+  defdelegate list_grafana_alerts, to: Grafana, as: :list_alerts
 
   @doc """
   Returns `{product, repository, issue}` triples for every cached GitHub

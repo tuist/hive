@@ -6,6 +6,9 @@ defmodule HiveWeb.SettingsLive.Product do
   alias Hive.Auth
   alias Hive.GitHub.Repositories
   alias Hive.Products
+  alias Hive.Products.Webhook
+  alias Hive.Products.Webhooks
+  alias HiveWeb.Endpoint
   alias HiveWeb.Layouts
   alias HiveWeb.SettingsComponents
 
@@ -23,6 +26,11 @@ defmodule HiveWeb.SettingsLive.Product do
        |> assign(:repository_load_error, nil)
        |> assign(:repository_options_loaded?, false)
        |> assign(:selected_repository, selected_repository)
+       |> assign(:webhook_sources, Webhook.sources())
+       |> assign(:webhook_form, webhook_form())
+       |> assign(:selected_source, default_webhook_source())
+       |> assign(:created_webhook_url, nil)
+       |> assign(:webhooks, Webhooks.list_for_product(product))
        |> assign_form(Products.change_product(product))}
     else
       {:ok,
@@ -63,6 +71,70 @@ defmodule HiveWeb.SettingsLive.Product do
 
   def handle_event("repository_dropdown_open_change", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("create_webhook", %{"webhook" => params}, socket) do
+    case Webhooks.create(socket.assigns.product, params) do
+      {:ok, {webhook, token}} ->
+        url = webhook_ingest_url(socket.assigns.product.id, webhook.source, token)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Webhook created. Copy the URL. It is shown only once.")
+         |> assign(:webhooks, Webhooks.list_for_product(socket.assigns.product))
+         |> assign(:webhook_form, webhook_form())
+         |> assign(:selected_source, default_webhook_source())
+         |> assign(:created_webhook_url, url)
+         |> push_event("close-modal", %{id: "new-webhook-modal"})}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Couldn't create the webhook.")}
+    end
+  end
+
+  def handle_event("select_webhook_source", %{"source" => source}, socket) do
+    case parse_webhook_source(source) do
+      {:ok, source} -> {:noreply, assign(socket, :selected_source, source)}
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_new_webhook", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:webhook_form, webhook_form())
+     |> assign(:selected_source, default_webhook_source())
+     |> push_event("close-modal", %{id: "new-webhook-modal"})}
+  end
+
+  def handle_event("new_webhook_modal_open_change", %{"open" => false}, socket) do
+    {:noreply,
+     socket
+     |> assign(:webhook_form, webhook_form())
+     |> assign(:selected_source, default_webhook_source())}
+  end
+
+  def handle_event("new_webhook_modal_open_change", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("dismiss_created_webhook", _params, socket) do
+    {:noreply, assign(socket, :created_webhook_url, nil)}
+  end
+
+  def handle_event("delete_webhook", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.webhooks, &(&1.id == id)) do
+      nil ->
+        {:noreply, socket}
+
+      webhook ->
+        {:ok, _} = Webhooks.delete(webhook)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Webhook deleted.")
+         |> assign(:webhooks, Webhooks.list_for_product(socket.assigns.product))}
+    end
   end
 
   def handle_event("save", %{"product" => params}, socket) do
@@ -136,6 +208,23 @@ defmodule HiveWeb.SettingsLive.Product do
     assign(socket, :form, to_form(interpolate_errors(changeset), as: :product))
   end
 
+  defp webhook_form do
+    to_form(%{"name" => "", "source" => "grafana"}, as: :webhook)
+  end
+
+  defp default_webhook_source, do: List.first(Webhook.sources())
+
+  defp parse_webhook_source(value) do
+    case Enum.find(Webhook.sources(), &(Atom.to_string(&1) == value)) do
+      nil -> :error
+      source -> {:ok, source}
+    end
+  end
+
+  defp webhook_ingest_url(product_id, source, token) do
+    Endpoint.url() <> "/webhooks/products/#{product_id}/#{source}/#{token}"
+  end
+
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
     Map.update!(changeset, :errors, fn errors -> Enum.map(errors, &interpolate_error/1) end)
   end
@@ -170,6 +259,11 @@ defmodule HiveWeb.SettingsLive.Product do
         repository_options={@repository_options}
         repository_load_error={@repository_load_error}
         selected_repository={@selected_repository}
+        webhooks={@webhooks}
+        webhook_form={@webhook_form}
+        webhook_sources={@webhook_sources}
+        selected_source={@selected_source}
+        created_webhook_url={@created_webhook_url}
       />
     </Layouts.dashboard>
     """
