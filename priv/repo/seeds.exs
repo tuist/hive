@@ -252,11 +252,150 @@ specs = [
       - Status changes notify subscribers.
       - Converting a request into a spec includes a link to the spec.
       """,
-      "status" => "accepted"
+      "status" => "approved"
     },
     comments: [
       {"maya@example.com", "Let's make sure the email copy links to the public spec page."},
       {"sam@example.com", "Could this also support digest mode later?"}
+    ]
+  },
+  %{
+    author: "maya@example.com",
+    product_names: ["Hive"],
+    attrs: %{
+      "title" => "Spec activity feed",
+      "summary" =>
+        "Stream spec status, revision, and comment events so members can follow proposals without polling.",
+      "body" => """
+      # Why
+
+      Members ask "what changed on the memory spec this week?" and end up scrolling the revision table looking for status flips. We need a denser surface that ties together revisions, comments, and status changes in one chronological view.
+
+      ## Goals
+
+      1. One feed per spec that lists every revision, comment, and status change in order.
+      2. A workspace-wide feed at `/activity` that aggregates events across all visible specs.
+      3. PubSub fan-out so any subscriber (LiveView, MCP) sees the same event stream.
+      4. Markdown previews for comments inline, without a full re-render.
+
+      ## Non-goals
+
+      - Email or Slack delivery (separate spec).
+      - Per-user mute/follow controls in v1.
+      - Replacing the revision table on the spec page.
+
+      ## Event shape
+
+      Every activity row is a typed event with a stable JSON shape, persisted to `spec_events`:
+
+      ```elixir
+      defmodule Hive.Specs.Event do
+        use Ecto.Schema
+
+        @primary_key {:id, :binary_id, autogenerate: true}
+        @foreign_key_type :binary_id
+
+        schema "spec_events" do
+          field :kind, Ecto.Enum, values: [:revision, :comment, :status_changed]
+          field :payload, :map
+          belongs_to :spec, Hive.Specs.Spec
+          belongs_to :actor, Hive.Accounts.User
+          timestamps(type: :utc_datetime, updated_at: false)
+        end
+      end
+      ```
+
+      Status-change payloads carry the transition:
+
+      ```json
+      {
+        "from": "proposed",
+        "to": "approved",
+        "lock_version": 4
+      }
+      ```
+
+      ## Subscriptions
+
+      LiveView subscribes per spec with `Phoenix.PubSub.subscribe(Hive.PubSub, "spec:" <> spec_id)`. The workspace feed subscribes to `"specs:activity"`. Both topics are emitted by the same publisher:
+
+      ```elixir
+      def publish(%Event{spec_id: spec_id} = event) do
+        Phoenix.PubSub.broadcast(Hive.PubSub, "spec:" <> spec_id, {:spec_event, event})
+        Phoenix.PubSub.broadcast(Hive.PubSub, "specs:activity", {:spec_event, event})
+      end
+      ```
+
+      ## Acceptance criteria
+
+      - [ ] Every `update_spec/3` and `add_comment/3` writes a typed `Hive.Specs.Event`.
+      - [ ] `/specs/:n` shows the per-spec feed live without polling.
+      - [ ] `/activity` shows the workspace feed and respects visibility.
+      - [ ] MCP `list_events` tool returns the same events for connected agents.
+
+      ## Open questions
+
+      | Question | Owner | Status |
+      | --- | --- | --- |
+      | Retention policy for events | maya | open |
+      | Whether comments mirror to events or live in their own table | jon | leaning toward events table |
+      | How to backfill events for existing specs | priya | needs design |
+
+      > [!IMPORTANT]
+      > **Why paused?** We want the [forage GitHub issues sync](/specs/4) to land first so the event publisher has a real second producer to design against. Resume once that is shipped.
+
+      > [!TIP]
+      > Subscribing to `"specs:activity"` from a LiveView keeps the workspace feed real-time without polling.
+      """,
+      "status" => "paused"
+    },
+    comments: [
+      {"jon@example.com",
+       "Agree on pausing. Let's revisit once we have two producers (specs + forage) feeding the publisher."},
+      {"priya@example.com",
+       "The `spec_events` table is fine as a starting point but I want to look at partitioning before we go to prod."}
+    ]
+  },
+  %{
+    author: "sam@example.com",
+    product_names: ["Hive"],
+    attrs: %{
+      "title" => "Auto-generate specs from forage with an LLM",
+      "summary" =>
+        "Convert feature requests into draft specs automatically using an LLM that fills in the proposal template.",
+      "body" => """
+      # Proposal
+
+      When a feature request is marked `planned`, trigger an LLM to draft a spec body from the request title and description, plus relevant context from the linked product. The draft is saved as a `draft` spec for a human to refine.
+
+      ## Sketch
+
+      ```elixir
+      def draft_spec_from_request(%FeatureRequest{} = request) do
+        prompt = build_prompt(request)
+        {:ok, body} = LLM.complete(prompt, model: "claude-opus-4-8")
+        Specs.create_spec(%{"title" => request.title, "body" => body, "status" => "draft"}, system_user())
+      end
+      ```
+
+      ## Why rejected
+
+      > [!CAUTION]
+      > We don't have a clear quality signal that the generated drafts would be worth more than the noise they add to the spec list.
+
+      Concretely:
+
+      - No baseline for what "good" looks like — every feature request is different.
+      - The current spec workflow assumes humans wrote the body, so the revision history would be polluted with LLM regenerations.
+      - We don't have an LLM client wired into Hive yet; building one for this use case is premature.
+
+      Revisit once we ship the [activity feed](/specs/5) and have a clearer picture of what good spec hygiene looks like in practice. A *retrieval-only* path (LLM summarizes existing specs, doesn't draft new ones) is a more promising direction.
+      """,
+      "status" => "rejected"
+    },
+    comments: [
+      {"maya@example.com",
+       "Right call to reject this. The summarization angle is interesting though — I'd open a fresh spec for it rather than reopening this one."}
     ]
   },
   %{

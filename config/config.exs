@@ -36,6 +36,8 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+config :mdex_native, syntax_highlighter: :lumis
+
 config :boruta, Boruta.Oauth,
   repo: Hive.Repo,
   contexts: [

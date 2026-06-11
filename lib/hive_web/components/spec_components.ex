@@ -126,8 +126,17 @@ defmodule HiveWeb.SpecComponents do
             />
           </div>
         </div>
-        <div :if={@can_edit?} data-part="header-actions">
+        <div data-part="header-actions">
+          <.status_menu :if={@can_edit?} spec={@spec} />
+          <.badge
+            :if={!@can_edit?}
+            label={status_label(@spec.status)}
+            color={status_color(@spec.status)}
+            style="light-fill"
+            size="large"
+          />
           <.button
+            :if={@can_edit?}
             label="Edit"
             href={~p"/specs/#{@spec.number}/edit"}
             size="medium"
@@ -354,6 +363,32 @@ defmodule HiveWeb.SpecComponents do
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
 
+  attr :spec, :map, required: true
+
+  defp status_menu(assigns) do
+    ~H"""
+    <.dropdown
+      id={"spec-status-menu-#{@spec.id}"}
+      label={status_label(@spec.status)}
+      data-part="status-menu"
+    >
+      <.dropdown_item
+        :for={status <- Spec.statuses()}
+        value={Atom.to_string(status)}
+        label={status_label(status)}
+        size="large"
+        on_click="set_status"
+        phx-value-status={Atom.to_string(status)}
+        data-selected={status == @spec.status}
+      >
+        <:right_icon :if={status == @spec.status}>
+          <.check />
+        </:right_icon>
+      </.dropdown_item>
+    </.dropdown>
+    """
+  end
+
   attr :form, :any, required: true
   attr :id, :string, required: true
 
@@ -430,7 +465,9 @@ defmodule HiveWeb.SpecComponents do
 
   defp status_color(:draft), do: "neutral"
   defp status_color(:proposed), do: "information"
-  defp status_color(:accepted), do: "success"
+  defp status_color(:approved), do: "success"
+  defp status_color(:paused), do: "attention"
+  defp status_color(:rejected), do: "destructive"
   defp status_color(:in_progress), do: "attention"
   defp status_color(:shipped), do: "success"
   defp status_color(:archived), do: "neutral"
