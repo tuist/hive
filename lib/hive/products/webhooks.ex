@@ -54,18 +54,16 @@ defmodule Hive.Products.Webhooks do
   Finds a webhook matching the URL-supplied token, restricted to the
   given product and source. Returns the webhook or `nil`.
 
-  The lookup is by hash (constant cost in DB); the equality comparison
-  on `token_hash` is then done in constant time to avoid leaking timing
-  signal even if two distinct tokens collide on a prefix.
+  Lookup is a single indexed query: `token_hash` carries a unique index,
+  and the WHERE clause also pins `product_id` and `source` so a token
+  belonging to a different product or source can never resolve. Since
+  matching happens inside the database, there is no Elixir-level
+  iteration whose timing could leak which row (if any) matched.
   """
   def find_by_token(product_id, source, token)
       when is_binary(product_id) and is_atom(source) and is_binary(token) do
     hash = hash_token(token)
-
-    Webhook
-    |> where([webhook], webhook.product_id == ^product_id and webhook.source == ^source)
-    |> Repo.all()
-    |> Enum.find(fn webhook -> Plug.Crypto.secure_compare(webhook.token_hash, hash) end)
+    Repo.get_by(Webhook, token_hash: hash, product_id: product_id, source: source)
   end
 
   def find_by_token(_product_id, _source, _token), do: nil
