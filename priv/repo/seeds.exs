@@ -507,7 +507,8 @@ grafana_alert_seeds = [
           },
           "annotations" => %{
             "summary" => "Build queue backlog growing",
-            "description" => "Pending builds queue has grown to 142 jobs over the last 10 minutes."
+            "description" =>
+              "Pending builds queue has grown to 142 jobs over the last 10 minutes."
           },
           "startsAt" => "2026-06-10T17:50:00Z",
           "generatorURL" => "https://grafana.example/alert/tuist-queue"
