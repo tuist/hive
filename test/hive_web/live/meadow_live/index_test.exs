@@ -6,7 +6,7 @@ defmodule HiveWeb.MeadowLive.IndexTest do
   alias Hive.Meadows
 
   test "shows the meadows page to anonymous visitors but hides edit controls", %{conn: conn} do
-    {:ok, _public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
+    {:ok, public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
 
     {:ok, _private} =
       Meadows.create_meadow(%{"name" => "Private meadow", "visibility" => "private"})
@@ -16,6 +16,7 @@ defmodule HiveWeb.MeadowLive.IndexTest do
     assert html =~ "Public meadow"
     refute html =~ "Private meadow"
     refute html =~ "Add meadow"
+    refute html =~ ~s(href="/meadows/#{public.id}")
   end
 
   test "shows contributors public meadows without edit controls", %{conn: conn} do

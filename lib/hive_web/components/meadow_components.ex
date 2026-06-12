@@ -42,7 +42,9 @@ defmodule HiveWeb.MeadowComponents do
               id="meadows-table"
               rows={@meadows}
               row_key={fn meadow -> "meadow-#{meadow.id || meadow.name}" end}
-              row_navigate={fn meadow -> ~p"/meadows/#{meadow.id}" end}
+              row_navigate={
+                if @editable?, do: fn meadow -> ~p"/meadows/#{meadow.id}" end, else: nil
+              }
             >
               <:col :let={meadow} label="Meadow">
                 <.text_and_description_cell

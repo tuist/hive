@@ -46,8 +46,14 @@ defmodule HiveWeb.MeadowComponentsTest do
       assert html =~ ~s(id="new-meadow-modal")
     end
 
-    test "hides edit controls when not editable" do
-      assigns = assigns()
+    test "hides edit controls and row navigation when not editable" do
+      meadow = %Meadow{
+        id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
+        name: "Hive",
+        github_repositories: []
+      }
+
+      assigns = assigns(%{meadows: [meadow]})
 
       html =
         rendered_to_string(~H"""
@@ -63,7 +69,7 @@ defmodule HiveWeb.MeadowComponentsTest do
 
       refute html =~ "Add meadow"
       refute html =~ ~s(id="new-meadow-modal")
-      assert html =~ "Organization members will populate this list."
+      refute html =~ ~s(href="/meadows/#{meadow.id}")
     end
 
     test "renders the new meadow modal with repository options" do
