@@ -11,11 +11,13 @@ Phoenix application that hosts Tuist's agentic meadow orchestration. MPL-2.0 lic
 - **Database**: PostgreSQL via Ecto
 - **Frontend**: Phoenix HTML + Noora design system; esbuild bundles `assets/`
 - **LiveView** powers the forage section (`lib/hive_web/live/`); login is still server-rendered HTML from a controller
+- **Agentic workflows** built on [Condukt](https://github.com/tuist/condukt) (Elixir agent framework wrapping ReqLLM); shared call site is `Hive.Agents.Sessions`
 - **Tool versions** pinned in `mise.toml`
 
 ## Layout
 
 - `lib/hive/` — domain modules (currently just `auth.ex`, `repo.ex`, `application.ex`, `release.ex`)
+- `lib/hive/agents/` — agent infrastructure: `Hive.Agents` (LLM config), `Hive.Agents.Sessions` (Condukt entry point), `Hive.Agents.StyleGuide` (shared prose rules). Individual agents live under `lib/hive/<domain>/agents/<name>_agent.ex`.
 - `lib/hive_web/` — web layer
   - `components/layouts.ex` — `Layouts.app` (controller HTML shell) + `Layouts.root` (LiveView root layout) + `Layouts.dashboard` (header + sidebar + content slot)
   - `live/forage_live/` — LiveViews for the forage section; `components/forage_components.ex` holds their presentational markup; authorization is a LetMe policy (`lib/hive/forage/policy.ex`)
@@ -64,6 +66,27 @@ Two providers are supported and can run side-by-side:
 - **Generic OIDC**: point `HIVE_OIDC_ISSUER` at any issuer URL with a `.well-known/openid-configuration`; supply `HIVE_OIDC_CLIENT_ID/_SECRET` (and optionally `HIVE_OIDC_DISPLAY_NAME`).
 
 Routes: Ueberauth's plug owns `/auth/:provider` (redirect to IdP) and `/auth/:provider/callback` (token exchange + userinfo). The Hive `AuthController.callback/2` action reads `conn.assigns.ueberauth_auth`, runs `Hive.Auth.check_domain/2` against the provider's allowlist, and stores the user in the session.
+
+## Agents
+
+Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive and is configured at runtime from three env vars:
+
+[Condukt]: https://github.com/tuist/condukt
+[ReqLLM]: https://hexdocs.pm/req_llm
+
+- `HIVE_LLM_API_KEY` — provider API key (Anthropic, OpenAI, Fireworks, etc.)
+- `HIVE_LLM_MODEL` — `provider:model_id` (e.g. `anthropic:claude-haiku-4-5`, `openai:gpt-4o-mini`)
+- `HIVE_LLM_BASE_URL` — optional endpoint override
+
+When `HIVE_LLM_API_KEY` is unset, `Hive.Agents.enabled?/0` returns `false`, `Hive.Agents.Sessions.run/3` returns `{:error, :llm_not_configured}`, and agentic features stay dormant. The rest of Hive keeps booting, so deploying without an LLM is supported.
+
+### Adding an agent
+
+1. Create `lib/hive/<domain>/agents/<name>_agent.ex` (e.g. `lib/hive/forage/agents/issue_triage_agent.ex`).
+2. `use Condukt` and implement `system_prompt/0` and `tools/0`. Append `Hive.Agents.StyleGuide.prose_rules()` to the system prompt so the cross-cutting style rules apply.
+3. Expose a public entry point (e.g. `triage(issue)`) that calls `Hive.Agents.Sessions.run/3`. Don't call `Condukt.run/3` directly: the wrapper merges the resolved LLM client options and is the hook point for future audit-trail wiring.
+4. Define tools inline with `Condukt.tool(name:, description:, parameters:, call:)`. Keep their `call:` callbacks short and delegate to a context module under `lib/hive/<domain>/`.
+5. In tests, `Mimic.copy/1` the agent module in `test/test_helper.exs` and stub the entry-point function. `Mimic.copy(Condukt, type_check: true)` is already in place for end-to-end stubs. For unit tests of code that doesn't need a real LLM round-trip, `Hive.TestSupport.Agents.NoopAgent` is a minimal `use Condukt` agent backed by a runtime that returns `{:ok, "handled: " <> prompt}`.
 
 ## Releases
 

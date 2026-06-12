@@ -99,6 +99,25 @@ if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
 end
 
+# Condukt-backed agents read their LLM credentials from `:hive, :llm`.
+# When `HIVE_LLM_API_KEY` is unset the config stays empty and `Hive.Agents`
+# refuses to run, so the rest of the app keeps booting in environments
+# (CI, self-hosters without an LLM) that don't ship agentic features.
+case System.get_env("HIVE_LLM_API_KEY") do
+  empty when empty in [nil, ""] ->
+    :ok
+
+  api_key ->
+    model =
+      System.get_env("HIVE_LLM_MODEL") ||
+        raise "environment variable HIVE_LLM_MODEL is required when HIVE_LLM_API_KEY is set"
+
+    config :hive, :llm,
+      api_key: api_key,
+      model: model,
+      base_url: System.get_env("HIVE_LLM_BASE_URL")
+end
+
 google_client_id = System.get_env("HIVE_GOOGLE_CLIENT_ID")
 google_client_secret = System.get_env("HIVE_GOOGLE_CLIENT_SECRET")
 google_allowed = parse_domains.(System.get_env("HIVE_GOOGLE_ALLOWED_DOMAINS"))

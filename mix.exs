@@ -61,6 +61,7 @@ defmodule Hive.MixProject do
       {:ueberauth_github, "~> 0.8"},
       {:emcp, "~> 0.3.4"},
       {:boruta, git: "https://github.com/malach-it/boruta_auth", branch: "master"},
+      {:condukt, github: "tuist/condukt", tag: "1.7.0", override: true},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
