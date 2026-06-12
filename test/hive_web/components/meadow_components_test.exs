@@ -172,12 +172,14 @@ defmodule HiveWeb.MeadowComponentsTest do
           webhook_form={to_form(%{"name" => "", "source" => "grafana"}, as: :webhook)}
           webhook_sources={[:grafana]}
           selected_source={:grafana}
+          delete_meadow_form={to_form(%{"name" => ""})}
         />
         """)
 
       assert html =~ "Atlas"
       assert html =~ "Internal planning."
       assert html =~ "Save meadow"
+      assert html =~ "Delete meadow"
       assert html =~ ~s(class="noora-dropdown")
       assert html =~ ~s(id="meadow-visibility")
       assert html =~ ~s(name="meadow[visibility]")

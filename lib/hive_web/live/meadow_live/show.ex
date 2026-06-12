@@ -35,6 +35,7 @@ defmodule HiveWeb.MeadowLive.Show do
          |> assign(:selected_source, default_webhook_source())
          |> assign(:created_webhook_url, nil)
          |> assign(:webhooks, if(editable?, do: Webhooks.list_for_meadow(meadow), else: []))
+         |> assign(:delete_meadow_form, delete_meadow_form())
          |> assign_form(Meadows.change_meadow(meadow))}
 
       {:error, :not_found} ->
@@ -129,6 +130,31 @@ defmodule HiveWeb.MeadowLive.Show do
       update_meadow(socket, params)
     else
       {:noreply, put_flash(socket, :error, "Only organization members can edit meadows.")}
+    end
+  end
+
+  def handle_event("close_delete_meadow", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:delete_meadow_form, delete_meadow_form())
+     |> push_event("close-modal", %{id: "delete-meadow-modal"})}
+  end
+
+  def handle_event("delete_meadow", %{"name" => name}, socket) do
+    cond do
+      not socket.assigns.editable? ->
+        {:noreply, put_flash(socket, :error, "Only organization members can delete meadows.")}
+
+      name == socket.assigns.meadow.name ->
+        {:ok, _meadow} = Meadows.delete_meadow(socket.assigns.meadow)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Meadow deleted.")
+         |> push_navigate(to: ~p"/meadows")}
+
+      true ->
+        {:noreply, assign(socket, :delete_meadow_form, delete_meadow_form())}
     end
   end
 
@@ -241,6 +267,10 @@ defmodule HiveWeb.MeadowLive.Show do
     to_form(%{"name" => "", "source" => "grafana"}, as: :webhook)
   end
 
+  defp delete_meadow_form do
+    to_form(%{"name" => ""})
+  end
+
   defp default_webhook_source, do: List.first(Webhook.sources())
 
   defp parse_webhook_source(value) do
@@ -293,6 +323,7 @@ defmodule HiveWeb.MeadowLive.Show do
         webhook_sources={@webhook_sources}
         selected_source={@selected_source}
         created_webhook_url={@created_webhook_url}
+        delete_meadow_form={@delete_meadow_form}
       />
     </Layouts.dashboard>
     """
