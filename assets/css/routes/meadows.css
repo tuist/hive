@@ -154,9 +154,7 @@
     & .noora-modal [data-part="body"] {
       display: flex;
       flex-direction: column;
-      gap: var(--noora-spacing-5);
-      padding-top: var(--noora-spacing-5);
-      padding-bottom: var(--noora-spacing-5);
+      gap: var(--noora-spacing-8);
       width: 440px;
       max-width: 100%;
 
