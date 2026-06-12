@@ -1,4 +1,4 @@
-defmodule HiveWeb.SettingsLive.Meadows do
+defmodule HiveWeb.MeadowLive.Index do
   @moduledoc false
 
   use HiveWeb, :live_view
@@ -8,26 +8,23 @@ defmodule HiveWeb.SettingsLive.Meadows do
   alias Hive.Meadows
   alias Hive.Meadows.Meadow
   alias HiveWeb.Layouts
-  alias HiveWeb.SettingsComponents
+  alias HiveWeb.MeadowComponents
 
   @impl true
   def mount(_params, _session, socket) do
-    if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
-      {:ok,
-       socket
-       |> assign(:page_title, "Meadows · #{socket.assigns.product_name}")
-       |> assign(:meadows, Meadows.list_meadows())
-       |> assign(:repository_options, [])
-       |> assign(:repository_load_error, nil)
-       |> assign(:repository_options_loaded?, false)
-       |> assign(:selected_repository, nil)
-       |> assign_form(Meadows.change_meadow())}
-    else
-      {:ok,
-       socket
-       |> put_flash(:error, "You don't have access to configure meadows.")
-       |> redirect(to: ~p"/login")}
-    end
+    user = socket.assigns.current_user
+    editable? = Auth.member?(user)
+
+    {:ok,
+     socket
+     |> assign(:page_title, "Meadows · #{socket.assigns.product_name}")
+     |> assign(:meadows, Meadows.list_visible_meadows(user))
+     |> assign(:editable?, editable?)
+     |> assign(:repository_options, [])
+     |> assign(:repository_load_error, nil)
+     |> assign(:repository_options_loaded?, false)
+     |> assign(:selected_repository, nil)
+     |> assign_form(Meadows.change_meadow())}
   end
 
   @impl true
@@ -79,12 +76,20 @@ defmodule HiveWeb.SettingsLive.Meadows do
   end
 
   def handle_event("save", %{"meadow" => params}, socket) do
+    if socket.assigns.editable? do
+      create_meadow(socket, params)
+    else
+      {:noreply, put_flash(socket, :error, "Only organization members can create meadows.")}
+    end
+  end
+
+  defp create_meadow(socket, params) do
     case Meadows.create_meadow(params) do
       {:ok, _meadow} ->
         {:noreply,
          socket
          |> put_flash(:info, "Meadow created.")
-         |> assign(:meadows, Meadows.list_meadows())
+         |> assign(:meadows, Meadows.list_visible_meadows(socket.assigns.current_user))
          |> reset_new_meadow()
          |> push_event("close-modal", %{id: "new-meadow-modal"})
          |> push_event("reset-form", %{id: "new-meadow-form"})}
@@ -162,13 +167,13 @@ defmodule HiveWeb.SettingsLive.Meadows do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
-      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
     >
-      <SettingsComponents.meadows
+      <MeadowComponents.meadows
         meadows={@meadows}
+        editable?={@editable?}
         form={@form}
         repository_options={@repository_options}
         repository_load_error={@repository_load_error}

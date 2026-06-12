@@ -99,11 +99,11 @@ defmodule HiveWeb.Router do
       live "/specs/:number/edit", SpecLive.Edit
     end
 
-    live_session :settings,
+    live_session :meadows,
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
-      live "/settings/meadows", SettingsLive.Meadows
-      live "/settings/meadows/:id", SettingsLive.Meadow
+      live "/meadows", MeadowLive.Index
+      live "/meadows/:id", MeadowLive.Show
     end
 
     live_session :account,

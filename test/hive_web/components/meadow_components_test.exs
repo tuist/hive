@@ -1,4 +1,4 @@
-defmodule HiveWeb.SettingsComponentsTest do
+defmodule HiveWeb.MeadowComponentsTest do
   use ExUnit.Case, async: true
 
   import Phoenix.Component
@@ -8,7 +8,7 @@ defmodule HiveWeb.SettingsComponentsTest do
   alias Hive.Meadows
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
-  alias HiveWeb.SettingsComponents
+  alias HiveWeb.MeadowComponents
 
   describe "meadows/1" do
     defp assigns(overrides \\ %{}) do
@@ -24,13 +24,14 @@ defmodule HiveWeb.SettingsComponentsTest do
       )
     end
 
-    test "renders the empty state and add meadow action" do
+    test "renders the empty state and add meadow action when editable" do
       assigns = assigns()
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.meadows
+        <MeadowComponents.meadows
           meadows={@meadows}
+          editable?
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -39,10 +40,30 @@ defmodule HiveWeb.SettingsComponentsTest do
         """)
 
       assert html =~ "Add meadow"
-      assert html =~ "No meadows configured"
+      assert html =~ "No meadows yet"
       assert html =~ ~s(class="noora-card")
       assert html =~ ~s(id="meadows-table")
       assert html =~ ~s(id="new-meadow-modal")
+    end
+
+    test "hides edit controls when not editable" do
+      assigns = assigns()
+
+      html =
+        rendered_to_string(~H"""
+        <MeadowComponents.meadows
+          meadows={@meadows}
+          editable?={false}
+          form={@form}
+          repository_options={@repository_options}
+          repository_load_error={@repository_load_error}
+          selected_repository={@selected_repository}
+        />
+        """)
+
+      refute html =~ "Add meadow"
+      refute html =~ ~s(id="new-meadow-modal")
+      assert html =~ "Organization members will populate this list."
     end
 
     test "renders the new meadow modal with repository options" do
@@ -58,8 +79,9 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.meadows
+        <MeadowComponents.meadows
           meadows={@meadows}
+          editable?
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -97,8 +119,9 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.meadows
+        <MeadowComponents.meadows
           meadows={@meadows}
+          editable?
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -110,12 +133,12 @@ defmodule HiveWeb.SettingsComponentsTest do
       assert html =~ "Meadow orchestration"
       assert html =~ "Public"
       assert html =~ "tuist/hive"
-      assert html =~ ~s(href="/settings/meadows/#{meadow.id}")
+      assert html =~ ~s(href="/meadows/#{meadow.id}")
       assert html =~ ~s(data-type="badge")
       assert html =~ ~s(data-part="repository-cell")
     end
 
-    test "renders a meadow detail form" do
+    test "renders a meadow detail form when editable" do
       meadow = %Meadow{
         id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
         name: "Atlas",
@@ -132,8 +155,9 @@ defmodule HiveWeb.SettingsComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <SettingsComponents.meadow_detail
+        <MeadowComponents.meadow_detail
           meadow={@meadow}
+          editable?
           form={@form}
           repository_options={@repository_options}
           repository_load_error={@repository_load_error}
@@ -151,8 +175,47 @@ defmodule HiveWeb.SettingsComponentsTest do
       assert html =~ ~s(class="noora-dropdown")
       assert html =~ ~s(id="meadow-visibility")
       assert html =~ ~s(name="meadow[visibility]")
+      assert html =~ "Webhooks"
       refute html =~ "Linked specs"
       refute html =~ "Back"
+    end
+
+    test "renders a read-only meadow detail when not editable" do
+      meadow = %Meadow{
+        id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
+        name: "Atlas",
+        description: "Public planning.",
+        visibility: :public,
+        github_repositories: []
+      }
+
+      assigns =
+        assigns(%{
+          meadow: meadow,
+          form: to_form(Meadows.change_meadow(meadow), as: :meadow)
+        })
+
+      html =
+        rendered_to_string(~H"""
+        <MeadowComponents.meadow_detail
+          meadow={@meadow}
+          editable?={false}
+          form={@form}
+          repository_options={@repository_options}
+          repository_load_error={@repository_load_error}
+          selected_repository={@selected_repository}
+          webhooks={[]}
+          webhook_form={to_form(%{"name" => "", "source" => "grafana"}, as: :webhook)}
+          webhook_sources={[:grafana]}
+          selected_source={:grafana}
+        />
+        """)
+
+      assert html =~ "Atlas"
+      assert html =~ "Public planning."
+      refute html =~ "Save meadow"
+      refute html =~ "Webhooks"
+      refute html =~ ~s(phx-submit="save")
     end
   end
 

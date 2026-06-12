@@ -6,6 +6,7 @@ defmodule Hive.Meadows do
   import Ecto.Query
 
   alias Ecto.Multi
+  alias Hive.Auth
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
   alias Hive.Meadows.MeadowRepository
@@ -18,10 +19,52 @@ defmodule Hive.Meadows do
     |> Repo.all()
   end
 
+  @doc """
+  Lists meadows the `user` is allowed to see. Members see every meadow;
+  anyone else sees only those marked `:public`. Anonymous viewers (a `nil`
+  user) get the same public-only view.
+  """
+  def list_visible_meadows(user) do
+    query =
+      Meadow
+      |> order_by([meadow], asc: meadow.name)
+      |> preload(:github_repositories)
+
+    if Auth.member?(user) do
+      Repo.all(query)
+    else
+      query
+      |> where([meadow], meadow.visibility == :public)
+      |> Repo.all()
+    end
+  end
+
   def get_meadow!(id) do
     Meadow
     |> preload(:github_repositories)
     |> Repo.get!(id)
+  end
+
+  @doc """
+  Returns `{:ok, meadow}` when `user` is allowed to see the meadow with
+  `id`, or `{:error, :not_found}` for a missing record, a malformed id,
+  or a private meadow viewed by a non-member.
+  """
+  def fetch_visible_meadow(id, user) do
+    case Repo.get(Meadow, id) do
+      nil ->
+        {:error, :not_found}
+
+      %Meadow{visibility: :private} = meadow ->
+        if Auth.member?(user),
+          do: {:ok, Repo.preload(meadow, :github_repositories)},
+          else: {:error, :not_found}
+
+      %Meadow{} = meadow ->
+        {:ok, Repo.preload(meadow, :github_repositories)}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   def change_meadow(meadow \\ %Meadow{}, attrs \\ %{}) do

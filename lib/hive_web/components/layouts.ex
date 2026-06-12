@@ -58,7 +58,6 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
   attr :signed_in?, :boolean, default: false
-  attr :settings_enabled?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
@@ -78,10 +77,16 @@ defmodule HiveWeb.Layouts do
       <.line_divider />
       <section data-part="main">
         <.sidebar>
+          <.sidebar_item
+            label="Meadows"
+            icon="treemap"
+            href={~p"/meadows"}
+            selected={String.starts_with?(@current_path, ~p"/meadows")}
+          />
           <details data-part="forage-sources" open>
             <summary data-part="trigger">
               <.tab_menu_vertical label="Forage">
-                <:icon_left><.icon name="list_tree" /></:icon_left>
+                <:icon_left><.icon name="rss" /></:icon_left>
                 <:icon_right>
                   <span data-part="indicator"><.chevron_down /></span>
                 </:icon_right>
@@ -103,24 +108,6 @@ defmodule HiveWeb.Layouts do
             href={~p"/specs?filter_status_op===&filter_status_val=draft"}
             selected={String.starts_with?(@current_path, "/specs")}
           />
-          <details :if={@settings_enabled?} data-part="settings" open>
-            <summary data-part="trigger">
-              <.tab_menu_vertical label="Settings">
-                <:icon_left><.icon name="settings" /></:icon_left>
-                <:icon_right>
-                  <span data-part="indicator"><.chevron_down /></span>
-                </:icon_right>
-              </.tab_menu_vertical>
-            </summary>
-            <div data-part="content">
-              <.sidebar_item
-                label="Meadows"
-                icon="package"
-                href={~p"/settings/meadows"}
-                selected={String.starts_with?(@current_path, ~p"/settings/meadows")}
-              />
-            </div>
-          </details>
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}

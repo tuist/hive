@@ -1,6 +1,6 @@
-defmodule HiveWeb.SettingsComponents do
+defmodule HiveWeb.MeadowComponents do
   @moduledoc """
-  Presentational components for instance settings.
+  Presentational components for the meadows section.
   """
 
   use HiveWeb, :html
@@ -11,6 +11,7 @@ defmodule HiveWeb.SettingsComponents do
   alias Hive.Meadows.Webhook
 
   attr :meadows, :list, required: true
+  attr :editable?, :boolean, default: false
   attr :form, :any, required: true
   attr :repository_options, :list, required: true
   attr :repository_load_error, :string, default: nil
@@ -18,17 +19,16 @@ defmodule HiveWeb.SettingsComponents do
 
   def meadows(assigns) do
     ~H"""
-    <section id="settings">
+    <section id="meadows">
       <div data-part="page-header">
         <div data-part="title-group">
-          <.badge label="Settings" color="information" style="light-fill" />
           <h1>Meadows</h1>
-          <p>Configure the meadows this Hive instance can plan and route work for.</p>
+          <p>The domains this Hive instance plans and routes work for.</p>
         </div>
       </div>
 
-      <.card icon="apps" title="Meadows" data-part="meadows-card">
-        <:actions>
+      <.card icon="treemap" title="Meadows" data-part="meadows-card">
+        <:actions :if={@editable?}>
           <.new_meadow_modal
             form={@form}
             repository_options={@repository_options}
@@ -42,7 +42,7 @@ defmodule HiveWeb.SettingsComponents do
               id="meadows-table"
               rows={@meadows}
               row_key={fn meadow -> "meadow-#{meadow.id || meadow.name}" end}
-              row_navigate={fn meadow -> ~p"/settings/meadows/#{meadow.id}" end}
+              row_navigate={fn meadow -> ~p"/meadows/#{meadow.id}" end}
             >
               <:col :let={meadow} label="Meadow">
                 <.text_and_description_cell
@@ -89,9 +89,9 @@ defmodule HiveWeb.SettingsComponents do
               </:col>
               <:empty_state>
                 <.table_empty_state
-                  icon="package"
-                  title="No meadows configured"
-                  subtitle="Create the first meadow to give Hive a meadow boundary."
+                  icon="treemap"
+                  title="No meadows yet"
+                  subtitle={meadow_empty_subtitle(@editable?)}
                 />
               </:empty_state>
             </.table>
@@ -103,6 +103,7 @@ defmodule HiveWeb.SettingsComponents do
   end
 
   attr :meadow, :map, required: true
+  attr :editable?, :boolean, default: false
   attr :form, :any, required: true
   attr :repository_options, :list, required: true
   attr :repository_load_error, :string, default: nil
@@ -115,19 +116,24 @@ defmodule HiveWeb.SettingsComponents do
 
   def meadow_detail(assigns) do
     ~H"""
-    <section id="settings">
+    <section id="meadows">
       <div data-part="page-header">
         <div data-part="title-group">
-          <.badge label="Settings" color="information" style="light-fill" />
           <h1>{@meadow.name}</h1>
           <p>{meadow_description(@meadow)}</p>
         </div>
       </div>
 
       <div data-part="meadow-detail-layout">
-        <.card icon="package" title="Meadow">
+        <.card icon="treemap" title="Meadow">
           <.card_section>
-            <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
+            <.form
+              :if={@editable?}
+              for={@form}
+              phx-change="validate"
+              phx-submit="save"
+              data-part="form"
+            >
               <input
                 type="hidden"
                 name="meadow[github_repository_owner]"
@@ -211,10 +217,12 @@ defmodule HiveWeb.SettingsComponents do
                 <.button label="Save meadow" size="medium" variant="primary" />
               </div>
             </.form>
+            <.meadow_readonly :if={!@editable?} meadow={@meadow} />
           </.card_section>
         </.card>
 
         <.webhooks_card
+          :if={@editable?}
           meadow={@meadow}
           webhooks={@webhooks}
           webhook_form={@webhook_form}
@@ -226,6 +234,60 @@ defmodule HiveWeb.SettingsComponents do
     </section>
     """
   end
+
+  attr :meadow, :map, required: true
+
+  defp meadow_readonly(assigns) do
+    ~H"""
+    <dl data-part="meadow-readonly">
+      <div data-part="row">
+        <dt>Visibility</dt>
+        <dd>
+          <.badge
+            label={visibility_label(@meadow.visibility)}
+            color={visibility_color(@meadow.visibility)}
+            style="light-fill"
+            size="large"
+          >
+            <:icon>
+              <.lock :if={@meadow.visibility == :private} />
+              <.world :if={@meadow.visibility != :private} />
+            </:icon>
+          </.badge>
+        </dd>
+      </div>
+      <div data-part="row">
+        <dt>Repositories</dt>
+        <dd>
+          <div data-part="repository-cell">
+            <.badge
+              :if={@meadow.github_repositories == []}
+              label="No repository"
+              color="neutral"
+              style="light-fill"
+              size="large"
+            />
+            <.badge
+              :for={repository <- @meadow.github_repositories}
+              label={GitHubRepository.full_name(repository)}
+              color="neutral"
+              style="light-fill"
+              size="large"
+            >
+              <:icon><.brand_github /></:icon>
+            </.badge>
+          </div>
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
+  defp meadow_empty_subtitle(true),
+    do: "Create the first meadow to give Hive a domain boundary."
+
+  defp meadow_empty_subtitle(false),
+    do: "Organization members will populate this list."
 
   attr :meadow, :map, required: true
   attr :webhooks, :list, required: true

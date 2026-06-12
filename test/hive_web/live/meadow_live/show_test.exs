@@ -1,25 +1,34 @@
-defmodule HiveWeb.SettingsLive.MeadowTest do
+defmodule HiveWeb.MeadowLive.ShowTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Auth
   alias Hive.GitHub.Repositories
   alias Hive.Meadows
 
-  test "redirects guests to login", %{conn: conn} do
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+  test "shows a public meadow to anonymous visitors in read-only mode", %{conn: conn} do
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "public"})
 
-    assert {:error, {:redirect, %{to: "/login"}}} =
-             live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, _view, html} = live(conn, ~p"/meadows/#{meadow.id}")
+
+    assert html =~ "Hive"
+    refute html =~ "Save meadow"
+    refute html =~ "Webhooks"
   end
 
-  test "redirects signed-in contributors", %{conn: conn} do
+  test "redirects anonymous visitors away from a private meadow", %{conn: conn} do
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "private"})
+
+    assert {:error, {:redirect, %{to: "/meadows"}}} =
+             live(conn, ~p"/meadows/#{meadow.id}")
+  end
+
+  test "redirects contributors away from a private meadow", %{conn: conn} do
     {conn, user} = sign_in(conn, "contributor@example.com")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
-
     Mimic.stub(Auth, :member?, fn ^user -> false end)
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "private"})
 
-    assert {:error, {:redirect, %{to: "/login"}}} =
-             live(conn, ~p"/settings/meadows/#{meadow.id}")
+    assert {:error, {:redirect, %{to: "/meadows"}}} =
+             live(conn, ~p"/meadows/#{meadow.id}")
   end
 
   test "renders a meadow detail page for signed-in members", %{conn: conn} do
@@ -34,7 +43,7 @@ defmodule HiveWeb.SettingsLive.MeadowTest do
         github_repository_name: "hive"
       })
 
-    {:ok, _view, html} = live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, _view, html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     assert html =~ "Hive"
     assert html =~ "Meadow orchestration"
@@ -47,7 +56,7 @@ defmodule HiveWeb.SettingsLive.MeadowTest do
     {conn, _user} = sign_in(conn, "alice@example.com")
     {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     html =
       view
@@ -76,7 +85,7 @@ defmodule HiveWeb.SettingsLive.MeadowTest do
         github_repository_name: "hive"
       })
 
-    {:ok, view, html} = live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, view, html} = live(conn, ~p"/meadows/#{meadow.id}")
     refute html =~ "tuist/tuist"
 
     Mimic.stub(Repositories, :list_accessible_repositories, fn ->
@@ -113,7 +122,7 @@ defmodule HiveWeb.SettingsLive.MeadowTest do
     {conn, _user} = sign_in(conn, "alice@example.com")
     {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     html =
       render_submit(view, "create_webhook", %{
@@ -132,7 +141,7 @@ defmodule HiveWeb.SettingsLive.MeadowTest do
     {:ok, {webhook, _}} =
       Hive.Meadows.Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/meadows/#{meadow.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     render_click(view, "delete_webhook", %{"id" => webhook.id})
 

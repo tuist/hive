@@ -1,53 +1,53 @@
-defmodule HiveWeb.SettingsLive.MeadowsTest do
+defmodule HiveWeb.MeadowLive.IndexTest do
   use HiveWeb.ConnCase, async: true
 
-  alias Hive.Accounts
   alias Hive.Auth
   alias Hive.GitHub.Repositories
-  alias HiveWeb.SettingsLive.Meadows
+  alias Hive.Meadows
 
-  test "redirects guests to login", %{conn: conn} do
-    assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/settings/meadows")
+  test "shows the meadows page to anonymous visitors but hides edit controls", %{conn: conn} do
+    {:ok, _public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
+
+    {:ok, _private} =
+      Meadows.create_meadow(%{"name" => "Private meadow", "visibility" => "private"})
+
+    {:ok, _view, html} = live(conn, ~p"/meadows")
+
+    assert html =~ "Public meadow"
+    refute html =~ "Private meadow"
+    refute html =~ "Add meadow"
   end
 
-  test "redirects signed-in contributors" do
-    {:ok, user} =
-      Accounts.upsert_from_auth(%{
-        email: "contributor@example.com",
-        provider: "test",
-        provider_uid: "contributor"
-      })
-
+  test "shows contributors public meadows without edit controls", %{conn: conn} do
+    {conn, user} = sign_in(conn, "contributor@example.com")
     Mimic.stub(Auth, :member?, fn ^user -> false end)
 
-    socket = %Phoenix.LiveView.Socket{
-      assigns: %{
-        __changed__: %{},
-        signed_in?: true,
-        current_user: user,
-        product_name: "Hive",
-        flash: %{}
-      }
-    }
+    {:ok, _public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
 
-    assert {:ok, socket} = Meadows.mount(%{}, %{}, socket)
-    assert {:redirect, %{to: "/login"}} = socket.redirected
+    {:ok, _private} =
+      Meadows.create_meadow(%{"name" => "Private meadow", "visibility" => "private"})
+
+    {:ok, _view, html} = live(conn, ~p"/meadows")
+
+    assert html =~ "Public meadow"
+    refute html =~ "Private meadow"
+    refute html =~ "Add meadow"
   end
 
-  test "renders the meadows settings page for signed-in users", %{conn: conn} do
+  test "renders the meadows page for organization members", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, _view, html} = live(conn, ~p"/settings/meadows")
+    {:ok, _view, html} = live(conn, ~p"/meadows")
 
     assert html =~ "Meadows"
     assert html =~ "Add meadow"
-    assert html =~ "No meadows configured"
+    assert html =~ "No meadows yet"
   end
 
   test "renders the new meadow modal", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, _view, html} = live(conn, ~p"/settings/meadows")
+    {:ok, _view, html} = live(conn, ~p"/meadows")
 
     assert html =~ ~s(id="new-meadow-modal")
     assert html =~ "New meadow"
@@ -60,7 +60,7 @@ defmodule HiveWeb.SettingsLive.MeadowsTest do
   } do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, view, html} = live(conn, ~p"/settings/meadows")
+    {:ok, view, html} = live(conn, ~p"/meadows")
     refute html =~ "tuist/hive"
 
     Mimic.stub(Repositories, :list_accessible_repositories, fn ->
@@ -98,7 +98,7 @@ defmodule HiveWeb.SettingsLive.MeadowsTest do
   test "surfaces validation errors with interpolated bindings", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, view, _html} = live(conn, ~p"/settings/meadows")
+    {:ok, view, _html} = live(conn, ~p"/meadows")
 
     html =
       render_submit(view, "save", %{

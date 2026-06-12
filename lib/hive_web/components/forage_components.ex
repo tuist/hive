@@ -241,7 +241,7 @@ defmodule HiveWeb.ForageComponents do
             <h2>No {@stats.state_label} to show</h2>
             <p>
               Connect a GitHub repository to a meadow in
-              <a href={~p"/settings/meadows"}>Settings → Meadows</a>
+              <a href={~p"/meadows"}>Meadows</a>
               and matching issues will appear here once they have been synced.
             </p>
           </div>
