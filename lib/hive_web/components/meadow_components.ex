@@ -265,7 +265,7 @@ defmodule HiveWeb.MeadowComponents do
           <.modal
             id="delete-meadow-modal"
             title={"Delete " <> @meadow.name <> "?"}
-            header_size="large"
+            header_size="small"
             on_dismiss="close_delete_meadow"
           >
             <:trigger :let={attrs}>
@@ -375,65 +375,73 @@ defmodule HiveWeb.MeadowComponents do
 
   defp webhooks_card(assigns) do
     ~H"""
-    <.card icon="bell" title="Webhooks" data-part="webhooks-card">
-      <:actions>
-        <.new_webhook_modal
-          webhook_form={@webhook_form}
-          webhook_sources={@webhook_sources}
-          selected_source={@selected_source}
-        />
-      </:actions>
-      <.card_section data-part="webhooks-section">
-        <p data-part="card-description">
-          Generate a URL that an external source can POST alerts to. The URL
-          carries a per-webhook token. Hive only keeps a hash, so the URL is
-          revealed once at creation. To rotate, delete a webhook and create
-          a new one.
-        </p>
-
-        <.alert
-          :if={@created_webhook_url}
-          status="success"
-          size="large"
-          title="Webhook URL"
-          data-part="created-webhook"
-        >
-          <p>Copy this now. It is shown only once.</p>
-          <code data-part="created-webhook-url">{@created_webhook_url}</code>
-          <:action>
-            <.button
-              label="Dismiss"
-              size="small"
-              variant="secondary"
-              phx-click="dismiss_created_webhook"
-            />
-          </:action>
-        </.alert>
-
-        <div :if={@webhooks == []} data-part="webhooks-empty">
-          <p>
-            No webhooks yet. Use <strong>New webhook</strong> to generate one.
-          </p>
+    <.card_section data-part="webhooks-card">
+      <div data-part="header">
+        <div data-part="title-group">
+          <span data-part="title">Webhooks</span>
+          <span data-part="subtitle">
+            Generate a URL that an external source can POST alerts to. The URL carries a
+            per-webhook token. Hive only keeps a hash, so the URL is revealed once at
+            creation. To rotate, delete a webhook and create a new one.
+          </span>
         </div>
+        <div data-part="actions">
+          <.new_webhook_modal
+            webhook_form={@webhook_form}
+            webhook_sources={@webhook_sources}
+            selected_source={@selected_source}
+          />
+        </div>
+      </div>
 
-        <ul :if={@webhooks != []} data-part="webhook-list">
-          <li :for={webhook <- @webhooks} data-part="webhook-row">
-            <div data-part="webhook-copy">
-              <h3 data-part="webhook-name">{webhook.name}</h3>
-              <span data-part="webhook-meta">
-                Created {format_short_datetime(webhook.inserted_at)} ·
-                {last_used_label(webhook.last_used_at)}
-              </span>
-            </div>
-            <div data-part="webhook-meta-actions">
-              <.badge
-                label={Webhook.source_label(webhook.source)}
-                color="information"
-                style="light-fill"
-                size="large"
-              >
-                <:icon><.bell /></:icon>
-              </.badge>
+      <.alert
+        :if={@created_webhook_url}
+        status="success"
+        size="large"
+        title="Webhook URL"
+        data-part="created-webhook"
+      >
+        <p>Copy this now. It is shown only once.</p>
+        <code data-part="created-webhook-url">{@created_webhook_url}</code>
+        <:action>
+          <.button
+            label="Dismiss"
+            size="small"
+            variant="secondary"
+            phx-click="dismiss_created_webhook"
+          />
+        </:action>
+      </.alert>
+
+      <.table
+        id="meadow-webhooks-table"
+        rows={@webhooks}
+        row_key={fn webhook -> "webhook-#{webhook.id}" end}
+      >
+        <:col :let={webhook} label="Name">
+          <.text_and_description_cell
+            label={webhook.name}
+            description={"Created " <> format_short_datetime(webhook.inserted_at)}
+          />
+        </:col>
+        <:col :let={webhook} label="Source">
+          <div data-part="cell" data-type="badge">
+            <.badge
+              label={Webhook.source_label(webhook.source)}
+              color="information"
+              style="light-fill"
+              size="large"
+            >
+              <:icon><.bell /></:icon>
+            </.badge>
+          </div>
+        </:col>
+        <:col :let={webhook} label="Last used">
+          <.text_cell label={last_used_label(webhook.last_used_at)} />
+        </:col>
+        <:col :let={webhook} label="">
+          <.button_cell>
+            <:button>
               <.button
                 label="Delete webhook"
                 size="large"
@@ -445,11 +453,18 @@ defmodule HiveWeb.MeadowComponents do
               >
                 <.trash />
               </.button>
-            </div>
-          </li>
-        </ul>
-      </.card_section>
-    </.card>
+            </:button>
+          </.button_cell>
+        </:col>
+        <:empty_state>
+          <.table_empty_state
+            icon="bell"
+            title="No webhooks yet"
+            subtitle="Use New webhook to generate one."
+          />
+        </:empty_state>
+      </.table>
+    </.card_section>
     """
   end
 
