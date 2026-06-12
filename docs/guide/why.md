@@ -21,8 +21,6 @@ work in one place:
 - **Forage** ingests operational signals such as Grafana alerts and
   threads them per meadow, so the same view that holds the plan also
   holds the operational reality.
-- **Authentication** is delegated to OIDC providers so any team's
-  identity setup works without bespoke integrations.
 
 The goal is a small, opinionated surface that a team can adopt without
 adopting an entire methodology.

@@ -24,6 +24,12 @@ env:
   HIVE_ORG_DOMAINS: "tuist.dev"
   HIVE_OBJECT_STORAGE_PROVIDER: "s3"
   HIVE_S3_FORCE_PATH_STYLE: "true"
+  # LLM model identifier in ReqLLM `provider:model_id` form, shared by
+  # every agentic feature. We hit Fireworks directly via the OpenAI-
+  # compatible provider; the endpoint override lives in
+  # `HIVE_LLM_BASE_URL`. The API key is pulled from 1Password below.
+  HIVE_LLM_MODEL: "openai:accounts/fireworks/models/kimi-k2p5"
+  HIVE_LLM_BASE_URL: "https://api.fireworks.ai/inference/v1"
 
 externalSecrets:
   enabled: true
@@ -59,6 +65,8 @@ externalSecrets:
       remoteRef: "hive-object-storage/username"
     HIVE_S3_SECRET_ACCESS_KEY:
       remoteRef: "hive-object-storage/credential"
+    HIVE_LLM_API_KEY:
+      remoteRef: "hive-llm-api-key/credential"
   pullSecret:
     enabled: true
     item: "hive-ghcr-pull"
