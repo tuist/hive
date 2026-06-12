@@ -62,6 +62,31 @@ defmodule HiveWeb.MarkdownTest do
     assert rendered =~ "Plain quote."
   end
 
+  defp inline(markdown) do
+    markdown
+    |> Markdown.inline()
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  describe "inline/1" do
+    test "renders inline code spans without a wrapping paragraph" do
+      rendered = inline("Static framework with `.metal` produces `default.metallib`")
+
+      assert rendered ==
+               "Static framework with <code>.metal</code> produces <code>default.metallib</code>"
+    end
+
+    test "escapes raw HTML in inline input" do
+      rendered = inline(~S|<script>alert(1)</script>|)
+
+      refute rendered =~ "<script>"
+    end
+
+    test "returns an empty safe string for nil" do
+      assert Phoenix.HTML.safe_to_string(Markdown.inline(nil)) == ""
+    end
+  end
+
   test "highlights fenced code blocks" do
     rendered =
       html("""

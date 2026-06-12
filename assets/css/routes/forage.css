@@ -216,6 +216,26 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }
 
+  & [data-part="issue-copy"] code {
+    box-shadow:
+      0 1px 1px 0 rgba(14, 14, 14, 0.05),
+      0 0 0 1px rgba(46, 51, 56, 0.08),
+      0 1px 1px 0 rgba(46, 51, 56, 0.1);
+    border-radius: var(--noora-radius-2);
+    background: var(--noora-surface-background-secondary);
+    padding: 0 var(--noora-spacing-1);
+    color: var(--noora-surface-label-primary);
+    white-space: nowrap;
+  }
+
+  & [data-part="issue-copy"] h2 code {
+    font: var(--noora-font-weight-regular) var(--noora-font-code-large);
+  }
+
+  & [data-part="issue-copy"] p code {
+    font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
+  }
+
   & [data-part="issue-meta-row"] {
     display: flex;
     flex-wrap: wrap;

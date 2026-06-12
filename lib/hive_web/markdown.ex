@@ -3,6 +3,8 @@ defmodule HiveWeb.Markdown do
 
   import Phoenix.HTML
 
+  @paragraph_wrap ~r/\A<p>(.*)<\/p>\z/s
+
   @options [
     extension: [
       strikethrough: true,
@@ -37,8 +39,32 @@ defmodule HiveWeb.Markdown do
 
   def render(_markdown), do: raw("")
 
+  @doc """
+  Renders a single line of markdown as inline-only HTML, suitable for use
+  inside an existing block element (issue titles, excerpts, badges). The
+  outer `<p>` wrapper that MDEx adds for block rendering is stripped so
+  the caller controls the surrounding element.
+  """
+  def inline(text) when is_binary(text) do
+    text
+    |> MDEx.to_html!(@options)
+    |> strip_paragraph_wrap()
+    |> raw()
+  end
+
+  def inline(_text), do: raw("")
+
   defp downshift_heading(%MDEx.Heading{level: level} = node),
     do: %{node | level: min(level + 1, 6)}
 
   defp downshift_heading(node), do: node
+
+  defp strip_paragraph_wrap(html) do
+    trimmed = String.trim(html)
+
+    case Regex.run(@paragraph_wrap, trimmed, capture: :all_but_first) do
+      [inner] -> inner
+      _ -> trimmed
+    end
+  end
 end

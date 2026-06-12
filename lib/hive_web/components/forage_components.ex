@@ -11,6 +11,9 @@ defmodule HiveWeb.ForageComponents do
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
   alias Hive.Meadows.GitHubRepository
+  alias HiveWeb.Markdown
+
+  @heading_line ~r/^#+\s+/
 
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
@@ -255,10 +258,10 @@ defmodule HiveWeb.ForageComponents do
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {issue.title}
+                    {Markdown.inline(issue.title)}
                   </a>
                 </h2>
-                <p :if={issue_excerpt(issue.body)}>{issue_excerpt(issue.body)}</p>
+                <p :if={issue_excerpt(issue.body)}>{Markdown.inline(issue_excerpt(issue.body))}</p>
                 <div data-part="issue-meta-row">
                   <.badge
                     label={GitHubRepository.full_name(repository)}
@@ -395,17 +398,16 @@ defmodule HiveWeb.ForageComponents do
   defp issue_excerpt(body) when is_binary(body) do
     body
     |> String.split("\n", trim: true)
-    |> Enum.find(&(String.trim(&1) != ""))
+    |> Enum.map(&String.trim/1)
+    |> Enum.find(&excerpt_candidate?/1)
     |> case do
-      nil ->
-        nil
-
-      line ->
-        line
-        |> String.trim()
-        |> truncate(240)
+      nil -> nil
+      line -> truncate(line, 240)
     end
   end
+
+  defp excerpt_candidate?(""), do: false
+  defp excerpt_candidate?(line), do: not Regex.match?(@heading_line, line)
 
   defp truncate(string, limit) when byte_size(string) <= limit, do: string
   defp truncate(string, limit), do: String.slice(string, 0, limit) <> "…"

@@ -7,6 +7,9 @@ defmodule HiveWeb.ForageComponentsTest do
   alias Hive.Accounts.User
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
+  alias Hive.Forage.GitHubIssue
+  alias Hive.Meadows.GitHubRepository
+  alias Hive.Meadows.Meadow
   alias HiveWeb.ForageComponents
 
   describe "feature_requests/1" do
@@ -67,6 +70,45 @@ defmodule HiveWeb.ForageComponentsTest do
       assert html =~ "Title"
       assert html =~ "Description"
       assert html =~ ~s(phx-submit="save")
+    end
+  end
+
+  describe "github_issues/1" do
+    test "renders inline code spans in titles and skips heading-only excerpts" do
+      meadow = %Meadow{name: "hive"}
+      repository = %GitHubRepository{owner: "tuist", name: "tuist"}
+
+      issue = %GitHubIssue{
+        number: 42,
+        title: "Static framework with `.metal` produces `default.metallib`",
+        body: "### What happened?\n\nThe `tuist generate` command misbehaves."
+      }
+
+      assigns = %{
+        source: Forage.get_source!(:github_issues),
+        entries: [{meadow, repository, issue}],
+        stats: %{state_label: "open", total: 1, repositories: 1, meadows: 1},
+        available_filters: [],
+        active_filters: []
+      }
+
+      html =
+        rendered_to_string(~H"""
+        <ForageComponents.github_issues
+          source={@source}
+          signed_in?={false}
+          entries={@entries}
+          stats={@stats}
+          available_filters={@available_filters}
+          active_filters={@active_filters}
+        />
+        """)
+
+      assert html =~
+               ~s(Static framework with <code>.metal</code> produces <code>default.metallib</code>)
+
+      refute html =~ "### What happened?"
+      assert html =~ "The <code>tuist generate</code> command misbehaves."
     end
   end
 

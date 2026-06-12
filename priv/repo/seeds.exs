@@ -154,6 +154,18 @@ github_issue_fixtures = [
        title: "Render GitHub issue body as Markdown",
        body:
          "Most issue bodies use Markdown for code blocks and lists. Render them as Markdown in the forage view so the excerpt is useful at a glance."
+     },
+     %{
+       number: 104,
+       title: "`Markdown.inline/1` should accept `Phoenix.HTML.safe` input",
+       body:
+         "Callers that already hold a `{:safe, iodata}` tuple have to unwrap it before passing to `Markdown.inline/1`. Accept both shapes so the function composes with `Phoenix.HTML.html_escape/1`."
+     },
+     %{
+       number: 105,
+       title: "Persist filter selection in the `?filters=` query string",
+       body:
+         "When a reviewer adds a filter like `state:closed` we should reflect it in the URL so the view is shareable and survives a refresh."
      }
    ]},
   {"tuist", "tuist",
@@ -169,6 +181,38 @@ github_issue_fixtures = [
        title: "Document `tuist install` in the getting started guide",
        body:
          "Newcomers reach for `tuist install` before `tuist generate` once Swift Package dependencies are involved. The guide should mention it earlier."
+     },
+     %{
+       number: 7423,
+       title:
+         "Static framework with `.metal` produces `default.metallib` that ignores Metal-related build settings",
+       body: """
+       ### What happened?
+
+       When a static framework target contains `.metal` files, `tuist generate` emits a `default.metallib` resource that ignores the `MTL_*` build settings configured on the target. The resulting binary uses the default Metal compiler flags instead of the project-specific ones.
+
+       ### Steps to reproduce
+
+       1. Create a static framework with a `.metal` shader.
+       2. Set `MTL_FAST_MATH = NO` on the target.
+       3. Run `tuist generate` and inspect the generated `default.metallib`.
+       """
+     },
+     %{
+       number: 7424,
+       title:
+         "Crash in `Tuist.Generator` when `Project.swift` references a missing `Package.swift`",
+       body: """
+       ### What happened?
+
+       Running `tuist generate` against a project whose `Project.swift` declares a Swift Package dependency that no longer exists on disk crashes with `MissingPackageManifest` instead of surfacing a helpful error.
+       """
+     },
+     %{
+       number: 7425,
+       title: "Add `--quiet` flag to `tuist cache warm`",
+       body:
+         "CI logs are noisy. A `--quiet` flag that suppresses per-target progress lines and only prints the final summary would make cache-warm output easy to scan."
      }
    ]}
 ]
