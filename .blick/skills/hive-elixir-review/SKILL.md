@@ -1,17 +1,30 @@
 ---
 name: hive-elixir-review
-description: Project-specific PR-review rules for the tuist/hive Phoenix/Elixir codebase. Focuses on open-source secret hygiene, Noora data-part styling, OIDC auth, async tests, Helm deployment boundaries, and release conventions documented in AGENTS.md.
+description: Project-specific PR-review rules for the tuist/hive Phoenix/Elixir codebase. Focuses on open-source secret hygiene, Noora data-part styling, OIDC auth, Helm deployment boundaries, release conventions, and a small set of Phoenix/Ecto/LiveView review rules that require diff awareness, semantic context, or cross-file reasoning that `mix format`/`mix credo` cannot do.
 ---
 
 # Hive Elixir Review
 
-This skill is intentionally narrow. **Generic Elixir style, naming,
-formatting, pipe chains, and low-level Credo concerns are already covered
-by `mix format` and `mix credo` in CI. Do not flag those.** Focus on the
-rules below because they catch Hive-specific regressions.
+This skill is intentionally narrow. Generic Elixir style, naming,
+formatting, pipe chains, and lint hygiene are covered by `mix format`
+and `mix credo` (including the custom checks under
+`credo/checks/`). **Do not flag anything credo already catches** —
+in particular: `Repo.*` calls inside `Enum.*` / `Stream.*` / `for`
+(N+1 shape), or `timestamps/1` without an explicit `type:`. Focus on the
+rules below because they need diff awareness, semantic context, or
+cross-file reasoning that credo cannot do.
 
-For each finding, cite `path:line` or `Module.function/arity` and quote
-the relevant snippet.
+For each finding, cite `path:line` (or `Module.function/arity`) and
+quote the relevant snippet.
+
+Only report findings whose cited snippet is present in the PR diff. If
+the concern comes from unchanged context, do not emit a finding, do not
+mention it as a note, and do not create a "findings outside this PR's
+diff" section. If every possible concern is outside the diff, return no
+findings.
+
+Do not infer violations from nearby lines. A finding must be anchored on
+a changed line in the diff.
 
 ---
 
@@ -107,23 +120,19 @@ require a signed-in session. Login remains available in both modes.
 
 ---
 
-## 4. Async tests and config isolation
+## 4. Test setup boundaries
 
-All tests in Hive are expected to be `async: true`. Tests must not mutate
-global application config in `setup` or `on_exit`; use Mimic on a
-wrapping module instead.
+Tests run async-by-default and stub through Mimic, not `Application`
+config. The static parts of this rule are enforced by credo; what's left
+here is the cross-file and semantic piece.
 
 ### Flag
 
-- New test modules that omit `async: true` or set `async: false`.
-  **Severity: medium.**
-- Tests that call `Application.put_env/3`, `Application.delete_env/2`, or
-  similar global config mutation to control code under test.
-  **Severity: high.**
-- A new mockable module used with Mimic that is not copied in
-  `test/test_helper.exs`. **Severity: medium.**
-- Tests for route/controller changes that are not mirrored under the
-  matching `test/hive_web/...` path. **Severity: low.**
+- A new mockable module used with Mimic (`stub/3`, `expect/3`) that is
+  not added to `test/test_helper.exs` via `Mimic.copy/1`. The first
+  stubbing test will silently no-op. **Severity: medium.**
+- Tests for a new route or controller action that are not mirrored under
+  the matching `test/hive_web/...` path. **Severity: low.**
 
 ### Do not flag
 
@@ -187,22 +196,164 @@ Commit scopes and Helm chart releases from `helm`-scoped commits.
 
 ---
 
-## 7. Phoenix shape
+## 7. LiveView lifecycle
 
-Hive currently uses Phoenix controllers and raw HEEx templates, not
-LiveView.
+The forage, dashboard, meadow, and spec sections use Phoenix LiveView.
+These rules catch lifecycle bugs that need semantic context (which
+routes are tenant-scoped, what counts as "slow", which collections grow)
+and so live outside credo.
 
 ### Flag
 
-- New LiveView code introduced without an accompanying architectural
-  reason and route/layout integration. **Severity: medium.**
-- New controller actions or templates that skip the existing
-  `Layouts.app` / `Layouts.dashboard` structure when they are part of
-  the normal app shell. **Severity: medium.**
-- New domain behavior placed in controllers instead of a small module
-  under `lib/hive/`. **Severity: medium.**
+- A new LiveView route on a tenant-scoped resource whose `mount/3` does
+  not gate access via the corresponding LetMe policy (e.g.
+  `Hive.Forage.Policy`). **Severity: high.**
+- A `mount/3` performing a fetch that can exceed ~100ms (DB query,
+  agent run, external HTTP) without `Phoenix.LiveView.assign_async/3`.
+  **Severity: medium.**
+- A new LiveView that assigns an unbounded collection
+  (e.g. `assign(socket, :specs, list)`) instead of
+  `Phoenix.LiveView.stream/3`. **Severity: medium.**
+- A `handle_event/3` performing a slow operation (DB write, agent run,
+  external HTTP) inline instead of offloading to a Task or background
+  process. **Severity: medium.**
+- New domain logic (data access, multi-step flows, business rules)
+  placed inside a controller, LiveView `mount/3`/`handle_event/3`, or
+  HEEx template instead of a context module under `lib/hive/<domain>/`.
+  The web layer should orchestrate; the domain should compute.
+  **Severity: medium.**
 
 ### Do not flag
 
-- Existing controller-rendered HEEx templates. That is the current app
-  model.
+- Existing controller-rendered HEEx templates where the page does not
+  need LiveView interactivity.
+- LiveViews that legitimately need synchronous data at mount (page
+  title, OpenGraph metadata) when the fetch is bounded and fast.
+- Thin presentation helpers defined in the LiveView module itself
+  (formatting, derived assigns) that don't reach for the DB or external
+  systems.
+
+---
+
+## 8. Ecto changesets, tenancy, and templates
+
+These rules require diff awareness or cross-file tracing that credo
+cannot do.
+
+### Flag
+
+- A new or materially changed `*_changeset/N` function in `lib/hive/**`
+  whose diff does not also add or update a test calling that function in
+  the matching `test/hive/**/*_test.exs`. Material changes include any
+  new/modified `cast`, `validate_*`, `unique_constraint`,
+  `foreign_key_constraint`, or `put_change` line. **Severity: medium.**
+- A changeset that `cast`s a programmatic foreign-key field (`user_id`,
+  `account_id`, `organization_id`, `actor_id`, or any FK naming the
+  actor/owner) from user params instead of setting it via `put_change`
+  from a verified actor. **Severity: high.**
+- A controller, LiveView, or context function calling
+  `Hive.Repo.get(Schema, id)` / `Repo.one(from s in Schema, where: s.id == ^id)`
+  for a tenant-owned schema without a tenant constraint, when the call
+  site already has the tenant in scope. **Severity: high.**
+- A HEEx template accessing `@record.assoc.field` with no upstream
+  evidence (trace through the context function) that the association was
+  preloaded. The render-time crash on `%Ecto.Association.NotLoaded{}` is
+  silent at compile time. **Severity: medium.**
+
+### Do not flag
+
+- Trivial mechanical changeset edits (renaming a field already covered
+  by an existing test, formatting-only churn, reordering pipe steps).
+- Diffs that exercise the changeset indirectly through a higher-level
+  context test that still passes.
+
+---
+
+## 9. Documentation and operator-facing surfaces
+
+`README.md` describes behavior, configuration, and outcomes for the
+operator or end user of any Hive deployment. Tuist-specific operational
+details (production cluster, 1Password vault names, ESO config, Hetzner
+storage classes, deployment workflow internals) belong in `AGENTS.md`,
+not the README. Implementation details — module names, struct fields,
+private helpers, refactoring artifacts — belong in code or `AGENTS.md`,
+never in user-facing docs.
+
+### Flag
+
+- A PR that adds, changes, or removes a feature visible to operators or
+  end users (new env var, new route, new ingestion source, changed
+  default, removed capability) without updating `README.md` in the same
+  diff. **Severity: medium.**
+- A `README.md` change that introduces Tuist-specific operational
+  details (vault names, cluster names, ESO config, hcloud storage
+  classes, production-only workflow notes) instead of putting them in
+  `AGENTS.md`. **Severity: low.**
+- A `README.md` change that leaks implementation details (module names,
+  function signatures, private struct fields, internal refactoring
+  notes) instead of describing observable behavior. **Severity: low.**
+- A doc cross-reference to something that no longer exists or now works
+  differently after the diff (stale env var, removed route, renamed
+  flag). **Severity: medium.**
+
+### Do not flag
+
+- Internal-only changes (refactors, perf, ops-only paths, tests,
+  fixtures) that have no operator- or user-visible effect.
+- Existing implementation references in `AGENTS.md` — that file is
+  explicitly the place for them.
+- README additions for genuinely user-facing operational concerns
+  (allowed-domain configuration, visibility modes) even if Tuist also
+  uses them.
+
+---
+
+## Before submitting findings
+
+For each finding, confirm:
+
+1. The `path:line` is real and the snippet appears in the diff.
+2. The category above is one of 1–9; if it isn't, downgrade to a
+   question (`uncertain: ...`) rather than asserting a finding.
+3. The severity is set: **critical** (auth bypass / cross-tenant read or
+   write / secret leak), **high** (likely security or correctness bug),
+   **medium** (compliance / consistency gap), **low** (nice-to-have).
+4. You are not reporting an unchanged line as a finding. Unchanged
+   context can explain a diff finding, but cannot be the finding itself.
+
+---
+
+## Out of scope (handled elsewhere — do not flag)
+
+- Module/function naming, pipe-chain start, nesting depth, parentheses
+  on no-arg calls → `mix format` and built-in credo checks.
+- Migration `timestamps(...)` or schema `timestamps(...)` without
+  explicit `type:` → `Hive.Credo.Checks.TimestampsType`.
+- `Repo.*` calls inside `Enum.*` / `Stream.*` / `for` (N+1 shape) →
+  `Hive.Credo.Checks.RepoCallInEnum`.
+- Missing `@spec` / `@type` — this codebase intentionally avoids
+  typespecs. Never suggest adding them.
+- Missing `@doc` / `@moduledoc` on internal helper modules.
+- `String.to_atom/1` on user input → credo's `UnsafeToAtom`.
+
+---
+
+## Skill maintenance (not a review-time instruction)
+
+A rule belongs in this skill **only** when it needs at least one of:
+
+- **The PR diff** ("changed in this PR", "co-changed with X").
+- **Semantic context** that depends on the project ("this schema is
+  tenant-owned", "this route is public", "this is a request path").
+- **Cross-file or cross-module reasoning** ("was this association
+  preloaded upstream", "is the mock registered in `test_helper.exs`").
+- **Human-shaped pattern recognition** ("this string looks like a real
+  credential", "this leaks implementation details").
+- **External-system awareness** that the code itself doesn't expose
+  (Helm overlays, 1Password references, deployment workflow).
+
+A rule that reduces to "match this AST shape in files under this path"
+belongs in `credo/checks/`, not here. When the temptation is to add a
+new section to this skill, first ask: could a Credo check do it? If
+yes, write the check instead and leave only the semantic escalation
+(severity by context, hot-path judgment) for the skill.
