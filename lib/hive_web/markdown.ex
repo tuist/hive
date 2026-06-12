@@ -3,6 +3,8 @@ defmodule HiveWeb.Markdown do
 
   import Phoenix.HTML
 
+  @paragraph_wrap ~r/\A<p>(.*)<\/p>\z/s
+
   @options [
     extension: [
       strikethrough: true,
@@ -60,7 +62,7 @@ defmodule HiveWeb.Markdown do
   defp strip_paragraph_wrap(html) do
     trimmed = String.trim(html)
 
-    case Regex.run(~r/\A<p>(.*)<\/p>\z/s, trimmed, capture: :all_but_first) do
+    case Regex.run(@paragraph_wrap, trimmed, capture: :all_but_first) do
       [inner] -> inner
       _ -> trimmed
     end

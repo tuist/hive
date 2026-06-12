@@ -13,6 +13,8 @@ defmodule HiveWeb.ForageComponents do
   alias Hive.Meadows.GitHubRepository
   alias HiveWeb.Markdown
 
+  @heading_line ~r/^#+\s+/
+
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
   attr :signed_in?, :boolean, required: true
@@ -405,7 +407,7 @@ defmodule HiveWeb.ForageComponents do
   end
 
   defp excerpt_candidate?(""), do: false
-  defp excerpt_candidate?(line), do: not Regex.match?(~r/^#+\s+/, line)
+  defp excerpt_candidate?(line), do: not Regex.match?(@heading_line, line)
 
   defp truncate(string, limit) when byte_size(string) <= limit, do: string
   defp truncate(string, limit), do: String.slice(string, 0, limit) <> "…"
