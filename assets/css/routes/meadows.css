@@ -78,12 +78,13 @@
     & .noora-modal [data-part="body"] {
       display: flex;
       flex-direction: column;
-      gap: var(--noora-spacing-8);
-      min-width: 392px;
+      gap: var(--noora-spacing-6);
+      width: 440px;
+      max-width: 100%;
 
       @media (max-width: 768px) {
         & {
-          min-width: 80vw;
+          width: 80vw;
         }
       }
     }
