@@ -161,6 +161,23 @@ defmodule Hive.MeadowsTest do
     end
   end
 
+  describe "delete_meadow/1" do
+    test "deletes the meadow and cascades its repository links" do
+      assert {:ok, meadow} =
+               Meadows.create_meadow(%{
+                 name: "Hive",
+                 github_repository_owner: "tuist",
+                 github_repository_name: "hive"
+               })
+
+      assert {:ok, _meadow} = Meadows.delete_meadow(meadow)
+
+      assert Repo.aggregate(Meadow, :count) == 0
+      assert Repo.aggregate(MeadowRepository, :count) == 0
+      assert Repo.aggregate(GitHubRepository, :count) == 1
+    end
+  end
+
   describe "update_meadow/2" do
     test "updates meadow fields" do
       assert {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas"})

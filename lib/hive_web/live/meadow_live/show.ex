@@ -132,6 +132,27 @@ defmodule HiveWeb.MeadowLive.Show do
     end
   end
 
+  def handle_event("close_delete_meadow", _params, socket) do
+    {:noreply, push_event(socket, "close-modal", %{id: "delete-meadow-modal"})}
+  end
+
+  def handle_event("delete_meadow", _params, socket) do
+    if socket.assigns.editable? do
+      do_delete_meadow(socket)
+    else
+      {:noreply, put_flash(socket, :error, "Only organization members can delete meadows.")}
+    end
+  end
+
+  defp do_delete_meadow(socket) do
+    {:ok, _meadow} = Meadows.delete_meadow(socket.assigns.meadow)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Meadow deleted.")
+     |> push_navigate(to: ~p"/meadows")}
+  end
+
   defp do_create_webhook(socket, params) do
     case Webhooks.create(socket.assigns.meadow, params) do
       {:ok, {webhook, token}} ->

@@ -134,6 +134,19 @@ defmodule HiveWeb.MeadowLive.ShowTest do
     assert [_webhook] = Hive.Meadows.Webhooks.list_for_meadow(meadow)
   end
 
+  test "deletes a meadow and redirects to the meadows index", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "alice@example.com")
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+
+    {:ok, view, html} = live(conn, ~p"/meadows/#{meadow.id}")
+    assert html =~ "Danger zone"
+
+    assert {:error, {:live_redirect, %{to: "/meadows"}}} =
+             render_click(view, "delete_meadow")
+
+    assert Meadows.list_meadows() == []
+  end
+
   test "deletes a webhook", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
     {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})

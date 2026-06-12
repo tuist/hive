@@ -232,8 +232,74 @@ defmodule HiveWeb.MeadowComponents do
           selected_source={@selected_source}
           created_webhook_url={@created_webhook_url}
         />
+
+        <.danger_zone_card :if={@editable?} meadow={@meadow} />
       </div>
     </section>
+    """
+  end
+
+  attr :meadow, :map, required: true
+
+  defp danger_zone_card(assigns) do
+    ~H"""
+    <.card icon="alert_triangle" title="Danger zone" data-part="danger-zone-card">
+      <.card_section data-part="danger-zone-section">
+        <div data-part="danger-zone-row">
+          <div data-part="danger-zone-copy">
+            <h3>Delete meadow</h3>
+            <p>
+              Permanently removes the meadow, its webhooks, and links to repositories
+              and specs. This cannot be undone.
+            </p>
+          </div>
+          <.delete_meadow_modal meadow={@meadow} />
+        </div>
+      </.card_section>
+    </.card>
+    """
+  end
+
+  attr :meadow, :map, required: true
+
+  defp delete_meadow_modal(assigns) do
+    ~H"""
+    <.modal
+      id="delete-meadow-modal"
+      title={"Delete " <> @meadow.name <> "?"}
+      description="This permanently removes the meadow, its webhooks, and links to repositories and specs. This cannot be undone."
+      header_type="warning"
+      header_size="large"
+      on_dismiss="close_delete_meadow"
+    >
+      <:trigger :let={attrs}>
+        <.button label="Delete meadow" size="medium" variant="destructive" {attrs}>
+          <:icon_left><.trash /></:icon_left>
+        </.button>
+      </:trigger>
+      <:footer>
+        <.modal_footer>
+          <:action>
+            <.button
+              label="Cancel"
+              variant="secondary"
+              size="medium"
+              type="button"
+              phx-click="close_delete_meadow"
+            />
+          </:action>
+          <:action>
+            <.button
+              label="Delete meadow"
+              size="medium"
+              variant="destructive"
+              type="button"
+              phx-click="delete_meadow"
+            />
+          </:action>
+        </.modal_footer>
+      </:footer>
+    </.modal>
     """
   end
 

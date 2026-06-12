@@ -50,6 +50,36 @@
     width: 100%;
   }
 
+  & [data-part="danger-zone-card"] {
+    width: 100%;
+  }
+
+  & [data-part="danger-zone-row"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--noora-spacing-6);
+  }
+
+  & [data-part="danger-zone-copy"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+    min-width: 0;
+
+    & h3 {
+      margin: 0;
+      color: var(--noora-surface-label-primary);
+      font: var(--noora-font-weight-medium) var(--noora-font-body-large);
+    }
+
+    & p {
+      margin: 0;
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+    }
+  }
+
   & [data-part="card-description"] {
     color: var(--noora-surface-label-secondary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-medium);

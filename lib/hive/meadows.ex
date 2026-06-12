@@ -93,6 +93,8 @@ defmodule Hive.Meadows do
     end
   end
 
+  def delete_meadow(%Meadow{} = meadow), do: Repo.delete(meadow)
+
   def update_meadow(%Meadow{} = meadow, attrs) do
     meadow = Repo.preload(meadow, :github_repositories)
     changeset = change_meadow(meadow, attrs)
