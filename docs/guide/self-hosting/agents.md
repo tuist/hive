@@ -21,7 +21,9 @@ so you can deploy without an LLM and turn it on later.
 ## Providers
 
 Any provider supported by [ReqLLM](https://hexdocs.pm/req_llm) works.
-The patterns below are the common ones.
+ReqLLM's catalog is sourced from [models.dev](https://models.dev), so
+the `provider:model_id` strings you can put in `HIVE_LLM_MODEL` are
+exactly the IDs listed there. The patterns below are the common ones.
 
 ### Anthropic
 
