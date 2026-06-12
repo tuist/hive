@@ -1,6 +1,6 @@
 defmodule Hive.Specs do
   @moduledoc """
-  Editable product proposals that can be shaped from forage.
+  Editable meadow proposals that can be shaped from forage.
   """
 
   import Ecto.Query
@@ -8,7 +8,7 @@ defmodule Hive.Specs do
   alias Ecto.Changeset
   alias Hive.Accounts.User
   alias Hive.Auth
-  alias Hive.Products.Product
+  alias Hive.Meadows.Meadow
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
@@ -26,7 +26,7 @@ defmodule Hive.Specs do
     do: visibility
 
   def effective_visibility(%Spec{} = spec) do
-    if has_private_product?(spec), do: :private, else: :public
+    if has_private_meadow?(spec), do: :private, else: :public
   end
 
   def list_specs(opts \\ []) do
@@ -37,7 +37,7 @@ defmodule Hive.Specs do
     |> maybe_filter_by_status(status)
     |> maybe_filter_by_visibility(user)
     |> order_by([spec], desc: spec.updated_at)
-    |> preload([:source_feature_request, :created_by_user, :updated_by_user, :products])
+    |> preload([:source_feature_request, :created_by_user, :updated_by_user, :meadows])
     |> Repo.all()
   end
 
@@ -59,19 +59,19 @@ defmodule Hive.Specs do
     if Auth.member?(user) do
       query
     else
-      private_product_spec_ids =
-        from(product in Product,
-          join: product_spec in "products_specs",
-          on: product_spec.product_id == product.id,
-          where: product.visibility == :private,
-          select: product_spec.spec_id
+      private_meadow_spec_ids =
+        from(meadow in Meadow,
+          join: meadow_spec in "meadows_specs",
+          on: meadow_spec.meadow_id == meadow.id,
+          where: meadow.visibility == :private,
+          select: meadow_spec.spec_id
         )
 
       where(
         query,
         [spec],
         spec.visibility == :public or
-          (is_nil(spec.visibility) and spec.id not in subquery(private_product_spec_ids))
+          (is_nil(spec.visibility) and spec.id not in subquery(private_meadow_spec_ids))
       )
     end
   end
@@ -149,7 +149,7 @@ defmodule Hive.Specs do
       :source_feature_request,
       :created_by_user,
       :updated_by_user,
-      :products,
+      :meadows,
       comments: ^comments_query,
       revisions: ^revisions_query
     ])
@@ -157,9 +157,9 @@ defmodule Hive.Specs do
 
   def change_spec(spec \\ %Spec{}, attrs \\ %{}) do
     spec
-    |> preload_products()
+    |> preload_meadows()
     |> Spec.changeset(attrs)
-    |> maybe_put_existing_product_ids(attrs)
+    |> maybe_put_existing_meadow_ids(attrs)
   end
 
   def create_spec(attrs, %User{} = user) do
@@ -193,7 +193,7 @@ defmodule Hive.Specs do
            |> Changeset.put_change(:created_by_user_id, user.id)
            |> Changeset.put_change(:updated_by_user_id, user.id)
            |> Repo.insert(),
-         {:ok, spec} <- put_products(spec, attrs),
+         {:ok, spec} <- put_meadows(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
       spec
     else
@@ -207,7 +207,7 @@ defmodule Hive.Specs do
            |> Spec.update_changeset(attrs)
            |> Changeset.put_change(:updated_by_user_id, user.id)
            |> Repo.update(stale_error_field: :lock_version),
-         {:ok, spec} <- put_products(spec, attrs),
+         {:ok, spec} <- put_meadows(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
       spec
     else
@@ -249,14 +249,14 @@ defmodule Hive.Specs do
     |> Repo.insert()
   end
 
-  defp preload_products(%Spec{} = spec), do: Repo.preload(spec, :products)
+  defp preload_meadows(%Spec{} = spec), do: Repo.preload(spec, :meadows)
 
-  defp maybe_put_existing_product_ids(changeset, attrs) do
-    if product_ids_present?(attrs) do
+  defp maybe_put_existing_meadow_ids(changeset, attrs) do
+    if meadow_ids_present?(attrs) do
       changeset
     else
-      products = get_field_or_loaded_assoc(changeset.data, :products)
-      Changeset.put_change(changeset, :product_ids, Enum.map(products, & &1.id))
+      meadows = get_field_or_loaded_assoc(changeset.data, :meadows)
+      Changeset.put_change(changeset, :meadow_ids, Enum.map(meadows, & &1.id))
     end
   end
 
@@ -267,54 +267,54 @@ defmodule Hive.Specs do
     end
   end
 
-  defp has_private_product?(%Spec{products: %Ecto.Association.NotLoaded{}, id: id})
+  defp has_private_meadow?(%Spec{meadows: %Ecto.Association.NotLoaded{}, id: id})
        when is_binary(id) do
     Repo.exists?(
-      from(product in Product,
-        join: product_spec in "products_specs",
-        on: product_spec.product_id == product.id,
-        where: product_spec.spec_id == ^id and product.visibility == :private
+      from(meadow in Meadow,
+        join: meadow_spec in "meadows_specs",
+        on: meadow_spec.meadow_id == meadow.id,
+        where: meadow_spec.spec_id == ^id and meadow.visibility == :private
       )
     )
   end
 
-  defp has_private_product?(%Spec{products: products}) when is_list(products) do
-    Enum.any?(products, &(&1.visibility == :private))
+  defp has_private_meadow?(%Spec{meadows: meadows}) when is_list(meadows) do
+    Enum.any?(meadows, &(&1.visibility == :private))
   end
 
-  defp has_private_product?(_spec), do: false
+  defp has_private_meadow?(_spec), do: false
 
-  defp put_products(%Spec{} = spec, attrs) do
-    if product_ids_present?(attrs) do
-      product_ids = normalized_product_ids(attrs)
-      products = Repo.all(from(product in Product, where: product.id in ^product_ids))
+  defp put_meadows(%Spec{} = spec, attrs) do
+    if meadow_ids_present?(attrs) do
+      meadow_ids = normalized_meadow_ids(attrs)
+      meadows = Repo.all(from(meadow in Meadow, where: meadow.id in ^meadow_ids))
 
-      if length(products) == length(product_ids) do
+      if length(meadows) == length(meadow_ids) do
         spec
-        |> Repo.preload(:products)
+        |> Repo.preload(:meadows)
         |> Changeset.change()
-        |> Changeset.put_assoc(:products, products)
+        |> Changeset.put_assoc(:meadows, meadows)
         |> Repo.update()
       else
         {:error,
          spec
          |> Spec.changeset(attrs)
-         |> Changeset.add_error(:product_ids, "contains unknown products")}
+         |> Changeset.add_error(:meadow_ids, "contains unknown meadows")}
       end
     else
       {:ok, spec}
     end
   end
 
-  defp product_ids_present?(attrs) when is_map(attrs) do
-    Map.has_key?(attrs, "product_ids") or Map.has_key?(attrs, :product_ids)
+  defp meadow_ids_present?(attrs) when is_map(attrs) do
+    Map.has_key?(attrs, "meadow_ids") or Map.has_key?(attrs, :meadow_ids)
   end
 
-  defp product_ids_present?(_attrs), do: false
+  defp meadow_ids_present?(_attrs), do: false
 
-  defp normalized_product_ids(attrs) do
+  defp normalized_meadow_ids(attrs) do
     attrs
-    |> Map.get("product_ids", Map.get(attrs, :product_ids, []))
+    |> Map.get("meadow_ids", Map.get(attrs, :meadow_ids, []))
     |> List.wrap()
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.uniq()

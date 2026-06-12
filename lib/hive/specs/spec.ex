@@ -18,7 +18,7 @@ defmodule Hive.Specs.Spec do
     field :status, Ecto.Enum, values: @statuses, default: :draft
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
     field :lock_version, :integer, default: 1
-    field :product_ids, {:array, :binary_id}, virtual: true
+    field :meadow_ids, {:array, :binary_id}, virtual: true
 
     belongs_to :source_feature_request, Hive.Forage.FeatureRequest
     belongs_to :created_by_user, Hive.Accounts.User
@@ -26,9 +26,9 @@ defmodule Hive.Specs.Spec do
     has_many :comments, Hive.Specs.Comment
     has_many :revisions, Hive.Specs.Revision
 
-    many_to_many :products, Hive.Products.Product,
-      join_through: "products_specs",
-      join_keys: [spec_id: :id, product_id: :id],
+    many_to_many :meadows, Hive.Meadows.Meadow,
+      join_through: "meadows_specs",
+      join_keys: [spec_id: :id, meadow_id: :id],
       on_replace: :delete
 
     timestamps(type: :utc_datetime)
@@ -38,7 +38,7 @@ defmodule Hive.Specs.Spec do
   def visibilities, do: @visibilities
 
   def changeset(spec, attrs) do
-    attrs = normalize_product_ids(attrs)
+    attrs = normalize_meadow_ids(attrs)
 
     spec
     |> cast(attrs, [
@@ -48,7 +48,7 @@ defmodule Hive.Specs.Spec do
       :status,
       :visibility,
       :source_feature_request_id,
-      :product_ids
+      :meadow_ids
     ])
     |> validate_required([:title, :body, :status, :visibility])
     |> validate_length(:title, max: 160)
@@ -74,22 +74,22 @@ defmodule Hive.Specs.Spec do
     |> optimistic_lock(:lock_version)
   end
 
-  defp normalize_product_ids(attrs) when is_map(attrs) do
+  defp normalize_meadow_ids(attrs) when is_map(attrs) do
     cond do
-      Map.has_key?(attrs, "product_ids") ->
-        Map.put(attrs, "product_ids", normalize_product_id_values(attrs["product_ids"]))
+      Map.has_key?(attrs, "meadow_ids") ->
+        Map.put(attrs, "meadow_ids", normalize_meadow_id_values(attrs["meadow_ids"]))
 
-      Map.has_key?(attrs, :product_ids) ->
-        Map.put(attrs, :product_ids, normalize_product_id_values(attrs.product_ids))
+      Map.has_key?(attrs, :meadow_ids) ->
+        Map.put(attrs, :meadow_ids, normalize_meadow_id_values(attrs.meadow_ids))
 
       true ->
         attrs
     end
   end
 
-  defp normalize_product_ids(attrs), do: attrs
+  defp normalize_meadow_ids(attrs), do: attrs
 
-  defp normalize_product_id_values(values) do
+  defp normalize_meadow_id_values(values) do
     values
     |> List.wrap()
     |> Enum.reject(&(&1 in [nil, ""]))

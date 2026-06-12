@@ -9,7 +9,7 @@ defmodule Hive.Forage.GitHubIssue do
 
   import Ecto.Changeset
 
-  alias Hive.Products.GitHubRepository
+  alias Hive.Meadows.GitHubRepository
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

@@ -1,6 +1,6 @@
 # Hive
 
-Phoenix application that hosts Tuist's agentic product orchestration. MPL-2.0 licensed; runs as a single deployment per organization (Tuist hosts its own at `hive.tuist.dev`; the chart in `infra/helm/hive` supports self-hosting).
+Phoenix application that hosts Tuist's agentic meadow orchestration. MPL-2.0 licensed; runs as a single deployment per organization (Tuist hosts its own at `hive.tuist.dev`; the chart in `infra/helm/hive` supports self-hosting).
 
 **This is an open-source repository.** Treat every commit and PR as world-readable. Never paste credentials, tokens, kubeconfigs, OAuth secrets, database URLs, or `.env` contents into source, tests, fixtures, commit messages, or PR bodies. Production secrets live exclusively in the `hive-k8s-production` 1Password vault and are pulled into Kubernetes via External Secrets at deploy time — the repo only references them by name (`hive-google-oauth/credential`), never by value. Reference names are not secrets but treat them as low-stakes signal: assume an attacker reading the repo learns them. Test fixtures and example env values must use obvious placeholders (e.g. `"client-id"`, `"google-client-secret"`), never real credentials even if revoked.
 

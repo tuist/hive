@@ -1,58 +1,67 @@
-defmodule HiveWeb.SettingsLive.ProductTest do
+defmodule HiveWeb.MeadowLive.ShowTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Auth
   alias Hive.GitHub.Repositories
-  alias Hive.Products
+  alias Hive.Meadows
 
-  test "redirects guests to login", %{conn: conn} do
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+  test "shows a public meadow to anonymous visitors in read-only mode", %{conn: conn} do
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "public"})
 
-    assert {:error, {:redirect, %{to: "/login"}}} =
-             live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, _view, html} = live(conn, ~p"/meadows/#{meadow.id}")
+
+    assert html =~ "Hive"
+    refute html =~ "Save meadow"
+    refute html =~ "Webhooks"
   end
 
-  test "redirects signed-in contributors", %{conn: conn} do
+  test "redirects anonymous visitors away from a private meadow", %{conn: conn} do
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "private"})
+
+    assert {:error, {:redirect, %{to: "/meadows"}}} =
+             live(conn, ~p"/meadows/#{meadow.id}")
+  end
+
+  test "redirects contributors away from a private meadow", %{conn: conn} do
     {conn, user} = sign_in(conn, "contributor@example.com")
-    {:ok, product} = Products.create_product(%{name: "Hive"})
-
     Mimic.stub(Auth, :member?, fn ^user -> false end)
+    {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "private"})
 
-    assert {:error, {:redirect, %{to: "/login"}}} =
-             live(conn, ~p"/settings/products/#{product.id}")
+    assert {:error, {:redirect, %{to: "/meadows"}}} =
+             live(conn, ~p"/meadows/#{meadow.id}")
   end
 
-  test "renders a product detail page for signed-in members", %{conn: conn} do
+  test "renders a meadow detail page for signed-in members", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, product} =
-      Products.create_product(%{
+    {:ok, meadow} =
+      Meadows.create_meadow(%{
         name: "Hive",
-        description: "Product orchestration",
+        description: "Meadow orchestration",
         visibility: "private",
         github_repository_owner: "tuist",
         github_repository_name: "hive"
       })
 
-    {:ok, _view, html} = live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, _view, html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     assert html =~ "Hive"
-    assert html =~ "Product orchestration"
+    assert html =~ "Meadow orchestration"
     assert html =~ "Private"
     assert html =~ "tuist/hive"
-    assert html =~ "Save product"
+    assert html =~ "Save meadow"
   end
 
-  test "updates product fields", %{conn: conn} do
+  test "updates meadow fields", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, product} = Products.create_product(%{name: "Atlas"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     html =
       view
       |> form("form[data-part='form']",
-        product: %{
+        meadow: %{
           name: "Atlas",
           description: "Private planning.",
           visibility: "private",
@@ -66,17 +75,17 @@ defmodule HiveWeb.SettingsLive.ProductTest do
     assert html =~ "Private"
   end
 
-  test "loads repositories on dropdown open and replaces the product repository", %{conn: conn} do
+  test "loads repositories on dropdown open and replaces the meadow repository", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, product} =
-      Products.create_product(%{
+    {:ok, meadow} =
+      Meadows.create_meadow(%{
         name: "Hive",
         github_repository_owner: "tuist",
         github_repository_name: "hive"
       })
 
-    {:ok, view, html} = live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, view, html} = live(conn, ~p"/meadows/#{meadow.id}")
     refute html =~ "tuist/tuist"
 
     Mimic.stub(Repositories, :list_accessible_repositories, fn ->
@@ -97,7 +106,7 @@ defmodule HiveWeb.SettingsLive.ProductTest do
     html =
       view
       |> form("form[data-part='form']",
-        product: %{
+        meadow: %{
           name: "Hive",
           visibility: "public",
           github_repository_owner: "tuist",
@@ -111,9 +120,9 @@ defmodule HiveWeb.SettingsLive.ProductTest do
 
   test "creates a webhook from the modal form", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     html =
       render_submit(view, "create_webhook", %{
@@ -122,20 +131,20 @@ defmodule HiveWeb.SettingsLive.ProductTest do
 
     assert html =~ "Grafana prod"
     assert html =~ "Webhook URL"
-    assert [_webhook] = Hive.Products.Webhooks.list_for_product(product)
+    assert [_webhook] = Hive.Meadows.Webhooks.list_for_meadow(meadow)
   end
 
   test "deletes a webhook", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
     {:ok, {webhook, _}} =
-      Hive.Products.Webhooks.create(product, %{"name" => "G", "source" => "grafana"})
+      Hive.Meadows.Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, view, _html} = live(conn, ~p"/settings/products/#{product.id}")
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
 
     render_click(view, "delete_webhook", %{"id" => webhook.id})
 
-    assert Hive.Products.Webhooks.list_for_product(product) == []
+    assert Hive.Meadows.Webhooks.list_for_meadow(meadow) == []
   end
 end

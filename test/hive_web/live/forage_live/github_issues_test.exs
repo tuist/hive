@@ -3,17 +3,17 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   use Mimic
 
   alias Hive.Forage
-  alias Hive.Products
+  alias Hive.Meadows
 
   defp unique, do: System.unique_integer([:positive])
 
-  defp create_product!(attrs) do
-    {:ok, product} = Products.create_product(attrs)
-    product
+  defp create_meadow!(attrs) do
+    {:ok, meadow} = Meadows.create_meadow(attrs)
+    meadow
   end
 
-  defp seed_issue!(product, opts) do
-    repository = hd(product.github_repositories)
+  defp seed_issue!(meadow, opts) do
+    repository = hd(meadow.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{
@@ -26,10 +26,10 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     repository
   end
 
-  test "redirects guests when no public product/repo pair exists", %{conn: conn} do
+  test "redirects guests when no public meadow/repo pair exists", %{conn: conn} do
     suffix = unique()
 
-    create_product!(%{
+    create_meadow!(%{
       name: "atlas-#{suffix}",
       visibility: "private",
       github_repository_owner: "owner#{suffix}",
@@ -41,11 +41,11 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
              live(conn, ~p"/forage/github-issues")
   end
 
-  test "renders cached issues for a guest when a public product/repo pair exists", %{conn: conn} do
+  test "renders cached issues for a guest when a public meadow/repo pair exists", %{conn: conn} do
     suffix = unique()
 
-    product =
-      create_product!(%{
+    meadow =
+      create_meadow!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -53,7 +53,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(product, number: 7, title: "Crash on launch", body: "Detail")
+    seed_issue!(meadow, number: 7, title: "Crash on launch", body: "Detail")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
@@ -62,7 +62,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     assert html =~ "owner#{suffix}/hive#{suffix}"
   end
 
-  test "shows the empty state when a member has no products with repositories", %{conn: conn} do
+  test "shows the empty state when a member has no meadows with repositories", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
@@ -84,8 +84,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    product =
-      create_product!(%{
+    meadow =
+      create_meadow!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -93,7 +93,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(product, number: 1, title: "Still open")
+    seed_issue!(meadow, number: 1, title: "Still open")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
@@ -102,35 +102,35 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     assert html =~ "Open"
   end
 
-  test "filters issues by product through URL params", %{conn: conn} do
+  test "filters issues by meadow through URL params", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    product_a =
-      create_product!(%{
-        name: "product-a-#{suffix}",
+    meadow_a =
+      create_meadow!(%{
+        name: "meadow-a-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-a-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    product_b =
-      create_product!(%{
-        name: "product-b-#{suffix}",
+    meadow_b =
+      create_meadow!(%{
+        name: "meadow-b-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-b-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    seed_issue!(product_a, number: 1, title: "Issue for A")
-    seed_issue!(product_b, number: 2, title: "Issue for B")
+    seed_issue!(meadow_a, number: 1, title: "Issue for A")
+    seed_issue!(meadow_b, number: 2, title: "Issue for B")
 
     {:ok, _view, html} =
       live(
         conn,
-        ~p"/forage/github-issues?filter_state_op===&filter_state_val=open&filter_product_op===&filter_product_val=#{product_a.id}"
+        ~p"/forage/github-issues?filter_state_op===&filter_state_val=open&filter_meadow_op===&filter_meadow_val=#{meadow_a.id}"
       )
 
     assert html =~ "Issue for A"
@@ -141,28 +141,28 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    product_a =
-      create_product!(%{
-        name: "product-a-#{suffix}",
+    meadow_a =
+      create_meadow!(%{
+        name: "meadow-a-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-a-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    product_b =
-      create_product!(%{
-        name: "product-b-#{suffix}",
+    meadow_b =
+      create_meadow!(%{
+        name: "meadow-b-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-b-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    seed_issue!(product_a, number: 1, title: "Issue for A")
-    seed_issue!(product_b, number: 2, title: "Issue for B")
+    seed_issue!(meadow_a, number: 1, title: "Issue for A")
+    seed_issue!(meadow_b, number: 2, title: "Issue for B")
 
-    repository_b = hd(product_b.github_repositories)
+    repository_b = hd(meadow_b.github_repositories)
 
     {:ok, _view, html} =
       live(
@@ -178,8 +178,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    product =
-      create_product!(%{
+    meadow =
+      create_meadow!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -187,7 +187,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(product, number: 1, title: "Open one")
+    seed_issue!(meadow, number: 1, title: "Open one")
 
     {:ok, _view, html} =
       live(conn, ~p"/forage/github-issues?filter_state_op===&filter_state_val=closed")
@@ -198,8 +198,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   test "hides issues from private repos when viewed by a guest", %{conn: conn} do
     suffix = unique()
 
-    private_product =
-      create_product!(%{
+    private_meadow =
+      create_meadow!(%{
         name: "atlas-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -207,10 +207,10 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "private"
       })
 
-    seed_issue!(private_product, number: 1, title: "Private issue", body: "Sensitive")
+    seed_issue!(private_meadow, number: 1, title: "Private issue", body: "Sensitive")
 
-    public_product =
-      create_product!(%{
+    public_meadow =
+      create_meadow!(%{
         name: "public-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -218,7 +218,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(public_product, number: 2, title: "Public issue", body: "Open")
+    seed_issue!(public_meadow, number: 2, title: "Public issue", body: "Open")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 

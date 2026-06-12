@@ -3,7 +3,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
   use Mimic
 
   alias Hive.Auth
-  alias Hive.Products
+  alias Hive.Meadows
   alias Hive.Specs
 
   test "renders the empty state and OpenGraph metadata", %{conn: conn} do
@@ -18,14 +18,14 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   test "lists specs and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
-    {:ok, product} = Products.create_product(%{name: "Hive"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
           "title" => "GitHub sign-in",
           "body" => "Initial proposal.",
-          "product_ids" => [product.id]
+          "meadow_ids" => [meadow.id]
         },
         user
       )
@@ -105,18 +105,18 @@ defmodule HiveWeb.SpecLive.IndexTest do
     refute html =~ "Private proposal"
   end
 
-  test "shows public specs attached to private products to contributors", %{conn: conn} do
+  test "shows public specs attached to private meadows to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, private_product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+    {:ok, private_meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
-          "title" => "Public product proposal",
+          "title" => "Public meadow proposal",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "product_ids" => [private_product.id]
+          "meadow_ids" => [private_meadow.id]
         },
         member
       )
@@ -128,6 +128,6 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     {:ok, _view, html} = live(contributor_conn, ~p"/specs")
 
-    assert html =~ "Public product proposal"
+    assert html =~ "Public meadow proposal"
   end
 end

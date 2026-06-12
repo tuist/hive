@@ -1,6 +1,6 @@
-defmodule Hive.Products.Webhook do
+defmodule Hive.Meadows.Webhook do
   @moduledoc """
-  Per-product inbound webhook for an external source (Grafana, etc).
+  Per-meadow inbound webhook for an external source (Grafana, etc).
 
   The plaintext token is generated once when the webhook is created,
   shown to the user, and never stored. Only its SHA-256 hash lives in
@@ -17,13 +17,13 @@ defmodule Hive.Products.Webhook do
 
   @sources [:grafana]
 
-  schema "product_webhooks" do
+  schema "meadow_webhooks" do
     field :name, :string
     field :source, Ecto.Enum, values: @sources
     field :token_hash, :string
     field :last_used_at, :utc_datetime
 
-    belongs_to :product, Hive.Products.Product
+    belongs_to :meadow, Hive.Meadows.Meadow
 
     timestamps(type: :utc_datetime)
   end
@@ -35,8 +35,8 @@ defmodule Hive.Products.Webhook do
   @doc false
   def changeset(webhook, attrs) do
     webhook
-    |> cast(attrs, [:name, :source, :token_hash, :product_id])
-    |> validate_required([:name, :source, :token_hash, :product_id])
+    |> cast(attrs, [:name, :source, :token_hash, :meadow_id])
+    |> validate_required([:name, :source, :token_hash, :meadow_id])
     |> validate_length(:name, max: 120)
     |> validate_inclusion(:source, @sources)
     |> unique_constraint(:token_hash)

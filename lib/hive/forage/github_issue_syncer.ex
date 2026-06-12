@@ -1,7 +1,7 @@
 defmodule Hive.Forage.GitHubIssueSyncer do
   @moduledoc """
   Periodically reconciles the `forage_github_issues` cache with GitHub.
-  Iterates every repository connected to a product, pulls its open issues
+  Iterates every repository connected to a meadow, pulls its open issues
   via the configured GitHub App installation, and updates the table so
   the dashboard renders without per-request API calls.
 
@@ -18,7 +18,7 @@ defmodule Hive.Forage.GitHubIssueSyncer do
   alias Hive.Forage
   alias Hive.GitHub.Client
   alias Hive.GitHub.Issues
-  alias Hive.Products.GitHubRepository
+  alias Hive.Meadows.GitHubRepository
 
   @default_interval_ms :timer.minutes(15)
 
@@ -66,8 +66,8 @@ defmodule Hive.Forage.GitHubIssueSyncer do
   defp run_sync do
     case Client.config() do
       {:ok, _config} ->
-        Forage.list_repositories_with_products()
-        |> Enum.map(fn {_product, repository} -> repository end)
+        Forage.list_repositories_with_meadows()
+        |> Enum.map(fn {_meadow, repository} -> repository end)
         |> Enum.uniq_by(& &1.id)
         |> Enum.each(&sync_repository/1)
 

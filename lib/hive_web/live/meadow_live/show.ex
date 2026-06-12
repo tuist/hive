@@ -1,50 +1,55 @@
-defmodule HiveWeb.SettingsLive.Product do
+defmodule HiveWeb.MeadowLive.Show do
   @moduledoc false
 
   use HiveWeb, :live_view
 
   alias Hive.Auth
   alias Hive.GitHub.Repositories
-  alias Hive.Products
-  alias Hive.Products.Webhook
-  alias Hive.Products.Webhooks
+  alias Hive.Meadows
+  alias Hive.Meadows.Webhook
+  alias Hive.Meadows.Webhooks
   alias HiveWeb.Endpoint
   alias HiveWeb.Layouts
-  alias HiveWeb.SettingsComponents
+  alias HiveWeb.MeadowComponents
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    if socket.assigns.signed_in? and Auth.member?(socket.assigns.current_user) do
-      product = Products.get_product!(id)
-      selected_repository = selected_repository(product)
+    user = socket.assigns.current_user
+    editable? = Auth.member?(user)
 
-      {:ok,
-       socket
-       |> assign(:page_title, "#{product.name} · Products · #{socket.assigns.product_name}")
-       |> assign(:product, product)
-       |> assign(:repository_options, [])
-       |> assign(:repository_load_error, nil)
-       |> assign(:repository_options_loaded?, false)
-       |> assign(:selected_repository, selected_repository)
-       |> assign(:webhook_sources, Webhook.sources())
-       |> assign(:webhook_form, webhook_form())
-       |> assign(:selected_source, default_webhook_source())
-       |> assign(:created_webhook_url, nil)
-       |> assign(:webhooks, Webhooks.list_for_product(product))
-       |> assign_form(Products.change_product(product))}
-    else
-      {:ok,
-       socket
-       |> put_flash(:error, "You don't have access to configure products.")
-       |> redirect(to: ~p"/login")}
+    case Meadows.fetch_visible_meadow(id, user) do
+      {:ok, meadow} ->
+        selected_repository = selected_repository(meadow)
+
+        {:ok,
+         socket
+         |> assign(:page_title, "#{meadow.name} · Meadows · #{socket.assigns.product_name}")
+         |> assign(:meadow, meadow)
+         |> assign(:editable?, editable?)
+         |> assign(:repository_options, [])
+         |> assign(:repository_load_error, nil)
+         |> assign(:repository_options_loaded?, false)
+         |> assign(:selected_repository, selected_repository)
+         |> assign(:webhook_sources, Webhook.sources())
+         |> assign(:webhook_form, webhook_form())
+         |> assign(:selected_source, default_webhook_source())
+         |> assign(:created_webhook_url, nil)
+         |> assign(:webhooks, if(editable?, do: Webhooks.list_for_meadow(meadow), else: []))
+         |> assign_form(Meadows.change_meadow(meadow))}
+
+      {:error, :not_found} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Meadow not found.")
+         |> redirect(to: ~p"/meadows")}
     end
   end
 
   @impl true
-  def handle_event("validate", %{"product" => params}, socket) do
+  def handle_event("validate", %{"meadow" => params}, socket) do
     changeset =
-      socket.assigns.product
-      |> Products.change_product(params)
+      socket.assigns.meadow
+      |> Meadows.change_meadow(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
@@ -74,21 +79,10 @@ defmodule HiveWeb.SettingsLive.Product do
   end
 
   def handle_event("create_webhook", %{"webhook" => params}, socket) do
-    case Webhooks.create(socket.assigns.product, params) do
-      {:ok, {webhook, token}} ->
-        url = webhook_ingest_url(socket.assigns.product.id, webhook.source, token)
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook created. Copy the URL. It is shown only once.")
-         |> assign(:webhooks, Webhooks.list_for_product(socket.assigns.product))
-         |> assign(:webhook_form, webhook_form())
-         |> assign(:selected_source, default_webhook_source())
-         |> assign(:created_webhook_url, url)
-         |> push_event("close-modal", %{id: "new-webhook-modal"})}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Couldn't create the webhook.")}
+    if socket.assigns.editable? do
+      do_create_webhook(socket, params)
+    else
+      {:noreply, put_flash(socket, :error, "Only organization members can manage webhooks.")}
     end
   end
 
@@ -123,6 +117,41 @@ defmodule HiveWeb.SettingsLive.Product do
   end
 
   def handle_event("delete_webhook", %{"id" => id}, socket) do
+    if socket.assigns.editable? do
+      do_delete_webhook(socket, id)
+    else
+      {:noreply, put_flash(socket, :error, "Only organization members can manage webhooks.")}
+    end
+  end
+
+  def handle_event("save", %{"meadow" => params}, socket) do
+    if socket.assigns.editable? do
+      update_meadow(socket, params)
+    else
+      {:noreply, put_flash(socket, :error, "Only organization members can edit meadows.")}
+    end
+  end
+
+  defp do_create_webhook(socket, params) do
+    case Webhooks.create(socket.assigns.meadow, params) do
+      {:ok, {webhook, token}} ->
+        url = webhook_ingest_url(socket.assigns.meadow.id, webhook.source, token)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Webhook created. Copy the URL. It is shown only once.")
+         |> assign(:webhooks, Webhooks.list_for_meadow(socket.assigns.meadow))
+         |> assign(:webhook_form, webhook_form())
+         |> assign(:selected_source, default_webhook_source())
+         |> assign(:created_webhook_url, url)
+         |> push_event("close-modal", %{id: "new-webhook-modal"})}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Couldn't create the webhook.")}
+    end
+  end
+
+  defp do_delete_webhook(socket, id) do
     case Enum.find(socket.assigns.webhooks, &(&1.id == id)) do
       nil ->
         {:noreply, socket}
@@ -133,31 +162,31 @@ defmodule HiveWeb.SettingsLive.Product do
         {:noreply,
          socket
          |> put_flash(:info, "Webhook deleted.")
-         |> assign(:webhooks, Webhooks.list_for_product(socket.assigns.product))}
+         |> assign(:webhooks, Webhooks.list_for_meadow(socket.assigns.meadow))}
     end
   end
 
-  def handle_event("save", %{"product" => params}, socket) do
-    case Products.update_product(socket.assigns.product, params) do
-      {:ok, product} ->
-        product = Products.get_product!(product.id)
-        selected_repository = selected_repository(product)
+  defp update_meadow(socket, params) do
+    case Meadows.update_meadow(socket.assigns.meadow, params) do
+      {:ok, meadow} ->
+        meadow = Meadows.get_meadow!(meadow.id)
+        selected_repository = selected_repository(meadow)
 
         {:noreply,
          socket
-         |> put_flash(:info, "Product updated.")
-         |> assign(:page_title, "#{product.name} · Products · #{socket.assigns.product_name}")
-         |> assign(:product, product)
+         |> put_flash(:info, "Meadow updated.")
+         |> assign(:page_title, "#{meadow.name} · Meadows · #{socket.assigns.product_name}")
+         |> assign(:meadow, meadow)
          |> assign(:selected_repository, selected_repository)
-         |> assign_form(Products.change_product(product))}
+         |> assign_form(Meadows.change_meadow(meadow))}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, Map.put(changeset, :action, :update))}
     end
   end
 
-  defp selected_repository(product) do
-    product.github_repositories
+  defp selected_repository(meadow) do
+    meadow.github_repositories
     |> List.first()
     |> case do
       nil ->
@@ -205,7 +234,7 @@ defmodule HiveWeb.SettingsLive.Product do
   defp repository_load_error(_reason), do: "GitHub repositories could not be loaded."
 
   defp assign_form(socket, changeset) do
-    assign(socket, :form, to_form(interpolate_errors(changeset), as: :product))
+    assign(socket, :form, to_form(interpolate_errors(changeset), as: :meadow))
   end
 
   defp webhook_form do
@@ -221,8 +250,8 @@ defmodule HiveWeb.SettingsLive.Product do
     end
   end
 
-  defp webhook_ingest_url(product_id, source, token) do
-    Endpoint.url() <> "/webhooks/products/#{product_id}/#{source}/#{token}"
+  defp webhook_ingest_url(meadow_id, source, token) do
+    Endpoint.url() <> "/webhooks/meadows/#{meadow_id}/#{source}/#{token}"
   end
 
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
@@ -248,13 +277,13 @@ defmodule HiveWeb.SettingsLive.Product do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
-      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
     >
-      <SettingsComponents.product_detail
-        product={@product}
+      <MeadowComponents.meadow_detail
+        meadow={@meadow}
+        editable?={@editable?}
         form={@form}
         repository_options={@repository_options}
         repository_load_error={@repository_load_error}

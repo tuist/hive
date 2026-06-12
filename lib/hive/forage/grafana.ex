@@ -2,7 +2,7 @@ defmodule Hive.Forage.Grafana do
   @moduledoc """
   Parses Grafana Unified Alerting webhook payloads and upserts the
   resulting alerts into `forage_grafana_alerts`, keyed by
-  `(product_id, fingerprint)` so firing/resolved deliveries thread into
+  `(meadow_id, fingerprint)` so firing/resolved deliveries thread into
   the same row.
 
   Reference payload shape (only the fields Hive uses):
@@ -26,8 +26,8 @@ defmodule Hive.Forage.Grafana do
   import Ecto.Query
 
   alias Hive.Forage.GrafanaAlert
-  alias Hive.Products.Product
-  alias Hive.Products.Webhook
+  alias Hive.Meadows.Meadow
+  alias Hive.Meadows.Webhook
   alias Hive.Repo
 
   @doc """
@@ -35,19 +35,19 @@ defmodule Hive.Forage.Grafana do
   `{:ok, [%GrafanaAlert{}, ...]}` listing the upserted rows, or
   `{:error, :invalid_payload}` if the payload doesn't look like Grafana.
   """
-  def ingest(%Product{} = product, %Webhook{} = webhook, payload) when is_map(payload) do
+  def ingest(%Meadow{} = meadow, %Webhook{} = webhook, payload) when is_map(payload) do
     case extract_alerts(payload) do
       [] -> {:error, :invalid_payload}
-      alerts -> {:ok, Enum.map(alerts, &upsert_alert(product, webhook, &1))}
+      alerts -> {:ok, Enum.map(alerts, &upsert_alert(meadow, webhook, &1))}
     end
   end
 
-  def ingest(_product, _webhook, _payload), do: {:error, :invalid_payload}
+  def ingest(_meadow, _webhook, _payload), do: {:error, :invalid_payload}
 
   defp extract_alerts(%{"alerts" => alerts}) when is_list(alerts), do: alerts
   defp extract_alerts(_payload), do: []
 
-  defp upsert_alert(%Product{} = product, %Webhook{} = webhook, alert) when is_map(alert) do
+  defp upsert_alert(%Meadow{} = meadow, %Webhook{} = webhook, alert) when is_map(alert) do
     fingerprint = Map.get(alert, "fingerprint") || derive_fingerprint(alert)
     status = parse_status(Map.get(alert, "status"))
     labels = alert |> Map.get("labels") || %{}
@@ -64,11 +64,11 @@ defmodule Hive.Forage.Grafana do
       starts_at: parse_timestamp(Map.get(alert, "startsAt")),
       ends_at: parse_timestamp(Map.get(alert, "endsAt")),
       last_received_at: now,
-      product_id: product.id,
+      meadow_id: meadow.id,
       webhook_id: webhook.id
     }
 
-    case Repo.get_by(GrafanaAlert, product_id: product.id, fingerprint: fingerprint) do
+    case Repo.get_by(GrafanaAlert, meadow_id: meadow.id, fingerprint: fingerprint) do
       nil -> %GrafanaAlert{}
       existing -> existing
     end
@@ -116,12 +116,12 @@ defmodule Hive.Forage.Grafana do
   defp epoch?(_), do: false
 
   @doc """
-  Lists all Grafana alerts most-recent-first, preloading their product.
+  Lists all Grafana alerts most-recent-first, preloading their meadow.
   """
   def list_alerts do
     GrafanaAlert
     |> order_by([alert], desc: alert.last_received_at)
-    |> preload(:product)
+    |> preload(:meadow)
     |> Repo.all()
   end
 end

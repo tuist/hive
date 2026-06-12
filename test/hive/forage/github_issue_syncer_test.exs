@@ -7,15 +7,15 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
   alias Hive.Forage.GitHubIssueSyncer
   alias Hive.GitHub.Client
   alias Hive.GitHub.Issues
-  alias Hive.Products
+  alias Hive.Meadows
 
   defp unique, do: System.unique_integer([:positive])
 
-  defp setup_product! do
+  defp setup_meadow! do
     suffix = unique()
 
-    {:ok, product} =
-      Products.create_product(%{
+    {:ok, meadow} =
+      Meadows.create_meadow(%{
         name: "hive-syncer-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -23,7 +23,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
         github_repository_visibility: "public"
       })
 
-    product
+    meadow
   end
 
   defp start_syncer! do
@@ -42,7 +42,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "skips the sync when the GitHub App is not configured" do
     stub(Client, :config, fn -> {:error, {:not_configured, [:app_id]}} end)
-    setup_product!()
+    setup_meadow!()
 
     {_pid, name} = start_syncer!()
 
@@ -51,8 +51,8 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
   end
 
   test "upserts new issues and deletes issues that disappeared upstream" do
-    product = setup_product!()
-    repository = hd(product.github_repositories)
+    meadow = setup_meadow!()
+    repository = hd(meadow.github_repositories)
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
 
@@ -82,16 +82,16 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
     assert remaining.title == "Updated title"
   end
 
-  test "list_github_issues_for_user/1 returns issues with their product/repo context" do
-    product = setup_product!()
-    repository = hd(product.github_repositories)
+  test "list_github_issues_for_user/1 returns issues with their meadow/repo context" do
+    meadow = setup_meadow!()
+    repository = hd(meadow.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{number: 1, title: "Hello", body: "World"}
     ])
 
-    assert [{returned_product, returned_repo, issue}] = Forage.list_github_issues_for_user(nil)
-    assert returned_product.id == product.id
+    assert [{returned_meadow, returned_repo, issue}] = Forage.list_github_issues_for_user(nil)
+    assert returned_meadow.id == meadow.id
     assert returned_repo.id == repository.id
     assert issue.title == "Hello"
   end

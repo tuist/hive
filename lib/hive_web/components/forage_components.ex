@@ -10,7 +10,7 @@ defmodule HiveWeb.ForageComponents do
 
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
-  alias Hive.Products.GitHubRepository
+  alias Hive.Meadows.GitHubRepository
 
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
@@ -86,7 +86,7 @@ defmodule HiveWeb.ForageComponents do
         <div data-part="title-group">
           <.badge label="Forage" color="information" style="light-fill" />
           <h1>New feature request</h1>
-          <p>Capture a public idea that can become workable product direction.</p>
+          <p>Capture a public idea that can become workable meadow direction.</p>
           <span data-part="requester">
             Requesting as {@user_name}
           </span>
@@ -138,7 +138,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title="Active" value={@stats.firing} legend="primary" />
         <.forage_widget title="Resolved" value={@stats.resolved} legend="secondary" />
-        <.forage_widget title="Products" value={@stats.products} legend="tertiary" />
+        <.forage_widget title="Meadows" value={@stats.meadows} legend="tertiary" />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -147,7 +147,7 @@ defmodule HiveWeb.ForageComponents do
             <div data-part="empty-icon"><.bell /></div>
             <h2>No Grafana alerts yet</h2>
             <p>
-              Generate a webhook on a product in settings and point a Grafana
+              Generate a webhook on a meadow in settings and point a Grafana
               contact point at it. Firing and resolved deliveries will thread
               into one item per alert.
             </p>
@@ -169,8 +169,8 @@ defmodule HiveWeb.ForageComponents do
                   dot={true}
                 />
                 <.badge
-                  :if={alert.product}
-                  label={alert.product.name}
+                  :if={alert.meadow}
+                  label={alert.meadow.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
@@ -195,7 +195,7 @@ defmodule HiveWeb.ForageComponents do
     %{
       firing: Enum.count(alerts, &(&1.status == :firing)),
       resolved: Enum.count(alerts, &(&1.status == :resolved)),
-      products: alerts |> Enum.map(& &1.product_id) |> Enum.uniq() |> length()
+      meadows: alerts |> Enum.map(& &1.meadow_id) |> Enum.uniq() |> length()
     }
   end
 
@@ -218,7 +218,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title={String.capitalize(@stats.state_label)} value={@stats.total} legend="primary" />
         <.forage_widget title="Repositories" value={@stats.repositories} legend="secondary" />
-        <.forage_widget title="Products" value={@stats.products} legend="tertiary" />
+        <.forage_widget title="Meadows" value={@stats.meadows} legend="tertiary" />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -240,14 +240,14 @@ defmodule HiveWeb.ForageComponents do
             <div data-part="empty-icon"><.icon name={@source.icon} /></div>
             <h2>No {@stats.state_label} to show</h2>
             <p>
-              Connect a GitHub repository to a product in
-              <a href={~p"/settings/products"}>Settings → Products</a>
+              Connect a GitHub repository to a meadow in
+              <a href={~p"/meadows"}>Meadows</a>
               and matching issues will appear here once they have been synced.
             </p>
           </div>
 
           <div :if={@entries != []} data-part="issue-list">
-            <article :for={{product, repository, issue} <- @entries} data-part="issue-row">
+            <article :for={{meadow, repository, issue} <- @entries} data-part="issue-row">
               <div data-part="issue-copy">
                 <h2>
                   <a
@@ -269,7 +269,7 @@ defmodule HiveWeb.ForageComponents do
                     <:icon><.brand_github /></:icon>
                   </.badge>
                   <.badge
-                    label={product.name}
+                    label={meadow.name}
                     color="information"
                     style="light-fill"
                     size="large"

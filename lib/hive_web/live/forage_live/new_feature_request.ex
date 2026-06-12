@@ -11,7 +11,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
 
   def open_graph do
     %{
-      description: "Capture a public idea that can become workable product direction.",
+      description: "Capture a public idea that can become workable meadow direction.",
       eyebrow: "Forage",
       highlights: ["Public ideas", "Actionable context", "Contributor signal"],
       id: "forage-feature-requests-new",
@@ -91,7 +91,6 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
-      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}

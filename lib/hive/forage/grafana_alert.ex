@@ -1,8 +1,8 @@
 defmodule Hive.Forage.GrafanaAlert do
   @moduledoc """
-  A Grafana alert ingested via an inbound product webhook.
+  A Grafana alert ingested via an inbound meadow webhook.
 
-  One row per Grafana `fingerprint` per product. Firing and resolved
+  One row per Grafana `fingerprint` per meadow. Firing and resolved
   deliveries for the same fingerprint update the same row, so the UI can
   thread state transitions instead of stacking duplicate cards.
   """
@@ -27,8 +27,8 @@ defmodule Hive.Forage.GrafanaAlert do
     field :ends_at, :utc_datetime
     field :last_received_at, :utc_datetime
 
-    belongs_to :product, Hive.Products.Product
-    belongs_to :webhook, Hive.Products.Webhook
+    belongs_to :meadow, Hive.Meadows.Meadow
+    belongs_to :webhook, Hive.Meadows.Webhook
 
     timestamps(type: :utc_datetime)
   end
@@ -54,7 +54,7 @@ defmodule Hive.Forage.GrafanaAlert do
       :starts_at,
       :ends_at,
       :last_received_at,
-      :product_id,
+      :meadow_id,
       :webhook_id
     ])
     |> validate_required([
@@ -62,10 +62,10 @@ defmodule Hive.Forage.GrafanaAlert do
       :status,
       :title,
       :last_received_at,
-      :product_id
+      :meadow_id
     ])
     |> validate_length(:title, max: 255)
     |> validate_inclusion(:status, @statuses)
-    |> unique_constraint([:product_id, :fingerprint])
+    |> unique_constraint([:meadow_id, :fingerprint])
   end
 end

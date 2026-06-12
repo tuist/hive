@@ -1,4 +1,4 @@
-defmodule Hive.Products.Product do
+defmodule Hive.Meadows.Meadow do
   @moduledoc false
 
   use Ecto.Schema
@@ -9,7 +9,7 @@ defmodule Hive.Products.Product do
   @foreign_key_type :binary_id
   @visibilities [:public, :private]
 
-  schema "products" do
+  schema "meadows" do
     field :name, :string
     field :description, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
@@ -17,21 +17,21 @@ defmodule Hive.Products.Product do
     field :github_repository_name, :string, virtual: true
     field :github_repository_visibility, Ecto.Enum, values: [:public, :private], virtual: true
 
-    many_to_many :github_repositories, Hive.Products.GitHubRepository,
-      join_through: Hive.Products.ProductRepository,
-      join_keys: [product_id: :id, github_repository_id: :id]
+    many_to_many :github_repositories, Hive.Meadows.GitHubRepository,
+      join_through: Hive.Meadows.MeadowRepository,
+      join_keys: [meadow_id: :id, github_repository_id: :id]
 
     many_to_many :specs, Hive.Specs.Spec,
-      join_through: "products_specs",
-      join_keys: [product_id: :id, spec_id: :id]
+      join_through: "meadows_specs",
+      join_keys: [meadow_id: :id, spec_id: :id]
 
     timestamps(type: :utc_datetime)
   end
 
   def visibilities, do: @visibilities
 
-  def changeset(product, attrs) do
-    product
+  def changeset(meadow, attrs) do
+    meadow
     |> cast(attrs, [
       :name,
       :description,

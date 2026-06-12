@@ -1,4 +1,4 @@
-#settings {
+#meadows {
   display: flex;
   flex-direction: column;
   gap: var(--noora-spacing-7);
@@ -28,18 +28,18 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
   }
 
-  & [data-part="products-card"] {
+  & [data-part="meadows-card"] {
     width: 100%;
     overflow-x: hidden;
   }
 
-  & [data-part="products-section"] {
+  & [data-part="meadows-section"] {
     display: flex;
     flex-direction: column;
     gap: var(--noora-spacing-8);
   }
 
-  & [data-part="product-detail-layout"] {
+  & [data-part="meadow-detail-layout"] {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -145,7 +145,7 @@
     }
   }
 
-  & [data-part="products-table"] .noora-table {
+  & [data-part="meadows-table"] .noora-table {
     width: 100%;
 
     & th:nth-child(1),

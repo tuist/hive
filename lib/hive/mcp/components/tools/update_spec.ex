@@ -25,10 +25,10 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
           "type" => "string",
           "description" => "Spec visibility. Use public or private."
         },
-        "product_ids" => %{
+        "meadow_ids" => %{
           "type" => "array",
           "items" => %{"type" => "string"},
-          "description" => "Product IDs to associate with the spec."
+          "description" => "Meadow IDs to associate with the spec."
         },
         "expected_revision" => %{"type" => "integer"}
       }
@@ -64,7 +64,7 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
   end
 
   defp update(conn, spec, args) do
-    attrs = Map.take(args, ["title", "body", "summary", "status", "visibility", "product_ids"])
+    attrs = Map.take(args, ["title", "body", "summary", "status", "visibility", "meadow_ids"])
 
     case Specs.update_spec(spec, attrs, conn.assigns.current_user) do
       {:ok, spec} ->

@@ -5,11 +5,11 @@ alias Hive.Accounts.UserIdentity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
 alias Hive.Forage.Grafana
-alias Hive.Products
-alias Hive.Products.GitHubRepository
-alias Hive.Products.Product
-alias Hive.Products.Webhook
-alias Hive.Products.Webhooks
+alias Hive.Meadows
+alias Hive.Meadows.GitHubRepository
+alias Hive.Meadows.Meadow
+alias Hive.Meadows.Webhook
+alias Hive.Meadows.Webhooks
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
@@ -93,10 +93,10 @@ Enum.each(feature_requests, fn {email, attrs} ->
   end
 end)
 
-products = [
+meadows = [
   %{
     "name" => "Hive",
-    "description" => "Agentic product orchestration for one organization.",
+    "description" => "Agentic meadow orchestration for one organization.",
     "visibility" => "public",
     "github_repository_owner" => "tuist",
     "github_repository_name" => "hive"
@@ -111,26 +111,26 @@ products = [
   },
   %{
     "name" => "Noora",
-    "description" => "Design system components shared across Tuist products.",
+    "description" => "Design system components shared across Tuist meadows.",
     "visibility" => "public",
     "github_repository_owner" => "tuist",
     "github_repository_name" => "tuist"
   },
   %{
     "name" => "Atlas",
-    "description" => "A product boundary without a GitHub repository connected yet.",
+    "description" => "A meadow boundary without a GitHub repository connected yet.",
     "visibility" => "private"
   }
 ]
 
-Enum.each(products, fn attrs ->
+Enum.each(meadows, fn attrs ->
   exists? =
-    Product
-    |> where([product], product.name == ^attrs["name"])
+    Meadow
+    |> where([meadow], meadow.name == ^attrs["name"])
     |> Repo.exists?()
 
   unless exists? do
-    {:ok, _product} = Products.create_product(attrs)
+    {:ok, _meadow} = Meadows.create_meadow(attrs)
   end
 end)
 
@@ -187,13 +187,13 @@ specs = [
   %{
     author: "maya@example.com",
     source_title: "Import feature requests from GitHub Discussions",
-    product_names: ["Hive"],
+    meadow_names: ["Hive"],
     attrs: %{
       "title" => "GitHub Discussions forage import",
       "summary" =>
         "Import public GitHub Discussions into Forage while preserving source metadata for reviewers.",
       "body" => """
-      Connect a GitHub Discussions category as a forage source so public product ideas flow into Hive without manual copying.
+      Connect a GitHub Discussions category as a forage source so public meadow ideas flow into Hive without manual copying.
 
       The importer should preserve the original title, body, author signal, and source URL. Imported items should appear alongside manually submitted feature requests and keep enough metadata for reviewers to trace the idea back to GitHub.
 
@@ -214,7 +214,7 @@ specs = [
   %{
     author: "jon@example.com",
     source_title: "Group forage by source and priority",
-    product_names: ["Hive", "Noora"],
+    meadow_names: ["Hive", "Noora"],
     attrs: %{
       "title" => "Forage source and priority grouping",
       "summary" =>
@@ -234,13 +234,13 @@ specs = [
     },
     comments: [
       {"priya@example.com",
-       "The alert exception is important. Not every signal should become product planning."}
+       "The alert exception is important. Not every signal should become meadow planning."}
     ]
   },
   %{
     author: "priya@example.com",
     source_title: "Let users subscribe to feature request updates",
-    product_names: ["Hive"],
+    meadow_names: ["Hive"],
     attrs: %{
       "title" => "Feature request subscriptions",
       "summary" =>
@@ -264,7 +264,7 @@ specs = [
   },
   %{
     author: "maya@example.com",
-    product_names: ["Hive"],
+    meadow_names: ["Hive"],
     attrs: %{
       "title" => "Spec activity feed",
       "summary" =>
@@ -361,7 +361,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    product_names: ["Hive"],
+    meadow_names: ["Hive"],
     attrs: %{
       "title" => "Auto-generate specs from forage with an LLM",
       "summary" =>
@@ -369,7 +369,7 @@ specs = [
       "body" => """
       # Proposal
 
-      When a feature request is marked `planned`, trigger an LLM to draft a spec body from the request title and description, plus relevant context from the linked product. The draft is saved as a `draft` spec for a human to refine.
+      When a feature request is marked `planned`, trigger an LLM to draft a spec body from the request title and description, plus relevant context from the linked meadow. The draft is saved as a `draft` spec for a human to refine.
 
       ## Sketch
 
@@ -403,7 +403,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    product_names: ["Hive", "Tuist"],
+    meadow_names: ["Hive", "Tuist"],
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
       "summary" =>
@@ -427,15 +427,15 @@ specs = [
 ]
 
 spec_needs_update? = fn spec, attrs ->
-  spec = Repo.preload(spec, :products)
-  product_ids = Map.get(attrs, "product_ids", [])
+  spec = Repo.preload(spec, :meadows)
+  meadow_ids = Map.get(attrs, "meadow_ids", [])
 
   spec.title != attrs["title"] or
     spec.body != attrs["body"] or
     spec.summary != attrs["summary"] or
     Atom.to_string(spec.status) != attrs["status"] or
     Atom.to_string(spec.visibility) != Map.get(attrs, "visibility", "public") or
-    Enum.sort(Enum.map(spec.products, & &1.id)) != Enum.sort(product_ids)
+    Enum.sort(Enum.map(spec.meadows, & &1.id)) != Enum.sort(meadow_ids)
 end
 
 Enum.each(specs, fn seed ->
@@ -457,10 +457,10 @@ Enum.each(specs, fn seed ->
     end
     |> Map.put_new("visibility", "public")
     |> Map.put(
-      "product_ids",
+      "meadow_ids",
       seed
-      |> Map.get(:product_names, [])
-      |> Enum.map(fn name -> Repo.get_by!(Product, name: name).id end)
+      |> Map.get(:meadow_names, [])
+      |> Enum.map(fn name -> Repo.get_by!(Meadow, name: name).id end)
     )
 
   spec =
@@ -528,39 +528,39 @@ Enum.each(specs, fn seed ->
   end)
 end)
 
-product_webhooks = [
-  %{product_name: "Hive", name: "Seed Grafana", source: :grafana},
-  %{product_name: "Tuist", name: "Seed Grafana", source: :grafana}
+meadow_webhooks = [
+  %{meadow_name: "Hive", name: "Seed Grafana", source: :grafana},
+  %{meadow_name: "Tuist", name: "Seed Grafana", source: :grafana}
 ]
 
-Enum.each(product_webhooks, fn seed ->
-  product = Repo.get_by!(Product, name: seed.product_name)
+Enum.each(meadow_webhooks, fn seed ->
+  meadow = Repo.get_by!(Meadow, name: seed.meadow_name)
 
   exists? =
     Webhook
     |> where(
       [webhook],
-      webhook.product_id == ^product.id and webhook.name == ^seed.name and
+      webhook.meadow_id == ^meadow.id and webhook.name == ^seed.name and
         webhook.source == ^seed.source
     )
     |> Repo.exists?()
 
   unless exists? do
     {:ok, {_webhook, token}} =
-      Webhooks.create(product, %{
+      Webhooks.create(meadow, %{
         "name" => seed.name,
         "source" => Atom.to_string(seed.source)
       })
 
     IO.puts(
-      "Seeded webhook for #{seed.product_name} (#{seed.source}). Token (shown once): #{token}"
+      "Seeded webhook for #{seed.meadow_name} (#{seed.source}). Token (shown once): #{token}"
     )
   end
 end)
 
 grafana_alert_seeds = [
   %{
-    product_name: "Hive",
+    meadow_name: "Hive",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -584,7 +584,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    product_name: "Hive",
+    meadow_name: "Hive",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -607,7 +607,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    product_name: "Tuist",
+    meadow_name: "Tuist",
     payload: %{
       "status" => "resolved",
       "alerts" => [
@@ -632,7 +632,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    product_name: "Tuist",
+    meadow_name: "Tuist",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -658,14 +658,14 @@ grafana_alert_seeds = [
 ]
 
 Enum.each(grafana_alert_seeds, fn seed ->
-  product = Repo.get_by!(Product, name: seed.product_name)
+  meadow = Repo.get_by!(Meadow, name: seed.meadow_name)
 
   webhook =
     Repo.one!(
       from webhook in Webhook,
-        where: webhook.product_id == ^product.id and webhook.source == ^:grafana,
+        where: webhook.meadow_id == ^meadow.id and webhook.source == ^:grafana,
         limit: 1
     )
 
-  {:ok, _alerts} = Grafana.ingest(product, webhook, seed.payload)
+  {:ok, _alerts} = Grafana.ingest(meadow, webhook, seed.payload)
 end)

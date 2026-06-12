@@ -4,7 +4,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
   alias Hive.Accounts
   alias Hive.Auth
-  alias Hive.Products
+  alias Hive.Meadows
   alias Hive.Specs
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
@@ -70,18 +70,18 @@ defmodule HiveWeb.SpecLive.ShowTest do
              live(contributor_conn, ~p"/specs/#{spec.number}")
   end
 
-  test "shows public specs attached to private products to contributors", %{conn: conn} do
+  test "shows public specs attached to private meadows to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Public product spec",
+          "title" => "Public meadow spec",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "product_ids" => [product.id]
+          "meadow_ids" => [meadow.id]
         },
         member
       )
@@ -92,20 +92,20 @@ defmodule HiveWeb.SpecLive.ShowTest do
     end)
 
     assert {:ok, _view, html} = live(contributor_conn, ~p"/specs/#{spec.number}")
-    assert html =~ "Public product spec"
+    assert html =~ "Public meadow spec"
   end
 
-  test "labels public specs attached to private products as public for members", %{conn: conn} do
+  test "labels public specs attached to private meadows as public for members", %{conn: conn} do
     {conn, member} = sign_in(conn, "member@tuist.dev")
-    {:ok, product} = Products.create_product(%{name: "Atlas", visibility: "private"})
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Public product spec",
+          "title" => "Public meadow spec",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "product_ids" => [product.id]
+          "meadow_ids" => [meadow.id]
         },
         member
       )

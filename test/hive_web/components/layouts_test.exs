@@ -33,7 +33,6 @@ defmodule HiveWeb.LayoutsTest do
         avatar_color={@avatar_color}
         auth_enabled?={@auth_enabled?}
         signed_in?={@signed_in?}
-        settings_enabled?={@settings_enabled?}
         csrf_token={@csrf_token}
         current_path={@current_path}
         forage_sources={@forage_sources}
@@ -68,7 +67,6 @@ defmodule HiveWeb.LayoutsTest do
           avatar_color: "purple",
           auth_enabled?: false,
           signed_in?: true,
-          settings_enabled?: true,
           csrf_token: "csrf-token-123",
           current_path: "/forage/feature-requests",
           forage_sources: [
@@ -90,7 +88,7 @@ defmodule HiveWeb.LayoutsTest do
       )
     end
 
-    test "renders the product name and the slotted content" do
+    test "renders the meadow name and the slotted content" do
       html = render_dashboard(assigns())
 
       assert html =~ "Hive"
@@ -129,25 +127,17 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "/forage/bug-reports"
     end
 
-    test "shows product settings when settings are enabled" do
+    test "shows Meadows at the top of the sidebar for any visitor" do
       html =
         render_dashboard(
           assigns(%{
-            signed_in?: true,
-            settings_enabled?: true,
-            current_path: "/settings/products"
+            signed_in?: false,
+            current_path: "/meadows"
           })
         )
 
-      assert html =~ "Settings"
-      assert html =~ "Products"
-      assert html =~ "/settings/products"
-    end
-
-    test "hides settings when settings are disabled" do
-      html = render_dashboard(assigns(%{signed_in?: true, settings_enabled?: false}))
-
-      refute html =~ "/settings/products"
+      assert html =~ "Meadows"
+      assert html =~ ~s(href="/meadows")
     end
 
     test "does not show account navigation in the dashboard sidebar" do
@@ -166,7 +156,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Identities"
       assert html =~ "/account/identities"
       refute html =~ "Feature requests"
-      refute html =~ "/settings/products"
+      refute html =~ "/meadows"
     end
   end
 end

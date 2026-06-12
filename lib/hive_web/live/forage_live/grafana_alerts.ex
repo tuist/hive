@@ -1,6 +1,6 @@
 defmodule HiveWeb.ForageLive.GrafanaAlerts do
   @moduledoc """
-  Renders Grafana alerts ingested via product webhooks. Visibility is
+  Renders Grafana alerts ingested via meadow webhooks. Visibility is
   organization-only, gated through the forage policy.
   """
 
@@ -50,7 +50,6 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
       avatar_color={@avatar_color}
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
-      settings_enabled?={@settings_enabled?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}

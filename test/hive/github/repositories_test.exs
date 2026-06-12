@@ -41,7 +41,7 @@ defmodule Hive.GitHub.RepositoriesTest do
                %{
                  "full_name" => "tuist/hive",
                  "name" => "hive",
-                 "description" => "Product orchestration"
+                 "description" => "Meadow orchestration"
                },
                %{
                  "full_name" => "tuist/tuist",
@@ -61,7 +61,7 @@ defmodule Hive.GitHub.RepositoriesTest do
                )
 
       assert Repositories.full_name(hive) == "tuist/hive"
-      assert hive.description == "Product orchestration"
+      assert hive.description == "Meadow orchestration"
       assert Repositories.full_name(tuist) == "tuist/tuist"
     end
 
