@@ -30,6 +30,7 @@ export const site = {
         items: [
           { text: "Overview", link: "/guide/self-hosting/" },
           { text: "Authentication", link: "/guide/self-hosting/authentication" },
+          { text: "Agents", link: "/guide/self-hosting/agents" },
           { text: "Deployment", link: "/guide/self-hosting/deployment" },
         ],
       },
