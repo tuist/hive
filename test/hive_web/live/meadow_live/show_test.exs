@@ -60,7 +60,7 @@ defmodule HiveWeb.MeadowLive.ShowTest do
 
     html =
       view
-      |> form("form[data-part='form']",
+      |> form("#edit-meadow-form",
         meadow: %{
           name: "Atlas",
           description: "Private planning.",
@@ -105,7 +105,7 @@ defmodule HiveWeb.MeadowLive.ShowTest do
 
     html =
       view
-      |> form("form[data-part='form']",
+      |> form("#edit-meadow-form",
         meadow: %{
           name: "Hive",
           visibility: "public",
@@ -134,17 +134,32 @@ defmodule HiveWeb.MeadowLive.ShowTest do
     assert [_webhook] = Hive.Meadows.Webhooks.list_for_meadow(meadow)
   end
 
-  test "deletes a meadow and redirects to the meadows index", %{conn: conn} do
+  test "deletes a meadow when the typed name matches and redirects to the index", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
     {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
     {:ok, view, html} = live(conn, ~p"/meadows/#{meadow.id}")
-    assert html =~ "Danger zone"
+    assert html =~ "Delete meadow"
 
     assert {:error, {:live_redirect, %{to: "/meadows"}}} =
-             render_click(view, "delete_meadow")
+             view
+             |> form("#delete-meadow-form", %{"name" => "Hive"})
+             |> render_submit()
 
     assert Meadows.list_meadows() == []
+  end
+
+  test "does not delete a meadow when the typed name does not match", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "alice@example.com")
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+
+    {:ok, view, _html} = live(conn, ~p"/meadows/#{meadow.id}")
+
+    view
+    |> form("#delete-meadow-form", %{"name" => "wrong"})
+    |> render_submit()
+
+    assert [%{name: "Hive"}] = Meadows.list_meadows()
   end
 
   test "deletes a webhook", %{conn: conn} do

@@ -115,6 +115,7 @@ defmodule HiveWeb.MeadowComponents do
   attr :webhook_sources, :list, default: []
   attr :selected_source, :atom, default: :grafana
   attr :created_webhook_url, :string, default: nil
+  attr :delete_meadow_form, :any, default: nil
 
   def meadow_detail(assigns) do
     ~H"""
@@ -132,6 +133,7 @@ defmodule HiveWeb.MeadowComponents do
             <.form
               :if={@editable?}
               for={@form}
+              id="edit-meadow-form"
               phx-change="validate"
               phx-submit="save"
               data-part="form"
@@ -233,73 +235,82 @@ defmodule HiveWeb.MeadowComponents do
           created_webhook_url={@created_webhook_url}
         />
 
-        <.danger_zone_card :if={@editable?} meadow={@meadow} />
+        <.delete_meadow_section
+          :if={@editable?}
+          meadow={@meadow}
+          delete_meadow_form={@delete_meadow_form}
+        />
       </div>
     </section>
     """
   end
 
   attr :meadow, :map, required: true
+  attr :delete_meadow_form, :any, required: true
 
-  defp danger_zone_card(assigns) do
+  defp delete_meadow_section(assigns) do
     ~H"""
-    <.card icon="alert_triangle" title="Danger zone" data-part="danger-zone-card">
-      <.card_section data-part="danger-zone-section">
-        <div data-part="danger-zone-row">
-          <div data-part="danger-zone-copy">
-            <h3>Delete meadow</h3>
-            <p>
-              Permanently removes the meadow, its webhooks, and links to repositories
-              and specs. This cannot be undone.
-            </p>
-          </div>
-          <.delete_meadow_modal meadow={@meadow} />
-        </div>
-      </.card_section>
-    </.card>
-    """
-  end
-
-  attr :meadow, :map, required: true
-
-  defp delete_meadow_modal(assigns) do
-    ~H"""
-    <.modal
-      id="delete-meadow-modal"
-      title={"Delete " <> @meadow.name <> "?"}
-      description="This permanently removes the meadow, its webhooks, and links to repositories and specs. This cannot be undone."
-      header_type="warning"
-      header_size="large"
-      on_dismiss="close_delete_meadow"
-    >
-      <:trigger :let={attrs}>
-        <.button label="Delete meadow" size="medium" variant="destructive" {attrs}>
-          <:icon_left><.trash /></:icon_left>
-        </.button>
-      </:trigger>
-      <:footer>
-        <.modal_footer>
-          <:action>
-            <.button
-              label="Cancel"
-              variant="secondary"
-              size="medium"
-              type="button"
-              phx-click="close_delete_meadow"
+    <.card_section data-part="delete-meadow-card-section">
+      <div data-part="header">
+        <span data-part="title">Delete meadow</span>
+        <span data-part="subtitle">This action cannot be undone.</span>
+      </div>
+      <div data-part="content">
+        <.form
+          data-part="form"
+          for={@delete_meadow_form}
+          id="delete-meadow-form"
+          phx-submit="delete_meadow"
+        >
+          <.modal
+            id="delete-meadow-modal"
+            title={"Are you sure you want to delete " <> @meadow.name <> "?"}
+            header_size="large"
+            on_dismiss="close_delete_meadow"
+          >
+            <:trigger :let={attrs}>
+              <.button label="Delete meadow" variant="destructive" size="medium" {attrs} />
+            </:trigger>
+            <.line_divider />
+            <.alert
+              status="warning"
+              type="secondary"
+              size="small"
+              title="Deleting the meadow will permanently remove its webhooks and links to repositories and specs."
             />
-          </:action>
-          <:action>
-            <.button
-              label="Delete meadow"
-              size="medium"
-              variant="destructive"
-              type="button"
-              phx-click="delete_meadow"
+            <.text_input
+              label={"Enter this meadow's name to confirm"}
+              field={@delete_meadow_form[:name]}
+              type="basic"
+              placeholder={@meadow.name}
             />
-          </:action>
-        </.modal_footer>
-      </:footer>
-    </.modal>
+            <.line_divider />
+            <:footer>
+              <.modal_footer>
+                <:action>
+                  <.button
+                    type="reset"
+                    label="Cancel"
+                    variant="secondary"
+                    size="medium"
+                    phx-click="close_delete_meadow"
+                  />
+                </:action>
+                <:action>
+                  <.button
+                    type="submit"
+                    form="delete-meadow-form"
+                    label="Delete"
+                    variant="destructive"
+                    size="medium"
+                  />
+                </:action>
+              </.modal_footer>
+            </:footer>
+          </.modal>
+        </.form>
+      </div>
+    </.card_section>
     """
   end
 
