@@ -126,6 +126,14 @@ defmodule Hive.Auth do
   def contributor?(user), do: role(user) == :contributor
 
   @doc """
+  True when the user's stored authorization role is `:admin`. Distinct
+  from `member?/1`: org membership is derived from the email domain;
+  admin status is a stored flag on the user (see `Hive.Accounts.User`).
+  """
+  def admin?(%User{role: :admin}), do: true
+  def admin?(_user), do: false
+
+  @doc """
   The persisted user for the current session, or `nil`. The session
   stores only the user id; the record is loaded on demand.
   """

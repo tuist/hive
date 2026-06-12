@@ -67,6 +67,29 @@ Two providers are supported and can run side-by-side:
 
 Routes: Ueberauth's plug owns `/auth/:provider` (redirect to IdP) and `/auth/:provider/callback` (token exchange + userinfo). The Hive `AuthController.callback/2` action reads `conn.assigns.ueberauth_auth`, runs `Hive.Auth.check_domain/2` against the provider's allowlist, and stores the user in the session.
 
+## Authorization
+
+Hive uses [LetMe] as its authorization framework. A LetMe `Policy` declares the actions allowed on an object and the named checks each action needs; the checks themselves are plain boolean functions over `{subject, object}` and live in a sibling `Checks` module.
+
+[LetMe]: https://hexdocs.pm/let_me
+
+Layout convention: `lib/hive/<domain>/policy.ex` declares `use LetMe.Policy` and the rule tree; `lib/hive/<domain>/policy/checks.ex` exposes the boolean checks referenced by name. Call sites use `Policy.authorize?(:object_action, subject, object)`.
+
+The persisted authorization role lives on `Hive.Accounts.User.role` (`:admin` or `:member`, default `:member`). It is distinct from the email-domain-derived org role exposed by `Hive.Auth.role/1` (`:member` vs `:contributor`): the stored role gates app surfaces like the audit trail; the org role classifies whether someone belongs to the deployment's organization.
+
+Examples to follow:
+
+- `lib/hive/forage/policy.ex` + `lib/hive/forage/policy/checks.ex` — public vs org-member access to forage sources.
+- `lib/hive/audit/policy.ex` + `lib/hive/audit/policy/checks.ex` — admin-only access to the audit trail.
+
+## Audit
+
+`Hive.Audit` records a single append-only trail of user, agent, webhook, and worker actions. Each entry captures who did something (the actor: id, email, name, role), where the action came from (the interface: `dashboard | mcp | webhook | worker | system`), what was acted on (target type/id/label, with metadata), and when it occurred. Entries surface through `HiveWeb.AuditLive` at `/audit` (gated by `Hive.Audit.Policy` on the stored `:admin` role) and through the `list_audit_activities` / `get_audit_activity` MCP tools.
+
+The actor and interface for the current process are stored in the process dictionary so call sites that record events don't need to thread them through every function. Set them at the request boundary (`Audit.put_context/1` is already called from `HiveWeb.Plugs.RequireAuthenticated`, `HiveWeb.Plugs.MCPAuthentication`, and `HiveWeb.DashboardLive.Hooks`) and call `Audit.record(action, attrs)` from wherever the event happens. Workers, webhook handlers, and one-off scripts should call `put_context/1` themselves with the right interface before recording.
+
+When in doubt about action names, follow the dotted `domain.verb` convention: `user.signed_in`, `spec.created`, `meadow.webhook_received`, `forage.feature_request.created`. `target_type` is a short noun (`user`, `spec`, `meadow`, `feature_request`, `github_issue`, `grafana_alert`); `Hive.Audit.resource_path/3` knows how to turn a `target_type`+`target_id` into a link for the UI.
+
 ## Agents
 
 Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive and is configured at runtime from three env vars:

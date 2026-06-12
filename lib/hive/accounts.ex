@@ -18,6 +18,13 @@ defmodule Hive.Accounts do
   def get_user(nil), do: nil
   def get_user(id), do: Repo.get(User, id)
 
+  @doc "Updates a user's stored authorization role."
+  def update_user_role(%User{} = user, role) do
+    user
+    |> User.role_changeset(%{role: role})
+    |> Repo.update()
+  end
+
   @doc "Fetches a user by id with its OAuth identities preloaded."
   def get_user_with_identities(nil), do: nil
 
@@ -40,26 +47,44 @@ defmodule Hive.Accounts do
   Only a never-seen identity matches (or creates) a user by email. Runs
   in a transaction so a login never leaves a user without its identity.
   """
-  def upsert_from_auth(%{email: email, provider: provider, provider_uid: provider_uid}) do
+  def upsert_from_auth(%{email: email, provider: provider, provider_uid: provider_uid} = attrs) do
+    name = Map.get(attrs, :name)
+
     Repo.transaction(fn ->
       case get_identity(provider, provider_uid) do
         %UserIdentity{} = identity ->
-          identity |> Repo.preload(:user) |> Map.fetch!(:user)
+          identity
+          |> Repo.preload(:user)
+          |> Map.fetch!(:user)
+          |> maybe_backfill_name(name)
 
         nil ->
-          create_user_with_identity(email, provider, provider_uid)
+          create_user_with_identity(email, name, provider, provider_uid)
       end
     end)
   end
 
-  defp create_user_with_identity(email, provider, provider_uid) do
-    with {:ok, user} <- upsert_user(email),
+  defp create_user_with_identity(email, name, provider, provider_uid) do
+    with {:ok, user} <- upsert_user(email, name),
          {:ok, _identity} <- insert_identity(user, provider, provider_uid) do
       user
     else
       {:error, changeset} -> Repo.rollback(changeset)
     end
   end
+
+  defp maybe_backfill_name(%User{name: existing} = user, _name)
+       when is_binary(existing) and existing != "",
+       do: user
+
+  defp maybe_backfill_name(%User{} = user, name) when is_binary(name) and name != "" do
+    case user |> User.changeset(%{name: name}) |> Repo.update() do
+      {:ok, updated} -> updated
+      _error -> user
+    end
+  end
+
+  defp maybe_backfill_name(user, _name), do: user
 
   @doc """
   Links an authenticated provider identity to an existing user.
@@ -78,10 +103,10 @@ defmodule Hive.Accounts do
     end)
   end
 
-  defp upsert_user(email) do
+  defp upsert_user(email, name) do
     case get_user_by_email(email || "") do
-      nil -> %User{} |> User.changeset(%{email: email}) |> Repo.insert()
-      user -> {:ok, user}
+      nil -> %User{} |> User.changeset(%{email: email, name: name}) |> Repo.insert()
+      user -> {:ok, maybe_backfill_name(user, name)}
     end
   end
 

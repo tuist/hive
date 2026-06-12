@@ -2,6 +2,7 @@ defmodule HiveWeb.AuthController do
   use HiveWeb, :controller
 
   alias Hive.Accounts
+  alias Hive.Audit
   alias Hive.Auth
   alias HiveWeb.PageHTML
 
@@ -35,6 +36,7 @@ defmodule HiveWeb.AuthController do
          :ok <- Auth.check_domain(provider, email || "") do
       auth_attrs = %{
         email: email,
+        name: auth.info.name,
         provider: provider_key,
         provider_uid: to_string(auth.uid)
       }
@@ -80,6 +82,20 @@ defmodule HiveWeb.AuthController do
   end
 
   def delete(conn, _params) do
+    case current_user(conn) do
+      nil ->
+        :ok
+
+      user ->
+        Audit.record("user.signed_out", %{
+          actor: user,
+          interface: "dashboard",
+          target_type: "user",
+          target_id: user.id,
+          target_label: user.email
+        })
+    end
+
     conn
     |> configure_session(drop: true)
     |> redirect(to: ~p"/login")
@@ -87,6 +103,14 @@ defmodule HiveWeb.AuthController do
 
   defp sign_in(conn, user) do
     return_to = get_session(conn, :user_return_to) || ~p"/"
+
+    Audit.record("user.signed_in", %{
+      actor: user,
+      interface: "dashboard",
+      target_type: "user",
+      target_id: user.id,
+      target_label: user.email
+    })
 
     conn
     |> configure_session(renew: true)

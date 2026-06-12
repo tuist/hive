@@ -7,14 +7,18 @@ defmodule Hive.Agents.Sessions do
   individual agents stay free of LLM plumbing. Caller-supplied options
   win on key collision.
 
+  Each run also installs an audit actor that identifies the agent (see
+  `Hive.Audit.agent_actor/2`) for the duration of the call, so any
+  `Hive.Audit.record/3` inside the agent's tools attributes the entry to
+  the agent (kind `"agent"`) rather than to a system actor. The actor
+  context is scoped to the run and restored when it returns.
+
   Returns `{:error, :llm_not_configured}` when no LLM is configured,
   keeping the rest of the app working when Hive is deployed without
   agentic features.
-
-  Future audit-trail wiring (persisting sessions and tool calls to the
-  database, surfacing them in the UI) lands here so every existing agent
-  picks it up without changes.
   """
+
+  alias Hive.Audit
 
   @doc """
   Runs an agent module with the given prompt. Caller-supplied opts are
@@ -23,7 +27,9 @@ defmodule Hive.Agents.Sessions do
   def run(agent_module, prompt, opts \\ [])
       when is_atom(agent_module) and is_binary(prompt) and is_list(opts) do
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
-      Condukt.run(agent_module, prompt, Keyword.merge(llm_opts, opts))
+      Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
+        Condukt.run(agent_module, prompt, Keyword.merge(llm_opts, opts))
+      end)
     end
   end
 
@@ -33,7 +39,20 @@ defmodule Hive.Agents.Sessions do
   def run_operation(agent_module, operation_name, args, opts \\ [])
       when is_atom(agent_module) and is_atom(operation_name) and is_map(args) and is_list(opts) do
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
-      Condukt.Operation.run(agent_module, operation_name, args, Keyword.merge(llm_opts, opts))
+      Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
+        Condukt.Operation.run(agent_module, operation_name, args, Keyword.merge(llm_opts, opts))
+      end)
     end
+  end
+
+  defp agent_actor_context(agent_module, llm_opts) do
+    %{actor: Audit.agent_actor(agent_name(agent_module), model: Keyword.get(llm_opts, :model))}
+  end
+
+  defp agent_name(agent_module) do
+    agent_module
+    |> Module.split()
+    |> List.last()
+    |> to_string()
   end
 end

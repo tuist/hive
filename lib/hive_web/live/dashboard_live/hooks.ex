@@ -10,14 +10,16 @@ defmodule HiveWeb.DashboardLive.Hooks do
   import Phoenix.LiveView
 
   alias Hive.Accounts
+  alias Hive.Audit
   alias Hive.Auth
   alias Hive.Forage
 
   def on_mount(:default, _params, session, socket) do
-    socket =
-      socket
-      |> assign_chrome(session)
-      |> attach_hook(:dashboard_current_path, :handle_params, &put_current_path/3)
+    socket = assign_chrome(socket, session)
+
+    Audit.put_context(%{actor: socket.assigns.current_user, interface: "dashboard"})
+
+    socket = attach_hook(socket, :dashboard_current_path, :handle_params, &put_current_path/3)
 
     {:cont, socket}
   end
@@ -38,6 +40,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
     |> assign(:avatar_color, if(user, do: "purple", else: "gray"))
     |> assign(:auth_enabled?, Auth.private?())
     |> assign(:signed_in?, not is_nil(user))
+    |> assign(:admin?, Auth.admin?(user))
     |> assign(:csrf_token, Plug.CSRFProtection.get_csrf_token())
     |> assign(:forage_sources, Forage.visible_sources(user))
     |> assign(:current_path, "/")
