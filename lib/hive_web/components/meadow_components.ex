@@ -264,25 +264,27 @@ defmodule HiveWeb.MeadowComponents do
         >
           <.modal
             id="delete-meadow-modal"
-            title={"Delete " <> @meadow.name <> "?"}
-            header_size="small"
+            title="Are you sure you want to delete this?"
+            header_size="large"
             on_dismiss="close_delete_meadow"
           >
             <:trigger :let={attrs}>
               <.button label="Delete meadow" variant="destructive" size="medium" {attrs} />
             </:trigger>
+            <.line_divider />
             <.alert
               status="warning"
               type="secondary"
               size="small"
-              title="Deleting the meadow permanently removes all of its data."
+              title="Deleting the meadow will permanently remove all of its data"
             />
             <.text_input
-              label="Enter the meadow's name to confirm"
+              label="Enter this meadow's name to confirm"
               field={@delete_meadow_form[:name]}
               type="basic"
               placeholder={@meadow.name}
             />
+            <.line_divider />
             <:footer>
               <.modal_footer>
                 <:action>
