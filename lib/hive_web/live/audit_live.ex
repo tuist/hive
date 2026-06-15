@@ -373,6 +373,8 @@ defmodule HiveWeb.AuditLive do
 
   defp target_label(_target), do: "-"
 
+  defp interface_label("mcp"), do: "MCP"
+
   defp interface_label(interface) when is_binary(interface) do
     interface
     |> String.replace("_", " ")
