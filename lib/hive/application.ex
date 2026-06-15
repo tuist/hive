@@ -21,7 +21,7 @@ defmodule Hive.Application do
         Hive.Forage.GitHubIssueSyncer
       ]
       |> maybe_add_open_graph_browser_pool()
-      |> maybe_add_meadow_evolution_worker()
+      |> maybe_add_oban()
 
     opts = [strategy: :one_for_one, name: Hive.Supervisor]
     Supervisor.start_link(children, opts)
@@ -41,9 +41,9 @@ defmodule Hive.Application do
     end
   end
 
-  defp maybe_add_meadow_evolution_worker(children) do
+  defp maybe_add_oban(children) do
     if Hive.Agents.enabled?() do
-      children ++ [Hive.Meadows.EvolutionWorker]
+      children ++ [{Oban, Application.fetch_env!(:hive, Oban)}]
     else
       children
     end

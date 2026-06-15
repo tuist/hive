@@ -45,6 +45,16 @@ config :boruta, Boruta.Oauth,
   ],
   issuer: "http://localhost"
 
+config :hive, Oban,
+  repo: Hive.Repo,
+  queues: [meadows: 1],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"*/30 * * * *", Hive.Meadows.EvolutionWorker}
+     ]}
+  ]
+
 # Ueberauth's plug reads the providers list at plug-init time (which is
 # compile-time in prod). Declare every possible provider here with just
 # the strategy module + static options; ueberauth_oidcc looks up its

@@ -1,64 +1,36 @@
 defmodule Hive.Meadows.EvolutionWorkerTest do
-  use ExUnit.Case, async: true
+  use Hive.DataCase, async: true
+  use Oban.Testing, repo: Hive.Repo
 
   alias Hive.Meadows.EvolutionWorker
 
-  defp start_worker!(opts) do
-    name = :"meadow_evolution_worker_#{System.unique_integer([:positive])}"
-
-    {:ok, _pid} =
-      start_supervised(
-        {EvolutionWorker,
-         Keyword.merge(
-           [
-             name: name,
-             run_on_start: false,
-             interval_ms: :timer.minutes(60),
-             debounce_ms: 5
-           ],
-           opts
-         )}
-      )
-
-    name
+  setup do
+    start_supervised!({Oban, Application.fetch_env!(:hive, Oban)})
+    :ok
   end
 
-  test "evolve_now/1 runs the configured evolution function when agents are enabled" do
-    test_pid = self()
+  test "enqueue/1 inserts a delayed unique evolution job when agents are enabled" do
+    assert {:ok, %Oban.Job{} = first_job} =
+             EvolutionWorker.enqueue(agents_enabled?: fn -> true end)
 
-    name =
-      start_worker!(
-        agents_enabled?: fn -> true end,
-        evolve_fun: fn ->
-          send(test_pid, :evolved)
-          {:ok, %{created: [], updated: [], skipped: []}}
-        end
-      )
+    assert {:ok, %Oban.Job{} = second_job} =
+             EvolutionWorker.enqueue(agents_enabled?: fn -> true end)
 
-    assert :ok = EvolutionWorker.evolve_now(name)
-    assert_receive :evolved
+    assert first_job.id == second_job.id
+    assert second_job.conflict?
+    assert first_job.queue == "meadows"
+    assert first_job.worker == inspect(EvolutionWorker)
+    assert DateTime.compare(first_job.scheduled_at, DateTime.utc_now()) == :gt
+
+    assert [%Oban.Job{}] = all_enqueued(worker: EvolutionWorker, queue: "meadows")
   end
 
-  test "enqueue/1 debounces evolution requests" do
-    test_pid = self()
-
-    name =
-      start_worker!(
-        agents_enabled?: fn -> true end,
-        evolve_fun: fn ->
-          send(test_pid, :evolved)
-          {:ok, %{created: [], updated: [], skipped: []}}
-        end
-      )
-
-    assert :ok = EvolutionWorker.enqueue(name)
-    assert :ok = EvolutionWorker.enqueue(name)
-
-    assert_receive :evolved, 100
-    refute_receive :evolved, 30
+  test "enqueue/1 skips when agentic workflows are dormant" do
+    assert :skipped = EvolutionWorker.enqueue(agents_enabled?: fn -> false end)
+    assert [] = all_enqueued(worker: EvolutionWorker)
   end
 
-  test "enqueue/1 skips when the worker is not running" do
-    assert :skipped = EvolutionWorker.enqueue(:missing_meadow_evolution_worker)
+  test "perform/1 evolves from work items" do
+    assert :ok = perform_job(EvolutionWorker, %{})
   end
 end
