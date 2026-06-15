@@ -30,7 +30,6 @@ defmodule HiveWeb.AuditLiveTest do
 
     assert has_element?(view, "#audit")
     assert has_element?(view, "#audit-table")
-    assert has_element?(view, "#audit-count", "1 activity")
     assert has_element?(view, ~s(a[data-part="target-link"][href="/meadows/meadow-1"]))
 
     view
