@@ -12,6 +12,9 @@ defmodule Hive.Meadows do
   alias Hive.Meadows.MeadowRepository
   alias Hive.Repo
 
+  defdelegate evolve_from_work_items(opts \\ []), to: Hive.Meadows.Evolution
+  defdelegate schedule_evolution, to: Hive.Meadows.EvolutionWorker, as: :enqueue
+
   def list_meadows do
     Meadow
     |> order_by([meadow], asc: meadow.name)

@@ -165,6 +165,14 @@ defmodule Hive.Specs do
   def create_spec(attrs, %User{} = user) do
     if can_create?(user) do
       Repo.transaction(fn -> create_spec_transaction(attrs, user) end)
+      |> case do
+        {:ok, spec} ->
+          Hive.Meadows.schedule_evolution()
+          {:ok, spec}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       {:error, :unauthorized}
     end
@@ -176,8 +184,12 @@ defmodule Hive.Specs do
     if can_edit?(spec, user) do
       Repo.transaction(fn -> update_spec_transaction(spec, attrs, user) end)
       |> case do
-        {:ok, spec} -> {:ok, spec}
-        {:error, reason} -> {:error, reason}
+        {:ok, spec} ->
+          Hive.Meadows.schedule_evolution()
+          {:ok, spec}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     else
       {:error, :unauthorized}

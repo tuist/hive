@@ -134,6 +134,14 @@ defmodule Hive.Forage do
     |> FeatureRequest.changeset(attrs)
     |> Ecto.Changeset.put_change(:user_id, user.id)
     |> Repo.insert()
+    |> case do
+      {:ok, feature_request} ->
+        Hive.Meadows.schedule_evolution()
+        {:ok, feature_request}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   defdelegate list_grafana_alerts, to: Grafana, as: :list_alerts
@@ -198,6 +206,8 @@ defmodule Hive.Forage do
       Enum.each(entries, &upsert_entry(repository_id, &1))
       delete_missing(repository_id, incoming_numbers)
     end)
+
+    Hive.Meadows.schedule_evolution()
 
     :ok
   end

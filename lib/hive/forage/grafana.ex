@@ -37,8 +37,13 @@ defmodule Hive.Forage.Grafana do
   """
   def ingest(%Meadow{} = meadow, %Webhook{} = webhook, payload) when is_map(payload) do
     case extract_alerts(payload) do
-      [] -> {:error, :invalid_payload}
-      alerts -> {:ok, Enum.map(alerts, &upsert_alert(meadow, webhook, &1))}
+      [] ->
+        {:error, :invalid_payload}
+
+      alerts ->
+        alerts = Enum.map(alerts, &upsert_alert(meadow, webhook, &1))
+        Hive.Meadows.schedule_evolution()
+        {:ok, alerts}
     end
   end
 
