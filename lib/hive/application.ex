@@ -42,9 +42,7 @@ defmodule Hive.Application do
   end
 
   defp maybe_add_meadow_evolution_worker(children) do
-    if :hive
-       |> Application.get_env(:meadow_evolution, [])
-       |> Keyword.get(:enabled, true) do
+    if Hive.Agents.enabled?() do
       children ++ [Hive.Meadows.EvolutionWorker]
     else
       children

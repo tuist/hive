@@ -41,9 +41,7 @@ defmodule Hive.Forage.Grafana do
         {:error, :invalid_payload}
 
       alerts ->
-        alerts = Enum.map(alerts, &upsert_alert(meadow, webhook, &1))
-        Hive.Meadows.schedule_evolution()
-        {:ok, alerts}
+        {:ok, Enum.map(alerts, &upsert_alert(meadow, webhook, &1))}
     end
   end
 

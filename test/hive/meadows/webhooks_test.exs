@@ -66,4 +66,23 @@ defmodule Hive.Meadows.WebhooksTest do
 
     assert Webhooks.list_for_meadow(meadow) == []
   end
+
+  test "ingest_webhook/4 upserts a Grafana delivery for the meadow", %{meadow: meadow} do
+    {:ok, {webhook, _token}} = Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
+
+    assert {:ok, [alert]} =
+             Meadows.ingest_webhook(:grafana, meadow, webhook, %{
+               "alerts" => [
+                 %{
+                   "status" => "firing",
+                   "fingerprint" => "fp-1",
+                   "labels" => %{"alertname" => "HighLatency"}
+                 }
+               ]
+             })
+
+    assert alert.meadow_id == meadow.id
+    assert alert.webhook_id == webhook.id
+    assert alert.title == "HighLatency"
+  end
 end

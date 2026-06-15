@@ -1,17 +1,22 @@
 ## Agents
 
-Some of Hive's features (for example, drafting forage summaries and
-triaging issues) call an LLM. They share a single provider and model
-configured through three environment variables. When no API key is
-set, agentic features stay dormant and the rest of Hive runs normally,
-so you can deploy without an LLM and turn it on later.
+Hive's agentic features call an LLM. They share a single provider and
+model configured through three environment variables. When no API key
+is set, agentic features stay dormant and the rest of Hive runs
+normally, so you can deploy without an LLM and turn it on later.
 
-Hive also uses agents to evolve meadows over time. When new forage items
-or specs arrive, Hive queues a debounced evolution pass. A periodic pass
-runs as well. The agent reviews recent work signals and current meadows,
-then proposes only create or update changes. Hive applies those changes
-through normal validation and skips suggestions that are too generic, too
-specific, or outside Tuist's business domains.
+## What Hive uses agents for
+
+Hive currently uses agents to keep meadows evolving over time. When new
+forage items or specs arrive, Hive queues a debounced evolution pass. A
+periodic pass runs as well. The agent reviews recent work signals and
+current meadows, then proposes only create or update changes. Hive
+applies those changes through normal validation and skips suggestions
+that are too generic, too specific, or outside Tuist's business domains.
+
+When LLM configuration is present, Hive starts the agentic workflows
+automatically. There is no separate feature flag for enabling agentic
+behavior.
 
 ## Configuration
 

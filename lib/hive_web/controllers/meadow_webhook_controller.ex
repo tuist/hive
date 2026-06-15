@@ -10,7 +10,6 @@ defmodule HiveWeb.MeadowWebhookController do
 
   use HiveWeb, :controller
 
-  alias Hive.Forage.Grafana
   alias Hive.Meadows
   alias Hive.Meadows.Webhook
   alias Hive.Meadows.Webhooks
@@ -46,5 +45,6 @@ defmodule HiveWeb.MeadowWebhookController do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
-  defp ingest(:grafana, meadow, webhook, payload), do: Grafana.ingest(meadow, webhook, payload)
+  defp ingest(source, meadow, webhook, payload),
+    do: Meadows.ingest_webhook(source, meadow, webhook, payload)
 end

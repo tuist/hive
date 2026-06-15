@@ -35,8 +35,8 @@ defmodule Hive.Meadows.EvolutionWorker do
 
   @impl true
   def init(opts) do
-    interval_ms = Keyword.get(opts, :interval_ms, configured(:interval_ms, @default_interval_ms))
-    debounce_ms = Keyword.get(opts, :debounce_ms, configured(:debounce_ms, @default_debounce_ms))
+    interval_ms = Keyword.get(opts, :interval_ms, @default_interval_ms)
+    debounce_ms = Keyword.get(opts, :debounce_ms, @default_debounce_ms)
     evolve_fun = Keyword.get(opts, :evolve_fun, &Hive.Meadows.evolve_from_work_items/0)
     agents_enabled? = Keyword.get(opts, :agents_enabled?, &Hive.Agents.enabled?/0)
 
@@ -103,12 +103,6 @@ defmodule Hive.Meadows.EvolutionWorker do
   defp schedule_debounced_run(state), do: state
 
   defp schedule_tick(interval_ms), do: Process.send_after(self(), :tick, interval_ms)
-
-  defp configured(key, default) do
-    :hive
-    |> Application.get_env(:meadow_evolution, [])
-    |> Keyword.get(key, default)
-  end
 
   defp process(pid) when is_pid(pid), do: pid
 
