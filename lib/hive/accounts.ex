@@ -105,10 +105,27 @@ defmodule Hive.Accounts do
 
   defp upsert_user(email, name) do
     case get_user_by_email(email || "") do
-      nil -> %User{} |> User.changeset(%{email: email, name: name}) |> Repo.insert()
-      user -> {:ok, maybe_backfill_name(user, name)}
+      nil ->
+        %User{}
+        |> User.changeset(%{email: email, name: name, role: initial_role(email)})
+        |> Repo.insert()
+
+      user ->
+        {:ok, maybe_backfill_name(user, name)}
     end
   end
+
+  defp initial_role(email) do
+    case Hive.Auth.org_domains() do
+      [] -> :member
+      domains -> if email_domain(email) in domains, do: :member, else: :collaborator
+    end
+  end
+
+  defp email_domain(email) when is_binary(email),
+    do: email |> String.split("@", parts: 2) |> List.last() |> String.downcase()
+
+  defp email_domain(_email), do: ""
 
   defp upsert_identity(user, provider, provider_uid) do
     case get_identity(provider, provider_uid) do

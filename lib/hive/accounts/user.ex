@@ -4,13 +4,23 @@ defmodule Hive.Accounts.User do
 
   A user may sign in through several providers; each of those is a
   `Hive.Accounts.UserIdentity` linked back here. Hive is single-tenant:
-  the deployment *is* the organization, and org membership is derived
-  from the email domain (see `Hive.Auth.role/1`).
+  the deployment *is* the organization.
 
-  The stored `:role` field is the persisted authorization role used for
-  in-app gating. It is currently `:admin` or `:member` and is what LetMe
-  policies key off (see `lib/hive/audit/policy.ex`). It is independent
-  from the email-domain-derived org membership in `Hive.Auth`.
+  The stored `:role` field is the single source of truth for what the
+  user can do, ordered weakest to strongest:
+
+  - `:collaborator` — signed in, but not part of the org. The default
+    for any user whose email domain is not in `HIVE_ORG_DOMAINS`.
+  - `:member` — part of the org. The default for users whose email
+    domain matches `HIVE_ORG_DOMAINS` at signup (or every signed-in
+    user when no org domains are configured).
+  - `:admin` — explicitly promoted; gates admin-only surfaces like
+    the audit trail.
+
+  The role is derived from the email domain at signup and then
+  persisted, so changing `HIVE_ORG_DOMAINS` afterwards does not
+  reclassify existing users. Promote and demote with
+  `Hive.Accounts.update_user_role/2`.
   """
 
   use Ecto.Schema
@@ -19,7 +29,7 @@ defmodule Hive.Accounts.User do
 
   alias Hive.Accounts.UserIdentity
 
-  @roles ~w(admin member)a
+  @roles ~w(collaborator member admin)a
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -27,7 +37,7 @@ defmodule Hive.Accounts.User do
   schema "users" do
     field :email, :string
     field :name, :string
-    field :role, Ecto.Enum, values: @roles, default: :member
+    field :role, Ecto.Enum, values: @roles, default: :collaborator
 
     has_many :identities, UserIdentity
 

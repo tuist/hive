@@ -8,14 +8,14 @@ defmodule Hive.Auth do
   allowed for a given provider's domain allowlist, and what role a
   signed-in user has.
 
-  Hive is single-tenant: the deployment *is* the organization. A user is
-  either a **member** of the org (their email domain is one of the
-  configured org domains) or an external **contributor** (authenticated,
-  but from outside). Role is derived from the email on each request, not
-  stored, so changing the org domains reclassifies users without a
-  migration. When no org domains are configured, everyone who can sign
-  in is treated as a member (the natural default for a private instance
-  where logging in already implies you're staff).
+  Hive is single-tenant: the deployment *is* the organization. Every
+  signed-in user holds one persisted role on `Hive.Accounts.User`,
+  ordered weakest to strongest: `:collaborator` (signed in, outside the
+  org), `:member` (part of the org), `:admin` (explicitly promoted). The
+  role is derived from the email domain at signup (see
+  `HIVE_ORG_DOMAINS`) and then stored, so changing the org domain list
+  afterwards does not reclassify existing users. Promote and demote with
+  `Hive.Accounts.update_user_role/2`.
   """
 
   alias Hive.Accounts
@@ -101,35 +101,25 @@ defmodule Hive.Auth do
   end
 
   @doc """
-  Role of a user relative to the org this instance represents:
-
-  - `:anonymous` — not signed in
-  - `:member` — email domain is one of `org_domains/0` (or no org
-    domains are configured)
-  - `:contributor` — signed in, but from outside the org
-
-  Takes the org domains explicitly (defaulting to `org_domains/0`) so the
-  classification can be tested without touching global config.
+  The user's persisted role, or `:anonymous` when not signed in. The
+  three signed-in values are `:collaborator`, `:member`, and `:admin`;
+  see `Hive.Accounts.User` for what each one means.
   """
-  def role(user, domains \\ org_domains())
-  def role(nil, _domains), do: :anonymous
-  def role(%User{}, []), do: :member
-
-  def role(%User{email: email}, domains) do
-    if email_domain(email) in domains, do: :member, else: :contributor
-  end
-
-  @doc "True when the user is a member of the org."
-  def member?(user), do: role(user) == :member
-
-  @doc "True when the user is signed in but not a member of the org."
-  def contributor?(user), do: role(user) == :contributor
+  def role(nil), do: :anonymous
+  def role(%User{role: role}), do: role
 
   @doc """
-  True when the user's stored authorization role is `:admin`. Distinct
-  from `member?/1`: org membership is derived from the email domain;
-  admin status is a stored flag on the user (see `Hive.Accounts.User`).
+  True when the user is part of the org. Both `:member` and `:admin`
+  qualify, since admin is a strict superset of member.
   """
+  def member?(%User{role: role}) when role in [:member, :admin], do: true
+  def member?(_user), do: false
+
+  @doc "True when the user is signed in but not part of the org."
+  def collaborator?(%User{role: :collaborator}), do: true
+  def collaborator?(_user), do: false
+
+  @doc "True when the user's persisted role is `:admin`."
   def admin?(%User{role: :admin}), do: true
   def admin?(_user), do: false
 
@@ -142,10 +132,4 @@ defmodule Hive.Auth do
     |> Plug.Conn.get_session(:user_id)
     |> Accounts.get_user()
   end
-
-  defp email_domain(email) when is_binary(email) do
-    email |> String.split("@", parts: 2) |> List.last() |> String.downcase()
-  end
-
-  defp email_domain(_email), do: ""
 end

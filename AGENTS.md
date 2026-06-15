@@ -75,7 +75,7 @@ Hive uses [LetMe] as its authorization framework. A LetMe `Policy` declares the 
 
 Layout convention: `lib/hive/<domain>/policy.ex` declares `use LetMe.Policy` and the rule tree; `lib/hive/<domain>/policy/checks.ex` exposes the boolean checks referenced by name. Call sites use `Policy.authorize?(:object_action, subject, object)`.
 
-The persisted authorization role lives on `Hive.Accounts.User.role` (`:admin` or `:member`, default `:member`). It is distinct from the email-domain-derived org role exposed by `Hive.Auth.role/1` (`:member` vs `:contributor`): the stored role gates app surfaces like the audit trail; the org role classifies whether someone belongs to the deployment's organization.
+The persisted authorization role lives on `Hive.Accounts.User.role` and is the single source of truth for authorization. It is an ordinal enum, weakest to strongest: `:collaborator` (signed in, outside the org), `:member` (part of the org), `:admin` (explicitly promoted; gates surfaces like the audit trail). The role is derived from the email domain at signup (matching `HIVE_ORG_DOMAINS` → `:member`, otherwise `:collaborator`; everyone defaults to `:member` when no org domains are set) and then stored, so changing `HIVE_ORG_DOMAINS` later does not reclassify existing users. `Hive.Auth.role/1` returns this stored value (with `:anonymous` for `nil`); `member?/1` is true for `:member` and `:admin`, `admin?/1` only for `:admin`.
 
 Examples to follow:
 

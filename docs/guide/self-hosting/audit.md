@@ -31,17 +31,20 @@ trace which model produced the side effect.
 ## Who sees it
 
 Access to the audit trail is gated by a persisted role on the user
-record. There are two roles:
+record. There are three roles, ordered weakest to strongest:
 
-- `member` (default): every signed-in user starts here. Members can
-  use Hive normally but cannot reach the audit trail.
-- `admin`: members promoted to admin can see the trail at `/audit`
-  and call the audit MCP tools.
+- `collaborator`: signed in, but not part of the org. The default
+  for anyone whose email domain is not in `HIVE_ORG_DOMAINS`.
+- `member`: part of the org. The default for users whose email
+  domain matches `HIVE_ORG_DOMAINS` at signup, or for every
+  signed-in user when no org domains are configured.
+- `admin`: explicitly promoted. Admins can see the trail at
+  `/audit` and call the audit MCP tools.
 
-The admin role is distinct from email-domain-based org membership
-(`HIVE_GOOGLE_ALLOWED_DOMAINS` and the equivalent generic-OIDC
-allowlist). Domain allowlisting gates who can sign in. The admin
-role gates who sees the trail among those signed in.
+The role is derived from the email domain the first time a user
+signs in and then stored. Changing `HIVE_ORG_DOMAINS` later does
+not reclassify existing users; promote and demote with
+`Hive.Accounts.update_user_role/2`.
 
 ## Promoting an admin
 
