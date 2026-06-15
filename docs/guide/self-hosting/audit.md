@@ -15,18 +15,18 @@ Each entry captures:
 - **Interface**: where the action came from. One of `dashboard`,
   `mcp`, `webhook`, `worker`, or `system`.
 - **Action**: a dotted `domain.verb` string, for example
-  `user.signed_in`, `spec.created`, or `meadow.webhook_received`.
+  `user.signed_in`, `spec.created`, or `spec.updated`.
 - **Target**: the resource the action acted on, with its type, id,
   and a human-readable label.
 - **Metadata**: a JSON blob with any extra context the action chose
   to record.
 - **Time**: when the action occurred, in UTC.
 
-User sign-ins, spec creation and updates, meadow webhooks, forage
-ingestion events, and similar workflows are recorded out of the box.
-Agentic workflows record entries with the agent module name as the
-actor and the model id in metadata, so you can trace which model
-produced which side effect.
+User sign-ins, sign-outs, and spec creation and updates are
+recorded out of the box. Agent-run workflows attribute their
+entries to the agent module name, with the model id captured in
+metadata, so when an agent drives one of those actions you can
+trace which model produced the side effect.
 
 ## Who sees it
 
