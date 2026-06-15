@@ -182,6 +182,7 @@ YAML
 - Do not add Back buttons to pages. The browser already provides back navigation; prefer clear page hierarchy and contextual links only when they go to a specific destination other than browser history.
 - Every user-facing HTML page should include OpenGraph metadata with an image. Define the page-specific OpenGraph data in the controller or LiveView that owns the page, pass it through `OpenGraph.assigns/1` for LiveViews, or pass `open_graph:` into `Layouts.app` for controller-rendered pages.
 - Tests live under `test/hive_web/...` mirroring `lib/hive_web/...` paths.
+- Every MCP tool module (`lib/hive/mcp/components/tools/<name>.ex`) has its own test module at `test/hive/mcp/components/tools/<name>_test.exs`. Don't bundle multiple tool tests into one file even when they share setup helpers; one file per tool keeps the layout discoverable and lets failures point at a specific tool.
 - **All tests are `async: true`.** Never mutate `Application` config in `setup`/`on_exit`: that serializes the suite. When a test needs to control behavior that reads from app config, stub the wrapping module with [Mimic](https://github.com/edgurgel/mimic) (process-local; safe under parallel execution). `test/test_helper.exs` lists which modules are Mimic-copied; add yours there when introducing new mockable surfaces.
 
 ### CSS
