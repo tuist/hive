@@ -62,6 +62,14 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }
 
+  & [data-part="pagination"] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--noora-spacing-4);
+  }
+
   & [data-part="target-link"] {
     display: block;
     color: inherit;

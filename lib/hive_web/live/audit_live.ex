@@ -14,7 +14,7 @@ defmodule HiveWeb.AuditLive do
   alias HiveWeb.Utilities.Query
   alias Noora.Filter
 
-  @page_size 25
+  @page_size 10
 
   def open_graph do
     %{
@@ -223,19 +223,39 @@ defmodule HiveWeb.AuditLive do
                 {@activities_meta.total_count} {activities_word(@activities_meta.total_count)}
               </span>
 
-              <.pagination_group
-                :if={@activities_meta.total_pages > 1}
-                id="audit-pagination"
-                current_page={@activities_meta.current_page}
-                number_of_pages={@activities_meta.total_pages}
-                page_patch={fn page -> "?#{Query.put(@uri.query, "page", page)}" end}
-              />
+              <div :if={@activities_meta.total_pages > 1} data-part="pagination">
+                <.button
+                  variant="secondary"
+                  label="Prev"
+                  disabled={@activities_meta.current_page <= 1}
+                  patch={page_link(@uri, max(1, @activities_meta.current_page - 1))}
+                >
+                  <:icon_left><.chevron_left /></:icon_left>
+                </.button>
+                <.button
+                  variant="secondary"
+                  label="Next"
+                  disabled={@activities_meta.current_page >= @activities_meta.total_pages}
+                  patch={
+                    page_link(
+                      @uri,
+                      min(@activities_meta.total_pages, @activities_meta.current_page + 1)
+                    )
+                  }
+                >
+                  <:icon_right><.chevron_right /></:icon_right>
+                </.button>
+              </div>
             </div>
           </.card_section>
         </.card>
       </section>
     </Layouts.dashboard>
     """
+  end
+
+  defp page_link(uri, page) do
+    "?" <> Query.put(uri.query, "page", Integer.to_string(page))
   end
 
   defp audit_query_params(query, active_filters) do
