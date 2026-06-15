@@ -178,6 +178,7 @@ YAML
 - No comments unless the *why* is non-obvious. Don't restate what well-named code does.
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
 - Use Noora dropdown/select components for user-facing dropdowns instead of native browser `<select>` controls.
+- Every list-style table should ship with three controls: filter chips, a free-text search box, and pagination. Use Noora's `filter_dropdown` + `active_filter` for the filter UI, a Noora `text_input` of `type="search"` for the search, and the prev/next chevron pattern from `../tuist/server` (`RunnerWorkflowsLive`, mirrored in `lib/hive_web/live/audit_live.ex`) for pagination. Render pagination centered below the table, without a separator bar. The only reason to skip any of the three is a bounded, fixed-size dataset.
 - Do not add Back buttons to pages. The browser already provides back navigation; prefer clear page hierarchy and contextual links only when they go to a specific destination other than browser history.
 - Every user-facing HTML page should include OpenGraph metadata with an image. Define the page-specific OpenGraph data in the controller or LiveView that owns the page, pass it through `OpenGraph.assigns/1` for LiveViews, or pass `open_graph:` into `Layouts.app` for controller-rendered pages.
 - Tests live under `test/hive_web/...` mirroring `lib/hive_web/...` paths.
