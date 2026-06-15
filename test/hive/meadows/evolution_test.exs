@@ -21,7 +21,7 @@ defmodule Hive.Meadows.EvolutionTest do
     {:ok, tuist} =
       Meadows.create_meadow(%{
         name: "Tuist",
-        description: "Developer tools for Xcode projects."
+        description: "Developer infrastructure for build systems."
       })
 
     {:ok, _feature_request} =
@@ -29,7 +29,7 @@ defmodule Hive.Meadows.EvolutionTest do
         %{
           "title" => "Show cache miss reasons",
           "description" =>
-            "Expose why remote cache artifacts miss so teams can improve their CI build times."
+            "Expose why remote cache artifacts miss so teams can improve CI build times."
         },
         user
       )
@@ -39,7 +39,7 @@ defmodule Hive.Meadows.EvolutionTest do
         %{
           "title" => "Build cache diagnostics",
           "summary" => "Explain build cache misses across CI and local developer workflows.",
-          "body" => "Capture cache keys, affected Xcode targets, and actionable remediation.",
+          "body" => "Capture cache keys, affected build targets, and actionable remediation.",
           "meadow_ids" => [tuist.id]
         },
         user
@@ -56,14 +56,14 @@ defmodule Hive.Meadows.EvolutionTest do
              meadow_id: tuist.id,
              name: "Tuist Developer Tools",
              description:
-               "Developer tooling for Xcode project generation, builds, and app team workflows.",
+               "Developer infrastructure for build systems, automation, and productive workflows.",
              rationale: "The existing meadow is broader than its description."
            },
            %{
              action: "create",
              name: "Build Cache",
              description:
-               "Build caching, cache diagnostics, and CI acceleration for Apple app teams.",
+               "Remote caching, cache diagnostics, and CI acceleration for development teams.",
              rationale: "Several signals point to cache observability as a durable domain."
            }
          ]

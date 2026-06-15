@@ -20,11 +20,12 @@ defmodule Hive.Meadows.Evolution do
   @max_body_length 1_200
 
   @business_context """
-  Tuist builds developer tools and infrastructure for Apple platform teams.
-  Important domains include Xcode project generation, build automation, caching,
-  testing, CI, release workflows, Swift package workflows, developer experience,
-  documentation, Hive product planning, forage, specs, MCP, identity, operations,
-  and Noora's design system.
+  Tuist builds infrastructure for productive software development, including
+  caching, compute environments, and support for build systems such as Xcode,
+  Gradle, and Bazel. Important domains include build automation, remote caching,
+  testing, CI, release workflows, developer experience, documentation, Hive
+  product planning, forage, specs, MCP, identity, operations, and Noora's design
+  system.
   """
 
   @generic_names MapSet.new(
@@ -32,8 +33,8 @@ defmodule Hive.Meadows.Evolution do
                  )
 
   @business_terms ~w(
-    account alert alerts app apple apps auth authentication authorization automation build builds cache caching ci cli
-    command commands developer developers development design docs documentation forage github grafana hive identity
+    account alert alerts app apple apps auth authentication authorization automation bazel build builds cache caching ci cli
+    command commands compute developer developers development design docs documentation environment environments forage github gradle grafana hive identity
     interface ios macos mcp noora onboarding operations organization organizations package packages project projects
     release releases repository repositories spec specs swift system test testing tests tuist workflow workflows xcode
   )

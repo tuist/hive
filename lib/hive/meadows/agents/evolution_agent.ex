@@ -80,8 +80,10 @@ defmodule Hive.Meadows.Agents.EvolutionAgent do
     GitHub issues, and operational alerts can accumulate over time.
 
     Tuist's business domains include:
-    - Apple platform developer workflows and Xcode project generation.
-    - Build, cache, test, CI, and release automation for app teams.
+    - Infrastructure for productive software development.
+    - Build automation, remote caching, testing, CI, and release workflows.
+    - Compute environments that make development and automation faster.
+    - Build system support across Xcode, Gradle, Bazel, and related ecosystems.
     - Developer experience, documentation, onboarding, and CLI workflows.
     - Hive's own product planning, forage, specs, MCP, identity, and operations.
     - Noora's design system and product interface foundations.

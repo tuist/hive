@@ -7,16 +7,18 @@ normally, so you can deploy without an LLM and turn it on later.
 
 ## What Hive uses agents for
 
-Hive currently uses agents to keep meadows evolving over time. When new
-forage items or specs arrive, Hive queues a debounced evolution pass. A
-periodic pass runs as well. The agent reviews recent work signals and
-current meadows, then proposes only create or update changes. Hive
-applies those changes through normal validation and skips suggestions
-that are too generic, too specific, or outside Tuist's business domains.
-
 When LLM configuration is present, Hive starts the agentic workflows
 automatically. There is no separate feature flag for enabling agentic
 behavior.
+
+Hive currently uses agents for:
+
+- Meadow evolution: when new forage items or specs arrive, Hive queues a
+  debounced evolution job. A periodic job runs as well. The agent
+  reviews recent work signals and current meadows, then proposes only
+  create or update changes. Hive applies those changes through normal
+  validation and skips suggestions that are too generic, too specific,
+  or outside Tuist's business domains.
 
 ## Configuration
 
