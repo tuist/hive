@@ -62,6 +62,12 @@ externalSecrets:
       remoteRef: "hive-github-app/private-key"
     HIVE_GITHUB_WEBHOOK_SECRET:
       remoteRef: "hive-github-app/webhook-secret"
+    HIVE_SLACK_CLIENT_ID:
+      remoteRef: "hive-slack-oauth/username"
+    HIVE_SLACK_CLIENT_SECRET:
+      remoteRef: "hive-slack-oauth/credential"
+    HIVE_SLACK_SIGNING_SECRET:
+      remoteRef: "hive-slack-signing-secret/credential"
     HIVE_S3_BUCKET:
       remoteRef: "hive-object-storage/bucket"
     HIVE_S3_REGION:

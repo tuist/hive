@@ -24,6 +24,11 @@ Hive currently uses agents for:
   changed between the previous and the new revision. The summary
   appears in the draft history on the spec page. When no LLM is
   configured, the history falls back to a counts-based heuristic.
+- Slack thread replies: when Hive's Slack bot is `@`-mentioned, Hive
+  queues a job that reads the thread context and asks the agent to
+  draft a short reply, posted back in the same thread. When no LLM is
+  configured, the bot stays silent. See [Slack](./slack) for the
+  workspace install flow.
 - GitHub issue meadow classification: each time the syncer sees a new
   issue or notices that an issue's title or body changed, Hive queues a
   job that asks the agent which meadows the issue actually belongs to.

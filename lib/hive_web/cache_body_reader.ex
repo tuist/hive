@@ -11,7 +11,7 @@ defmodule HiveWeb.CacheBodyReader do
         body = IO.iodata_to_binary(Enum.reverse([body | acc]))
 
         conn =
-          if conn.request_path == "/webhooks/github" do
+          if cache?(conn.request_path) do
             Plug.Conn.put_private(conn, :hive_raw_body, body)
           else
             conn
@@ -26,4 +26,8 @@ defmodule HiveWeb.CacheBodyReader do
         {:error, reason}
     end
   end
+
+  defp cache?("/webhooks/github"), do: true
+  defp cache?("/api/slack/" <> _rest), do: true
+  defp cache?(_path), do: false
 end

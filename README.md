@@ -31,6 +31,10 @@ When an LLM is configured, Hive can continuously evolve its meadows from
 new forage items and specs, keeping the taxonomy aligned with durable
 Tuist business domains instead of one-off tickets or vague buckets.
 
+Hive can also connect Slack workspaces so organization members can turn
+Slack messages into feature requests and receive bot replies in Slack
+threads.
+
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 

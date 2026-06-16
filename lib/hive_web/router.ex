@@ -42,6 +42,13 @@ defmodule HiveWeb.Router do
     post "/meadows/:meadow_id/:source/:token", MeadowWebhookController, :create
   end
 
+  scope "/api/slack", HiveWeb do
+    pipe_through :json_api
+
+    post "/events", SlackController, :events
+    post "/interactions", SlackController, :interactions
+  end
+
   scope "/", HiveWeb do
     get "/ready", HealthController, :ready
 
@@ -131,6 +138,15 @@ defmodule HiveWeb.Router do
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/account/identities", AccountLive.Identities
+      live "/account/slack", AccountLive.Slack
+    end
+
+    scope "/slack" do
+      pipe_through HiveWeb.Plugs.RequireAuthenticated
+
+      get "/install", SlackInstallController, :new
+      get "/install/callback", SlackInstallController, :callback
+      post "/installations/:id/disconnect", SlackInstallController, :disconnect
     end
 
     live_session :audit,

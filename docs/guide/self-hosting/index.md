@@ -30,5 +30,7 @@ on public instances.
 
 - [Authentication](./authentication) explains how to wire up Google and
   generic OIDC providers.
+- [Slack](./slack) covers connecting Slack workspaces so Hive can reply
+  in threads and capture messages as feature requests.
 - [Deployment](./deployment) walks through installing the Helm chart and
   the minimum values you need to provide.

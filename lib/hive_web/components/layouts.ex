@@ -199,6 +199,12 @@ defmodule HiveWeb.Layouts do
             href={~p"/account/identities"}
             selected={String.starts_with?(@current_path, ~p"/account/identities")}
           />
+          <.sidebar_item
+            label="Slack"
+            icon="brand_slack"
+            href={~p"/account/slack"}
+            selected={String.starts_with?(@current_path, ~p"/account/slack")}
+          />
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}

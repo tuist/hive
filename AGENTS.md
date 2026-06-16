@@ -142,7 +142,7 @@ mise exec -- git-cliff --include-path "infra/helm/**/*" \
 
 `infra/helm/hive/values-production.yaml` is the overlay Tuist applies to the chart at deploy time via `.github/workflows/deploy.yml`. The production cluster assumes cert-manager, ingress-nginx, external-dns, the CloudNativePG operator, the External Secrets Operator with a `ClusterSecretStore` named `onepassword-hive` pointing at the `hive-k8s-production` 1Password vault, and Hetzner Cloud block storage (`hcloud-volumes`).
 
-The 1Password vault must contain `kubeconfig: hive-production` (used by GitHub Actions), `hive-secret-key-base/password` (generated with `mix phx.gen.secret`), `hive-google-oauth/username` + `hive-google-oauth/credential` (Google OAuth client ID + secret, wired into `HIVE_GOOGLE_CLIENT_ID/_SECRET`), `hive-ghcr-pull/notesPlain` (base64 Docker config JSON for GHCR), and `hive-postgres-backup/username` + `hive-postgres-backup/credential` (CNPG backup creds).
+The 1Password vault must contain `kubeconfig: hive-production` (used by GitHub Actions), `hive-secret-key-base/password` (generated with `mix phx.gen.secret`), `hive-google-oauth/username` + `hive-google-oauth/credential` (Google OAuth client ID + secret, wired into `HIVE_GOOGLE_CLIENT_ID/_SECRET`), `hive-slack-oauth/username` + `hive-slack-oauth/credential` + `hive-slack-signing-secret/credential` (Slack app client ID, client secret, and signing secret), `hive-ghcr-pull/notesPlain` (base64 Docker config JSON for GHCR), and `hive-postgres-backup/username` + `hive-postgres-backup/credential` (CNPG backup creds).
 
 Bootstrap script for the `ClusterSecretStore` (run once when standing up the cluster):
 
