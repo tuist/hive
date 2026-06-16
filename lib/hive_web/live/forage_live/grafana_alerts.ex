@@ -33,6 +33,11 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
        socket
        |> assign(:page_title, "Grafana alerts · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph()))
+       |> assign(:atom_feed, %{
+         title: "Hive · Grafana alerts",
+         atom_href: "/forage/grafana-alerts/atom.xml",
+         rss_href: "/forage/grafana-alerts/rss.xml"
+       })
        |> assign(:source, source)
        |> assign(:alerts, alerts)}
     else

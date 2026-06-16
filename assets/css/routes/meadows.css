@@ -26,6 +26,13 @@
         font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
       }
     }
+
+    & > [data-part="header-actions"] {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--noora-spacing-3);
+    }
   }
 
   & [data-part="meadows-card"] {

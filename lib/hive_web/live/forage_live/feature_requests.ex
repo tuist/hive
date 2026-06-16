@@ -35,6 +35,11 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
      socket
      |> assign(:page_title, "Feature requests · #{socket.assigns.product_name}")
      |> assign(OpenGraph.assigns(open_graph(feature_requests)))
+     |> assign(:atom_feed, %{
+       title: "Hive · Feature requests",
+       atom_href: "/forage/feature-requests/atom.xml",
+       rss_href: "/forage/feature-requests/rss.xml"
+     })
      |> assign(:source, source)
      |> assign(:feature_requests, feature_requests)
      |> assign(:can_create_spec?, Specs.can_create?(socket.assigns.current_user))}

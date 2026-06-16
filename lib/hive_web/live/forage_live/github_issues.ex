@@ -48,6 +48,11 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
        |> assign(:uri, URI.parse(source.path))
        |> assign(:entries, [])
        |> assign(:stats, %{total: 0, repositories: 0, meadows: 0, state_label: "open issues"})
+       |> assign(:atom_feed, %{
+         title: "Hive · GitHub issues",
+         atom_href: "/forage/github-issues/atom.xml",
+         rss_href: "/forage/github-issues/rss.xml"
+       })
        |> assign(OpenGraph.assigns(open_graph(source, blank_stats())))}
     else
       {:ok, redirect(socket, to: ~p"/forage/feature-requests")}

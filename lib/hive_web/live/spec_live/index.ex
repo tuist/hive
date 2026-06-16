@@ -34,6 +34,11 @@ defmodule HiveWeb.SpecLive.Index do
      |> assign(:active_filters, [])
      |> assign(:uri, URI.parse("/specs"))
      |> assign(OpenGraph.assigns(open_graph([])))
+     |> assign(:atom_feed, %{
+       title: "Hive · Specs",
+       atom_href: "/specs/atom.xml",
+       rss_href: "/specs/rss.xml"
+     })
      |> assign(:specs, [])
      |> assign(:can_create?, Specs.can_create?(socket.assigns.current_user))}
   end

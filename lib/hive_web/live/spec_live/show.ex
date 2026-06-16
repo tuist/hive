@@ -34,6 +34,11 @@ defmodule HiveWeb.SpecLive.Show do
        socket
        |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph(spec)))
+       |> assign(:atom_feed, %{
+         title: "Hive · Specs",
+         atom_href: "/specs/atom.xml",
+         rss_href: "/specs/rss.xml"
+       })
        |> assign(:spec, spec)
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
        |> assign(:expanded_revision_rows, [])
