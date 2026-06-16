@@ -1,18 +1,18 @@
 defmodule Hive.Specs.StyleGuide do
   @moduledoc """
-  House style for writing Hive specs and Tuist RFCs.
+  House style for writing Hive specs.
 
-  Distilled from the Tuist RFC corpus on community.tuist.dev and the
-  review feedback patterns we see in practice. Surfaced to MCP clients
-  via the `write_spec` prompt and reusable by any future internal agent
-  that drafts specs.
+  Distilled from review feedback patterns we see in practice. Surfaced
+  to MCP clients via the `write_spec` prompt and reusable by any future
+  internal agent that drafts specs.
   """
 
   @body """
   # Writing a Hive spec
 
-  Hive specs and Tuist RFCs (community.tuist.dev) share conventions. A
-  spec is a public, reviewed contract for a non-trivial change.
+  A Hive spec is a public, reviewed contract for a non-trivial change.
+  Follow the conventions below so reviewers can read, push back on, and
+  approve the draft quickly.
 
   ## Altitude
 
@@ -24,8 +24,8 @@ defmodule Hive.Specs.StyleGuide do
     regression pattern, a recurring failure mode, a compliance boundary,
     a fixed-pool cost). Not abstract framing.
   - Current state, factually: what exists, what does not, with numbers
-    where they matter ("three Supabase projects", "274 migrations",
-    "~2 VMs per Mac mini").
+    where they matter ("three production environments", "274
+    migrations", "two database replicas").
   - Prior art with sources named. What we take, what we discard.
   - The proposed surface as a contract: API verbs, CLI subcommands, MCP
     tool names, event envelope shape, route table, IO format. Show
@@ -43,12 +43,12 @@ defmodule Hive.Specs.StyleGuide do
 
   Does not belong in the spec:
   - File-by-file `lib/...` layout blocks. Belongs in the PR.
-  - Ecto DDL with columns and indexes. Belongs in the migration.
-  - Helm values, ClickHouse engines, Kubernetes CR YAML. Belongs in the
+  - Database DDL with columns and indexes. Belongs in the migration.
+  - Helm values, storage engines, Kubernetes CR YAML. Belongs in the
     chart PR.
   - Lifecycle pseudocode (`1. authorize then 2. insert then 3. enqueue`).
     Belongs in code.
-  - Module paths and arities (`Tuist.Foo.bar/3`). Either go higher
+  - Module paths and arities (`MyApp.Foo.bar/3`). Either go higher
     ("reuse the per-account billing primitive") or be ready to prove the
     named surface exists.
 
@@ -66,7 +66,7 @@ defmodule Hive.Specs.StyleGuide do
     bulleted prose.
   - Concrete examples make the contract real: a CLI invocation, a JSON
     payload, an agent transcript. Examples, not pseudocode.
-  - Name decisions and give them reasons. "Two-line ceiling is
+  - Name decisions and give them reasons. "Two-line support ceiling is
     deliberate, following Node.js experience that each additional line
     multiplies backport cost." Reviewers attach to named decisions.
 
@@ -113,9 +113,9 @@ defmodule Hive.Specs.StyleGuide do
   1. Altitude. "This is implementation detail, move to the PR." Audit
      for DDL, layout blocks, pseudocode, function arities. Remove or
      paraphrase.
-  2. Scope creep. Do not name build systems, providers, or features you
-     are not adopting this year, unless explicitly taking inspiration.
-     Cite as inspiration, not as scope.
+  2. Scope creep. Do not name systems, providers, or features you are
+     not adopting this year, unless explicitly taking inspiration. Cite
+     as inspiration, not as scope.
   3. Lost framing. If a reviewer says "I'm a bit lost on the point" the
      remedy is rewriting the Why, not adding more detail. Frame as
      evolution of what exists unless it really is a rewrite.
@@ -127,9 +127,9 @@ defmodule Hive.Specs.StyleGuide do
      Address inline; reviewers will ask.
   6. Security and threat model. When the design touches untrusted code,
      mounted credentials, cross-tenant flows, or public exposure: state
-     the isolation posture per platform, scope mounts least-privilege
-     and short-TTL, name the blast radius of token leakage, name SSRF
-     and replay protections, name cross-account credential grants.
+     the isolation posture, scope mounts least-privilege and short-TTL,
+     name the blast radius of token leakage, name SSRF and replay
+     protections, name cross-account credential grants.
   7. Capacity and cost. When a design subtracts from a fixed pool, name
      the gating constraint and the fair-share story. When it adds an
      on-call surface, name the surface.
@@ -137,17 +137,16 @@ defmodule Hive.Specs.StyleGuide do
      match. Items in Goals also appear in Design and in Done-when.
   9. Promotion. If something is viability-critical, it belongs in
      Goals, not Open Questions.
-  10. Gating signal honesty. "1 week soak" with no RC adoption is "we
-      waited a week." When a gate has no signal, say so, and name the
-      signal you need.
+  10. Gating signal honesty. "1 week soak" with no rollout adoption is
+      "we waited a week." When a gate has no signal, say so, and name
+      the signal you need.
   11. Naming. Action vocabularies should be small and generic
-      (Stripe-style `resource.action`). Build-system or platform
-      specifics belong under scoped subcommands when they have no peer
-      (Xcode CAS has no Gradle equivalent).
+      (Stripe-style `resource.action`). Platform-specific concepts
+      belong under scoped subcommands when they have no peer on another
+      platform.
   12. Backward compatibility. Default to additive surfaces. "Existing
-      `tuist X show` and `tuist X list` remain unchanged." New
-      capabilities are new subcommands and new tools, not changes to
-      existing ones.
+      show and list subcommands remain unchanged." New capabilities are
+      new subcommands and new tools, not changes to existing ones.
   13. Forward evolution. Can a future consumer with a different access
       pattern slot in without rewinding? Do not design that consumer
       here, but do not bake assumptions that block it.
@@ -166,8 +165,8 @@ defmodule Hive.Specs.StyleGuide do
 
   Weak: "What should the cadence be?"
   Strong: "Cadence. Every 2 weeks felt right for parity with React
-  Native. But the ceremony cost (RC cut, soak, promotion) may not be
-  worth fortnightly for a 4-person team. Leaning toward 2 weeks with
+  Native. But the ceremony cost (release cut, soak, promotion) may not
+  be worth fortnightly for a small team. Leaning toward 2 weeks with
   explicit permission to skip a cut when `main` is quiet. The signal
   that would change this: count of cuts skipped in the first quarter."
 
@@ -177,11 +176,11 @@ defmodule Hive.Specs.StyleGuide do
   read it and know what to try in production.
 
   Weak: "Schema migration applied. Controllers added. Tests pass."
-  Strong: "Under the `tuist` account, Hive can `POST /api/v1/sandboxes`
-  with a Linux or macOS profile, poll until ready, exchange files via
-  `PUT/GET /files/*`, expose an HTTP service via `POST /ports`, and
-  `DELETE` to destroy. A `sandbox_sessions` row records the interval
-  starting at `ready_at`, tagged with platform."
+  Strong: "A signed-in user can `POST /api/v1/widgets` with a `name`
+  and `config`, poll `GET /widgets/:id` until `status` is `ready`,
+  attach a file via `PUT /widgets/:id/files/<path>`, expose an HTTP
+  service via `POST /widgets/:id/ports`, and `DELETE` to destroy. A
+  `widget_sessions` row records the interval starting at `ready_at`."
 
   ## Iteration
 

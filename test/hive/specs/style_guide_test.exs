@@ -18,7 +18,7 @@ defmodule Hive.Specs.StyleGuideTest do
     test "names the implementation detail that does not belong in the spec" do
       body = StyleGuide.body()
 
-      assert body =~ "Ecto DDL"
+      assert body =~ "Database DDL"
       assert body =~ "Lifecycle pseudocode"
       assert body =~ "Module paths and arities"
     end
@@ -26,9 +26,9 @@ defmodule Hive.Specs.StyleGuideTest do
 
   describe "write_spec_prompt/1" do
     test "weaves the topic into the lede when one is provided" do
-      prompt = StyleGuide.write_spec_prompt("Account-scoped sandbox API")
+      prompt = StyleGuide.write_spec_prompt("Account invitations")
 
-      assert prompt =~ "drafting a Hive spec about: Account-scoped sandbox API"
+      assert prompt =~ "drafting a Hive spec about: Account invitations"
       assert prompt =~ "Altitude"
     end
 

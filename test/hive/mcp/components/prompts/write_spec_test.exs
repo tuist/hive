@@ -29,10 +29,10 @@ defmodule Hive.MCP.Components.Prompts.WriteSpecTest do
     end
 
     test "weaves the topic into the lede when provided" do
-      result = WriteSpec.template(nil, %{"topic" => "Webhooks for Tuist Events"})
+      result = WriteSpec.template(nil, %{"topic" => "Webhooks for system events"})
 
       [%{content: %{text: text}}] = result.messages
-      assert text =~ "drafting a Hive spec about: Webhooks for Tuist Events"
+      assert text =~ "drafting a Hive spec about: Webhooks for system events"
     end
 
     test "falls back to a cold opener when topic is missing" do
