@@ -13,6 +13,7 @@ defmodule Hive.Specs do
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
+  alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
 
   def can_create?(user), do: Auth.member?(user)
@@ -252,16 +253,26 @@ defmodule Hive.Specs do
   defp maybe_put_user(changeset, _user), do: changeset
 
   defp create_revision(%Spec{} = spec, %User{} = user) do
-    %Revision{}
-    |> Revision.changeset(%{
-      revision: spec.lock_version,
-      title: spec.title,
-      body: spec.body,
-      status: spec.status,
-      spec_id: spec.id,
-      user_id: user.id
-    })
-    |> Repo.insert()
+    with {:ok, revision} <-
+           %Revision{}
+           |> Revision.changeset(%{
+             revision: spec.lock_version,
+             title: spec.title,
+             body: spec.body,
+             status: spec.status,
+             spec_id: spec.id,
+             user_id: user.id
+           })
+           |> Repo.insert() do
+      schedule_revision_summary(revision)
+      {:ok, revision}
+    end
+  end
+
+  defp schedule_revision_summary(%Revision{revision: 1}), do: :skipped
+
+  defp schedule_revision_summary(%Revision{id: id}) do
+    RevisionSummaryWorker.enqueue(id)
   end
 
   defp preload_meadows(%Spec{} = spec), do: Repo.preload(spec, :meadows)

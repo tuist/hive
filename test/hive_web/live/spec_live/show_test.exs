@@ -256,4 +256,39 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ ~s|data-type="removed"|
     refute html =~ "<code>Import comments.</code>"
   end
+
+  test "prefers the agent-written summary when present", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "GitHub sign-in", "body" => "Keep source URL visible."},
+        user
+      )
+
+    {:ok, spec} =
+      Specs.update_spec(
+        Specs.get_spec!(spec.id),
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Keep source URL visible.\nImport discussion comments.",
+          "lock_version" => spec.lock_version
+        },
+        user
+      )
+
+    spec = Specs.get_spec!(spec.id)
+    revision = Enum.find(spec.revisions, &(&1.revision == 2))
+
+    revision
+    |> Hive.Specs.Revision.summary_changeset("Added a discussion import step.")
+    |> Hive.Repo.update!()
+
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    html = render_click(view, "toggle-expand", %{"row-key" => "revision-#{revision.id}"})
+
+    assert html =~ "Added a discussion import step."
+    refute html =~ "This revision updated the proposal body"
+  end
 end

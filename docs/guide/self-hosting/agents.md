@@ -19,6 +19,11 @@ Hive currently uses agents for:
   create or update changes. Hive applies those changes through normal
   validation and skips suggestions that are too generic, too specific,
   or outside Tuist's business domains.
+- Spec revision summaries: whenever a spec is edited after its first
+  draft, Hive queues a job that asks the agent to describe what
+  changed between the previous and the new revision. The summary
+  appears in the draft history on the spec page. When no LLM is
+  configured, the history falls back to a counts-based heuristic.
 
 ## Configuration
 

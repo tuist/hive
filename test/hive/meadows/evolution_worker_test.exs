@@ -4,11 +4,6 @@ defmodule Hive.Meadows.EvolutionWorkerTest do
 
   alias Hive.Meadows.EvolutionWorker
 
-  setup do
-    start_supervised!({Oban, Application.fetch_env!(:hive, Oban)})
-    :ok
-  end
-
   test "enqueue/1 inserts a delayed unique evolution job when agents are enabled" do
     assert {:ok, %Oban.Job{} = first_job} =
              EvolutionWorker.enqueue(agents_enabled?: fn -> true end)

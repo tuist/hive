@@ -1,0 +1,49 @@
+defmodule Hive.Specs.RevisionSummaryWorker do
+  @moduledoc """
+  Generates the agent-written summary for a spec revision asynchronously
+  so the request that created the revision returns immediately.
+  """
+
+  use Oban.Worker,
+    queue: :specs,
+    max_attempts: 3,
+    unique: [fields: [:worker, :queue, :args], period: :infinity, states: :incomplete]
+
+  require Logger
+
+  alias Hive.Specs.RevisionSummaries
+
+  @doc """
+  Enqueues a summary job for the given revision id. Returns `:skipped`
+  when agentic workflows are dormant.
+  """
+  def enqueue(revision_id, opts \\ []) when is_binary(revision_id) do
+    agents_enabled? = Keyword.get(opts, :agents_enabled?, &Hive.Agents.enabled?/0)
+
+    if agents_enabled?.() do
+      %{"revision_id" => revision_id}
+      |> new()
+      |> Oban.insert()
+    else
+      :skipped
+    end
+  end
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"revision_id" => revision_id}}) do
+    case RevisionSummaries.summarize(revision_id) do
+      {:ok, _revision} ->
+        :ok
+
+      :skipped ->
+        :ok
+
+      {:error, :not_found} ->
+        Logger.info("[Specs.RevisionSummaryWorker] Revision #{revision_id} no longer exists")
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+end
