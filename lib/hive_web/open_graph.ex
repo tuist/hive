@@ -13,7 +13,7 @@ defmodule HiveWeb.OpenGraph do
   @content_type "image/jpeg"
   @height 1080
   @quality 95
-  @version "v3"
+  @version "v4"
   @width 1920
 
   def content_type, do: @content_type
@@ -167,45 +167,56 @@ defmodule HiveWeb.OpenGraph do
           }
 
           .main {
-            margin-top: 112px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            margin-top: 72px;
             max-width: 1380px;
           }
 
           .eyebrow {
-            margin: 0 0 34px;
+            margin: 0 0 28px;
             color: #5a6274;
-            font-size: 42px;
+            font-size: 38px;
             font-weight: 700;
             letter-spacing: 0;
           }
 
           h1 {
+            display: -webkit-box;
             margin: 0;
             max-width: 1430px;
             color: #252a33;
-            font-size: 122px;
+            font-size: 104px;
             font-weight: 760;
             letter-spacing: 0;
-            line-height: 1.02;
+            line-height: 1.04;
+            overflow: hidden;
             overflow-wrap: anywhere;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
           }
 
           .description {
-            margin: 44px 0 0;
+            display: -webkit-box;
+            margin: 32px 0 0;
             max-width: 1270px;
             color: #555f72;
-            font-size: 48px;
+            font-size: 40px;
             font-weight: 450;
-            line-height: 1.26;
+            line-height: 1.28;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
           }
 
           .author {
             display: flex;
             align-items: center;
             gap: 20px;
-            margin-top: 42px;
+            margin-top: 32px;
             color: #333948;
-            font-size: 34px;
+            font-size: 32px;
             font-weight: 650;
           }
 
