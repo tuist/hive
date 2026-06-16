@@ -105,6 +105,29 @@ defmodule HiveWeb.SpecLive.IndexTest do
     refute html =~ "Private proposal"
   end
 
+  test "strips markdown from the spec preview text", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    body = """
+    ## Why
+
+    Tuist already runs `Tuist.Namespace.create_instance_with_ssh_connection/1`.
+
+    ```elixir
+    def hidden_in_preview, do: :ok
+    ```
+    """
+
+    {:ok, _spec} = Specs.create_spec(%{"title" => "Schema spec", "body" => body}, user)
+
+    {:ok, _view, html} = live(conn, ~p"/specs")
+
+    refute html =~ "##"
+    refute html =~ "```"
+    refute html =~ "`Tuist.Namespace"
+    assert html =~ "Tuist.Namespace.create_instance_with_ssh_connection/1"
+  end
+
   test "shows public specs attached to private meadows to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")

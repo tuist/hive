@@ -64,7 +64,7 @@ defmodule HiveWeb.SpecComponents do
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
                   <strong>{spec_number(spec)} {spec.title}</strong>
-                  <p>{visibility_label(Specs.effective_visibility(spec))} · {preview(spec.body)}</p>
+                  <p>{visibility_label(Specs.effective_visibility(spec))} · {Markdown.preview(spec.body)}</p>
                 </div>
               </div>
             </:col>
@@ -352,12 +352,6 @@ defmodule HiveWeb.SpecComponents do
       </.card>
     </section>
     """
-  end
-
-  defp preview(body) do
-    body
-    |> String.replace(~r/\s+/, " ")
-    |> String.slice(0, 180)
   end
 
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
