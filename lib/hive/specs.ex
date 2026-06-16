@@ -240,6 +240,10 @@ defmodule Hive.Specs do
     Comment.changeset(comment, attrs)
   end
 
+  def get_comment!(id) do
+    Repo.get!(Comment, id)
+  end
+
   def add_comment(%Spec{} = spec, attrs, user \\ nil) do
     if can_comment?(spec, user) do
       %Comment{}
