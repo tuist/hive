@@ -45,6 +45,27 @@ Tuist runs the canonical Hive instance at
 Hive in action and to follow along with how we shape product work at
 Tuist.
 
+## Subscribe
+
+Every list-style surface ships both an Atom 1.0 feed at
+`<path>/atom.xml` and an RSS 2.0 feed at `<path>/rss.xml`, so you can
+subscribe with any reader. Each page surfaces the feeds in two places:
+a small RSS dropdown next to the page title with both links, and the
+usual `<link rel="alternate">` discovery tags in the document head so
+readers can auto-detect them from the page URL. Visibility is enforced
+the same way as the HTML page: anonymous subscribers only see the
+items a logged-out visitor would see.
+
+Available feeds (replace `atom.xml` with `rss.xml` for the RSS 2.0
+version):
+
+- `/forage/feature-requests/atom.xml`
+- `/forage/github-issues/atom.xml`
+- `/forage/grafana-alerts/atom.xml` (organization members only)
+- `/specs/atom.xml`
+- `/meadows/:id/atom.xml` — the GitHub issues and Grafana alerts that
+  belong to one meadow, merged into a single timeline.
+
 ## Documentation
 
 Read the documentation at

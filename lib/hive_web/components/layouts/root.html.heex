@@ -6,6 +6,7 @@
     <meta name="csrf-token" content={get_csrf_token()} />
     <title>{assigns[:page_title] || "Hive"}</title>
     <.open_graph_meta open_graph={assigns[:open_graph]} />
+    <.atom_feed_link feed={assigns[:atom_feed]} />
     <link rel="icon" type="image/png" href={~p"/images/logo.png"} />
     <link rel="stylesheet" href="/assets/js/app.css" />
     <script defer src="/assets/js/app.js">

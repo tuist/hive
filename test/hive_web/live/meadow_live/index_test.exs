@@ -19,6 +19,15 @@ defmodule HiveWeb.MeadowLive.IndexTest do
     refute html =~ ~s(href="/meadows/#{public.id}")
   end
 
+  test "exposes per-row links to the Atom and RSS feeds", %{conn: conn} do
+    {:ok, public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
+
+    {:ok, _view, html} = live(conn, ~p"/meadows")
+
+    assert html =~ ~s(href="/meadows/#{public.id}/atom.xml")
+    assert html =~ ~s(href="/meadows/#{public.id}/rss.xml")
+  end
+
   test "shows contributors public meadows without edit controls", %{conn: conn} do
     {conn, user} = sign_in(conn, "contributor@example.com")
     Mimic.stub(Auth, :member?, fn ^user -> false end)

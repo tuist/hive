@@ -90,9 +90,9 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
       %{number: 1, title: "Hello", body: "World"}
     ])
 
-    assert [{returned_meadow, returned_repo, issue}] = Forage.list_github_issues_for_user(nil)
-    assert returned_meadow.id == meadow.id
+    assert [{returned_repo, issue, returned_meadows}] = Forage.list_github_issues_for_user(nil)
     assert returned_repo.id == repository.id
     assert issue.title == "Hello"
+    assert Enum.map(returned_meadows, & &1.id) == [meadow.id]
   end
 end

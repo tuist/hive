@@ -127,4 +127,15 @@ defmodule Hive.Forage.Grafana do
     |> preload(:meadow)
     |> Repo.all()
   end
+
+  @doc """
+  Lists Grafana alerts for a single meadow, most-recent-first.
+  """
+  def list_alerts_for_meadow(meadow_id) when is_binary(meadow_id) do
+    GrafanaAlert
+    |> where([alert], alert.meadow_id == ^meadow_id)
+    |> order_by([alert], desc: alert.last_received_at)
+    |> preload(:meadow)
+    |> Repo.all()
+  end
 end

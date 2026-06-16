@@ -40,7 +40,7 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
 
   @impl EMCP.Tool
   def description do
-    "Update a Hive spec after checking the expected revision. Organization member only."
+    "Update a Hive spec after checking the expected revision. Organization member only. When the revision is a substantive rewrite, fetch the `write_spec` MCP prompt first so the body follows the house style."
   end
 
   @impl EMCP.Tool

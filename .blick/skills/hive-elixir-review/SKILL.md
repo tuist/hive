@@ -182,8 +182,10 @@ Commit scopes and Helm chart releases from `helm`-scoped commits.
 - Release workflow changes that let Helm-only commits contribute to the
   app changelog, or non-Helm commits contribute to the Helm changelog.
   **Severity: medium.**
-- Changes that remove the `server@X.Y.Z` or `helm@X.Y.Z` tag prefixes
-  from release detection or tagging. **Severity: high.**
+- Changes that remove the `helm@X.Y.Z` tag prefix from release
+  detection or tagging. **Severity: high.** (App tags are plain
+  `X.Y.Z`; the legacy `server@X.Y.Z` form is still accepted by the
+  workflow's detection logic for backward compatibility.)
 - PR titles or commit-message guidance that omits explicit Conventional
   Commit scopes when documenting examples for this repo. **Severity:
   low.**

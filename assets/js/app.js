@@ -3,6 +3,7 @@ import "../css/app.css"
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import Noora from "noora"
+import MentionAutocomplete from "./hooks/mention_autocomplete"
 
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -10,7 +11,7 @@ const csrfToken = document
 
 const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
-  hooks: { ...Noora.Hooks },
+  hooks: { ...Noora.Hooks, MentionAutocomplete },
 })
 
 liveSocket.connect()

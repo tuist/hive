@@ -48,6 +48,11 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
        |> assign(:uri, URI.parse(source.path))
        |> assign(:entries, [])
        |> assign(:stats, %{total: 0, repositories: 0, meadows: 0, state_label: "open issues"})
+       |> assign(:atom_feed, %{
+         title: "Hive · GitHub issues",
+         atom_href: "/forage/github-issues/atom.xml",
+         rss_href: "/forage/github-issues/rss.xml"
+       })
        |> assign(OpenGraph.assigns(open_graph(source, blank_stats())))}
     else
       {:ok, redirect(socket, to: ~p"/forage/feature-requests")}
@@ -195,8 +200,13 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
 
     %{
       total: length(entries),
-      repositories: entries |> Enum.map(fn {_p, r, _i} -> r.id end) |> Enum.uniq() |> length(),
-      meadows: entries |> Enum.map(fn {p, _r, _i} -> p.id end) |> Enum.uniq() |> length(),
+      repositories:
+        entries |> Enum.map(fn {repo, _i, _ms} -> repo.id end) |> Enum.uniq() |> length(),
+      meadows:
+        entries
+        |> Enum.flat_map(fn {_repo, _issue, meadows} -> Enum.map(meadows, & &1.id) end)
+        |> Enum.uniq()
+        |> length(),
       state_label: state_label_plural(state)
     }
   end

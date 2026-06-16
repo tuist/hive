@@ -26,6 +26,38 @@
         font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
       }
     }
+
+    & > [data-part="header-actions"] {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--noora-spacing-3);
+    }
+  }
+
+  & [data-part="cell"][data-type="feed"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-4);
+    padding: var(--noora-spacing-5) var(--noora-spacing-7);
+
+    & [data-part="feed-link"] {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--noora-spacing-2);
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-body-small);
+      text-decoration: none;
+
+      & svg {
+        width: var(--noora-icon-size-medium);
+        height: var(--noora-icon-size-medium);
+      }
+
+      &:hover {
+        color: var(--noora-surface-label-primary);
+      }
+    }
   }
 
   & [data-part="meadows-card"] {

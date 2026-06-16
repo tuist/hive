@@ -21,6 +21,12 @@ defmodule HiveWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :feed do
+    plug :accepts, ["xml"]
+    plug :fetch_session
+    plug HiveWeb.Plugs.RequireAuthenticated
+  end
+
   pipeline :oauth_registration do
     plug HiveWeb.Plugs.OAuthRegistrationRateLimit
   end
@@ -69,6 +75,21 @@ defmodule HiveWeb.Router do
       pipe_through [:json_api]
 
       post "/token", TokenController, :token
+    end
+
+    scope "/" do
+      pipe_through :feed
+
+      get "/forage/feature-requests/atom.xml", FeedController, :feature_requests_atom
+      get "/forage/feature-requests/rss.xml", FeedController, :feature_requests_rss
+      get "/forage/github-issues/atom.xml", FeedController, :github_issues_atom
+      get "/forage/github-issues/rss.xml", FeedController, :github_issues_rss
+      get "/forage/grafana-alerts/atom.xml", FeedController, :grafana_alerts_atom
+      get "/forage/grafana-alerts/rss.xml", FeedController, :grafana_alerts_rss
+      get "/specs/atom.xml", FeedController, :specs_atom
+      get "/specs/rss.xml", FeedController, :specs_rss
+      get "/meadows/:id/atom.xml", FeedController, :meadow_atom
+      get "/meadows/:id/rss.xml", FeedController, :meadow_rss
     end
 
     scope "/oauth2", OAuth do

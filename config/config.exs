@@ -53,7 +53,8 @@ config :hive, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       {"*/30 * * * *", Hive.Meadows.EvolutionWorker}
+       {"*/30 * * * *", Hive.Meadows.EvolutionWorker},
+       {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper}
      ]}
   ]
 

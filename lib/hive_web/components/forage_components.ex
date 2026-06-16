@@ -11,6 +11,7 @@ defmodule HiveWeb.ForageComponents do
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
   alias Hive.Meadows.GitHubRepository
+  alias HiveWeb.Layouts
   alias HiveWeb.Markdown
 
   @heading_line ~r/^#+\s+/
@@ -250,7 +251,7 @@ defmodule HiveWeb.ForageComponents do
           </div>
 
           <div :if={@entries != []} data-part="issue-list">
-            <article :for={{meadow, repository, issue} <- @entries} data-part="issue-row">
+            <article :for={{repository, issue, meadows} <- @entries} data-part="issue-row">
               <div data-part="issue-copy">
                 <h2>
                   <a
@@ -272,6 +273,7 @@ defmodule HiveWeb.ForageComponents do
                     <:icon><.brand_github /></:icon>
                   </.badge>
                   <.badge
+                    :for={meadow <- meadows}
                     label={meadow.name}
                     color="information"
                     style="light-fill"
@@ -336,18 +338,25 @@ defmodule HiveWeb.ForageComponents do
         <h1>{@source.label}</h1>
         <p>{@source.description}</p>
       </div>
-      <.button
-        :if={@source.id == :feature_requests}
-        label={if @signed_in?, do: "New request", else: "Log in to request"}
-        href={if @signed_in?, do: ~p"/forage/feature-requests/new", else: ~p"/login"}
-        size="medium"
-        variant="primary"
-      >
-        <:icon_left>
-          <.circle_plus :if={@signed_in?} />
-          <.lock :if={!@signed_in?} />
-        </:icon_left>
-      </.button>
+      <div data-part="header-actions">
+        <Layouts.feeds_dropdown
+          id={"forage-#{@source.id}-feeds-dropdown"}
+          atom_href={"#{@source.path}/atom.xml"}
+          rss_href={"#{@source.path}/rss.xml"}
+        />
+        <.button
+          :if={@source.id == :feature_requests}
+          label={if @signed_in?, do: "New request", else: "Log in to request"}
+          href={if @signed_in?, do: ~p"/forage/feature-requests/new", else: ~p"/login"}
+          size="medium"
+          variant="primary"
+        >
+          <:icon_left>
+            <.circle_plus :if={@signed_in?} />
+            <.lock :if={!@signed_in?} />
+          </:icon_left>
+        </.button>
+      </div>
     </div>
     """
   end

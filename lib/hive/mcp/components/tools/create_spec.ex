@@ -36,7 +36,7 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
 
   @impl EMCP.Tool
   def description do
-    "Create a Hive spec, optionally linked to a feature request forage item. Organization member only."
+    "Create a Hive spec, optionally linked to a feature request forage item. Organization member only. When drafting from scratch, fetch the `write_spec` MCP prompt first so the body follows the house style."
   end
 
   @impl EMCP.Tool

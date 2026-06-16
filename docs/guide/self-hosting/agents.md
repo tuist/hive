@@ -29,6 +29,19 @@ Hive currently uses agents for:
   draft a short reply, posted back in the same thread. When no LLM is
   configured, the bot stays silent. See [Slack](./slack) for the
   workspace install flow.
+- GitHub issue meadow classification: each time the syncer sees a new
+  issue or notices that an issue's title or body changed, Hive queues a
+  job that asks the agent which meadows the issue actually belongs to.
+  The candidates are the meadows attached to the issue's repository, so
+  the answer is always a subset of that set. The dashboard renders the
+  meadow badges from this classification, not from the repository's
+  meadow membership, so an issue in `tuist/tuist` only appears under
+  Cache when its substance is about caching. A scheduled sweeper also
+  re-classifies any cached issue still missing a classification, so
+  rows that existed before classification shipped or that hit a transient
+  LLM failure recover on the next tick. When no LLM is configured, each
+  issue is linked to every meadow attached to its repository, matching
+  pre-classification behaviour.
 
 ## Configuration
 

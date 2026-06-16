@@ -7,6 +7,7 @@ defmodule HiveWeb.Layouts do
 
   attr :title, :string, required: true
   attr :open_graph, :map, default: nil
+  attr :atom_feed, :map, default: nil
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -18,6 +19,7 @@ defmodule HiveWeb.Layouts do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{@title}</title>
         <.open_graph_meta open_graph={@open_graph} />
+        <.atom_feed_link feed={@atom_feed} />
         <link rel="icon" type="image/png" href={~p"/images/logo.png"} />
         <link rel="stylesheet" href="/assets/js/app.css" />
       </head>
@@ -25,6 +27,49 @@ defmodule HiveWeb.Layouts do
         {render_slot(@inner_block)}
       </body>
     </html>
+    """
+  end
+
+  attr :feed, :map, default: nil
+
+  def atom_feed_link(%{feed: nil} = assigns) do
+    ~H""
+  end
+
+  def atom_feed_link(assigns) do
+    ~H"""
+    <link
+      :if={@feed[:atom_href]}
+      rel="alternate"
+      type="application/atom+xml"
+      title={@feed.title}
+      href={@feed.atom_href}
+    />
+    <link
+      :if={@feed[:rss_href]}
+      rel="alternate"
+      type="application/rss+xml"
+      title={@feed.title}
+      href={@feed.rss_href}
+    />
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :atom_href, :string, required: true
+  attr :rss_href, :string, required: true
+
+  def feeds_dropdown(assigns) do
+    ~H"""
+    <.dropdown id={@id} size="medium" icon_only={true}>
+      <:icon><.icon name="rss" /></:icon>
+      <.dropdown_item value="atom" label="Atom" href={@atom_href}>
+        <:left_icon><.icon name="rss" /></:left_icon>
+      </.dropdown_item>
+      <.dropdown_item value="rss" label="RSS" href={@rss_href}>
+        <:left_icon><.icon name="rss" /></:left_icon>
+      </.dropdown_item>
+    </.dropdown>
     """
   end
 

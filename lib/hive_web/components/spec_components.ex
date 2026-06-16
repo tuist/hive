@@ -5,7 +5,9 @@ defmodule HiveWeb.SpecComponents do
 
   alias Hive.Specs
   alias Hive.Specs.Spec
+  alias HiveWeb.Layouts
   alias HiveWeb.Markdown
+  alias HiveWeb.MentionComponents
 
   attr :specs, :list, required: true
   attr :can_create?, :boolean, required: true
@@ -21,15 +23,22 @@ defmodule HiveWeb.SpecComponents do
           <h1>Specs</h1>
           <p>Editable proposals that shape forage into buildable work.</p>
         </div>
-        <.button
-          :if={@can_create?}
-          label="New spec"
-          href={~p"/specs/new"}
-          size="medium"
-          variant="primary"
-        >
-          <:icon_left><.circle_plus /></:icon_left>
-        </.button>
+        <div data-part="header-actions">
+          <Layouts.feeds_dropdown
+            id="specs-index-feeds-dropdown"
+            atom_href="/specs/atom.xml"
+            rss_href="/specs/rss.xml"
+          />
+          <.button
+            :if={@can_create?}
+            label="New spec"
+            href={~p"/specs/new"}
+            size="medium"
+            variant="primary"
+          >
+            <:icon_left><.circle_plus /></:icon_left>
+          </.button>
+        </div>
       </div>
 
       <.card icon="file_text" title="Specs">
@@ -104,9 +113,12 @@ defmodule HiveWeb.SpecComponents do
 
   attr :spec, :map, required: true
   attr :comment_form, :any, required: true
+  attr :edit_comment_form, :any, required: true
+  attr :mention_suggestions, :list, default: []
   attr :can_edit?, :boolean, required: true
+  attr :current_user, :map, default: nil
+  attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
-  attr :user_name, :string, required: true
   attr :expanded_revision_rows, :list, required: true
 
   def show(assigns) do
@@ -127,6 +139,11 @@ defmodule HiveWeb.SpecComponents do
           </div>
         </div>
         <div data-part="header-actions">
+          <Layouts.feeds_dropdown
+            id="spec-show-feeds-dropdown"
+            atom_href="/specs/atom.xml"
+            rss_href="/specs/rss.xml"
+          />
           <.status_menu :if={@can_edit?} spec={@spec} />
           <.badge
             :if={!@can_edit?}
@@ -224,15 +241,60 @@ defmodule HiveWeb.SpecComponents do
                       <strong>{comment_author(comment)}</strong>
                       <span>{Calendar.strftime(comment.inserted_at, "%b %-d, %Y")}</span>
                     </div>
-                    <a
-                      href={"#comment-#{comment.id}"}
-                      data-part="comment-permalink"
-                      aria-label="Permalink to comment"
-                    >
-                      <.icon name="link_icon" />
-                    </a>
+                    <div data-part="comment-actions">
+                      <button
+                        :if={Specs.can_edit_comment?(comment, @current_user)}
+                        type="button"
+                        data-part="comment-action-button"
+                        phx-click="edit_comment"
+                        phx-value-id={comment.id}
+                        aria-label="Edit comment"
+                        title="Edit comment"
+                      >
+                        <.pencil />
+                      </button>
+                      <a
+                        href={"#comment-#{comment.id}"}
+                        data-part="comment-permalink"
+                        aria-label="Permalink to comment"
+                        title="Permalink to comment"
+                      >
+                        <.icon name="link_icon" />
+                      </a>
+                    </div>
                   </header>
-                  <div data-part="comment-body">{Markdown.render(comment.body)}</div>
+                  <.form
+                    :if={@editing_comment_id == comment.id}
+                    for={@edit_comment_form}
+                    phx-change="validate_comment_edit"
+                    phx-submit="update_comment"
+                    data-part="comment-edit-form"
+                  >
+                    <input type="hidden" name="comment_id" value={comment.id} />
+                    <MentionComponents.mention_text_area
+                      field={@edit_comment_form[:body]}
+                      mention_suggestions={@mention_suggestions}
+                      label="Edit comment"
+                      placeholder="Update your comment with Markdown"
+                      max_length={20_000}
+                      rows={5}
+                      required={true}
+                      show_required={true}
+                    />
+                    <div data-part="form-actions">
+                      <.button
+                        label="Cancel"
+                        size="medium"
+                        variant="secondary"
+                        type="button"
+                        phx-click="cancel_comment_edit"
+                      />
+                      <.button label="Save comment" size="medium" variant="primary" />
+                    </div>
+                  </.form>
+                  <div :if={@editing_comment_id != comment.id} data-part="comment-body">
+                    {Markdown.render(comment.body)}
+                  </div>
                 </div>
               </article>
             </div>
@@ -257,11 +319,12 @@ defmodule HiveWeb.SpecComponents do
               phx-submit="comment"
               data-part="comment-form"
             >
-              <.text_area
+              <MentionComponents.mention_text_area
                 field={@comment_form[:body]}
+                mention_suggestions={@mention_suggestions}
                 label="Comment"
                 placeholder="Add context or feedback with Markdown"
-                max_length={4_000}
+                max_length={20_000}
                 rows={5}
                 required={true}
                 show_required={true}
