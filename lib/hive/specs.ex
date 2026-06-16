@@ -21,6 +21,11 @@ defmodule Hive.Specs do
   def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
   def can_comment?(_spec, _user), do: false
 
+  def can_edit_comment?(%Comment{user_id: user_id}, %User{id: user_id}) when is_binary(user_id),
+    do: true
+
+  def can_edit_comment?(_comment, _user), do: false
+
   def can_view?(%Spec{} = spec, user),
     do: Auth.member?(user) or effective_visibility(spec) == :public
 
@@ -246,6 +251,18 @@ defmodule Hive.Specs do
       {:error, :unauthorized}
     end
   end
+
+  def update_comment(%Comment{} = comment, attrs, %User{} = user) do
+    if can_edit_comment?(comment, user) do
+      comment
+      |> Comment.changeset(attrs)
+      |> Repo.update()
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def update_comment(_comment, _attrs, _user), do: {:error, :unauthorized}
 
   defp maybe_put_user(changeset, %User{} = user),
     do: Changeset.put_change(changeset, :user_id, user.id)

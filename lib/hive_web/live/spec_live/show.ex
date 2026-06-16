@@ -3,6 +3,7 @@ defmodule HiveWeb.SpecLive.Show do
 
   use HiveWeb, :live_view
 
+  alias Hive.Accounts.User
   alias Hive.Specs
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -39,10 +40,12 @@ defmodule HiveWeb.SpecLive.Show do
          atom_href: "/specs/atom.xml",
          rss_href: "/specs/rss.xml"
        })
-       |> assign(:spec, spec)
+       |> assign_spec(spec)
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
        |> assign(:expanded_revision_rows, [])
-       |> assign_comment_form(Specs.change_comment())}
+       |> assign(:editing_comment_id, nil)
+       |> assign_comment_form(Specs.change_comment())
+       |> assign_edit_comment_form(Specs.change_comment())}
     else
       {:ok,
        socket
@@ -86,7 +89,7 @@ defmodule HiveWeb.SpecLive.Show do
             {:noreply,
              socket
              |> put_flash(:info, "Spec marked as #{status_label(spec.status)}.")
-             |> assign(:spec, spec)
+             |> assign_spec(spec)
              |> assign(OpenGraph.assigns(open_graph(spec)))}
 
           {:error, :unauthorized} ->
@@ -108,7 +111,7 @@ defmodule HiveWeb.SpecLive.Show do
         {:noreply,
          socket
          |> put_flash(:info, "Comment added.")
-         |> assign(:spec, spec)
+         |> assign_spec(spec)
          |> assign(OpenGraph.assigns(open_graph(spec)))
          |> assign_comment_form(Specs.change_comment())}
 
@@ -120,8 +123,151 @@ defmodule HiveWeb.SpecLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("edit_comment", %{"id" => comment_id}, socket) do
+    with {:ok, comment} <- find_comment(socket, comment_id),
+         true <- Specs.can_edit_comment?(comment, socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> assign(:editing_comment_id, comment.id)
+       |> assign_edit_comment_form(Specs.change_comment(comment))}
+    else
+      _error ->
+        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+    end
+  end
+
+  @impl true
+  def handle_event(
+        "validate_comment_edit",
+        %{"comment_edit" => params, "comment_id" => comment_id},
+        socket
+      ) do
+    with {:ok, comment} <- find_comment(socket, comment_id),
+         true <- Specs.can_edit_comment?(comment, socket.assigns.current_user) do
+      changeset =
+        comment
+        |> Specs.change_comment(params)
+        |> Map.put(:action, :validate)
+
+      {:noreply,
+       socket
+       |> assign(:editing_comment_id, comment.id)
+       |> assign_edit_comment_form(changeset)}
+    else
+      _error ->
+        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+    end
+  end
+
+  @impl true
+  def handle_event(
+        "update_comment",
+        %{"comment_edit" => params, "comment_id" => comment_id},
+        socket
+      ) do
+    with {:ok, comment} <- find_comment(socket, comment_id),
+         {:ok, _comment} <- Specs.update_comment(comment, params, socket.assigns.current_user) do
+      spec = Specs.get_spec!(socket.assigns.spec.id)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Comment updated.")
+       |> assign_spec(spec)
+       |> assign(OpenGraph.assigns(open_graph(spec)))
+       |> clear_comment_edit()}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(:editing_comment_id, comment_id)
+         |> assign_edit_comment_form(Map.put(changeset, :action, :validate))}
+
+      _error ->
+        {:noreply, put_flash(socket, :error, "Comment not found.")}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_comment_edit", _params, socket) do
+    {:noreply, clear_comment_edit(socket)}
+  end
+
   defp assign_comment_form(socket, changeset) do
     assign(socket, :comment_form, to_form(interpolate_errors(changeset), as: :comment))
+  end
+
+  defp assign_spec(socket, spec) do
+    socket
+    |> assign(:spec, spec)
+    |> assign(
+      :comment_mention_suggestions,
+      comment_mention_suggestions(spec, socket.assigns.current_user)
+    )
+  end
+
+  defp assign_edit_comment_form(socket, changeset) do
+    assign(socket, :edit_comment_form, to_form(interpolate_errors(changeset), as: :comment_edit))
+  end
+
+  defp clear_comment_edit(socket) do
+    socket
+    |> assign(:editing_comment_id, nil)
+    |> assign_edit_comment_form(Specs.change_comment())
+  end
+
+  defp find_comment(socket, comment_id) do
+    case Enum.find(socket.assigns.spec.comments, &(&1.id == comment_id)) do
+      nil -> :error
+      comment -> {:ok, comment}
+    end
+  end
+
+  defp comment_mention_suggestions(spec, current_user) do
+    [current_user, spec.created_by_user, spec.updated_by_user]
+    |> Kernel.++(Enum.map(spec.comments, & &1.user))
+    |> Kernel.++(Enum.map(spec.revisions, & &1.user))
+    |> Enum.filter(&match?(%User{}, &1))
+    |> Enum.uniq_by(& &1.email)
+    |> Enum.map(&mention_suggestion/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort_by(&mention_suggestion_sort_key/1)
+  end
+
+  defp mention_suggestion(%User{email: email} = user) when is_binary(email) do
+    with [local_part, _domain] <- String.split(email, "@", parts: 2),
+         token when token != "" <- mention_token(local_part) do
+      %{token: token, name: mention_name(user), email: email}
+    else
+      _invalid -> nil
+    end
+  end
+
+  defp mention_suggestion(_user), do: nil
+
+  defp mention_suggestion_sort_key(%{name: name, email: email}) do
+    {name || email, email}
+    |> then(fn {name, email} -> {String.downcase(name), String.downcase(email)} end)
+  end
+
+  defp mention_name(%User{name: name}) when is_binary(name) do
+    case String.trim(name) do
+      "" -> nil
+      name -> name
+    end
+  end
+
+  defp mention_name(_user), do: nil
+
+  defp mention_token(value) do
+    value
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9._-]+/, "-")
+    |> String.slice(0, 39)
+    |> String.trim(".-_")
   end
 
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
@@ -185,9 +331,12 @@ defmodule HiveWeb.SpecLive.Show do
       <SpecComponents.show
         spec={@spec}
         comment_form={@comment_form}
+        edit_comment_form={@edit_comment_form}
+        mention_suggestions={@comment_mention_suggestions}
         can_edit?={@can_edit?}
+        current_user={@current_user}
+        editing_comment_id={@editing_comment_id}
         signed_in?={@signed_in?}
-        user_name={@user_name}
         expanded_revision_rows={@expanded_revision_rows}
       />
     </Layouts.dashboard>

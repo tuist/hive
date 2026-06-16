@@ -324,5 +324,32 @@ defmodule Hive.SpecsTest do
               [count: 20_000, validation: :length, kind: :max, type: :string]} =
                changeset.errors[:body]
     end
+
+    test "updates comments for their author" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+      {:ok, comment} = Specs.add_comment(spec, %{"body" => "Initial note."}, user)
+
+      assert {:ok, updated_comment} =
+               Specs.update_comment(comment, %{"body" => "Updated note."}, user)
+
+      assert updated_comment.body == "Updated note."
+    end
+
+    test "rejects comment updates from other users" do
+      author = user("author@example.com")
+      other_user = user("other@example.com")
+
+      {:ok, spec} =
+        Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, author)
+
+      {:ok, comment} = Specs.add_comment(spec, %{"body" => "Initial note."}, author)
+
+      assert Specs.update_comment(comment, %{"body" => "Hijacked."}, other_user) ==
+               {:error, :unauthorized}
+
+      spec = Specs.get_spec!(spec.id)
+      assert Enum.map(spec.comments, & &1.body) == ["Initial note."]
+    end
   end
 end
