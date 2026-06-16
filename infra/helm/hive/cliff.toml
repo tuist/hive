@@ -3,7 +3,7 @@
 # Tagging scheme: `helm@X.Y.Z`. Only Conventional Commits with
 # `(helm)` in their scope contribute to the chart's release notes;
 # changes to app code are captured by the root cliff.toml under the
-# `server@X.Y.Z` tag scheme.
+# plain `X.Y.Z` tag scheme (and the legacy `server@X.Y.Z` tags).
 
 [bump]
 initial_tag = "helm@0.1.0"

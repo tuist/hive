@@ -118,12 +118,12 @@ Versioning is driven by [git-cliff] and Conventional Commits, modeled after the 
 [git-cliff]: https://git-cliff.org
 [tuist/tuist]: https://github.com/tuist/tuist/blob/main/.github/workflows/release.yml
 
-- **App** (Docker image `ghcr.io/tuist/hive`) — versioned via `server@X.Y.Z` tags. Config: `cliff.toml` at the repo root. Any Conventional Commit that isn't `(helm)`-scoped contributes (so `feat(auth):`, `fix:`, `refactor(css):` etc. all count).
+- **App** (Docker image `ghcr.io/tuist/hive`) — versioned via plain semver `X.Y.Z` tags. Config: `cliff.toml` at the repo root. Any Conventional Commit that isn't `(helm)`-scoped contributes (so `feat(auth):`, `fix:`, `refactor(css):` etc. all count). The release workflow still recognizes the legacy `server@X.Y.Z` tags for bump detection until the latest tag is a plain one.
 - **Helm chart** (OCI artifact at `oci://ghcr.io/tuist/charts/hive`) — versioned via `helm@X.Y.Z` tags. Config: `infra/helm/hive/cliff.toml`. Only `(helm)`-scoped commits count.
 
 `.github/workflows/release.yml` runs on every push to `main`:
 
-1. **check-releases** uses `git cliff --bumped-version` to figure out whether either component has releasable changes since the last `server@*` / `helm@*` tag.
+1. **check-releases** uses `git cliff --bumped-version` to figure out whether either component has releasable changes since the last app tag (plain `X.Y.Z`, or the legacy `server@X.Y.Z`) / `helm@*` tag.
 2. **release-server** (conditional): generates release notes, refreshes `CHANGELOG.md`, builds and pushes the Docker image tagged with the new version (and `:latest`).
 3. **release-helm** (conditional): generates release notes, bumps `Chart.yaml` (`version` + `appVersion`), refreshes `infra/helm/hive/CHANGELOG.md`, runs `helm package` + `helm push` to the GHCR OCI registry.
 4. **commit-and-release**: creates git tags, publishes a GitHub Release per component with the cliff-generated notes, then commits the `CHANGELOG.md` / `Chart.yaml` bumps back to `main` with `[skip ci]`.
