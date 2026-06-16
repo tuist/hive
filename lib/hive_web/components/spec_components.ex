@@ -354,10 +354,27 @@ defmodule HiveWeb.SpecComponents do
     """
   end
 
-  defp preview(body) do
+  defp preview(body) when is_binary(body) do
     body
+    |> strip_markdown()
     |> String.replace(~r/\s+/, " ")
+    |> String.trim()
     |> String.slice(0, 180)
+  end
+
+  defp preview(_body), do: ""
+
+  defp strip_markdown(text) do
+    text
+    |> String.replace(~r/```[\s\S]*?```/, " ")
+    |> String.replace(~r/~~~[\s\S]*?~~~/, " ")
+    |> String.replace(~r/!\[[^\]]*\]\([^)]*\)/, " ")
+    |> String.replace(~r/\[([^\]]+)\]\([^)]*\)/, "\\1")
+    |> String.replace(~r/^[ \t]*>+ ?/m, "")
+    |> String.replace(~r/^[ \t]*[#]{1,6}[ \t]+/m, "")
+    |> String.replace(~r/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/m, "")
+    |> String.replace(~r/`+/, "")
+    |> String.replace(~r/\*+|~~/, "")
   end
 
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
