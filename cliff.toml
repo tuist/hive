@@ -1,12 +1,15 @@
 # git-cliff config for the Hive app (Phoenix server + Docker image).
 #
-# Tagging scheme: `server@X.Y.Z` (the chart in infra/helm/hive has its
-# own scheme, see infra/helm/hive/cliff.toml). Conventional commits
-# scoped with `(helm)` are skipped so they only affect the chart's
-# changelog; everything else here counts toward the next app release.
+# Tagging scheme: plain semver `X.Y.Z` (the chart in infra/helm/hive
+# has its own `helm@X.Y.Z` scheme, see infra/helm/hive/cliff.toml). The
+# tag_pattern below also matches the legacy `server@X.Y.Z` tags so the
+# bump logic keeps working until the latest tag is a plain one.
+# Conventional commits scoped with `(helm)` are skipped so they only
+# affect the chart's changelog; everything else here counts toward the
+# next app release.
 
 [bump]
-initial_tag = "server@0.1.0"
+initial_tag = "0.1.0"
 
 [remote.github]
 owner = "tuist"
@@ -84,7 +87,7 @@ commit_parsers = [
 ]
 protect_breaking_commits = false
 filter_commits = true
-tag_pattern = "server@[0-9].*"
+tag_pattern = "(server@)?[0-9].*"
 skip_tags = "beta|alpha"
 ignore_tags = "rc"
 topo_order = false
