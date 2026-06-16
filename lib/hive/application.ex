@@ -21,6 +21,7 @@ defmodule Hive.Application do
         Hive.Forage.GitHubIssueSyncer
       ]
       |> maybe_add_open_graph_browser_pool()
+      |> maybe_add_oban()
 
     opts = [strategy: :one_for_one, name: Hive.Supervisor]
     Supervisor.start_link(children, opts)
@@ -35,6 +36,14 @@ defmodule Hive.Application do
   defp maybe_add_open_graph_browser_pool(children) do
     if @start_og_images_browser_pool do
       List.insert_at(children, -1, HiveWeb.OpenGraph.browser_pool_child_spec())
+    else
+      children
+    end
+  end
+
+  defp maybe_add_oban(children) do
+    if Hive.Agents.enabled?() do
+      children ++ [{Oban, Application.fetch_env!(:hive, Oban)}]
     else
       children
     end

@@ -166,10 +166,15 @@ defmodule Hive.Specs do
   def create_spec(attrs, %User{} = user) do
     if can_create?(user) do
       Repo.transaction(fn -> create_spec_transaction(attrs, user) end)
-      |> tap(fn
-        {:ok, spec} -> record_spec_event("spec.created", spec, user)
-        _other -> :ok
-      end)
+      |> case do
+        {:ok, spec} ->
+          record_spec_event("spec.created", spec, user)
+          Hive.Meadows.schedule_evolution()
+          {:ok, spec}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       {:error, :unauthorized}
     end
@@ -183,6 +188,7 @@ defmodule Hive.Specs do
       |> case do
         {:ok, updated_spec} ->
           record_spec_event("spec.updated", updated_spec, user)
+          Hive.Meadows.schedule_evolution()
           {:ok, updated_spec}
 
         {:error, reason} ->

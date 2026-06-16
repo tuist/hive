@@ -27,6 +27,10 @@ LLMs and agentic workflows, and Hive is our take on it. It's built to run
 inside our own team and equally to be opened up to the people who use
 your products.
 
+When an LLM is configured, Hive can continuously evolve its meadows from
+new forage items and specs, keeping the taxonomy aligned with durable
+Tuist business domains instead of one-off tickets or vague buckets.
+
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 

@@ -7,10 +7,22 @@ defmodule Hive.Meadows do
 
   alias Ecto.Multi
   alias Hive.Auth
+  alias Hive.Forage.Grafana
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
   alias Hive.Meadows.MeadowRepository
+  alias Hive.Meadows.Webhook
   alias Hive.Repo
+
+  defdelegate evolve_from_work_items(opts \\ []), to: Hive.Meadows.Evolution
+  defdelegate schedule_evolution, to: Hive.Meadows.EvolutionWorker, as: :enqueue
+
+  def ingest_webhook(:grafana, %Meadow{} = meadow, %Webhook{} = webhook, payload) do
+    with {:ok, alerts} <- Grafana.ingest(meadow, webhook, payload) do
+      schedule_evolution()
+      {:ok, alerts}
+    end
+  end
 
   def list_meadows do
     Meadow
