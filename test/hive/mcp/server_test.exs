@@ -14,6 +14,7 @@ defmodule Hive.MCP.ServerTest do
              "list_audit_activities",
              "list_specs",
              "update_spec",
+             "update_spec_comment",
              "whoami"
            ]
   end
