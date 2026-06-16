@@ -24,6 +24,16 @@ Hive currently uses agents for:
   changed between the previous and the new revision. The summary
   appears in the draft history on the spec page. When no LLM is
   configured, the history falls back to a counts-based heuristic.
+- GitHub issue meadow classification: each time the syncer sees a new
+  issue or notices that an issue's title or body changed, Hive queues a
+  job that asks the agent which meadows the issue actually belongs to.
+  The candidates are the meadows attached to the issue's repository, so
+  the answer is always a subset of that set. The dashboard renders the
+  meadow badges from this classification, not from the repository's
+  meadow membership, so an issue in `tuist/tuist` only appears under
+  Cache when its substance is about caching. When no LLM is configured,
+  each issue is linked to every meadow attached to its repository,
+  matching pre-classification behaviour.
 
 ## Configuration
 

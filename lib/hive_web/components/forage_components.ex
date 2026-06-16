@@ -251,7 +251,7 @@ defmodule HiveWeb.ForageComponents do
           </div>
 
           <div :if={@entries != []} data-part="issue-list">
-            <article :for={{meadow, repository, issue} <- @entries} data-part="issue-row">
+            <article :for={{repository, issue, meadows} <- @entries} data-part="issue-row">
               <div data-part="issue-copy">
                 <h2>
                   <a
@@ -273,6 +273,7 @@ defmodule HiveWeb.ForageComponents do
                     <:icon><.brand_github /></:icon>
                   </.badge>
                   <.badge
+                    :for={meadow <- meadows}
                     label={meadow.name}
                     color="information"
                     style="light-fill"

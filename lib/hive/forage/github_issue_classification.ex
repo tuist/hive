@@ -1,0 +1,190 @@
+defmodule Hive.Forage.GitHubIssueClassification do
+  @moduledoc """
+  Resolves which meadows a single GitHub issue belongs to and persists the
+  resulting links.
+
+  Classification calls the configured LLM through
+  `Hive.Forage.Agents.GitHubIssueClassifierAgent`. The candidate set is
+  the meadows attached to the issue's repository, so the answer is always
+  a subset of that list. When the LLM is not configured, every candidate
+  meadow is linked so the dashboard still has something to show.
+  """
+
+  import Ecto.Query
+
+  alias Hive.Agents
+  alias Hive.Agents.Sessions
+  alias Hive.Forage.Agents.GitHubIssueClassifierAgent
+  alias Hive.Forage.GitHubIssue
+  alias Hive.Forage.GitHubIssueMeadow
+  alias Hive.Meadows.Meadow
+  alias Hive.Meadows.MeadowRepository
+  alias Hive.Repo
+
+  @business_context """
+  Tuist builds infrastructure for productive software development, including
+  caching, compute environments, and support for build systems such as Xcode,
+  Gradle, and Bazel. Important domains include build automation, remote caching,
+  testing, CI, release workflows, developer experience, documentation, Hive
+  product planning, forage, specs, MCP, identity, operations, and Noora's
+  design system.
+  """
+
+  @max_body_length 1_200
+
+  @doc """
+  Classifies the issue with `issue_id` and writes the resulting meadow
+  links.
+
+  Returns `{:ok, [meadow_id]}` on success, `{:error, :not_found}` for an
+  unknown id, and `{:error, reason}` for an LLM error that should be
+  retried by the caller (typically the worker).
+  """
+  def classify(issue_id, opts \\ []) when is_binary(issue_id) do
+    case load_issue(issue_id) do
+      nil -> {:error, :not_found}
+      issue -> classify_issue(issue, opts)
+    end
+  end
+
+  def classify_issue(%GitHubIssue{} = issue, opts \\ []) do
+    candidate_meadows = candidate_meadows(issue.github_repository_id)
+
+    cond do
+      candidate_meadows == [] ->
+        persist!(issue, [])
+        {:ok, []}
+
+      not agents_enabled?(opts) ->
+        meadow_ids = Enum.map(candidate_meadows, & &1.id)
+        persist!(issue, meadow_ids)
+        {:ok, meadow_ids}
+
+      true ->
+        run_agent(issue, candidate_meadows, opts)
+    end
+  end
+
+  defp run_agent(issue, candidate_meadows, opts) do
+    runner = Keyword.get(opts, :runner, &run_classifier(&1, opts))
+
+    case runner.(build_input(issue, candidate_meadows)) do
+      {:ok, %{meadow_ids: meadow_ids}} ->
+        persist_classification(issue, candidate_meadows, meadow_ids)
+
+      {:ok, %{"meadow_ids" => meadow_ids}} ->
+        persist_classification(issue, candidate_meadows, meadow_ids)
+
+      {:ok, _other} ->
+        {:error, :invalid_agent_response}
+
+      {:error, :llm_not_configured} ->
+        meadow_ids = Enum.map(candidate_meadows, & &1.id)
+        persist!(issue, meadow_ids)
+        {:ok, meadow_ids}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp persist_classification(issue, candidate_meadows, meadow_ids) when is_list(meadow_ids) do
+    allowed = MapSet.new(candidate_meadows, & &1.id)
+
+    selected =
+      meadow_ids
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
+      |> Enum.filter(&MapSet.member?(allowed, &1))
+
+    persist!(issue, selected)
+    {:ok, selected}
+  end
+
+  defp persist_classification(_issue, _candidate_meadows, _other),
+    do: {:error, :invalid_agent_response}
+
+  defp persist!(%GitHubIssue{id: issue_id}, meadow_ids) do
+    classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    inserted_at = classified_at
+
+    rows =
+      Enum.map(meadow_ids, fn meadow_id ->
+        %{
+          forage_github_issue_id: issue_id,
+          meadow_id: meadow_id,
+          inserted_at: inserted_at,
+          updated_at: inserted_at
+        }
+      end)
+
+    Repo.transaction(fn ->
+      from(link in GitHubIssueMeadow, where: link.forage_github_issue_id == ^issue_id)
+      |> Repo.delete_all()
+
+      if rows != [], do: Repo.insert_all(GitHubIssueMeadow, rows)
+
+      GitHubIssue
+      |> where([issue], issue.id == ^issue_id)
+      |> Repo.update_all(set: [classified_at: classified_at])
+    end)
+
+    :ok
+  end
+
+  defp candidate_meadows(repository_id) do
+    Meadow
+    |> join(:inner, [meadow], link in MeadowRepository, on: link.meadow_id == meadow.id)
+    |> where([_meadow, link], link.github_repository_id == ^repository_id)
+    |> order_by([meadow, _link], asc: meadow.name)
+    |> Repo.all()
+  end
+
+  defp build_input(%GitHubIssue{} = issue, candidate_meadows) do
+    repository = issue.github_repository
+
+    %{
+      business_context: @business_context,
+      candidate_meadows:
+        Enum.map(candidate_meadows, fn meadow ->
+          %{
+            id: meadow.id,
+            name: meadow.name,
+            description: meadow.description || ""
+          }
+        end),
+      issue: %{
+        repository: "#{repository.owner}/#{repository.name}",
+        number: issue.number,
+        title: issue.title,
+        body: truncate(issue.body)
+      }
+    }
+  end
+
+  defp run_classifier(input, opts) do
+    agent = Keyword.get(opts, :agent, GitHubIssueClassifierAgent)
+    agent_opts = Keyword.get(opts, :agent_opts, [])
+
+    Sessions.run_operation(agent, :classify_issue, input, agent_opts)
+  end
+
+  defp load_issue(id) do
+    GitHubIssue
+    |> preload(:github_repository)
+    |> Repo.get(id)
+  end
+
+  defp agents_enabled?(opts) do
+    fun = Keyword.get(opts, :agents_enabled?, &Agents.enabled?/0)
+    fun.()
+  end
+
+  defp truncate(value) when is_binary(value) do
+    if String.length(value) > @max_body_length,
+      do: String.slice(value, 0, @max_body_length) <> "...",
+      else: value
+  end
+
+  defp truncate(_value), do: ""
+end

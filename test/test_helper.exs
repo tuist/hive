@@ -13,6 +13,7 @@ Ecto.Adapters.SQL.Sandbox.mode(Hive.Repo, :manual)
 # tests don't have to mutate Application config. Stubs apply per-test
 # (process-local), keeping parallelism safe.
 Mimic.copy(Hive.Agents)
+Mimic.copy(Hive.Forage.Agents.GitHubIssueClassifierAgent)
 Mimic.copy(Hive.Specs.Agents.RevisionSummaryAgent)
 Mimic.copy(Hive.Auth)
 Mimic.copy(Hive.GitHub.Client)

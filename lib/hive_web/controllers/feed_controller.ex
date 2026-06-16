@@ -59,7 +59,7 @@ defmodule HiveWeb.FeedController do
       id: feed_id(conn),
       title: "Hive · GitHub issues",
       subtitle: "Open issues from GitHub repositories connected to meadows.",
-      updated: latest_updated(triples, fn {_m, _r, issue} -> issue.updated_at end),
+      updated: latest_updated(triples, fn {_repo, issue, _meadows} -> issue.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/github-issues"),
       entries: Enum.map(triples, &github_issue_entry/1)
@@ -154,7 +154,7 @@ defmodule HiveWeb.FeedController do
     }
   end
 
-  defp github_issue_entry({_meadow, repository, issue}) do
+  defp github_issue_entry({repository, issue, _meadows}) do
     url = "https://github.com/#{repository.owner}/#{repository.name}/issues/#{issue.number}"
 
     %{
