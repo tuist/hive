@@ -321,26 +321,37 @@
       font-weight: var(--noora-font-weight-medium);
     }
 
-    & code {
+    & :not(pre) > code {
+      box-shadow:
+        0 1px 1px 0 rgba(14, 14, 14, 0.05),
+        0 0 0 1px rgba(46, 51, 56, 0.08),
+        0 1px 1px 0 rgba(46, 51, 56, 0.1);
       border-radius: var(--noora-radius-2);
-      background: var(--noora-surface-background-tertiary);
-      padding: 0 var(--noora-spacing-1);
-      font: var(--noora-font-code-medium);
+      background: var(--noora-surface-background-secondary);
+      padding: 1px var(--noora-spacing-1);
+      color: var(--noora-surface-label-primary);
+      font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
     }
 
     & pre {
       overflow-x: auto;
-      border: 1px solid var(--noora-surface-border-primary);
-      border-radius: var(--noora-radius-3);
-      background: var(--noora-surface-background-tertiary);
-      padding: var(--noora-spacing-4) var(--noora-spacing-5);
+      box-shadow:
+        0 1px 1px 0 rgba(14, 14, 14, 0.05),
+        0 0 0 1px rgba(46, 51, 56, 0.08),
+        0 1px 2px 0 rgba(46, 51, 56, 0.08);
+      border: 0;
+      border-radius: var(--noora-radius-4);
+      background: var(--noora-surface-background-tertiary) !important;
+      padding: var(--noora-spacing-5);
       line-height: 1.5;
     }
 
     & pre code {
+      box-shadow: none;
       background: transparent;
       padding: 0;
-      font: var(--noora-font-code-medium);
+      color: var(--noora-surface-label-primary);
+      font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
     }
 
     & blockquote {
