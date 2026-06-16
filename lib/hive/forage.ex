@@ -256,11 +256,25 @@ defmodule Hive.Forage do
         {:error, _} -> []
       end
 
-    Enum.each(dirty_issue_ids, &classify_issue/1)
+    unclassified_ids = list_unclassified_issue_ids(repository_id)
+
+    (dirty_issue_ids ++ unclassified_ids)
+    |> Enum.uniq()
+    |> Enum.each(&classify_issue/1)
 
     Hive.Meadows.schedule_evolution()
 
     :ok
+  end
+
+  defp list_unclassified_issue_ids(repository_id) do
+    GitHubIssue
+    |> where(
+      [issue],
+      issue.github_repository_id == ^repository_id and is_nil(issue.classified_at)
+    )
+    |> select([issue], issue.id)
+    |> Repo.all()
   end
 
   defp upsert_entry(repository_id, entry) do

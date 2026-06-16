@@ -31,9 +31,12 @@ Hive currently uses agents for:
   the answer is always a subset of that set. The dashboard renders the
   meadow badges from this classification, not from the repository's
   meadow membership, so an issue in `tuist/tuist` only appears under
-  Cache when its substance is about caching. When no LLM is configured,
-  each issue is linked to every meadow attached to its repository,
-  matching pre-classification behaviour.
+  Cache when its substance is about caching. A scheduled sweeper also
+  re-classifies any cached issue still missing a classification, so
+  rows that existed before classification shipped or that hit a transient
+  LLM failure recover on the next tick. When no LLM is configured, each
+  issue is linked to every meadow attached to its repository, matching
+  pre-classification behaviour.
 
 ## Configuration
 
