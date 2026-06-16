@@ -309,5 +309,20 @@ defmodule Hive.SpecsTest do
 
       assert {:ok, _comment} = Specs.add_comment(spec, %{"body" => "Member note."}, member)
     end
+
+    test "accepts a body at the maximum length and rejects one beyond it" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      assert {:ok, _comment} =
+               Specs.add_comment(spec, %{"body" => String.duplicate("a", 20_000)}, user)
+
+      assert {:error, changeset} =
+               Specs.add_comment(spec, %{"body" => String.duplicate("a", 20_001)}, user)
+
+      assert {"should be at most %{count} character(s)",
+              [count: 20_000, validation: :length, kind: :max, type: :string]} =
+               changeset.errors[:body]
+    end
   end
 end
