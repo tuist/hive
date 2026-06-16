@@ -54,6 +54,47 @@ defmodule HiveWeb.Markdown do
 
   def inline(_text), do: raw("")
 
+  @doc """
+  Strips Markdown formatting from `text` and returns a plain-text string,
+  preserving the original whitespace. Useful for previews, OpenGraph
+  descriptions, or anywhere a Markdown body needs to be flattened.
+
+  Intraword underscores are preserved so identifiers like
+  `Module.do_something/1` survive the strip.
+  """
+  def to_plain_text(text) when is_binary(text) do
+    text
+    |> String.replace(~r/```[\s\S]*?```/, " ")
+    |> String.replace(~r/~~~[\s\S]*?~~~/, " ")
+    |> String.replace(~r/!\[[^\]]*\]\([^)]*\)/, " ")
+    |> String.replace(~r/\[([^\]]+)\]\([^)]*\)/, "\\1")
+    |> String.replace(~r/^[ \t]*>+ ?/m, "")
+    |> String.replace(~r/^[ \t]*[#]{1,6}[ \t]+/m, "")
+    |> String.replace(~r/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/m, "")
+    |> String.replace(~r/`+/, "")
+    |> String.replace(~r/\*+|~~/, "")
+  end
+
+  def to_plain_text(_text), do: ""
+
+  @doc """
+  Builds a single-line plain-text preview of `text`, suitable for table
+  cells or summary lines. Strips Markdown formatting, collapses runs of
+  whitespace into a single space, and truncates to `limit` characters
+  (default 180).
+  """
+  def preview(text, limit \\ 180)
+
+  def preview(text, limit) when is_binary(text) and is_integer(limit) and limit > 0 do
+    text
+    |> to_plain_text()
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> String.slice(0, limit)
+  end
+
+  def preview(_text, _limit), do: ""
+
   defp downshift_heading(%MDEx.Heading{level: level} = node),
     do: %{node | level: min(level + 1, 6)}
 

@@ -87,6 +87,59 @@ defmodule HiveWeb.MarkdownTest do
     end
   end
 
+  describe "to_plain_text/1" do
+    test "strips headings, fenced code, list markers, links, and emphasis" do
+      body = """
+      ## Why
+
+      Tuist already runs `Tuist.Namespace.create_instance_with_ssh_connection/1`.
+
+      - one
+      - two
+
+      See [docs](https://example.com) and **bold** and ~~strike~~.
+
+      ```elixir
+      def hidden, do: :ok
+      ```
+      """
+
+      plain = Markdown.to_plain_text(body)
+
+      refute plain =~ "##"
+      refute plain =~ "```"
+      refute plain =~ "**"
+      refute plain =~ "~~"
+      refute plain =~ "- one"
+      assert plain =~ "Why"
+      assert plain =~ "Tuist.Namespace.create_instance_with_ssh_connection/1"
+      assert plain =~ "docs"
+      refute plain =~ "https://example.com"
+      assert plain =~ "bold"
+      assert plain =~ "strike"
+      refute plain =~ "def hidden"
+    end
+
+    test "returns an empty string for nil" do
+      assert Markdown.to_plain_text(nil) == ""
+    end
+  end
+
+  describe "preview/2" do
+    test "collapses whitespace and truncates to the given limit" do
+      assert Markdown.preview("## Hello\n\nthere\nworld", 100) == "Hello there world"
+    end
+
+    test "uses 180 characters by default" do
+      body = String.duplicate("a", 300)
+      assert String.length(Markdown.preview(body)) == 180
+    end
+
+    test "returns an empty string for nil" do
+      assert Markdown.preview(nil) == ""
+    end
+  end
+
   test "highlights fenced code blocks" do
     rendered =
       html("""
