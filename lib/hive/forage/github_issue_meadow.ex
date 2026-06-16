@@ -3,8 +3,6 @@ defmodule Hive.Forage.GitHubIssueMeadow do
 
   use Ecto.Schema
 
-  import Ecto.Changeset
-
   alias Hive.Forage.GitHubIssue
   alias Hive.Meadows.Meadow
 
@@ -16,14 +14,5 @@ defmodule Hive.Forage.GitHubIssueMeadow do
     belongs_to :meadow, Meadow, primary_key: true
 
     timestamps(type: :utc_datetime)
-  end
-
-  def changeset(link, attrs) do
-    link
-    |> cast(attrs, [:forage_github_issue_id, :meadow_id])
-    |> validate_required([:forage_github_issue_id, :meadow_id])
-    |> unique_constraint([:forage_github_issue_id, :meadow_id],
-      name: :forage_github_issue_meadows_pkey
-    )
   end
 end

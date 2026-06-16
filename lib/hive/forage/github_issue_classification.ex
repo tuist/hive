@@ -52,7 +52,8 @@ defmodule Hive.Forage.GitHubIssueClassification do
 
     cond do
       candidate_meadows == [] ->
-        persist!(issue, [])
+        # Leave classified_at nil so the sweeper retries once the
+        # repository is attached to its first meadow.
         {:ok, []}
 
       not agents_enabled?(opts) ->

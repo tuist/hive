@@ -141,4 +141,29 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     assert {:error, :not_found} =
              GitHubIssueClassification.classify("00000000-0000-0000-0000-000000000001")
   end
+
+  test "leaves classified_at nil when the repository has no meadow attached" do
+    meadow = create_meadow_with_new_repo!("orphan")
+    repo = hd(meadow.github_repositories)
+
+    issue =
+      Repo.insert!(
+        GitHubIssue.changeset(%GitHubIssue{}, %{
+          github_repository_id: repo.id,
+          number: 1,
+          title: "Lonely issue",
+          body: nil,
+          state: :open
+        })
+      )
+
+    Repo.delete!(meadow)
+
+    assert {:ok, []} =
+             GitHubIssueClassification.classify(issue.id, agents_enabled?: fn -> false end)
+
+    refreshed = Repo.get!(GitHubIssue, issue.id)
+    assert is_nil(refreshed.classified_at)
+    assert [] = Repo.all(GitHubIssueMeadow)
+  end
 end
