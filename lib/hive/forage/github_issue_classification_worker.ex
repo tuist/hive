@@ -35,6 +35,7 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
   def perform(%Oban.Job{args: %{"issue_id" => issue_id}}) do
     case GitHubIssueClassification.classify(issue_id) do
       {:ok, _meadow_ids} ->
+        Hive.Meadows.schedule_evolution()
         :ok
 
       {:error, :not_found} ->
