@@ -91,12 +91,21 @@ defmodule HiveWeb.MeadowComponents do
                 </div>
               </:col>
               <:col :let={meadow} label="Feed">
-                <div :if={meadow.id} data-part="feed-cell">
-                  <Layouts.feeds_dropdown
-                    id={"meadows-list-#{meadow.id}-feeds-dropdown"}
-                    atom_href={"/meadows/#{meadow.id}/atom.xml"}
-                    rss_href={"/meadows/#{meadow.id}/rss.xml"}
-                  />
+                <div :if={meadow.id} data-part="cell" data-type="feed">
+                  <a
+                    href={"/meadows/#{meadow.id}/atom.xml"}
+                    data-part="feed-link"
+                    title="Subscribe via Atom"
+                  >
+                    <.icon name="rss" /><span>Atom</span>
+                  </a>
+                  <a
+                    href={"/meadows/#{meadow.id}/rss.xml"}
+                    data-part="feed-link"
+                    title="Subscribe via RSS"
+                  >
+                    <.icon name="rss" /><span>RSS</span>
+                  </a>
                 </div>
               </:col>
               <:empty_state>

@@ -19,14 +19,13 @@ defmodule HiveWeb.MeadowLive.IndexTest do
     refute html =~ ~s(href="/meadows/#{public.id}")
   end
 
-  test "exposes a per-row feed dropdown linking to Atom and RSS", %{conn: conn} do
+  test "exposes per-row links to the Atom and RSS feeds", %{conn: conn} do
     {:ok, public} = Meadows.create_meadow(%{"name" => "Public meadow", "visibility" => "public"})
 
     {:ok, _view, html} = live(conn, ~p"/meadows")
 
-    assert html =~ ~s(id="meadows-list-#{public.id}-feeds-dropdown")
-    assert html =~ "/meadows/#{public.id}/atom.xml"
-    assert html =~ "/meadows/#{public.id}/rss.xml"
+    assert html =~ ~s(href="/meadows/#{public.id}/atom.xml")
+    assert html =~ ~s(href="/meadows/#{public.id}/rss.xml")
   end
 
   test "shows contributors public meadows without edit controls", %{conn: conn} do
