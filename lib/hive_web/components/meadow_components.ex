@@ -9,6 +9,7 @@ defmodule HiveWeb.MeadowComponents do
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
   alias Hive.Meadows.Webhook
+  alias HiveWeb.Layouts
 
   attr :meadows, :list, required: true
   attr :editable?, :boolean, default: false
@@ -89,6 +90,24 @@ defmodule HiveWeb.MeadowComponents do
                   </div>
                 </div>
               </:col>
+              <:col :let={meadow} label="Feed">
+                <div :if={meadow.id} data-part="cell" data-type="feed">
+                  <a
+                    href={"/meadows/#{meadow.id}/atom.xml"}
+                    data-part="feed-link"
+                    title="Subscribe via Atom"
+                  >
+                    <.icon name="rss" /><span>Atom</span>
+                  </a>
+                  <a
+                    href={"/meadows/#{meadow.id}/rss.xml"}
+                    data-part="feed-link"
+                    title="Subscribe via RSS"
+                  >
+                    <.icon name="rss" /><span>RSS</span>
+                  </a>
+                </div>
+              </:col>
               <:empty_state>
                 <.table_empty_state
                   icon="treemap"
@@ -124,6 +143,13 @@ defmodule HiveWeb.MeadowComponents do
         <div data-part="title-group">
           <h1>{@meadow.name}</h1>
           <p>{meadow_description(@meadow)}</p>
+        </div>
+        <div data-part="header-actions">
+          <Layouts.feeds_dropdown
+            id={"meadow-#{@meadow.id}-feeds-dropdown"}
+            atom_href={"/meadows/#{@meadow.id}/atom.xml"}
+            rss_href={"/meadows/#{@meadow.id}/rss.xml"}
+          />
         </div>
       </div>
 

@@ -24,6 +24,11 @@ defmodule HiveWeb.MeadowLive.Show do
         {:ok,
          socket
          |> assign(:page_title, "#{meadow.name} · Meadows · #{socket.assigns.product_name}")
+         |> assign(:atom_feed, %{
+           title: "Hive · #{meadow.name}",
+           atom_href: "/meadows/#{meadow.id}/atom.xml",
+           rss_href: "/meadows/#{meadow.id}/rss.xml"
+         })
          |> assign(:meadow, meadow)
          |> assign(:editable?, editable?)
          |> assign(:repository_options, [])

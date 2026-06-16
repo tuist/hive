@@ -5,6 +5,7 @@ defmodule HiveWeb.SpecComponents do
 
   alias Hive.Specs
   alias Hive.Specs.Spec
+  alias HiveWeb.Layouts
   alias HiveWeb.Markdown
 
   attr :specs, :list, required: true
@@ -21,15 +22,22 @@ defmodule HiveWeb.SpecComponents do
           <h1>Specs</h1>
           <p>Editable proposals that shape forage into buildable work.</p>
         </div>
-        <.button
-          :if={@can_create?}
-          label="New spec"
-          href={~p"/specs/new"}
-          size="medium"
-          variant="primary"
-        >
-          <:icon_left><.circle_plus /></:icon_left>
-        </.button>
+        <div data-part="header-actions">
+          <Layouts.feeds_dropdown
+            id="specs-index-feeds-dropdown"
+            atom_href="/specs/atom.xml"
+            rss_href="/specs/rss.xml"
+          />
+          <.button
+            :if={@can_create?}
+            label="New spec"
+            href={~p"/specs/new"}
+            size="medium"
+            variant="primary"
+          >
+            <:icon_left><.circle_plus /></:icon_left>
+          </.button>
+        </div>
       </div>
 
       <.card icon="file_text" title="Specs">
@@ -127,6 +135,11 @@ defmodule HiveWeb.SpecComponents do
           </div>
         </div>
         <div data-part="header-actions">
+          <Layouts.feeds_dropdown
+            id="spec-show-feeds-dropdown"
+            atom_href="/specs/atom.xml"
+            rss_href="/specs/rss.xml"
+          />
           <.status_menu :if={@can_edit?} spec={@spec} />
           <.badge
             :if={!@can_edit?}
