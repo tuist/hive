@@ -23,7 +23,7 @@ defmodule Hive.Specs.Comment do
     |> cast(attrs, [:body, :author_name])
     |> update_change(:author_name, &normalize_author_name/1)
     |> validate_required([:body])
-    |> validate_length(:body, min: 2, max: 4_000)
+    |> validate_length(:body, min: 2, max: 20_000)
     |> validate_length(:author_name, max: 160)
     |> foreign_key_constraint(:spec_id)
   end
