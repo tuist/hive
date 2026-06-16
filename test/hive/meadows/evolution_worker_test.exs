@@ -4,11 +4,6 @@ defmodule Hive.Meadows.EvolutionWorkerTest do
 
   alias Hive.Meadows.EvolutionWorker
 
-  setup do
-    start_supervised!({Oban, Application.fetch_env!(:hive, Oban)})
-    :ok
-  end
-
   test "enqueue/1 inserts a delayed unique evolution job when agents are enabled" do
     assert {:ok, %Oban.Job{} = first_job} =
              EvolutionWorker.enqueue(agents_enabled?: fn -> true end)
@@ -18,11 +13,11 @@ defmodule Hive.Meadows.EvolutionWorkerTest do
 
     assert first_job.id == second_job.id
     assert second_job.conflict?
-    assert first_job.queue == "meadows"
+    assert first_job.queue == "agents"
     assert first_job.worker == inspect(EvolutionWorker)
     assert DateTime.compare(first_job.scheduled_at, DateTime.utc_now()) == :gt
 
-    assert [%Oban.Job{}] = all_enqueued(worker: EvolutionWorker, queue: "meadows")
+    assert [%Oban.Job{}] = all_enqueued(worker: EvolutionWorker, queue: "agents")
   end
 
   test "enqueue/1 skips when agentic workflows are dormant" do

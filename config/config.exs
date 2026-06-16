@@ -49,7 +49,7 @@ config :boruta, Boruta.Oauth,
 
 config :hive, Oban,
   repo: Hive.Repo,
-  queues: [meadows: 1],
+  queues: [agents: 2],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [

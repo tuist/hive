@@ -478,6 +478,10 @@ defmodule HiveWeb.SpecComponents do
   defp revision_summary_title(%{revision: 1}), do: "Initial draft"
   defp revision_summary_title(revision), do: "Revision #{revision.revision} summary"
 
+  defp revision_summary(%{summary: summary}, _revisions)
+       when is_binary(summary) and summary != "",
+       do: summary
+
   defp revision_summary(%{revision: 1, status: status}, _revisions) do
     "Created the initial #{String.downcase(status_label(status))} proposal."
   end
