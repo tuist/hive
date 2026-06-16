@@ -26,7 +26,7 @@ defmodule Hive.Specs.RevisionSummaryWorkerTest do
 
     assert first.id == second.id
     assert second.conflict?
-    assert first.queue == "specs"
+    assert first.queue == "agents"
     assert first.worker == inspect(RevisionSummaryWorker)
     assert first.args == %{"revision_id" => "00000000-0000-0000-0000-000000000001"}
   end

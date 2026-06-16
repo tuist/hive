@@ -5,7 +5,7 @@ defmodule Hive.Specs.RevisionSummaryWorker do
   """
 
   use Oban.Worker,
-    queue: :specs,
+    queue: :agents,
     max_attempts: 3,
     unique: [fields: [:worker, :queue, :args], period: :infinity, states: :incomplete]
 

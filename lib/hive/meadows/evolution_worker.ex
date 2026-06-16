@@ -4,7 +4,7 @@ defmodule Hive.Meadows.EvolutionWorker do
   """
 
   use Oban.Worker,
-    queue: :meadows,
+    queue: :agents,
     max_attempts: 3,
     unique: [
       fields: [:worker, :queue],
