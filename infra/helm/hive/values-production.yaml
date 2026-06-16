@@ -12,6 +12,13 @@ host: hive.tuist.dev
 image:
   pullSecretName: ghcr-pull
 
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+
 env:
   # Tuist's instance is public: anyone can browse it. Google login is
   # the team's path, restricted to @tuist.dev via HIVE_GOOGLE_ALLOWED_DOMAINS.
