@@ -257,8 +257,12 @@ specs = [
       "status" => "proposed"
     },
     comments: [
+      {"test@hive.dev",
+       "Edit demo: @maya this comment is intentionally a little rough so the inline edit affordance is easy to try locally. It should probably become a short numbered list before asking for another pass."},
       {"jon@example.com",
        "This should keep the source URL visible on the forage item and the spec."},
+      {"maya@example.com",
+       "@test good catch. When you edit it, try splitting the sync, dedupe, and traceability notes onto separate lines."},
       {"guest@example.com",
        "It would help if imported items linked back to the discussion comments too."}
     ]

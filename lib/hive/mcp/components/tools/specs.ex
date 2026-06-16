@@ -48,7 +48,8 @@ defmodule Hive.MCP.Components.Tools.Specs do
       id: comment.id,
       body: comment.body,
       author: comment_author(comment),
-      inserted_at: comment.inserted_at
+      inserted_at: comment.inserted_at,
+      updated_at: comment.updated_at
     }
   end
 

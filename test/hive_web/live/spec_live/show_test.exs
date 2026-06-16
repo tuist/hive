@@ -136,6 +136,76 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ ~s|aria-label="Permalink to comment"|
   end
 
+  test "renders mention autocomplete suggestions for spec participants", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
+
+    {:ok, bob} =
+      Accounts.upsert_from_auth(%{
+        email: "bob@example.com",
+        name: "Bob Example",
+        provider: "test",
+        provider_uid: "bob@example.com"
+      })
+
+    {:ok, _comment} = Specs.add_comment(spec, %{"body" => "Worth doing."}, bob)
+
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ ~s|phx-hook="MentionAutocomplete"|
+    assert html =~ ~s|&quot;token&quot;:&quot;alice&quot;|
+    assert html =~ ~s|&quot;token&quot;:&quot;bob&quot;|
+    assert html =~ "Bob Example"
+    assert html =~ "bob@example.com"
+  end
+
+  test "allows comment authors to edit their comments", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
+
+    {:ok, comment} = Specs.add_comment(spec, %{"body" => "Rendered without line breaks."}, user)
+    {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ ~s|aria-label="Edit comment"|
+
+    html = render_click(view, "edit_comment", %{"id" => comment.id})
+
+    assert html =~ "Save comment"
+    assert html =~ "Rendered without line breaks."
+
+    html =
+      view
+      |> form("form[data-part='comment-edit-form']",
+        comment_edit: %{body: "Properly formatted now, thanks @marek."}
+      )
+      |> render_submit()
+
+    assert html =~ "Properly formatted now, thanks "
+    assert html =~ ~s|<span data-part="mention" data-mention="@marek">@marek</span>|
+    refute html =~ "Rendered without line breaks."
+  end
+
+  test "hides comment edit controls from other users", %{conn: conn} do
+    {_author_conn, author} = sign_in(conn, "alice@example.com")
+    {conn, _other_user} = sign_in(conn, "bob@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, author)
+
+    {:ok, comment} = Specs.add_comment(spec, %{"body" => "Author note."}, author)
+    {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    refute html =~ ~s|aria-label="Edit comment"|
+
+    html = render_click(view, "edit_comment", %{"id" => comment.id})
+
+    refute html =~ "Save comment"
+  end
+
   test "renders author avatars with GitHub and Gravatar sources", %{conn: conn} do
     {_member_conn, user} = sign_in(conn, "alice@example.com")
 

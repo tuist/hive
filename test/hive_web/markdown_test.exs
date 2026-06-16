@@ -62,6 +62,21 @@ defmodule HiveWeb.MarkdownTest do
     assert rendered =~ "Plain quote."
   end
 
+  test "renders mentions as tag spans" do
+    rendered = html("@marek thanks for the pass.")
+
+    assert rendered =~ ~s|<span data-part="mention" data-mention="@marek">@marek</span>|
+  end
+
+  test "does not render emails, code, or link text as mentions" do
+    rendered = html("pedro@tuist.dev `@raw` [@link](https://example.com/@link) @marek")
+
+    refute rendered =~ ~s|data-mention="@tuist"|
+    refute rendered =~ ~s|data-mention="@raw"|
+    refute rendered =~ ~s|data-mention="@link"|
+    assert rendered =~ ~s|<span data-part="mention" data-mention="@marek">@marek</span>|
+  end
+
   defp inline(markdown) do
     markdown
     |> Markdown.inline()

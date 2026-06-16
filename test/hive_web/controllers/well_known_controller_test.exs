@@ -9,7 +9,7 @@ defmodule HiveWeb.WellKnownControllerTest do
 
       assert response["serverInfo"] == %{"name" => "hive", "version" => "0.1.0"}
       assert response["transport"] == %{"endpoint" => "/mcp"}
-      assert response["capabilities"] == ["tools"]
+      assert response["capabilities"] == ["tools", "prompts"]
     end
   end
 
