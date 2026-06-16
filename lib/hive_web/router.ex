@@ -24,6 +24,7 @@ defmodule HiveWeb.Router do
   pipeline :feed do
     plug :accepts, ["xml"]
     plug :fetch_session
+    plug HiveWeb.Plugs.RequireAuthenticated
   end
 
   pipeline :oauth_registration do
