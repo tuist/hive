@@ -6,7 +6,6 @@ defmodule Hive.Meadows.Evolution do
   import Ecto.Query
 
   alias Hive.Agents.Sessions
-  alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
@@ -138,17 +137,11 @@ defmodule Hive.Meadows.Evolution do
   end
 
   defp github_issue_items(limit) do
-    meadows_by_repository_id =
-      Forage.list_repositories_with_meadows()
-      |> Enum.group_by(fn {_meadow, repository} -> repository.id end, fn {meadow, _repository} ->
-        meadow.name
-      end)
-
     GitHubIssue
     |> where([issue], issue.state == :open)
     |> order_by([issue], desc: issue.updated_at)
     |> limit(^limit)
-    |> preload(:github_repository)
+    |> preload([:github_repository, :meadows])
     |> Repo.all()
     |> Enum.map(fn issue ->
       repository = issue.github_repository
@@ -161,7 +154,7 @@ defmodule Hive.Meadows.Evolution do
         body: truncate(issue.body || ""),
         status: Atom.to_string(issue.state),
         source: source,
-        meadows: Map.get(meadows_by_repository_id, repository.id, []),
+        meadows: Enum.map(issue.meadows, & &1.name),
         occurred_at: iso8601(issue.updated_at),
         sort_at: issue.updated_at
       }

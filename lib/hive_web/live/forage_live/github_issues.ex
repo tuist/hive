@@ -200,8 +200,13 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
 
     %{
       total: length(entries),
-      repositories: entries |> Enum.map(fn {_p, r, _i} -> r.id end) |> Enum.uniq() |> length(),
-      meadows: entries |> Enum.map(fn {p, _r, _i} -> p.id end) |> Enum.uniq() |> length(),
+      repositories:
+        entries |> Enum.map(fn {repo, _i, _ms} -> repo.id end) |> Enum.uniq() |> length(),
+      meadows:
+        entries
+        |> Enum.flat_map(fn {_repo, _issue, meadows} -> Enum.map(meadows, & &1.id) end)
+        |> Enum.uniq()
+        |> length(),
       state_label: state_label_plural(state)
     }
   end

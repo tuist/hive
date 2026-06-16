@@ -9,7 +9,9 @@ defmodule Hive.Forage.GitHubIssue do
 
   import Ecto.Changeset
 
+  alias Hive.Forage.GitHubIssueMeadow
   alias Hive.Meadows.GitHubRepository
+  alias Hive.Meadows.Meadow
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -20,8 +22,13 @@ defmodule Hive.Forage.GitHubIssue do
     field :title, :string
     field :body, :string
     field :state, Ecto.Enum, values: @states, default: :open
+    field :classified_at, :utc_datetime
 
     belongs_to :github_repository, GitHubRepository
+
+    many_to_many :meadows, Meadow,
+      join_through: GitHubIssueMeadow,
+      join_keys: [forage_github_issue_id: :id, meadow_id: :id]
 
     timestamps(type: :utc_datetime)
   end
@@ -30,7 +37,7 @@ defmodule Hive.Forage.GitHubIssue do
 
   def changeset(issue, attrs) do
     issue
-    |> cast(attrs, [:github_repository_id, :number, :title, :body, :state])
+    |> cast(attrs, [:github_repository_id, :number, :title, :body, :state, :classified_at])
     |> validate_required([:github_repository_id, :number, :title, :state])
     |> validate_length(:title, max: 500)
     |> validate_inclusion(:state, @states)

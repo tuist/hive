@@ -86,7 +86,7 @@ defmodule HiveWeb.ForageComponentsTest do
 
       assigns = %{
         source: Forage.get_source!(:github_issues),
-        entries: [{meadow, repository, issue}],
+        entries: [{repository, issue, [meadow]}],
         stats: %{state_label: "open", total: 1, repositories: 1, meadows: 1},
         available_filters: [],
         active_filters: []
