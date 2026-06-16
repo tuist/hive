@@ -7,6 +7,7 @@ defmodule Hive.Specs do
 
   alias Ecto.Changeset
   alias Hive.Accounts.User
+  alias Hive.Audit
   alias Hive.Auth
   alias Hive.Meadows.Meadow
   alias Hive.Repo
@@ -167,6 +168,7 @@ defmodule Hive.Specs do
       Repo.transaction(fn -> create_spec_transaction(attrs, user) end)
       |> case do
         {:ok, spec} ->
+          record_spec_event("spec.created", spec, user)
           Hive.Meadows.schedule_evolution()
           {:ok, spec}
 
@@ -184,9 +186,10 @@ defmodule Hive.Specs do
     if can_edit?(spec, user) do
       Repo.transaction(fn -> update_spec_transaction(spec, attrs, user) end)
       |> case do
-        {:ok, spec} ->
+        {:ok, updated_spec} ->
+          record_spec_event("spec.updated", updated_spec, user)
           Hive.Meadows.schedule_evolution()
-          {:ok, spec}
+          {:ok, updated_spec}
 
         {:error, reason} ->
           {:error, reason}
@@ -330,5 +333,18 @@ defmodule Hive.Specs do
     |> List.wrap()
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.uniq()
+  end
+
+  defp record_spec_event(action, %Spec{} = spec, %User{} = user) do
+    Audit.record(action, %{
+      actor: user,
+      target_type: "spec",
+      target_id: spec.id,
+      target_label: spec.title,
+      metadata: %{
+        "number" => spec.number && to_string(spec.number),
+        "status" => spec.status && Atom.to_string(spec.status)
+      }
+    })
   end
 end

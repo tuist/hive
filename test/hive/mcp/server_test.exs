@@ -9,7 +9,9 @@ defmodule Hive.MCP.ServerTest do
     assert Map.keys(server.tools) == [
              "add_spec_comment",
              "create_spec",
+             "get_audit_activity",
              "get_spec",
+             "list_audit_activities",
              "list_specs",
              "update_spec",
              "whoami"

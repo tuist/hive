@@ -46,6 +46,7 @@ defmodule Hive.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0", override: true},
       {:jason, "~> 1.2"},
+      {:flop, "~> 0.26"},
       {:let_me, "~> 3.0"},
       {:mdex, "~> 0.13"},
       {:lumis, "~> 0.1"},

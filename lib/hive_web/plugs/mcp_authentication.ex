@@ -6,6 +6,7 @@ defmodule HiveWeb.Plugs.MCPAuthentication do
 
   alias Boruta.Oauth.Token
   alias Hive.Accounts
+  alias Hive.Audit
   alias HiveWeb.RequestOrigin
 
   @mcp_path "/mcp"
@@ -21,6 +22,7 @@ defmodule HiveWeb.Plugs.MCPAuthentication do
          true <- scope_allowed?(scope),
          true <- resource_allowed?(conn, token),
          user when not is_nil(user) <- Accounts.get_user(user_id) do
+      Audit.put_context(%{actor: user, interface: "mcp"})
       assign(conn, :current_user, user)
     else
       _ -> unauthorized(conn)

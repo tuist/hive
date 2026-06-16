@@ -7,6 +7,7 @@
 @import "./routes/specs.css";
 @import "./routes/meadows.css";
 @import "./routes/account.css";
+@import "./routes/audit.css";
 
 :root {
   color-scheme: light;

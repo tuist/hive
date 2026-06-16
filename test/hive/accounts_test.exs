@@ -1,9 +1,12 @@
 defmodule Hive.AccountsTest do
   use Hive.DataCase, async: true
 
+  use Mimic
+
   alias Hive.Accounts
   alias Hive.Accounts.User
   alias Hive.Accounts.UserIdentity
+  alias Hive.Auth
 
   describe "upsert_from_auth/1" do
     test "creates a user and its identity" do
@@ -102,6 +105,83 @@ defmodule Hive.AccountsTest do
         })
 
       assert user.email == "alice@example.com"
+    end
+
+    test "defaults a new user to :member when no org domains are configured" do
+      stub(Auth, :org_domains, fn -> [] end)
+
+      {:ok, user} =
+        Accounts.upsert_from_auth(%{
+          email: "alice@example.com",
+          provider: "google",
+          provider_uid: "g-1"
+        })
+
+      assert user.role == :member
+    end
+
+    test "creates a :member when the email's domain matches the org domains" do
+      stub(Auth, :org_domains, fn -> ["tuist.dev"] end)
+
+      {:ok, user} =
+        Accounts.upsert_from_auth(%{
+          email: "pedro@tuist.dev",
+          provider: "google",
+          provider_uid: "g-1"
+        })
+
+      assert user.role == :member
+    end
+
+    test "creates a :collaborator when the email's domain does not match the org domains" do
+      stub(Auth, :org_domains, fn -> ["tuist.dev"] end)
+
+      {:ok, user} =
+        Accounts.upsert_from_auth(%{
+          email: "outsider@example.com",
+          provider: "google",
+          provider_uid: "g-1"
+        })
+
+      assert user.role == :collaborator
+    end
+
+    test "domain matching is case-insensitive" do
+      stub(Auth, :org_domains, fn -> ["tuist.dev"] end)
+
+      {:ok, user} =
+        Accounts.upsert_from_auth(%{
+          email: "Pedro@Tuist.DEV",
+          provider: "google",
+          provider_uid: "g-1"
+        })
+
+      assert user.role == :member
+    end
+
+    test "does not reclassify an existing user when domains change" do
+      stub(Auth, :org_domains, fn -> [] end)
+
+      {:ok, first} =
+        Accounts.upsert_from_auth(%{
+          email: "alice@example.com",
+          provider: "google",
+          provider_uid: "g-1"
+        })
+
+      assert first.role == :member
+
+      stub(Auth, :org_domains, fn -> ["tuist.dev"] end)
+
+      {:ok, again} =
+        Accounts.upsert_from_auth(%{
+          email: "alice@example.com",
+          provider: "github",
+          provider_uid: "gh-9"
+        })
+
+      assert again.id == first.id
+      assert again.role == :member
     end
   end
 
