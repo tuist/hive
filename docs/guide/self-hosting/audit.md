@@ -1,0 +1,80 @@
+## Audit
+
+Hive keeps an append-only audit trail of who did what across every
+surface: the dashboard, MCP, webhooks, background jobs, and system
+paths. The trail lives in PostgreSQL alongside the rest of the
+application data, so nothing extra needs to be wired up to enable it.
+
+## What gets recorded
+
+Each entry captures:
+
+- **Actor**: the user, agent, or system that initiated the action,
+  with its id, email, name, and role at the time the entry was
+  written.
+- **Interface**: where the action came from. One of `dashboard`,
+  `mcp`, `webhook`, `worker`, or `system`.
+- **Action**: a dotted `domain.verb` string, for example
+  `user.signed_in`, `spec.created`, or `spec.updated`.
+- **Target**: the resource the action acted on, with its type, id,
+  and a human-readable label.
+- **Metadata**: a JSON blob with any extra context the action chose
+  to record.
+- **Time**: when the action occurred, in UTC.
+
+User sign-ins, sign-outs, and spec creation and updates are
+recorded out of the box. Agent-run workflows attribute their
+entries to the agent module name, with the model id captured in
+metadata, so when an agent drives one of those actions you can
+trace which model produced the side effect.
+
+## Who sees it
+
+Access to the audit trail is gated by a persisted role on the user
+record. There are three roles, ordered weakest to strongest:
+
+- `collaborator`: signed in, but not part of the org. The default
+  for anyone whose email domain is not in `HIVE_ORG_DOMAINS`.
+- `member`: part of the org. The default for users whose email
+  domain matches `HIVE_ORG_DOMAINS` at signup, or for every
+  signed-in user when no org domains are configured.
+- `admin`: explicitly promoted. Admins can see the trail at
+  `/audit` and call the audit MCP tools.
+
+The role is derived from the email domain the first time a user
+signs in and then stored. Changing `HIVE_ORG_DOMAINS` later does
+not reclassify existing users; promote and demote with
+`Hive.Accounts.update_user_role/2`.
+
+## Promoting an admin
+
+There is no UI for changing a user's role yet. Attach a remote IEx
+to a running instance and promote by email. For a Helm-deployed
+Hive, that looks like:
+
+```bash
+kubectl exec -it deploy/hive -- bin/hive remote
+```
+
+Then in the IEx prompt:
+
+```elixir
+user = Hive.Accounts.get_user_by_email("admin@example.com")
+{:ok, _user} = Hive.Accounts.update_user_role(user, :admin)
+```
+
+Demote the same way, passing `:member` instead. The change takes
+effect on the user's next request.
+
+## MCP tools
+
+Two MCP tools expose the same data the dashboard does, gated by the
+same admin check:
+
+- `list_audit_activities`: paginated listing with filters for
+  interface, action, actor kind, and target type.
+- `get_audit_activity`: fetch a single entry by id.
+
+Non-admin callers receive `{"error": "forbidden"}`. The tools are
+always registered, so admins can use the trail from any MCP-aware
+client without extra configuration.

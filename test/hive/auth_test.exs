@@ -40,25 +40,38 @@ defmodule Hive.AuthTest do
     end
   end
 
-  describe "role/2" do
+  describe "role/1" do
     test "an unauthenticated user is anonymous" do
-      assert Auth.role(nil, ["tuist.dev"]) == :anonymous
+      assert Auth.role(nil) == :anonymous
     end
 
-    test "everyone signed in is a member when no org domains are configured" do
-      assert Auth.role(%User{email: "outsider@example.com"}, []) == :member
+    test "returns the user's persisted role" do
+      assert Auth.role(%User{role: :collaborator}) == :collaborator
+      assert Auth.role(%User{role: :member}) == :member
+      assert Auth.role(%User{role: :admin}) == :admin
+    end
+  end
+
+  describe "member?/1, collaborator?/1, admin?/1" do
+    test "member? is true for members and admins" do
+      assert Auth.member?(%User{role: :member})
+      assert Auth.member?(%User{role: :admin})
+      refute Auth.member?(%User{role: :collaborator})
+      refute Auth.member?(nil)
     end
 
-    test "a matching email domain is a member" do
-      assert Auth.role(%User{email: "pedro@tuist.dev"}, ["tuist.dev"]) == :member
+    test "collaborator? is true only for collaborators" do
+      assert Auth.collaborator?(%User{role: :collaborator})
+      refute Auth.collaborator?(%User{role: :member})
+      refute Auth.collaborator?(%User{role: :admin})
+      refute Auth.collaborator?(nil)
     end
 
-    test "a non-matching email domain is an external contributor" do
-      assert Auth.role(%User{email: "jane@example.com"}, ["tuist.dev"]) == :contributor
-    end
-
-    test "domain matching is case-insensitive" do
-      assert Auth.role(%User{email: "Pedro@Tuist.DEV"}, ["tuist.dev"]) == :member
+    test "admin? is true only for admins" do
+      assert Auth.admin?(%User{role: :admin})
+      refute Auth.admin?(%User{role: :member})
+      refute Auth.admin?(%User{role: :collaborator})
+      refute Auth.admin?(nil)
     end
   end
 end

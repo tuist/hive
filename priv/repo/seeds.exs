@@ -2,6 +2,8 @@ import Ecto.Query
 
 alias Hive.Accounts
 alias Hive.Accounts.UserIdentity
+alias Hive.Audit
+alias Hive.Audit.Activity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
 alias Hive.Forage.Grafana
@@ -37,6 +39,12 @@ Enum.each(account_identities, fn {email, provider, provider_uid} ->
       provider_uid: provider_uid
     })
 end)
+
+# Promote the dev user to admin so /audit is reachable without manual SQL.
+case Accounts.get_user_by_email("test@hive.dev") do
+  nil -> :ok
+  user -> Accounts.update_user_role(user, :admin)
+end
 
 feature_requests = [
   {
@@ -712,4 +720,234 @@ Enum.each(grafana_alert_seeds, fn seed ->
     )
 
   {:ok, _alerts} = Grafana.ingest(meadow, webhook, seed.payload)
+end)
+
+# Demo audit activities. Idempotent: each entry is keyed by a stable
+# `seed_key` in metadata so re-running seeds replaces rather than duplicates.
+demo_actors = %{
+  "test@hive.dev" => {"Hive Admin", :admin},
+  "maya@example.com" => {"Maya Chen", :member},
+  "jon@example.com" => {"Jon Park", :member},
+  "priya@example.com" => {"Priya Shah", :member},
+  "sam@example.com" => {"Sam Rivera", :member},
+  "octo@example.com" => {"Octo Cat", :member}
+}
+
+Enum.each(demo_actors, fn {email, {name, _role}} ->
+  case Accounts.get_user_by_email(email) do
+    nil ->
+      :ok
+
+    user ->
+      if is_nil(user.name) or user.name == "" do
+        user
+        |> Hive.Accounts.User.changeset(%{name: name})
+        |> Repo.update()
+      end
+  end
+end)
+
+demo_spec = Repo.get_by(Spec, title: "Forage source and priority grouping")
+demo_other_spec = Repo.get_by(Spec, title: "GitHub Discussions forage import")
+demo_meadow = Repo.get_by(Meadow, name: "Hive")
+demo_tuist_meadow = Repo.get_by(Meadow, name: "Tuist")
+demo_feature_request = Repo.get_by(FeatureRequest, title: "Group forage by source and priority")
+
+now = DateTime.utc_now() |> DateTime.truncate(:second)
+minutes_ago = fn n -> DateTime.add(now, -n * 60, :second) end
+
+audit_seed_entries = [
+  %{
+    key: "audit-seed-1",
+    action: "user.signed_in",
+    interface: "dashboard",
+    actor: "maya@example.com",
+    target_type: "user",
+    target_label_from: :actor_email,
+    occurred_at: minutes_ago.(3)
+  },
+  %{
+    key: "audit-seed-2",
+    action: "spec.updated",
+    interface: "dashboard",
+    actor: "maya@example.com",
+    target_type: "spec",
+    target_id: demo_spec && demo_spec.id,
+    target_label: demo_spec && demo_spec.title,
+    metadata: %{
+      "number" => demo_spec && to_string(demo_spec.number),
+      "status" => demo_spec && Atom.to_string(demo_spec.status),
+      "changed" => %{"status" => "draft", "summary" => "Updated summary"}
+    },
+    occurred_at: minutes_ago.(8)
+  },
+  %{
+    key: "audit-seed-3",
+    action: "spec.commented",
+    interface: "dashboard",
+    actor: "priya@example.com",
+    target_type: "spec",
+    target_id: demo_spec && demo_spec.id,
+    target_label: demo_spec && demo_spec.title,
+    metadata: %{"number" => demo_spec && to_string(demo_spec.number)},
+    occurred_at: minutes_ago.(17)
+  },
+  %{
+    key: "audit-seed-4",
+    action: "spec.created",
+    interface: "mcp",
+    actor: "sam@example.com",
+    target_type: "spec",
+    target_id: demo_other_spec && demo_other_spec.id,
+    target_label: demo_other_spec && demo_other_spec.title,
+    metadata: %{
+      "number" => demo_other_spec && to_string(demo_other_spec.number),
+      "source" => "claude-cli"
+    },
+    occurred_at: minutes_ago.(34)
+  },
+  %{
+    key: "audit-seed-5",
+    action: "meadow.created",
+    interface: "dashboard",
+    actor: "test@hive.dev",
+    target_type: "meadow",
+    target_id: demo_meadow && demo_meadow.id,
+    target_label: demo_meadow && demo_meadow.name,
+    occurred_at: minutes_ago.(55)
+  },
+  %{
+    key: "audit-seed-6",
+    action: "feature_request.created",
+    interface: "dashboard",
+    actor: "jon@example.com",
+    target_type: "feature_request",
+    target_id: demo_feature_request && demo_feature_request.id,
+    target_label: demo_feature_request && demo_feature_request.title,
+    occurred_at: minutes_ago.(90)
+  },
+  %{
+    key: "audit-seed-7",
+    action: "grafana_alert.received",
+    interface: "webhook",
+    target_type: "grafana_alert",
+    target_id: "seed-hive-latency",
+    target_label: "HighRequestLatency",
+    metadata: %{"severity" => "critical", "service" => "hive-web"},
+    occurred_at: minutes_ago.(120)
+  },
+  %{
+    key: "audit-seed-8",
+    action: "github_issue.synced",
+    interface: "worker",
+    target_type: "github_issue",
+    target_id: "101",
+    target_label: "Surface forage source counts in the sidebar",
+    metadata: %{"repository" => "tuist/hive", "count" => 3},
+    occurred_at: minutes_ago.(180)
+  },
+  %{
+    key: "audit-seed-9",
+    action: "spec.updated",
+    interface: "mcp",
+    actor: "octo@example.com",
+    target_type: "spec",
+    target_id: demo_other_spec && demo_other_spec.id,
+    target_label: demo_other_spec && demo_other_spec.title,
+    metadata: %{
+      "number" => demo_other_spec && to_string(demo_other_spec.number),
+      "changed" => %{"body" => "Refined acceptance criteria"}
+    },
+    occurred_at: minutes_ago.(260)
+  },
+  %{
+    key: "audit-seed-10",
+    action: "meadow.webhook_received",
+    interface: "webhook",
+    target_type: "meadow",
+    target_id: demo_tuist_meadow && demo_tuist_meadow.id,
+    target_label: demo_tuist_meadow && demo_tuist_meadow.name,
+    metadata: %{"source" => "grafana", "alerts" => 1},
+    occurred_at: minutes_ago.(420)
+  },
+  %{
+    key: "audit-seed-11",
+    action: "user.role_updated",
+    interface: "system",
+    target_type: "user",
+    target_id: "test@hive.dev",
+    target_label: "test@hive.dev",
+    metadata: %{"from" => "member", "to" => "admin"},
+    occurred_at: minutes_ago.(720)
+  },
+  %{
+    key: "audit-seed-12",
+    action: "user.signed_out",
+    interface: "dashboard",
+    actor: "jon@example.com",
+    target_type: "user",
+    target_label_from: :actor_email,
+    occurred_at: minutes_ago.(1440)
+  },
+  %{
+    key: "audit-seed-13",
+    action: "spec.created",
+    interface: "worker",
+    agent: %{name: "IssueTriageAgent", model: "anthropic:claude-haiku-4-5"},
+    target_type: "spec",
+    target_label: demo_other_spec && demo_other_spec.title,
+    metadata: %{
+      "number" => demo_other_spec && to_string(demo_other_spec.number),
+      "source_issue" => "tuist/hive#101"
+    },
+    occurred_at: minutes_ago.(70)
+  },
+  %{
+    key: "audit-seed-14",
+    action: "feature_request.summarized",
+    interface: "worker",
+    agent: %{name: "ForageSummarizerAgent", model: "openai:gpt-4o-mini"},
+    target_type: "feature_request",
+    target_id: demo_feature_request && demo_feature_request.id,
+    target_label: demo_feature_request && demo_feature_request.title,
+    metadata: %{"summary_chars" => 412},
+    occurred_at: minutes_ago.(210)
+  }
+]
+
+Enum.each(audit_seed_entries, fn entry ->
+  Activity
+  |> where([a], fragment("?->>'seed_key' = ?", a.metadata, ^entry.key))
+  |> Repo.delete_all()
+
+  user_actor = entry[:actor] && Accounts.get_user_by_email(entry[:actor])
+
+  agent_actor =
+    case entry[:agent] do
+      %{name: name} = agent -> Audit.agent_actor(name, model: Map.get(agent, :model))
+      _other -> nil
+    end
+
+  actor = agent_actor || user_actor
+
+  metadata =
+    entry
+    |> Map.get(:metadata, %{})
+    |> Map.put("seed_key", entry.key)
+
+  target_label =
+    case entry[:target_label_from] do
+      :actor_email -> user_actor && user_actor.email
+      _ -> entry[:target_label]
+    end
+
+  Audit.log(entry.action, %{
+    actor: actor,
+    interface: entry.interface,
+    occurred_at: entry.occurred_at,
+    target_type: entry[:target_type],
+    target_id: entry[:target_id],
+    target_label: target_label,
+    metadata: metadata
+  })
 end)

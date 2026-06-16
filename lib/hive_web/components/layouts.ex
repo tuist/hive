@@ -58,6 +58,7 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
   attr :signed_in?, :boolean, default: false
+  attr :admin?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
@@ -107,6 +108,13 @@ defmodule HiveWeb.Layouts do
             icon="file_text"
             href={~p"/specs?filter_status_op===&filter_status_val=draft"}
             selected={String.starts_with?(@current_path, "/specs")}
+          />
+          <.sidebar_item
+            :if={@admin?}
+            label="Audit"
+            icon="history"
+            href={~p"/audit"}
+            selected={String.starts_with?(@current_path, ~p"/audit")}
           />
         </.sidebar>
         <section data-part="content">
