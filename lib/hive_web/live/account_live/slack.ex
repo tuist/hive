@@ -4,6 +4,7 @@ defmodule HiveWeb.AccountLive.Slack do
   use HiveWeb, :live_view
 
   alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.Slack
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -23,19 +24,27 @@ defmodule HiveWeb.AccountLive.Slack do
   def mount(_params, session, socket) do
     user = Accounts.get_user(session["user_id"])
 
-    if user do
-      {:ok,
-       socket
-       |> assign(:page_title, "Slack · #{socket.assigns.product_name}")
-       |> assign(OpenGraph.assigns(open_graph()))
-       |> assign(:account_user, user)
-       |> assign(:slack_enabled?, Slack.enabled?())
-       |> assign(:installations, Slack.list_installations())}
-    else
-      {:ok,
-       socket
-       |> put_flash(:error, "Log in to manage your account.")
-       |> redirect(to: ~p"/login")}
+    cond do
+      is_nil(user) ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Log in to manage your account.")
+         |> redirect(to: ~p"/login")}
+
+      not Auth.member?(user) ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Only organization members can manage Slack workspaces.")
+         |> redirect(to: ~p"/account/identities")}
+
+      true ->
+        {:ok,
+         socket
+         |> assign(:page_title, "Slack · #{socket.assigns.product_name}")
+         |> assign(OpenGraph.assigns(open_graph()))
+         |> assign(:account_user, user)
+         |> assign(:slack_enabled?, Slack.enabled?())
+         |> assign(:installations, Slack.list_installations())}
     end
   end
 

@@ -12,8 +12,8 @@ Once a workspace is installed, Hive can:
 - Capture any Slack message as a Hive feature request via a message
   shortcut (right-click a message, "More message shortcuts", pick the
   shortcut).
-- Receive other Events API payloads and surface them through the audit
-  trail.
+- Record Slack installs, disconnects, app mentions, and captured feature
+  requests in the audit trail.
 
 ## Environment variables
 
@@ -25,7 +25,7 @@ Set these on the Hive deployment:
   verify Events and Interactivity requests).
 - `HIVE_SLACK_BOT_SCOPES`: optional, comma-separated list of bot OAuth
   scopes to request at install time. Defaults to:
-  `app_mentions:read,channels:read,chat:write,chat:write.public,groups:read,im:read,mpim:read,users:read,users:read.email`.
+  `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email`.
 
 When any of the three required variables is missing, the integration
 stays dormant: the `/slack/install` link is hidden and `/account/slack`
@@ -59,7 +59,8 @@ shows an inert state.
 
 Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
 
-1. Sign in to Hive and open **Account → Slack** at `/account/slack`.
+1. Sign in to Hive as an organization member and open **Account → Slack**
+   at `/account/slack`.
 2. Click **Connect a Slack workspace**, complete the Slack OAuth prompt,
    and pick the workspace.
 3. The workspace appears in the list. Click **Disconnect** to revoke

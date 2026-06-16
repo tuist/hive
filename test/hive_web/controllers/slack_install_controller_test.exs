@@ -2,10 +2,30 @@ defmodule HiveWeb.SlackInstallControllerTest do
   use HiveWeb.ConnCase, async: true
   use Mimic
 
+  alias Hive.Accounts
   alias Hive.Slack.Installation
   alias Hive.Slack.Installations
 
   describe "GET /slack/install" do
+    test "redirects anonymous users to login even when the instance is public", %{conn: conn} do
+      stub(Hive.Slack, :enabled?, fn -> true end)
+
+      conn = get(conn, ~p"/slack/install")
+
+      assert redirected_to(conn) == ~p"/login"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Log in"
+    end
+
+    test "redirects collaborators away from workspace management", %{conn: conn} do
+      {conn, user} = sign_in(conn, "collaborator@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :collaborator)
+
+      conn = get(conn, ~p"/slack/install")
+
+      assert redirected_to(conn) == ~p"/account/identities"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "organization members"
+    end
+
     test "redirects to the Slack authorize URL with a state cookie", %{conn: conn} do
       stub(Installations, :authorize_url, fn _redirect, state, _conf ->
         send(self(), {:state, state})
@@ -73,6 +93,25 @@ defmodule HiveWeb.SlackInstallControllerTest do
 
       assert redirected_to(conn) == ~p"/account/slack"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Workspace"
+    end
+
+    test "redirects anonymous callbacks to login", %{conn: conn} do
+      conn = get(conn, ~p"/slack/install/callback?state=valid&code=code-1")
+
+      assert redirected_to(conn) == ~p"/login"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Log in"
+    end
+  end
+
+  describe "POST /slack/installations/:id/disconnect" do
+    test "redirects collaborators away from disconnecting workspaces", %{conn: conn} do
+      {conn, user} = sign_in(conn, "collaborator-disconnect@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :collaborator)
+
+      conn = post(conn, ~p"/slack/installations/#{Ecto.UUID.generate()}/disconnect")
+
+      assert redirected_to(conn) == ~p"/account/identities"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "organization members"
     end
   end
 end

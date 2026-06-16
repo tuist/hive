@@ -47,7 +47,12 @@ defmodule Hive.SlackTest do
     test "returns the documented set of scopes" do
       scopes = Slack.default_bot_scopes()
       assert "app_mentions:read" in scopes
+      assert "channels:history" in scopes
       assert "chat:write" in scopes
+      assert "commands" in scopes
+      assert "groups:history" in scopes
+      assert "im:history" in scopes
+      assert "mpim:history" in scopes
       assert "users:read.email" in scopes
     end
   end

@@ -26,11 +26,16 @@ defmodule Hive.Slack do
 
   @default_bot_scopes [
     "app_mentions:read",
+    "channels:history",
     "channels:read",
     "chat:write",
     "chat:write.public",
+    "commands",
+    "groups:history",
     "groups:read",
+    "im:history",
     "im:read",
+    "mpim:history",
     "mpim:read",
     "users:read",
     "users:read.email"

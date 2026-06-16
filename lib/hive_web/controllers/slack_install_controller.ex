@@ -4,41 +4,130 @@ defmodule HiveWeb.SlackInstallController do
   require Logger
 
   alias Hive.Accounts
+  alias Hive.Auth
   alias Hive.Slack
   alias Hive.Slack.Installations
 
   @state_key :slack_install_state
 
   def new(conn, _params) do
-    if Slack.enabled?() do
-      state = generate_state()
-      redirect_uri = redirect_uri(conn)
-
-      case Installations.authorize_url(redirect_uri, state, Slack.config()) do
-        {:ok, url} ->
-          conn
-          |> put_session(@state_key, state)
-          |> redirect(external: url)
-
-        {:error, :not_configured} ->
-          conn
-          |> put_flash(:error, "Slack isn't configured on this Hive instance.")
-          |> redirect(to: ~p"/account/slack")
-      end
-    else
-      conn
-      |> put_flash(:error, "Slack isn't configured on this Hive instance.")
-      |> redirect(to: ~p"/account/slack")
-    end
+    require_member(conn, fn conn, _user -> start_install(conn) end)
   end
 
   def callback(conn, params) do
+    require_member(conn, fn conn, user -> handle_callback(conn, user, params) end)
+  end
+
+  def disconnect(conn, %{"id" => id}) do
+    require_member(conn, fn conn, _user -> disconnect_installation(conn, id) end)
+  end
+
+  defp require_member(conn, callback) do
+    case current_user(conn) do
+      nil -> require_member_login(conn)
+      user -> require_member_role(conn, user, callback)
+    end
+  end
+
+  defp require_member_login(conn) do
+    conn
+    |> put_flash(:error, "Log in to manage Slack workspaces.")
+    |> redirect(to: ~p"/login")
+  end
+
+  defp require_member_role(conn, user, callback) do
+    if Auth.member?(user) do
+      callback.(conn, user)
+    else
+      conn
+      |> put_flash(:error, "Only organization members can manage Slack workspaces.")
+      |> redirect(to: ~p"/account/identities")
+    end
+  end
+
+  defp start_install(conn) do
+    if Slack.enabled?() do
+      authorize_install(conn)
+    else
+      slack_not_configured(conn)
+    end
+  end
+
+  defp authorize_install(conn) do
+    state = generate_state()
+    redirect_uri = redirect_uri(conn)
+
+    case Installations.authorize_url(redirect_uri, state, Slack.config()) do
+      {:ok, url} ->
+        conn
+        |> put_session(@state_key, state)
+        |> redirect(external: url)
+
+      {:error, :not_configured} ->
+        slack_not_configured(conn)
+    end
+  end
+
+  defp slack_not_configured(conn) do
+    conn
+    |> put_flash(:error, "Slack isn't configured on this Hive instance.")
+    |> redirect(to: ~p"/account/slack")
+  end
+
+  defp handle_callback(conn, user, params) do
     expected_state = get_session(conn, @state_key)
 
     case validate_callback(params, expected_state) do
-      {:ok, code} -> complete(conn, code)
+      {:ok, code} -> complete(conn, user, code)
       {:error, message} -> bail(conn, message)
     end
+  end
+
+  defp complete(conn, user, code) do
+    case Installations.complete_install(code, redirect_uri(conn), installed_by_user_id: user.id) do
+      {:ok, installation} ->
+        conn
+        |> delete_session(@state_key)
+        |> put_flash(
+          :info,
+          "Connected #{installation.team_name || installation.team_id} to Hive."
+        )
+        |> redirect(to: ~p"/account/slack")
+
+      {:error, reason} ->
+        Logger.warning("[SlackInstall] OAuth exchange failed: #{inspect(reason)}")
+        bail(conn, "Slack rejected the install. Try again.")
+    end
+  end
+
+  defp disconnect_installation(conn, id) when is_binary(id) do
+    case Slack.get_installation(id) do
+      nil -> missing_installation(conn)
+      installation -> disconnect_installation(conn, installation)
+    end
+  end
+
+  defp disconnect_installation(conn, installation) do
+    case Installations.disconnect(installation) do
+      {:ok, updated} ->
+        conn
+        |> put_flash(
+          :info,
+          "Disconnected #{updated.team_name || updated.team_id} from Hive."
+        )
+        |> redirect(to: ~p"/account/slack")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Could not disconnect that workspace.")
+        |> redirect(to: ~p"/account/slack")
+    end
+  end
+
+  defp missing_installation(conn) do
+    conn
+    |> put_flash(:error, "That Slack workspace is not connected.")
+    |> redirect(to: ~p"/account/slack")
   end
 
   defp validate_callback(params, expected_state) do
@@ -57,57 +146,11 @@ defmodule HiveWeb.SlackInstallController do
     end
   end
 
-  defp complete(conn, code) do
-    user = current_user(conn)
-
-    case Installations.complete_install(code, redirect_uri(conn),
-           installed_by_user_id: user && user.id
-         ) do
-      {:ok, installation} ->
-        conn
-        |> delete_session(@state_key)
-        |> put_flash(
-          :info,
-          "Connected #{installation.team_name || installation.team_id} to Hive."
-        )
-        |> redirect(to: ~p"/account/slack")
-
-      {:error, reason} ->
-        Logger.warning("[SlackInstall] OAuth exchange failed: #{inspect(reason)}")
-        bail(conn, "Slack rejected the install. Try again.")
-    end
-  end
-
   defp bail(conn, message) do
     conn
     |> delete_session(@state_key)
     |> put_flash(:error, message)
     |> redirect(to: ~p"/account/slack")
-  end
-
-  def disconnect(conn, %{"id" => id}) do
-    case Slack.get_installation(id) do
-      nil ->
-        conn
-        |> put_flash(:error, "That Slack workspace is not connected.")
-        |> redirect(to: ~p"/account/slack")
-
-      installation ->
-        case Installations.disconnect(installation) do
-          {:ok, updated} ->
-            conn
-            |> put_flash(
-              :info,
-              "Disconnected #{updated.team_name || updated.team_id} from Hive."
-            )
-            |> redirect(to: ~p"/account/slack")
-
-          {:error, _} ->
-            conn
-            |> put_flash(:error, "Could not disconnect that workspace.")
-            |> redirect(to: ~p"/account/slack")
-        end
-    end
   end
 
   defp current_user(conn) do
