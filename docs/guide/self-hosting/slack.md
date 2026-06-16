@@ -33,6 +33,79 @@ shows an inert state.
 
 ## Setting up the Slack app
 
+The fastest path is to create the app from a manifest. Go to
+<https://api.slack.com/apps>, select **Create New App → From an app
+manifest**, choose JSON, replace `<your-host>` with your Hive host, and
+paste:
+
+```json
+{
+  "display_information": {
+    "name": "Hive",
+    "description": "Capture product feedback and reply to Hive mentions from Slack.",
+    "background_color": "#0F172A"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Hive",
+      "always_online": false
+    },
+    "shortcuts": [
+      {
+        "name": "Capture as feature request",
+        "type": "message",
+        "callback_id": "capture_feature_request",
+        "description": "Send this Slack message to Hive as a feature request."
+      }
+    ]
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://<your-host>/slack/install/callback"
+    ],
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "chat:write.public",
+        "commands",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "mpim:history",
+        "mpim:read",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://<your-host>/api/slack/events",
+      "bot_events": [
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://<your-host>/api/slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
+```
+
+To configure it manually instead:
+
 1. Go to <https://api.slack.com/apps> and **Create New App → From scratch**.
    Pick any name and workspace; you can change it later.
 2. In **Basic Information**, copy the Client ID, Client Secret, and
