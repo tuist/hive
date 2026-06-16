@@ -95,6 +95,17 @@ config :hive, :github_app,
   webhook_secret: System.get_env("HIVE_GITHUB_WEBHOOK_SECRET"),
   api_url: System.get_env("HIVE_GITHUB_API_URL", "https://api.github.com")
 
+# Slack app credentials. With Public Distribution enabled on the Slack
+# app, any workspace can install Hive via /slack/install without going
+# through the Slack App Directory. The signing secret is app-wide; the
+# per-workspace bot token is captured during OAuth and persisted in
+# `slack_installations`.
+config :hive, :slack,
+  client_id: System.get_env("HIVE_SLACK_CLIENT_ID"),
+  client_secret: System.get_env("HIVE_SLACK_CLIENT_SECRET"),
+  signing_secret: System.get_env("HIVE_SLACK_SIGNING_SECRET"),
+  scopes: System.get_env("HIVE_SLACK_BOT_SCOPES")
+
 if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
 end
