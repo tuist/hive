@@ -6,7 +6,7 @@ Phoenix application that hosts Tuist's agentic meadow orchestration. MPL-2.0 lic
 
 ## Tech Stack
 
-- **Backend**: Elixir 1.19.5 on Erlang/OTP 29.0, Phoenix 1.8
+- **Backend**: Elixir 1.20.1 on Erlang/OTP 29.0.2, Phoenix 1.8
 - **HTTP**: Bandit
 - **Database**: PostgreSQL via Ecto
 - **Frontend**: Phoenix HTML + Noora design system; esbuild bundles `assets/`
