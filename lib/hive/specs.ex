@@ -244,17 +244,21 @@ defmodule Hive.Specs do
     Repo.get!(Comment, id)
   end
 
-  def add_comment(%Spec{} = spec, attrs, user \\ nil) do
+  def add_comment(spec, attrs, user \\ nil)
+
+  def add_comment(%Spec{} = spec, attrs, %User{} = user) do
     if can_comment?(spec, user) do
       %Comment{}
       |> Comment.changeset(attrs)
       |> Changeset.put_change(:spec_id, spec.id)
-      |> maybe_put_user(user)
+      |> Changeset.put_change(:user_id, user.id)
       |> Repo.insert()
     else
       {:error, :unauthorized}
     end
   end
+
+  def add_comment(_spec, _attrs, _user), do: {:error, :unauthorized}
 
   def update_comment(%Comment{} = comment, attrs, %User{} = user) do
     if can_edit_comment?(comment, user) do
@@ -267,11 +271,6 @@ defmodule Hive.Specs do
   end
 
   def update_comment(_comment, _attrs, _user), do: {:error, :unauthorized}
-
-  defp maybe_put_user(changeset, %User{} = user),
-    do: Changeset.put_change(changeset, :user_id, user.id)
-
-  defp maybe_put_user(changeset, _user), do: changeset
 
   defp create_revision(%Spec{} = spec, %User{} = user) do
     with {:ok, revision} <-

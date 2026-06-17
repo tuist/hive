@@ -66,6 +66,22 @@ version):
 - `/meadows/:id/atom.xml` — the GitHub issues and Grafana alerts that
   belong to one meadow, merged into a single timeline.
 
+## Slack
+
+Hive connects to Slack through one Slack app per Hive deployment. Set
+`HIVE_SLACK_CLIENT_ID`, `HIVE_SLACK_CLIENT_SECRET`, and
+`HIVE_SLACK_SIGNING_SECRET`, then configure the Slack app with these
+URLs:
+
+- OAuth redirect URL: `https://<your-hive-host>/slack/install/callback`
+- Event subscriptions request URL: `https://<your-hive-host>/api/slack/events`
+- Interactivity request URL: `https://<your-hive-host>/api/slack/interactions`
+
+For Tuist's instance, replace `<your-hive-host>` with `hive.tuist.dev`.
+To install the same app in workspaces beyond the app's development
+workspace, enable Slack Public Distribution. App Directory submission is
+not required for private install links.
+
 ## Documentation
 
 Read the documentation at

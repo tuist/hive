@@ -1,6 +1,7 @@
 @import "noora/noora.css";
 
 @import "./layouts/dashboard.css";
+@import "./layouts/flash.css";
 @import "./components/account_dropdown.css";
 @import "./routes/login.css";
 @import "./routes/forage.css";

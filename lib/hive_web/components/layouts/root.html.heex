@@ -13,6 +13,7 @@
     </script>
   </head>
   <body data-part="app-body">
+    <.flash_group flash={assigns[:flash] || %{}} />
     {@inner_content}
   </body>
 </html>

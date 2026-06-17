@@ -69,6 +69,23 @@ defmodule HiveWeb.SlackInstallControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "expired"
     end
 
+    test "surfaces Slack callback errors", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "alice@example.com")
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{
+          user_id: get_session(conn, :user_id),
+          slack_install_state: "valid"
+        })
+        |> get(~p"/slack/install/callback?state=valid&error=invalid_team_for_non_distributed_app")
+
+      assert redirected_to(conn) == ~p"/account/slack"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Slack rejected the install: invalid team for non distributed app."
+    end
+
     test "completes the install when state matches", %{conn: conn} do
       stub(Installations, :complete_install, fn "code-1", _redirect_uri, opts ->
         assert is_binary(opts[:installed_by_user_id])

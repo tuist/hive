@@ -55,6 +55,26 @@ defmodule HiveWeb.Layouts do
     """
   end
 
+  attr :flash, :map, default: %{}
+
+  def flash_group(assigns) do
+    assigns = assign(assigns, :messages, flash_messages(assigns.flash))
+
+    ~H"""
+    <div :if={@messages != []} class="flash-stack" role="status" aria-live="polite">
+      <.alert
+        :for={message <- @messages}
+        id={message.id}
+        type="secondary"
+        status={message.status}
+        size="medium"
+        title={message.title}
+        dismissible={true}
+      />
+    </div>
+    """
+  end
+
   attr :id, :string, required: true
   attr :atom_href, :string, required: true
   attr :rss_href, :string, required: true
@@ -276,4 +296,28 @@ defmodule HiveWeb.Layouts do
     </header>
     """
   end
+
+  defp flash_messages(flash) do
+    [
+      flash_message(flash, :info, "success"),
+      flash_message(flash, :error, "error")
+    ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp flash_message(flash, key, status) do
+    case flash_value(flash, key) do
+      nil ->
+        nil
+
+      title ->
+        %{id: "flash-#{key}", status: status, title: title}
+    end
+  end
+
+  defp flash_value(flash, key) when is_map(flash) do
+    flash[key] || flash[Atom.to_string(key)]
+  end
+
+  defp flash_value(_flash, _key), do: nil
 end

@@ -131,20 +131,30 @@ defmodule HiveWeb.SlackInstallController do
   end
 
   defp validate_callback(params, expected_state) do
-    state = params["state"]
-    code = params["code"]
-
-    cond do
-      not is_binary(expected_state) or not is_binary(state) or expected_state != state ->
-        {:error, "The Slack install link expired. Try again."}
-
-      not is_binary(code) or code == "" ->
-        {:error, "Slack didn't return an authorization code."}
-
-      true ->
-        {:ok, code}
+    with :ok <- validate_state(params["state"], expected_state),
+         :ok <- validate_slack_response(params["error"]) do
+      validate_code(params["code"])
     end
   end
+
+  defp validate_state(state, expected_state)
+       when is_binary(state) and is_binary(expected_state) and state == expected_state,
+       do: :ok
+
+  defp validate_state(_state, _expected_state),
+    do: {:error, "The Slack install link expired. Try again."}
+
+  defp validate_slack_response(error) when error in [nil, ""], do: :ok
+
+  defp validate_slack_response("access_denied"),
+    do: {:error, "Slack install was cancelled."}
+
+  defp validate_slack_response(error) when is_binary(error),
+    do: {:error, "Slack rejected the install: #{format_slack_error(error)}."}
+
+  defp validate_code(code) when is_binary(code) and code != "", do: {:ok, code}
+
+  defp validate_code(_code), do: {:error, "Slack didn't return an authorization code."}
 
   defp bail(conn, message) do
     conn
@@ -198,4 +208,10 @@ defmodule HiveWeb.SlackInstallController do
 
   defp append_port(host, port) when port in [nil, 80, 443], do: host
   defp append_port(host, port), do: "#{host}:#{port}"
+
+  defp format_slack_error(error) do
+    error
+    |> String.replace("_", " ")
+    |> String.trim()
+  end
 end

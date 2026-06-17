@@ -23,6 +23,33 @@ defmodule HiveWeb.LayoutsTest do
     end
   end
 
+  describe "flash_group/1" do
+    test "renders info and error flash messages as alerts" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Layouts.flash_group flash={%{"info" => "Connected Slack.", "error" => "Slack rejected the install."}} />
+        """)
+
+      assert html =~ "Connected Slack."
+      assert html =~ "Slack rejected the install."
+      assert html =~ ~s(data-status="success")
+      assert html =~ ~s(data-status="error")
+    end
+
+    test "stays empty when there are no flash messages" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Layouts.flash_group flash={%{}} />
+        """)
+
+      refute html =~ "flash-stack"
+    end
+  end
+
   describe "dashboard/1" do
     defp render_dashboard(assigns) do
       rendered_to_string(~H"""
