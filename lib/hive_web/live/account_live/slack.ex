@@ -72,49 +72,87 @@ defmodule HiveWeb.AccountLive.Slack do
           </div>
         </div>
 
-        <.card icon="brand_slack" title="Workspaces">
+        <.card icon="brand_slack" title="Workspaces" data-part="workspaces-card">
+          <:actions :if={@slack_enabled? and @installations != []}>
+            <.button
+              label="Connect another workspace"
+              href={~p"/slack/install"}
+              variant="secondary"
+              size="small"
+            />
+          </:actions>
           <.card_section data-part="installations-section">
-            <p :if={not @slack_enabled?} data-part="empty-state">
-              Slack is not configured on this Hive instance. Set
-              <code>HIVE_SLACK_CLIENT_ID</code>, <code>HIVE_SLACK_CLIENT_SECRET</code>, and
-              <code>HIVE_SLACK_SIGNING_SECRET</code> to enable workspace installs.
-            </p>
+            <div :if={not @slack_enabled?} data-part="empty-state">
+              <div data-part="empty-icon">
+                <.icon name="brand_slack" />
+              </div>
+              <div data-part="empty-copy">
+                <h2>Slack is not configured</h2>
+                <p>
+                  Set <code>HIVE_SLACK_CLIENT_ID</code>, <code>HIVE_SLACK_CLIENT_SECRET</code>, and
+                  <code>HIVE_SLACK_SIGNING_SECRET</code> to enable workspace installs.
+                </p>
+              </div>
+            </div>
 
             <div :if={@slack_enabled? and @installations == []} data-part="empty-state">
-              <p>No workspaces are connected yet.</p>
-              <.button label="Connect a Slack workspace" href={~p"/slack/install"} variant="primary" />
+              <div data-part="empty-icon">
+                <.icon name="brand_slack" />
+              </div>
+              <div data-part="empty-copy">
+                <h2>No workspaces connected</h2>
+                <p>
+                  Connect a workspace so Hive can reply in threads and capture messages as feature requests.
+                </p>
+              </div>
+              <.button
+                label="Connect a Slack workspace"
+                href={~p"/slack/install"}
+                variant="primary"
+              />
             </div>
 
             <div :if={@slack_enabled? and @installations != []} data-part="installations-list">
-              <div :for={installation <- @installations} data-part="installation">
-                <div data-part="installation-info">
-                  <span data-part="team-name">
-                    {installation.team_name || installation.team_id}
-                  </span>
-                  <span :if={installation.installed_by_user} data-part="installed-by">
-                    Installed by {installation.installed_by_user.email}
-                  </span>
-                  <span :if={installation.installed_at} data-part="installed-at">
-                    {Calendar.strftime(installation.installed_at, "%Y-%m-%d")}
-                  </span>
-                  <span :if={installation.disconnected_at} data-part="status">
-                    Disconnected
-                  </span>
+              <article :for={installation <- @installations} data-part="installation-row">
+                <div data-part="workspace-icon">
+                  <.icon name="brand_slack" />
                 </div>
+
+                <div data-part="workspace-main">
+                  <div data-part="workspace-heading">
+                    <h2>{installation.team_name || installation.team_id}</h2>
+                    <.status_badge
+                      :if={is_nil(installation.disconnected_at)}
+                      label="Connected"
+                      status="success"
+                    />
+                    <.status_badge
+                      :if={installation.disconnected_at}
+                      label="Disconnected"
+                      status="disabled"
+                    />
+                  </div>
+
+                  <div data-part="workspace-meta">
+                    <span :if={installation.installed_by_user}>
+                      Installed by {installation.installed_by_user.email}
+                    </span>
+                    <span :if={installation.installed_at}>
+                      Installed on {Calendar.strftime(installation.installed_at, "%Y-%m-%d")}
+                    </span>
+                  </div>
+                </div>
+
                 <form
                   :if={is_nil(installation.disconnected_at)}
                   method="post"
                   action={~p"/slack/installations/#{installation.id}/disconnect"}
+                  data-part="workspace-actions"
                 >
                   <input type="hidden" name="_csrf_token" value={@csrf_token} />
-                  <button type="submit">Disconnect</button>
+                  <.button label="Disconnect" variant="destructive" size="small" />
                 </form>
-              </div>
-              <.button
-                label="Connect another workspace"
-                href={~p"/slack/install"}
-                variant="secondary"
-              />
+              </article>
             </div>
           </.card_section>
         </.card>

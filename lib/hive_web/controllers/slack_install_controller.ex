@@ -8,10 +8,11 @@ defmodule HiveWeb.SlackInstallController do
   alias Hive.Slack
   alias Hive.Slack.Installations
 
-  @state_key :slack_install_state
+  @state_salt "slack_install"
+  @state_max_age_seconds 30 * 60
 
   def new(conn, _params) do
-    require_member(conn, fn conn, _user -> start_install(conn) end)
+    require_member(conn, fn conn, user -> start_install(conn, user) end)
   end
 
   def callback(conn, params) do
@@ -45,23 +46,21 @@ defmodule HiveWeb.SlackInstallController do
     end
   end
 
-  defp start_install(conn) do
+  defp start_install(conn, user) do
     if Slack.enabled?() do
-      authorize_install(conn)
+      authorize_install(conn, user)
     else
       slack_not_configured(conn)
     end
   end
 
-  defp authorize_install(conn) do
-    state = generate_state()
+  defp authorize_install(conn, user) do
+    state = generate_state(conn, user)
     redirect_uri = redirect_uri(conn)
 
     case Installations.authorize_url(redirect_uri, state, Slack.config()) do
       {:ok, url} ->
-        conn
-        |> put_session(@state_key, state)
-        |> redirect(external: url)
+        redirect(conn, external: url)
 
       {:error, :not_configured} ->
         slack_not_configured(conn)
@@ -75,9 +74,7 @@ defmodule HiveWeb.SlackInstallController do
   end
 
   defp handle_callback(conn, user, params) do
-    expected_state = get_session(conn, @state_key)
-
-    case validate_callback(params, expected_state) do
+    case validate_callback(conn, user, params) do
       {:ok, code} -> complete(conn, user, code)
       {:error, message} -> bail(conn, message)
     end
@@ -87,7 +84,6 @@ defmodule HiveWeb.SlackInstallController do
     case Installations.complete_install(code, redirect_uri(conn), installed_by_user_id: user.id) do
       {:ok, installation} ->
         conn
-        |> delete_session(@state_key)
         |> put_flash(
           :info,
           "Connected #{installation.team_name || installation.team_id} to Hive."
@@ -130,18 +126,27 @@ defmodule HiveWeb.SlackInstallController do
     |> redirect(to: ~p"/account/slack")
   end
 
-  defp validate_callback(params, expected_state) do
-    with :ok <- validate_state(params["state"], expected_state),
+  defp validate_callback(conn, user, params) do
+    with :ok <- validate_state(conn, user, params["state"]),
          :ok <- validate_slack_response(params["error"]) do
       validate_code(params["code"])
     end
   end
 
-  defp validate_state(state, expected_state)
-       when is_binary(state) and is_binary(expected_state) and state == expected_state,
-       do: :ok
+  defp validate_state(conn, user, state) when is_binary(state) and state != "" do
+    case Phoenix.Token.verify(conn, @state_salt, state, max_age: @state_max_age_seconds) do
+      {:ok, %{user_id: user_id}} when user_id == user.id ->
+        :ok
 
-  defp validate_state(_state, _expected_state),
+      {:ok, _payload} ->
+        {:error, "The Slack install link was created for a different Hive session. Try again."}
+
+      {:error, _reason} ->
+        {:error, "The Slack install link expired. Try again."}
+    end
+  end
+
+  defp validate_state(_conn, _user, _state),
     do: {:error, "The Slack install link expired. Try again."}
 
   defp validate_slack_response(error) when error in [nil, ""], do: :ok
@@ -158,7 +163,6 @@ defmodule HiveWeb.SlackInstallController do
 
   defp bail(conn, message) do
     conn
-    |> delete_session(@state_key)
     |> put_flash(:error, message)
     |> redirect(to: ~p"/account/slack")
   end
@@ -169,10 +173,13 @@ defmodule HiveWeb.SlackInstallController do
     |> Accounts.get_user()
   end
 
-  defp generate_state do
-    16
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64(padding: false)
+  defp generate_state(conn, user) do
+    nonce =
+      16
+      |> :crypto.strong_rand_bytes()
+      |> Base.url_encode64(padding: false)
+
+    Phoenix.Token.sign(conn, @state_salt, %{nonce: nonce, user_id: user.id})
   end
 
   defp redirect_uri(conn) do

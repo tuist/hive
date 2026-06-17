@@ -12,8 +12,8 @@ defmodule Hive.Slack.Installations do
 
   @doc """
   Builds the Slack authorize URL the operator/user is redirected to at
-  install time. The caller stores the returned `state` in the session so
-  it can verify the callback.
+  install time. The caller passes a signed `state` token so it can
+  verify the callback.
   """
   def authorize_url(redirect_uri, state, conf \\ Slack.config()) do
     case conf do
