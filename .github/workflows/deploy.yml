@@ -114,7 +114,7 @@ jobs:
             --namespace "$NAMESPACE" --create-namespace \
             --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
-            --rollback-on-failure --timeout 15m
+            --timeout 15m
       - name: Diagnostics on failure
         if: failure()
         run: |
