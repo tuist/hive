@@ -105,7 +105,7 @@ jobs:
               ;;
             pending-upgrade|pending-rollback)
               echo "Release stuck in $status; rolling back to last deployed revision."
-              helm rollback "$HELM_RELEASE_NAME" -n "$NAMESPACE" --wait --timeout 5m || true
+              helm rollback "$HELM_RELEASE_NAME" -n "$NAMESPACE" --timeout 5m || true
               ;;
           esac
       - name: helm upgrade --install
@@ -114,7 +114,7 @@ jobs:
             --namespace "$NAMESPACE" --create-namespace \
             --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
-            --rollback-on-failure --timeout 15m --wait
+            --rollback-on-failure --timeout 15m
       - name: Diagnostics on failure
         if: failure()
         run: |
