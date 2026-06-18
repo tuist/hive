@@ -28,7 +28,7 @@ defmodule HiveWeb.OpsLive.Slack do
         {:ok,
          socket
          |> put_flash(:error, "Log in to manage Slack workspaces.")
-         |> redirect(to: ~p"/login")}
+         |> redirect(to: ~p"/login?return_to=/ops/slack")}
 
       not Policy.authorize?(:slack_workspace_manage, user, nil) ->
         {:ok,

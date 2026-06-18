@@ -6,8 +6,10 @@ defmodule HiveWeb.AuthController do
   alias Hive.Auth
   alias HiveWeb.PageHTML
 
-  def new(conn, _params) do
-    html(conn, Phoenix.HTML.Safe.to_iodata(PageHTML.login_page(conn, error: nil)))
+  def new(conn, params) do
+    conn
+    |> maybe_store_return_to(params)
+    |> html(Phoenix.HTML.Safe.to_iodata(PageHTML.login_page(conn, error: nil)))
   end
 
   # Ueberauth's plug normally handles the redirect to the IdP before this
@@ -118,6 +120,25 @@ defmodule HiveWeb.AuthController do
     |> delete_session(:user_return_to)
     |> redirect(to: return_to)
   end
+
+  defp maybe_store_return_to(conn, %{"return_to" => return_to}) do
+    if local_return_to?(return_to) do
+      put_session(conn, :user_return_to, return_to)
+    else
+      conn
+    end
+  end
+
+  defp maybe_store_return_to(conn, _params), do: conn
+
+  defp local_return_to?(return_to) when is_binary(return_to) do
+    uri = URI.parse(return_to)
+
+    String.starts_with?(return_to, "/") and not String.starts_with?(return_to, "//") and
+      is_nil(uri.scheme) and is_nil(uri.host)
+  end
+
+  defp local_return_to?(_return_to), do: false
 
   defp sign_in_from_auth(conn, attrs) do
     case Accounts.upsert_from_auth(attrs) do

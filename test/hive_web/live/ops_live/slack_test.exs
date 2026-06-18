@@ -6,7 +6,8 @@ defmodule HiveWeb.OpsLive.SlackTest do
   alias Hive.Slack.Installation
 
   test "redirects anonymous visitors to login", %{conn: conn} do
-    assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/ops/slack")
+    assert {:error, {:redirect, %{to: "/login?return_to=/ops/slack"}}} =
+             live(conn, ~p"/ops/slack")
   end
 
   test "redirects non-admins away from Slack workspace management", %{conn: conn} do
