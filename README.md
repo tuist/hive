@@ -32,8 +32,9 @@ new forage items and specs, keeping the taxonomy aligned with durable
 Tuist business domains instead of one-off tickets or vague buckets.
 
 Hive can also connect Slack workspaces so organization members can turn
-Slack messages into forage items and receive bot replies in Slack
-threads.
+Slack messages into forage items, receive bot replies in Slack threads,
+and see Hive links unfurl inline with a preview of the spec, meadow, or
+forage item they point to.
 
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
@@ -88,6 +89,13 @@ For Tuist's instance, replace `<your-hive-host>` with `hive.tuist.dev`.
 To install the same app in workspaces beyond the app's development
 workspace, enable Slack Public Distribution. App Directory submission is
 not required for private install links.
+
+When the Slack app's event subscriptions register `<your-hive-host>` as
+an app unfurl domain, every Hive link shared in a connected workspace
+unfurls inline with a preview of the underlying spec, meadow, or forage
+item. The preview only includes resources that an anonymous visitor
+could see on the dashboard, so private specs and organization-only
+forage items stay opaque.
 
 ## Documentation
 

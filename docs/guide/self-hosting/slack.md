@@ -12,6 +12,11 @@ Once a workspace is installed, Hive can:
 - Capture any Slack message as a Hive feature request via a message
   shortcut (right-click a message, "More message shortcuts", pick the
   shortcut).
+- Unfurl Hive links inline. When a workspace member pastes a link to a
+  spec, meadow, or forage item, Slack expands the message with a
+  preview of the resource. Only resources that an anonymous visitor
+  could see on the dashboard are previewed; private specs and
+  organization-only forage items stay opaque.
 - Record Slack installs, disconnects, app mentions, and captured feature
   requests in the audit trail.
 
@@ -25,7 +30,7 @@ Set these on the Hive deployment:
   verify Events and Interactivity requests).
 - `HIVE_SLACK_BOT_SCOPES`: optional, comma-separated list of bot OAuth
   scopes to request at install time. Defaults to:
-  `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email`.
+  `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,links:read,links:write,mpim:history,mpim:read,users:read,users:read.email`.
 
 When any of the three required variables is missing, the integration
 stays dormant: the `/slack/install` link is hidden and `/account/slack`
@@ -75,6 +80,8 @@ paste:
         "groups:read",
         "im:history",
         "im:read",
+        "links:read",
+        "links:write",
         "mpim:history",
         "mpim:read",
         "users:read",
@@ -87,12 +94,16 @@ paste:
       "request_url": "https://<your-host>/api/slack/events",
       "bot_events": [
         "app_mention",
+        "link_shared",
         "message.channels",
         "message.groups",
         "message.im",
         "message.mpim"
       ]
     },
+    "app_unfurl_domains": [
+      "<your-host>"
+    ],
     "interactivity": {
       "is_enabled": true,
       "request_url": "https://<your-host>/api/slack/interactions"
@@ -117,8 +128,10 @@ To configure it manually instead:
    - Enable events.
    - Request URL: `https://<your-host>/api/slack/events`. Slack verifies
      the URL once with a challenge; Hive responds automatically.
-   - Subscribe to bot events: `app_mention`, `message.channels`,
-     `message.groups`, `message.im`, `message.mpim`.
+   - Subscribe to bot events: `app_mention`, `link_shared`,
+     `message.channels`, `message.groups`, `message.im`, `message.mpim`.
+   - Under **App unfurl domains**, add `<your-host>` so Slack delivers
+     `link_shared` events for Hive links.
 5. In **Interactivity & Shortcuts**:
    - Turn on Interactivity.
    - Request URL: `https://<your-host>/api/slack/interactions`.
@@ -150,3 +163,21 @@ with an ephemeral error and nothing is captured.
 Successful captures land in the unified Forage queue at `/forage` and
 are recorded in the audit trail as `slack.feature_request.captured`.
 Installs and disconnects are recorded too.
+
+## Link unfurling
+
+When the Slack app registers your Hive host as an **app unfurl domain**,
+Slack delivers a `link_shared` event for every Hive URL pasted in a
+connected channel. Hive looks each URL up, builds a preview, and posts
+the preview back via `chat.unfurl`. Supported surfaces:
+
+- `/specs/:number`: title, summary or first body line, and status.
+- `/meadows/:id`: name and description.
+- `/forage/items/:origin/:id`: title, description excerpt, type, and
+  status. Manual items, GitHub issues, and Grafana alerts all unfurl
+  through the same surface.
+
+Previews follow the same visibility rules as anonymous dashboard
+access. Private specs, private meadows, organization-only forage items,
+and Grafana alerts on private deployments are skipped: Slack just
+shows the bare link.

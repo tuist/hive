@@ -90,6 +90,20 @@ The actor and interface for the current process are stored in the process dictio
 
 When in doubt about action names, follow the dotted `domain.verb` convention: `user.signed_in`, `spec.created`, `meadow.webhook_received`, `forage.feature_request.created`. `target_type` is a short noun (`user`, `spec`, `meadow`, `feature_request`, `github_issue`, `grafana_alert`); `Hive.Audit.resource_path/3` knows how to turn a `target_type`+`target_id` into a link for the UI.
 
+## Slack link unfurling
+
+Slack's `link_shared` event is handled in `Hive.Slack.Events` and dispatched to `Hive.Slack.Workers.UnfurlLinks`, which walks each URL through `Hive.Slack.Unfurler` and posts the resulting previews back via `chat.unfurl`. Only URLs whose host matches `HiveWeb.Endpoint.url()` are considered.
+
+`Hive.Slack.Unfurler` keeps a list of modules implementing the `Hive.Slack.Unfurl` behaviour (one `unfurl(URI.t()) :: {:ok, payload} | :skip` callback). The first module that returns `{:ok, payload}` wins; everyone else returns `:skip`.
+
+To make a new domain unfurlable:
+
+1. Add `lib/hive/<domain>/slack_unfurl.ex` with `@behaviour Hive.Slack.Unfurl`. Pattern-match the URL path with `Path.split/1`, look the resource up (skip when it can't be seen by an anonymous visitor), and return a Slack attachment-style map with `"title"`, `"title_link"`, `"text"`, and `"footer"`.
+2. Register the module in `Hive.Slack.Unfurler`'s `@unfurlers` list.
+3. Add a `<name>_test.exs` under the matching `test/hive/<domain>/` folder. Cover the happy path, the private/anonymous-skips path, the not-found path, and a non-matching URL.
+
+Visibility for unfurls follows the dashboard's anonymous view: a Slack workspace member is treated as an external visitor, so any resource that requires a Hive session stays opaque.
+
 ## Agents
 
 Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive and is configured at runtime from three env vars:
