@@ -426,5 +426,52 @@ defmodule Hive.ForageTest do
       assert item.source_label == "Hive"
       assert item.external_label == user.email
     end
+
+    test "hides organization-visible manual items from guests and collaborators" do
+      author = user_with_email("forage-author")
+      collaborator = user_with_email("forage-collaborator")
+      {:ok, collaborator} = Accounts.update_user_role(collaborator, :collaborator)
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Private roadmap feedback",
+            "description" => "This should only be visible to organization members."
+          },
+          author
+        )
+
+      item
+      |> Ecto.Changeset.change(visibility: :organization)
+      |> Repo.update!()
+
+      assert {[], %{total_count: 0}} = Forage.list_forage_items_for_user(nil)
+      assert {[], %{total_count: 0}} = Forage.list_forage_items_for_user(collaborator)
+    end
+
+    test "shows organization-visible manual items to members" do
+      author = user_with_email("forage-author")
+      member = user_with_email("forage-member")
+      {:ok, member} = Accounts.update_user_role(member, :member)
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Private roadmap feedback",
+            "description" => "This should be visible to organization members."
+          },
+          author
+        )
+
+      item =
+        item
+        |> Ecto.Changeset.change(visibility: :organization)
+        |> Repo.update!()
+
+      assert {[listed], %{total_count: 1}} = Forage.list_forage_items_for_user(member)
+      assert listed.id == "manual:#{item.id}"
+    end
   end
 end

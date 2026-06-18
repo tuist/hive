@@ -164,7 +164,7 @@ defmodule Hive.Forage do
     opts = normalize_item_opts(opts)
 
     items =
-      manual_item_entries()
+      manual_item_entries(user)
       |> Kernel.++(github_issue_item_entries(user))
       |> Kernel.++(grafana_alert_item_entries(user))
       |> filter_items(opts)
@@ -369,8 +369,9 @@ defmodule Hive.Forage do
 
   defdelegate list_grafana_alerts, to: Grafana, as: :list_alerts
 
-  defp manual_item_entries do
+  defp manual_item_entries(user) do
     list_manual_items()
+    |> Enum.filter(&can_view_item?(&1, user))
     |> Enum.map(&manual_item_entry/1)
   end
 
