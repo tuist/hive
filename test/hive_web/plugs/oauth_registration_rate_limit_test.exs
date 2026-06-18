@@ -6,7 +6,7 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimitTest do
   describe "call/2" do
     test "allows requests within the window limit" do
       conn = registration_conn()
-      opts = OAuthRegistrationRateLimit.init(now: fn -> 1_800 end)
+      opts = rate_limit_opts()
 
       for _ <- 1..20 do
         refute OAuthRegistrationRateLimit.call(conn, opts).halted
@@ -15,7 +15,7 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimitTest do
 
     test "rejects requests over the window limit" do
       conn = registration_conn()
-      opts = OAuthRegistrationRateLimit.init(now: fn -> 1_800 end)
+      opts = rate_limit_opts()
 
       for _ <- 1..20 do
         OAuthRegistrationRateLimit.call(conn, opts)
@@ -35,5 +35,10 @@ defmodule HiveWeb.Plugs.OAuthRegistrationRateLimitTest do
   defp registration_conn do
     Plug.Test.conn(:post, "/oauth2/register")
     |> Map.put(:remote_ip, {127, 255, rem(System.unique_integer([:positive]), 255), 1})
+  end
+
+  defp rate_limit_opts do
+    bucket = System.unique_integer([:positive, :monotonic])
+    OAuthRegistrationRateLimit.init(now: fn -> bucket * 60 end)
   end
 end
