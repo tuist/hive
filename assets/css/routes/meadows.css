@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--noora-spacing-7);
+  min-width: 0;
 
   & [data-part="page-header"] {
     display: flex;
@@ -62,6 +63,7 @@
 
   & [data-part="meadows-card"] {
     width: 100%;
+    min-width: 0;
     overflow-x: hidden;
   }
 
@@ -69,6 +71,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--noora-spacing-8);
+    min-width: 0;
   }
 
   & [data-part="meadow-detail-layout"] {
@@ -219,22 +222,42 @@
     }
   }
 
-  & [data-part="meadows-table"] .noora-table {
-    width: 100%;
+  & [data-part="meadows-table"] {
+    min-width: 0;
+  }
+
+  & #meadows-table {
+    overflow-x: visible;
+
+    & table {
+      table-layout: fixed;
+      min-width: 0;
+      width: 100%;
+    }
+
+    & th,
+    & td {
+      white-space: normal;
+    }
 
     & th:nth-child(1),
     & td:nth-child(1) {
-      width: 55%;
+      width: 42%;
     }
 
     & th:nth-child(2),
     & td:nth-child(2) {
-      width: 15%;
+      width: 14%;
     }
 
     & th:nth-child(3),
     & td:nth-child(3) {
-      width: 30%;
+      width: 28%;
+    }
+
+    & th:nth-child(4),
+    & td:nth-child(4) {
+      width: 16%;
     }
   }
 
@@ -242,6 +265,17 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--noora-spacing-2);
+    min-width: 0;
+
+    & .noora-badge {
+      max-width: 100%;
+    }
+
+    & [data-part="label"] {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   & [data-part="form"] {

@@ -20,12 +20,19 @@
 
 /*
  * Noora authors its components against the browser default `content-box`. The
- * card icon sizes its box with `width` + `padding` together, so our global
- * `border-box` reset above collapses the icon to a few pixels. Restore the box
- * model Noora expects for that element.
+ * card and table empty-state icons size their boxes with `width` + `padding`
+ * together, so our global `border-box` reset above collapses the icons to a few
+ * pixels. Restore the box model Noora expects for those elements.
  */
-.noora-card [data-part="icon"] {
+.noora-card [data-part="icon"],
+.noora-table-empty-state > [data-part="icon"] {
   box-sizing: content-box;
+}
+
+.noora-table-empty-state > [data-part="icon"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 body {
