@@ -20,6 +20,9 @@ defmodule HiveWeb.FeedController do
   alias HiveWeb.Endpoint
   alias HiveWeb.Rss
 
+  def forage_atom(conn, _params), do: send_feed(conn, :atom, forage_feed(conn))
+  def forage_rss(conn, _params), do: send_feed(conn, :rss, forage_feed(conn))
+
   def feature_requests_atom(conn, _params),
     do: send_feed(conn, :atom, feature_requests_feed(conn))
 
@@ -36,6 +39,22 @@ defmodule HiveWeb.FeedController do
 
   def meadow_atom(conn, %{"id" => id}), do: serve_meadow(conn, id, :atom)
   def meadow_rss(conn, %{"id" => id}), do: serve_meadow(conn, id, :rss)
+
+  defp forage_feed(conn) do
+    user = Auth.current_user(conn)
+    {items, _meta} = Forage.list_forage_items_for_user(user, page_size: :all)
+
+    %{
+      id: feed_id(conn),
+      title: "Hive · Forage",
+      subtitle:
+        "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue.",
+      updated: latest_updated(items, fn item -> item.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/forage"),
+      entries: Enum.map(items, &forage_item_entry(conn, &1))
+    }
+  end
 
   defp feature_requests_feed(conn) do
     feature_requests = Forage.list_feature_requests()
@@ -151,6 +170,20 @@ defmodule HiveWeb.FeedController do
       summary: request.description,
       author_name: author_name(request.user),
       author_email: author_email(request.user)
+    }
+  end
+
+  defp forage_item_entry(conn, item) do
+    url = item.external_url || page_url(conn, "/forage") <> "##{item.id}"
+
+    %{
+      id: "urn:hive:forage-item:#{item.id}",
+      title: "#{Forage.item_type_label(item.type)}: #{item.title}",
+      updated: item.updated_at,
+      url: url,
+      summary: item.body,
+      author_name: item.requester_label,
+      author_email: item.requester_label
     }
   end
 

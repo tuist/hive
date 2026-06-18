@@ -32,11 +32,19 @@ new forage items and specs, keeping the taxonomy aligned with durable
 Tuist business domains instead of one-off tickets or vague buckets.
 
 Hive can also connect Slack workspaces so organization members can turn
-Slack messages into feature requests and receive bot replies in Slack
+Slack messages into forage items and receive bot replies in Slack
 threads.
 
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
+
+## Forage
+
+Forage is a single queue for feature requests, bug reports, feedback,
+GitHub issues, and Grafana alerts. Signed-in users can create forage
+items, edit the items they created, and comment on manual forage items
+from Hive. GitHub issue items show the issue discussion from GitHub so
+reviewers can read the latest thread without Hive storing a second copy.
 
 ## Our instance
 
@@ -59,9 +67,8 @@ items a logged-out visitor would see.
 Available feeds (replace `atom.xml` with `rss.xml` for the RSS 2.0
 version):
 
-- `/forage/feature-requests/atom.xml`
-- `/forage/github-issues/atom.xml`
-- `/forage/grafana-alerts/atom.xml` (organization members only)
+- `/forage/atom.xml` — feature requests, bug reports, feedback, GitHub
+  issues, and Grafana alerts visible to the subscriber.
 - `/specs/atom.xml`
 - `/meadows/:id/atom.xml` — the GitHub issues and Grafana alerts that
   belong to one meadow, merged into a single timeline.

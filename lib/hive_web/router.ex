@@ -80,6 +80,8 @@ defmodule HiveWeb.Router do
     scope "/" do
       pipe_through :feed
 
+      get "/forage/atom.xml", FeedController, :forage_atom
+      get "/forage/rss.xml", FeedController, :forage_rss
       get "/forage/feature-requests/atom.xml", FeedController, :feature_requests_atom
       get "/forage/feature-requests/rss.xml", FeedController, :feature_requests_rss
       get "/forage/github-issues/atom.xml", FeedController, :github_issues_atom
@@ -115,12 +117,15 @@ defmodule HiveWeb.Router do
     live_session :forage,
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
-      live "/forage/feature-requests", ForageLive.FeatureRequests
+      live "/forage", ForageLive.Index, :index
+      live "/forage/new", ForageLive.NewFeatureRequest
+      live "/forage/items/:origin/:id", ForageLive.Show
       live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
-      live "/forage/bug-reports", ForageLive.Placeholder, :bug_reports
-      live "/forage/feedback", ForageLive.Placeholder, :feedback
-      live "/forage/github-issues", ForageLive.GitHubIssues
-      live "/forage/grafana-alerts", ForageLive.GrafanaAlerts
+      live "/forage/feature-requests", ForageLive.Index, :feature_requests
+      live "/forage/bug-reports", ForageLive.Index, :bug_reports
+      live "/forage/feedback", ForageLive.Index, :feedback
+      live "/forage/github-issues", ForageLive.Index, :github_issues
+      live "/forage/grafana-alerts", ForageLive.Index, :grafana_alerts
       live "/specs", SpecLive.Index
       live "/specs/new", SpecLive.New
       live "/specs/:number", SpecLive.Show

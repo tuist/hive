@@ -95,7 +95,7 @@ defmodule HiveWeb.LayoutsTest do
           auth_enabled?: false,
           signed_in?: true,
           csrf_token: "csrf-token-123",
-          current_path: "/forage/feature-requests",
+          current_path: "/forage",
           forage_sources: [
             %{
               id: :feature_requests,
@@ -145,13 +145,13 @@ defmodule HiveWeb.LayoutsTest do
       refute html =~ ~s(href="/account/identities")
     end
 
-    test "lists the visible forage sources" do
+    test "links to the unified forage page" do
       html = render_dashboard(assigns())
 
-      assert html =~ "Feature requests"
-      assert html =~ "Bug reports"
-      assert html =~ "/forage/feature-requests"
-      assert html =~ "/forage/bug-reports"
+      assert html =~ "Forage"
+      assert html =~ ~s(href="/forage")
+      refute html =~ "Feature requests"
+      refute html =~ "/forage/feature-requests"
     end
 
     test "shows Meadows at the top of the sidebar for any visitor" do

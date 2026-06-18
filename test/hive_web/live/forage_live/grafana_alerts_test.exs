@@ -7,20 +7,38 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
   alias Hive.Meadows
   alias Hive.Meadows.Webhooks
 
-  test "redirects guests away from the organization-only source", %{conn: conn} do
+  test "hides organization-only alerts from guests", %{conn: conn} do
     Mimic.stub(Auth, :member?, fn _ -> false end)
+    {:ok, meadow} = Meadows.create_meadow(%{name: "Guest hidden"})
 
-    assert {:error, {:redirect, %{to: "/forage/feature-requests"}}} =
-             live(conn, ~p"/forage/grafana-alerts")
+    {:ok, {webhook, _}} =
+      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
+
+    {:ok, [_]} =
+      Grafana.ingest(meadow, webhook, %{
+        "alerts" => [
+          %{
+            "status" => "firing",
+            "fingerprint" => "guest-hidden",
+            "labels" => %{"alertname" => "GuestHiddenLatency"},
+            "annotations" => %{"summary" => "Guest hidden latency"}
+          }
+        ]
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/forage")
+
+    refute html =~ "Guest hidden latency"
   end
 
   test "renders the empty state for organization members", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
 
-    {:ok, _view, html} = live(conn, ~p"/forage/grafana-alerts")
+    {:ok, _view, html} =
+      live(conn, ~p"/forage?filter_type_op===&filter_type_val=grafana_alert")
 
-    assert html =~ "Grafana alerts"
-    assert html =~ "No Grafana alerts yet"
+    assert html =~ "Forage"
+    assert html =~ "No forage items found"
   end
 
   test "lists ingested alerts with meadow and status", %{conn: conn} do
@@ -48,7 +66,8 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
         ]
       })
 
-    {:ok, _view, html} = live(conn, ~p"/forage/grafana-alerts")
+    {:ok, _view, html} =
+      live(conn, ~p"/forage?filter_type_op===&filter_type_val=grafana_alert")
 
     assert html =~ "Latency over budget"
     assert html =~ "p95 &gt; 500ms"

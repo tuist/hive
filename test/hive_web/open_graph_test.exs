@@ -66,6 +66,7 @@ defmodule HiveWeb.OpenGraphTest do
     page_data = [
       PageHTML.open_graph(),
       AccountLive.Identities.open_graph(),
+      ForageLive.Index.open_graph(%{total: 3, open: 2, meadows: 1}),
       ForageLive.FeatureRequests.open_graph(feature_requests),
       ForageLive.NewFeatureRequest.open_graph()
       | Enum.map(Forage.sources(), &ForageLive.Placeholder.open_graph/1)

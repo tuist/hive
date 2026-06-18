@@ -11,12 +11,12 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
 
   def open_graph do
     %{
-      description: "Capture a public idea that can become workable meadow direction.",
+      description: "Capture a public feature request, bug report, or feedback item.",
       eyebrow: "Forage",
-      highlights: ["Public ideas", "Actionable context", "Contributor signal"],
-      id: "forage-feature-requests-new",
-      path: "/forage/feature-requests/new",
-      title: "New feature request"
+      highlights: ["Public items", "Actionable context", "Contributor signal"],
+      id: "forage-new",
+      path: "/forage/new",
+      title: "New forage item"
     }
   end
 
@@ -27,34 +27,34 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
     if Forage.can_create?(source, socket.assigns.current_user) do
       {:ok,
        socket
-       |> assign(:page_title, "New feature request · #{socket.assigns.product_name}")
+       |> assign(:page_title, "New forage item · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph()))
-       |> assign_form(Forage.change_feature_request())}
+       |> assign_form(Forage.change_forage_item())}
     else
       {:ok,
        socket
-       |> put_flash(:error, "Log in to submit feature requests.")
+       |> put_flash(:error, "Log in to submit forage items.")
        |> redirect(to: ~p"/login")}
     end
   end
 
   @impl true
-  def handle_event("validate", %{"feature_request" => params}, socket) do
+  def handle_event("validate", %{"forage_item" => params}, socket) do
     changeset =
       %FeatureRequest{}
-      |> Forage.change_feature_request(params)
+      |> Forage.change_forage_item(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("save", %{"feature_request" => params}, socket) do
-    case Forage.create_feature_request(params, socket.assigns.current_user) do
-      {:ok, _feature_request} ->
+  def handle_event("save", %{"forage_item" => params}, socket) do
+    case Forage.create_forage_item(params, socket.assigns.current_user) do
+      {:ok, _item} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Feature request submitted.")
-         |> push_navigate(to: ~p"/forage/feature-requests")}
+         |> put_flash(:info, "Forage item submitted.")
+         |> push_navigate(to: ~p"/forage")}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -62,7 +62,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   end
 
   defp assign_form(socket, changeset) do
-    assign(socket, :form, to_form(interpolate_errors(changeset), as: :feature_request))
+    assign(socket, :form, to_form(interpolate_errors(changeset), as: :forage_item))
   end
 
   # Noora's inputs render an error's raw message and drop its opts, so
@@ -96,7 +96,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
       current_path={@current_path}
       forage_sources={@forage_sources}
     >
-      <ForageComponents.new_feature_request form={@form} user_name={@user_name} />
+      <ForageComponents.new_item form={@form} user_name={@user_name} />
     </Layouts.dashboard>
     """
   end
