@@ -60,6 +60,7 @@ defmodule HiveWeb.LayoutsTest do
         avatar_color={@avatar_color}
         auth_enabled?={@auth_enabled?}
         signed_in?={@signed_in?}
+        admin?={@admin?}
         csrf_token={@csrf_token}
         current_path={@current_path}
         forage_sources={@forage_sources}
@@ -85,6 +86,22 @@ defmodule HiveWeb.LayoutsTest do
       """)
     end
 
+    defp render_ops(assigns) do
+      rendered_to_string(~H"""
+      <Layouts.ops
+        product_name={@product_name}
+        user_name={@user_name}
+        user_email={@user_email}
+        avatar_color={@avatar_color}
+        signed_in?={@signed_in?}
+        csrf_token={@csrf_token}
+        current_path={@current_path}
+      >
+        <p>Ops content</p>
+      </Layouts.ops>
+      """)
+    end
+
     defp assigns(overrides \\ %{}) do
       Map.merge(
         %{
@@ -94,6 +111,7 @@ defmodule HiveWeb.LayoutsTest do
           avatar_color: "purple",
           auth_enabled?: false,
           signed_in?: true,
+          admin?: false,
           csrf_token: "csrf-token-123",
           current_path: "/forage",
           forage_sources: [
@@ -173,6 +191,15 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(href="/account/identities")
       refute html =~ ~s(<span data-part="label">Identities</span>)
     end
+
+    test "shows ops navigation only to admins" do
+      member_html = render_dashboard(assigns(%{admin?: false}))
+      admin_html = render_dashboard(assigns(%{admin?: true, current_path: "/ops/slack"}))
+
+      refute member_html =~ ~s(href="/ops/slack")
+      assert admin_html =~ "Ops"
+      assert admin_html =~ ~s(href="/ops/slack")
+    end
   end
 
   describe "account/1" do
@@ -182,8 +209,21 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Account content"
       assert html =~ "Identities"
       assert html =~ "/account/identities"
+      refute html =~ "Slack"
+      refute html =~ "/ops/slack"
       refute html =~ "Feature requests"
       refute html =~ "/meadows"
+    end
+  end
+
+  describe "ops/1" do
+    test "renders ops content with ops sidebar navigation" do
+      html = render_ops(assigns(%{current_path: "/ops/slack"}))
+
+      assert html =~ "Ops content"
+      assert html =~ "Slack"
+      assert html =~ "/ops/slack"
+      refute html =~ ~s(<span data-part="label">Identities</span>)
     end
   end
 end

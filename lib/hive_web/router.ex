@@ -143,7 +143,12 @@ defmodule HiveWeb.Router do
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/account/identities", AccountLive.Identities
-      live "/account/slack", AccountLive.Slack
+    end
+
+    live_session :ops,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/ops/slack", OpsLive.Slack
     end
 
     scope "/slack" do

@@ -16,14 +16,14 @@ defmodule HiveWeb.SlackInstallControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Log in"
     end
 
-    test "redirects collaborators away from workspace management", %{conn: conn} do
-      {conn, user} = sign_in(conn, "collaborator@example.com")
-      {:ok, _user} = Accounts.update_user_role(user, :collaborator)
+    test "redirects non-admins away from workspace management", %{conn: conn} do
+      {conn, user} = sign_in(conn, "member@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :member)
 
       conn = get(conn, ~p"/slack/install")
 
-      assert redirected_to(conn) == ~p"/account/identities"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "organization members"
+      assert redirected_to(conn) == ~p"/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "instance admins"
     end
 
     test "redirects to the Slack authorize URL with a signed state token", %{conn: conn} do
@@ -34,7 +34,8 @@ defmodule HiveWeb.SlackInstallControllerTest do
 
       stub(Hive.Slack, :enabled?, fn -> true end)
 
-      {conn, user} = sign_in(conn, "alice@example.com")
+      {conn, user} = sign_in(conn, "admin@example.com")
+      {:ok, user} = Accounts.update_user_role(user, :admin)
       conn = get(conn, ~p"/slack/install")
 
       assert redirected_to(conn) =~ "https://slack.com/oauth/v2/authorize?state="
@@ -47,28 +48,31 @@ defmodule HiveWeb.SlackInstallControllerTest do
       assert user_id == user.id
     end
 
-    test "redirects to /account/slack with a flash when Slack isn't configured", %{conn: conn} do
+    test "redirects to /ops/slack with a flash when Slack isn't configured", %{conn: conn} do
       stub(Hive.Slack, :enabled?, fn -> false end)
 
-      {conn, _user} = sign_in(conn, "alice@example.com")
+      {conn, user} = sign_in(conn, "admin-unconfigured@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :admin)
       conn = get(conn, ~p"/slack/install")
 
-      assert redirected_to(conn) == ~p"/account/slack"
+      assert redirected_to(conn) == ~p"/ops/slack"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "isn't configured"
     end
   end
 
   describe "GET /slack/install/callback" do
     test "rejects requests with a mismatched state", %{conn: conn} do
-      {conn, _user} = sign_in(conn, "alice@example.com")
+      {conn, user} = sign_in(conn, "admin-callback-mismatch@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :admin)
       conn = get(conn, ~p"/slack/install/callback?state=other&code=abc")
 
-      assert redirected_to(conn) == ~p"/account/slack"
+      assert redirected_to(conn) == ~p"/ops/slack"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "expired"
     end
 
     test "surfaces Slack callback errors", %{conn: conn} do
-      {conn, user} = sign_in(conn, "alice@example.com")
+      {conn, user} = sign_in(conn, "admin-callback-error@example.com")
+      {:ok, user} = Accounts.update_user_role(user, :admin)
       state = slack_install_state(conn, user)
 
       conn =
@@ -77,7 +81,7 @@ defmodule HiveWeb.SlackInstallControllerTest do
           ~p"/slack/install/callback?state=#{state}&error=invalid_team_for_non_distributed_app"
         )
 
-      assert redirected_to(conn) == ~p"/account/slack"
+      assert redirected_to(conn) == ~p"/ops/slack"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Slack rejected the install: invalid team for non distributed app."
@@ -95,11 +99,12 @@ defmodule HiveWeb.SlackInstallControllerTest do
          }}
       end)
 
-      {conn, user} = sign_in(conn, "alice@example.com")
+      {conn, user} = sign_in(conn, "admin-callback@example.com")
+      {:ok, user} = Accounts.update_user_role(user, :admin)
       state = slack_install_state(conn, user)
       conn = get(conn, ~p"/slack/install/callback?state=#{state}&code=code-1")
 
-      assert redirected_to(conn) == ~p"/account/slack"
+      assert redirected_to(conn) == ~p"/ops/slack"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Workspace"
     end
 
@@ -112,14 +117,14 @@ defmodule HiveWeb.SlackInstallControllerTest do
   end
 
   describe "POST /slack/installations/:id/disconnect" do
-    test "redirects collaborators away from disconnecting workspaces", %{conn: conn} do
-      {conn, user} = sign_in(conn, "collaborator-disconnect@example.com")
-      {:ok, _user} = Accounts.update_user_role(user, :collaborator)
+    test "redirects non-admins away from disconnecting workspaces", %{conn: conn} do
+      {conn, user} = sign_in(conn, "member-disconnect@example.com")
+      {:ok, _user} = Accounts.update_user_role(user, :member)
 
       conn = post(conn, ~p"/slack/installations/#{Ecto.UUID.generate()}/disconnect")
 
-      assert redirected_to(conn) == ~p"/account/identities"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "organization members"
+      assert redirected_to(conn) == ~p"/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "instance admins"
     end
   end
 

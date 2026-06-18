@@ -1,10 +1,9 @@
-defmodule HiveWeb.AccountLive.Slack do
+defmodule HiveWeb.OpsLive.Slack do
   @moduledoc false
 
   use HiveWeb, :live_view
 
-  alias Hive.Accounts
-  alias Hive.Auth
+  alias Hive.Ops.Policy
   alias Hive.Slack
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -12,37 +11,36 @@ defmodule HiveWeb.AccountLive.Slack do
   def open_graph do
     %{
       description: "Connect Slack workspaces to Hive.",
-      eyebrow: "Account",
+      eyebrow: "Ops",
       highlights: ["Slack OAuth", "Workspace installs", "Message shortcuts"],
-      id: "account-slack",
-      path: "/account/slack",
+      id: "ops-slack",
+      path: "/ops/slack",
       title: "Slack"
     }
   end
 
   @impl true
-  def mount(_params, session, socket) do
-    user = Accounts.get_user(session["user_id"])
+  def mount(_params, _session, socket) do
+    user = socket.assigns[:current_user]
 
     cond do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to manage your account.")
+         |> put_flash(:error, "Log in to manage Slack workspaces.")
          |> redirect(to: ~p"/login")}
 
-      not Auth.member?(user) ->
+      not Policy.authorize?(:slack_workspace_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only organization members can manage Slack workspaces.")
-         |> redirect(to: ~p"/account/identities")}
+         |> put_flash(:error, "Only instance admins can manage Slack workspaces.")
+         |> push_navigate(to: ~p"/")}
 
       true ->
         {:ok,
          socket
          |> assign(:page_title, "Slack · #{socket.assigns.product_name}")
          |> assign(OpenGraph.assigns(open_graph()))
-         |> assign(:account_user, user)
          |> assign(:slack_enabled?, Slack.enabled?())
          |> assign(:installations, Slack.list_installations())}
     end
@@ -51,7 +49,7 @@ defmodule HiveWeb.AccountLive.Slack do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.account
+    <Layouts.ops
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}
@@ -60,10 +58,10 @@ defmodule HiveWeb.AccountLive.Slack do
       csrf_token={@csrf_token}
       current_path={@current_path}
     >
-      <section id="account-slack">
+      <section id="ops-slack">
         <div data-part="page-header">
           <div data-part="title-group">
-            <.badge label="Account" color="information" style="light-fill" />
+            <.badge label="Ops" color="information" style="light-fill" />
             <h1>Slack</h1>
             <p>
               Connect Slack workspaces to Hive. Once installed, the bot can reply in threads
@@ -157,7 +155,7 @@ defmodule HiveWeb.AccountLive.Slack do
           </.card_section>
         </.card>
       </section>
-    </Layouts.account>
+    </Layouts.ops>
     """
   end
 end

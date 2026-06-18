@@ -4,7 +4,7 @@ defmodule HiveWeb.SlackInstallController do
   require Logger
 
   alias Hive.Accounts
-  alias Hive.Auth
+  alias Hive.Ops.Policy
   alias Hive.Slack
   alias Hive.Slack.Installations
 
@@ -12,37 +12,37 @@ defmodule HiveWeb.SlackInstallController do
   @state_max_age_seconds 30 * 60
 
   def new(conn, _params) do
-    require_member(conn, fn conn, user -> start_install(conn, user) end)
+    require_admin(conn, fn conn, user -> start_install(conn, user) end)
   end
 
   def callback(conn, params) do
-    require_member(conn, fn conn, user -> handle_callback(conn, user, params) end)
+    require_admin(conn, fn conn, user -> handle_callback(conn, user, params) end)
   end
 
   def disconnect(conn, %{"id" => id}) do
-    require_member(conn, fn conn, _user -> disconnect_installation(conn, id) end)
+    require_admin(conn, fn conn, _user -> disconnect_installation(conn, id) end)
   end
 
-  defp require_member(conn, callback) do
+  defp require_admin(conn, callback) do
     case current_user(conn) do
-      nil -> require_member_login(conn)
-      user -> require_member_role(conn, user, callback)
+      nil -> require_admin_login(conn)
+      user -> require_admin_role(conn, user, callback)
     end
   end
 
-  defp require_member_login(conn) do
+  defp require_admin_login(conn) do
     conn
     |> put_flash(:error, "Log in to manage Slack workspaces.")
     |> redirect(to: ~p"/login")
   end
 
-  defp require_member_role(conn, user, callback) do
-    if Auth.member?(user) do
+  defp require_admin_role(conn, user, callback) do
+    if Policy.authorize?(:slack_workspace_manage, user, nil) do
       callback.(conn, user)
     else
       conn
-      |> put_flash(:error, "Only organization members can manage Slack workspaces.")
-      |> redirect(to: ~p"/account/identities")
+      |> put_flash(:error, "Only instance admins can manage Slack workspaces.")
+      |> redirect(to: ~p"/")
     end
   end
 
@@ -70,7 +70,7 @@ defmodule HiveWeb.SlackInstallController do
   defp slack_not_configured(conn) do
     conn
     |> put_flash(:error, "Slack isn't configured on this Hive instance.")
-    |> redirect(to: ~p"/account/slack")
+    |> redirect(to: ~p"/ops/slack")
   end
 
   defp handle_callback(conn, user, params) do
@@ -88,7 +88,7 @@ defmodule HiveWeb.SlackInstallController do
           :info,
           "Connected #{installation.team_name || installation.team_id} to Hive."
         )
-        |> redirect(to: ~p"/account/slack")
+        |> redirect(to: ~p"/ops/slack")
 
       {:error, reason} ->
         Logger.warning("[SlackInstall] OAuth exchange failed: #{inspect(reason)}")
@@ -111,19 +111,19 @@ defmodule HiveWeb.SlackInstallController do
           :info,
           "Disconnected #{updated.team_name || updated.team_id} from Hive."
         )
-        |> redirect(to: ~p"/account/slack")
+        |> redirect(to: ~p"/ops/slack")
 
       {:error, _} ->
         conn
         |> put_flash(:error, "Could not disconnect that workspace.")
-        |> redirect(to: ~p"/account/slack")
+        |> redirect(to: ~p"/ops/slack")
     end
   end
 
   defp missing_installation(conn) do
     conn
     |> put_flash(:error, "That Slack workspace is not connected.")
-    |> redirect(to: ~p"/account/slack")
+    |> redirect(to: ~p"/ops/slack")
   end
 
   defp validate_callback(conn, user, params) do
@@ -164,7 +164,7 @@ defmodule HiveWeb.SlackInstallController do
   defp bail(conn, message) do
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/account/slack")
+    |> redirect(to: ~p"/ops/slack")
   end
 
   defp current_user(conn) do

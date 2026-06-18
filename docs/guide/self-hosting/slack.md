@@ -28,7 +28,7 @@ Set these on the Hive deployment:
   `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email`.
 
 When any of the three required variables is missing, the integration
-stays dormant: the `/slack/install` link is hidden and `/account/slack`
+stays dormant: the `/slack/install` link is hidden and `/ops/slack`
 shows an inert state.
 
 ## Setting up the Slack app
@@ -132,8 +132,8 @@ To configure it manually instead:
 
 Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
 
-1. Sign in to Hive as an organization member and open **Account → Slack**
-   at `/account/slack`.
+1. Sign in to Hive as an instance admin and open **Ops → Slack** at
+   `/ops/slack`.
 2. Click **Connect a Slack workspace**, complete the Slack OAuth prompt,
    and pick the workspace.
 3. The workspace appears in the list. Click **Disconnect** to revoke
