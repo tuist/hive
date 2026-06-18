@@ -147,6 +147,6 @@ to a Hive user by email. The Slack user must have signed in to Hive at
 least once (so the email is known); otherwise the shortcut responds
 with an ephemeral error and nothing is captured.
 
-Successful captures land at `/forage/feature-requests` and are recorded
-in the audit trail as `slack.feature_request.captured`. Installs and
-disconnects are recorded too.
+Successful captures land in the unified Forage queue at `/forage` and
+are recorded in the audit trail as `slack.feature_request.captured`.
+Installs and disconnects are recorded too.

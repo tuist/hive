@@ -1,9 +1,10 @@
 defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   use HiveWeb.ConnCase, async: true
-  use Mimic
 
   alias Hive.Forage
+  alias Hive.Forage.GitHubIssue
   alias Hive.Meadows
+  alias Hive.Repo
 
   defp unique, do: System.unique_integer([:positive])
 
@@ -26,19 +27,23 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     repository
   end
 
-  test "redirects guests when no public meadow/repo pair exists", %{conn: conn} do
+  test "hides private GitHub issues from guests", %{conn: conn} do
     suffix = unique()
 
-    create_meadow!(%{
-      name: "atlas-#{suffix}",
-      visibility: "private",
-      github_repository_owner: "owner#{suffix}",
-      github_repository_name: "atlas#{suffix}",
-      github_repository_visibility: "public"
-    })
+    meadow =
+      create_meadow!(%{
+        name: "atlas-#{suffix}",
+        visibility: "private",
+        github_repository_owner: "owner#{suffix}",
+        github_repository_name: "atlas#{suffix}",
+        github_repository_visibility: "public"
+      })
 
-    assert {:error, {:redirect, %{to: "/forage/feature-requests"}}} =
-             live(conn, ~p"/forage/github-issues")
+    seed_issue!(meadow, number: 3, title: "Private crash")
+
+    {:ok, _view, html} = live(conn, ~p"/forage")
+
+    refute html =~ "Private crash"
   end
 
   test "renders cached issues for a guest when a public meadow/repo pair exists", %{conn: conn} do
@@ -57,9 +62,40 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
-    assert html =~ "GitHub issues"
+    assert html =~ "GitHub issue"
     assert html =~ "Crash on launch"
     assert html =~ "owner#{suffix}/hive#{suffix}"
+  end
+
+  test "opens GitHub issues on a dedicated item detail page", %{conn: conn} do
+    suffix = unique()
+
+    meadow =
+      create_meadow!(%{
+        name: "hive-#{suffix}",
+        visibility: "public",
+        github_repository_owner: "owner#{suffix}",
+        github_repository_name: "hive#{suffix}",
+        github_repository_visibility: "public"
+      })
+
+    repository = seed_issue!(meadow, number: 42, title: "Crash on launch", body: "Detail")
+    issue = Repo.get_by!(GitHubIssue, github_repository_id: repository.id, number: 42)
+
+    {:ok, view, _html} = live(conn, ~p"/forage")
+
+    item_path = "/forage/items/github-issue/#{issue.id}"
+
+    assert {:error, {:live_redirect, %{to: ^item_path}}} =
+             view
+             |> element("a[data-part='item-title-link']", "Crash on launch")
+             |> render_click()
+
+    {:ok, _view, html} = live(conn, ~p"/forage/items/github-issue/#{issue.id}")
+
+    assert html =~ "Crash on launch"
+    assert html =~ "Open on GitHub"
+    refute html =~ "Add context or feedback with Markdown"
   end
 
   test "shows the empty state when a member has no meadows with repositories", %{conn: conn} do
@@ -67,17 +103,17 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
-    assert html =~ "No open issues to show"
+    assert html =~ "No forage items found"
   end
 
-  test "the bare URL redirects to one with the default state=open filter", %{conn: conn} do
+  test "the legacy source URL redirects to filtered forage", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
     assert {:error, {:live_redirect, %{to: target}}} =
              live(conn, ~p"/forage/github-issues")
 
-    assert target =~ "filter_state_op="
-    assert target =~ "filter_state_val=open"
+    assert target =~ "/forage?"
+    assert target =~ "filter_type_val=github_issue"
   end
 
   test "lands on state=open and shows the State chip", %{conn: conn} do
@@ -95,10 +131,14 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
     seed_issue!(meadow, number: 1, title: "Still open")
 
-    {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} =
+      live(
+        conn,
+        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=open"
+      )
 
     assert html =~ "Still open"
-    assert html =~ "State"
+    assert html =~ "Status"
     assert html =~ "Open"
   end
 
@@ -130,7 +170,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {:ok, _view, html} =
       live(
         conn,
-        ~p"/forage/github-issues?filter_state_op===&filter_state_val=open&filter_meadow_op===&filter_meadow_val=#{meadow_a.id}"
+        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=open&filter_meadow_op===&filter_meadow_val=#{meadow_a.id}"
       )
 
     assert html =~ "Issue for A"
@@ -167,7 +207,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {:ok, _view, html} =
       live(
         conn,
-        ~p"/forage/github-issues?filter_state_op===&filter_state_val=open&filter_repository_op===&filter_repository_val=#{repository_b.id}"
+        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=open&filter_repository_op===&filter_repository_val=#{repository_b.id}"
       )
 
     refute html =~ "Issue for A"
@@ -190,7 +230,10 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     seed_issue!(meadow, number: 1, title: "Open one")
 
     {:ok, _view, html} =
-      live(conn, ~p"/forage/github-issues?filter_state_op===&filter_state_val=closed")
+      live(
+        conn,
+        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=closed"
+      )
 
     refute html =~ "Open one"
   end

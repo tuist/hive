@@ -68,7 +68,7 @@ defmodule Hive.Slack.Interactions do
 
             respond(
               response_url,
-              "Captured as a feature request in Hive: <#{hive_url("/forage/feature-requests")}|view feature requests>."
+              "Captured as a feature request in Hive: <#{hive_url("/forage?filter_type_op=%3D%3D&filter_type_val=feature_request")}|view forage>."
             )
 
           {:error, _changeset} ->

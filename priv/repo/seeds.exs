@@ -46,58 +46,75 @@ case Accounts.get_user_by_email("test@hive.dev") do
   user -> Accounts.update_user_role(user, :admin)
 end
 
-feature_requests = [
-  {
-    "maya@example.com",
-    %{
+forage_items = [
+  %{
+    email: "maya@example.com",
+    attrs: %{
+      "type" => "feature_request",
       "title" => "Import feature requests from GitHub Discussions",
       "description" =>
         "Let maintainers connect a GitHub Discussions category so public ideas can flow into Forage without copying them by hand."
     }
   },
-  {
-    "jon@example.com",
-    %{
-      "title" => "Group forage by source and priority",
+  %{
+    email: "jon@example.com",
+    legacy_titles: ["Group forage by source and priority"],
+    attrs: %{
+      "type" => "bug_report",
+      "title" => "Filter forage by type, source, and status",
       "description" =>
-        "Show feature requests, bug reports, and alerts in one place while still making it easy to filter the list by source and urgency."
+        "The unified Forage queue needs stable filters so reviewers can scan feature requests, bug reports, feedback, GitHub issues, and Grafana alerts without jumping between source pages."
     }
   },
-  {
-    "priya@example.com",
-    %{
+  %{
+    email: "priya@example.com",
+    attrs: %{
+      "type" => "feature_request",
       "title" => "Let users subscribe to feature request updates",
       "description" =>
         "Allow authenticated requesters to follow a feature request and receive updates when its status changes."
     }
   },
-  {
-    "sam@example.com",
-    %{
-      "title" => "Capture affected organization on public requests",
+  %{
+    email: "sam@example.com",
+    legacy_titles: ["Capture affected organization on public requests"],
+    attrs: %{
+      "type" => "feedback",
+      "title" => "Capture affected organization on public feedback",
       "description" =>
-        "When a signed-in user belongs to an organization, attach that organization to the request so the team can understand who is asking."
+        "When a signed-in user belongs to an organization, attach that organization to the forage item so the team can understand who is asking."
     }
   }
 ]
 
-Enum.each(feature_requests, fn {email, attrs} ->
-  exists? =
+Enum.each(forage_items, fn seed ->
+  attrs = seed.attrs
+  titles = [attrs["title"] | Map.get(seed, :legacy_titles, [])]
+
+  existing_item =
     FeatureRequest
-    |> where([feature_request], feature_request.title == ^attrs["title"])
-    |> Repo.exists?()
+    |> where([feature_request], feature_request.title in ^titles)
+    |> Repo.all()
+    |> List.first()
 
-  unless exists? do
-    user =
-      Accounts.get_user_by_email(email) ||
-        Accounts.upsert_from_auth(%{
-          email: email,
-          provider: "seed",
-          provider_uid: email
-        })
-        |> then(fn {:ok, user} -> user end)
+  user =
+    Accounts.get_user_by_email(seed.email) ||
+      Accounts.upsert_from_auth(%{
+        email: seed.email,
+        provider: "seed",
+        provider_uid: seed.email
+      })
+      |> then(fn {:ok, user} -> user end)
 
-    {:ok, _feature_request} = Forage.create_feature_request(attrs, user)
+  case existing_item do
+    nil ->
+      {:ok, _item} = Forage.create_forage_item(attrs, user)
+
+    item ->
+      item
+      |> FeatureRequest.changeset(attrs)
+      |> Ecto.Changeset.put_change(:user_id, user.id)
+      |> Repo.update()
   end
 end)
 
@@ -147,15 +164,15 @@ github_issue_fixtures = [
    [
      %{
        number: 101,
-       title: "Surface forage source counts in the sidebar",
+       title: "Surface unified forage counts on the Forage page",
        body:
-         "Show the number of open feature requests, bug reports, and GitHub issues per source so reviewers can scan workload without opening every page."
+         "Show the number of open feature requests, bug reports, GitHub issues, and Grafana alerts in the Forage header so reviewers can scan workload without opening separate pages."
      },
      %{
        number: 102,
-       title: "Allow specs to link multiple forage sources",
+       title: "Allow specs to link multiple forage items",
        body:
-         "A single spec can be driven by both a feature request and a bug report. Today only one source can be attached. Capture all of them on the spec detail page."
+         "A single spec can be driven by both a feature request and a bug report. Today only one manual forage item can be attached. Capture all of them on the spec detail page."
      },
      %{
        number: 103,
@@ -269,22 +286,24 @@ specs = [
   },
   %{
     author: "jon@example.com",
-    source_title: "Group forage by source and priority",
+    source_title: "Filter forage by type, source, and status",
+    legacy_titles: ["Forage source and priority grouping"],
     meadow_names: ["Hive", "Noora"],
     attrs: %{
-      "title" => "Forage source and priority grouping",
+      "title" => "Forage type, source, and status filters",
       "summary" =>
-        "Group incoming forage by source and urgency without making every alert become a spec.",
+        "Filter incoming forage by type, source, status, meadow, and repository from one queue.",
       "visibility" => "private",
       "body" => """
-      Add lightweight grouping to Forage so reviewers can scan incoming work by source and urgency without losing the current source-specific pages.
+      Add lightweight filtering to the unified Forage queue so reviewers can scan incoming work by type, source, status, meadow, and repository without jumping between pages.
 
-      The first version should keep the sidebar simple and make prioritization visible in the list rows. Alerts can remain operational forage that does not require a spec unless a member explicitly promotes one.
+      The first version should keep the sidebar simple and make the item type, source, and status visible in each row. Alerts remain operational forage that only organization members can see.
 
       Acceptance criteria:
-      - Forage rows show their source and priority.
-      - The feature request page keeps its existing stats.
-      - Grafana alerts can stay outside the spec workflow by default.
+      - Forage rows show their type, source, status, and meadow context.
+      - Filter chips, search, and pagination work from `/forage`.
+      - Legacy source URLs land on the matching filtered Forage view.
+      - Grafana alerts remain hidden from anonymous visitors.
       """,
       "status" => "draft"
     },
@@ -421,19 +440,19 @@ specs = [
     attrs: %{
       "title" => "Auto-generate specs from forage with an LLM",
       "summary" =>
-        "Convert feature requests into draft specs automatically using an LLM that fills in the proposal template.",
+        "Convert planned forage items into draft specs automatically using an LLM that fills in the proposal template.",
       "body" => """
       # Proposal
 
-      When a feature request is marked `planned`, trigger an LLM to draft a spec body from the request title and description, plus relevant context from the linked meadow. The draft is saved as a `draft` spec for a human to refine.
+      When a manual forage item is marked `planned`, trigger an LLM to draft a spec body from the item title and description, plus relevant context from the linked meadow. The draft is saved as a `draft` spec for a human to refine.
 
       ## Sketch
 
       ```elixir
-      def draft_spec_from_request(%FeatureRequest{} = request) do
-        prompt = build_prompt(request)
+      def draft_spec_from_item(item) do
+        prompt = build_prompt(item)
         {:ok, body} = LLM.complete(prompt, model: "claude-opus-4-8")
-        Specs.create_spec(%{"title" => request.title, "body" => body, "status" => "draft"}, system_user())
+        Specs.create_spec(%{"title" => item.title, "body" => body, "status" => "draft"}, system_user())
       end
       ```
 
@@ -444,7 +463,7 @@ specs = [
 
       Concretely:
 
-      - No baseline for what "good" looks like — every feature request is different.
+      - No baseline for what "good" looks like: every forage item is different.
       - The current spec workflow assumes humans wrote the body, so the revision history would be polluted with LLM regenerations.
       - We don't have an LLM client wired into Hive yet; building one for this use case is premature.
 
@@ -508,7 +527,13 @@ Enum.each(specs, fn seed ->
         seed.attrs
 
       source_title ->
-        feature_request = Repo.get_by!(FeatureRequest, title: source_title)
+        feature_request =
+          FeatureRequest
+          |> where([feature_request], feature_request.title == ^source_title)
+          |> Repo.all()
+          |> List.first() ||
+            raise "missing seeded forage item titled #{inspect(source_title)}"
+
         Map.put(seed.attrs, "source_feature_request_id", feature_request.id)
     end
     |> Map.put_new("visibility", "public")
@@ -519,8 +544,10 @@ Enum.each(specs, fn seed ->
       |> Enum.map(fn name -> Repo.get_by!(Meadow, name: name).id end)
     )
 
+  spec_titles = [seed.attrs["title"] | Map.get(seed, :legacy_titles, [])]
+
   spec =
-    case Repo.get_by(Spec, title: seed.attrs["title"]) do
+    case Spec |> where([spec], spec.title in ^spec_titles) |> Repo.all() |> List.first() do
       nil ->
         {:ok, spec} = Specs.create_spec(attrs, user)
         spec
@@ -751,11 +778,30 @@ Enum.each(demo_actors, fn {email, {name, _role}} ->
   end
 end)
 
-demo_spec = Repo.get_by(Spec, title: "Forage source and priority grouping")
+get_by_title = fn schema, titles ->
+  titles = List.wrap(titles)
+
+  schema
+  |> where([record], record.title in ^titles)
+  |> Repo.all()
+  |> List.first()
+end
+
+demo_spec =
+  get_by_title.(Spec, [
+    "Forage type, source, and status filters",
+    "Forage source and priority grouping"
+  ])
+
 demo_other_spec = Repo.get_by(Spec, title: "GitHub Discussions forage import")
 demo_meadow = Repo.get_by(Meadow, name: "Hive")
 demo_tuist_meadow = Repo.get_by(Meadow, name: "Tuist")
-demo_feature_request = Repo.get_by(FeatureRequest, title: "Group forage by source and priority")
+
+demo_feature_request =
+  get_by_title.(FeatureRequest, [
+    "Filter forage by type, source, and status",
+    "Group forage by source and priority"
+  ])
 
 now = DateTime.utc_now() |> DateTime.truncate(:second)
 minutes_ago = fn n -> DateTime.add(now, -n * 60, :second) end
@@ -822,12 +868,13 @@ audit_seed_entries = [
   },
   %{
     key: "audit-seed-6",
-    action: "feature_request.created",
+    action: "forage.item_created",
     interface: "dashboard",
     actor: "jon@example.com",
     target_type: "feature_request",
     target_id: demo_feature_request && demo_feature_request.id,
     target_label: demo_feature_request && demo_feature_request.title,
+    metadata: %{"type" => "bug_report"},
     occurred_at: minutes_ago.(90)
   },
   %{
@@ -846,7 +893,7 @@ audit_seed_entries = [
     interface: "worker",
     target_type: "github_issue",
     target_id: "101",
-    target_label: "Surface forage source counts in the sidebar",
+    target_label: "Surface unified forage counts on the Forage page",
     metadata: %{"repository" => "tuist/hive", "count" => 3},
     occurred_at: minutes_ago.(180)
   },
@@ -908,13 +955,13 @@ audit_seed_entries = [
   },
   %{
     key: "audit-seed-14",
-    action: "feature_request.summarized",
+    action: "forage.item_summarized",
     interface: "worker",
     agent: %{name: "ForageSummarizerAgent", model: "openai:gpt-4o-mini"},
     target_type: "feature_request",
     target_id: demo_feature_request && demo_feature_request.id,
     target_label: demo_feature_request && demo_feature_request.title,
-    metadata: %{"summary_chars" => 412},
+    metadata: %{"summary_chars" => 412, "type" => "bug_report"},
     occurred_at: minutes_ago.(210)
   }
 ]

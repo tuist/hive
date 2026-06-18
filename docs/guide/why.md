@@ -18,9 +18,9 @@ work in one place:
 
 - **Specs** capture intent, decisions, and the surface area of a piece
   of work in a form both humans and agents can read.
-- **Forage** ingests operational signals such as Grafana alerts and
-  threads them per meadow, so the same view that holds the plan also
-  holds the operational reality.
+- **Forage** brings feature requests, bug reports, feedback, GitHub
+  issues, and Grafana alerts into one triage queue, scoped to the
+  meadows each viewer can see.
 
 The goal is a small, opinionated surface that a team can adopt without
 adopting an entire methodology.

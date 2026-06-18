@@ -23,6 +23,36 @@ defmodule HiveWeb.FeedControllerTest do
     member
   end
 
+  describe "GET /forage/atom.xml" do
+    test "renders an Atom feed listing visible forage items", %{conn: conn} do
+      author = user("alice@example.com")
+
+      {:ok, _request} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Dark mode",
+            "description" => "Add a dark theme."
+          },
+          author
+        )
+
+      conn = get(conn, ~p"/forage/atom.xml")
+
+      assert response_content_type(conn, :xml) =~ "application/atom+xml"
+      body = response(conn, 200)
+
+      assert body =~ ~s(<?xml version="1.0" encoding="UTF-8"?>)
+      assert body =~ ~s(<feed xmlns="http://www.w3.org/2005/Atom">)
+      assert body =~ "<title>Hive · Forage</title>"
+      assert body =~ "/forage/atom.xml"
+      assert body =~ "<entry>"
+      assert body =~ "<title>Feedback: Dark mode</title>"
+      assert body =~ "<summary>Add a dark theme.</summary>"
+      assert body =~ "<name>alice@example.com</name>"
+    end
+  end
+
   describe "GET /forage/feature-requests/atom.xml" do
     test "renders an Atom feed listing public feature requests", %{conn: conn} do
       author = user("alice@example.com")
@@ -233,14 +263,14 @@ defmodule HiveWeb.FeedControllerTest do
   end
 
   describe "feed discovery and dropdown" do
-    test "feature-requests page advertises both Atom and RSS feeds", %{conn: conn} do
-      body = conn |> get(~p"/forage/feature-requests") |> html_response(200)
+    test "forage page advertises both Atom and RSS feeds", %{conn: conn} do
+      body = conn |> get(~p"/forage") |> html_response(200)
 
       assert body =~
-               ~s(rel="alternate" type="application/atom+xml" title="Hive · Feature requests" href="/forage/feature-requests/atom.xml")
+               ~s(rel="alternate" type="application/atom+xml" title="Hive · Forage" href="/forage/atom.xml")
 
       assert body =~
-               ~s(rel="alternate" type="application/rss+xml" title="Hive · Feature requests" href="/forage/feature-requests/rss.xml")
+               ~s(rel="alternate" type="application/rss+xml" title="Hive · Forage" href="/forage/rss.xml")
     end
 
     test "specs index advertises both Atom and RSS feeds", %{conn: conn} do
@@ -253,12 +283,12 @@ defmodule HiveWeb.FeedControllerTest do
                ~s(rel="alternate" type="application/rss+xml" title="Hive · Specs" href="/specs/rss.xml")
     end
 
-    test "feature-requests page renders the feeds dropdown with both links", %{conn: conn} do
-      body = conn |> get(~p"/forage/feature-requests") |> html_response(200)
+    test "forage page renders the feeds dropdown with both links", %{conn: conn} do
+      body = conn |> get(~p"/forage") |> html_response(200)
 
-      assert body =~ ~s(id="forage-feature_requests-feeds-dropdown")
-      assert body =~ "/forage/feature-requests/atom.xml"
-      assert body =~ "/forage/feature-requests/rss.xml"
+      assert body =~ ~s(id="forage-feeds-dropdown")
+      assert body =~ "/forage/atom.xml"
+      assert body =~ "/forage/rss.xml"
     end
 
     test "specs index renders the feeds dropdown with both links", %{conn: conn} do

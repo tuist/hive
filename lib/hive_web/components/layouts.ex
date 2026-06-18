@@ -149,25 +149,12 @@ defmodule HiveWeb.Layouts do
             href={~p"/meadows"}
             selected={String.starts_with?(@current_path, ~p"/meadows")}
           />
-          <details data-part="forage-sources" open>
-            <summary data-part="trigger">
-              <.tab_menu_vertical label="Forage">
-                <:icon_left><.icon name="rss" /></:icon_left>
-                <:icon_right>
-                  <span data-part="indicator"><.chevron_down /></span>
-                </:icon_right>
-              </.tab_menu_vertical>
-            </summary>
-            <div data-part="content">
-              <.sidebar_item
-                :for={source <- @forage_sources}
-                label={source.label}
-                icon={source.icon}
-                href={source.path}
-                selected={String.starts_with?(@current_path, source.path)}
-              />
-            </div>
-          </details>
+          <.sidebar_item
+            label="Forage"
+            icon="rss"
+            href={~p"/forage"}
+            selected={String.starts_with?(@current_path, ~p"/forage")}
+          />
           <.sidebar_item
             label="Specs"
             icon="file_text"

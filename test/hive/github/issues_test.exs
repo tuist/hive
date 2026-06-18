@@ -86,4 +86,56 @@ defmodule Hive.GitHub.IssuesTest do
                )
     end
   end
+
+  describe "list_comments/3" do
+    test "fetches issue comments" do
+      request = fn request ->
+        assert request[:method] == :get
+
+        assert request[:url] ==
+                 "https://api.github.test/repos/tuist/hive/issues/42/comments" <>
+                   "?per_page=100&page=1"
+
+        {:ok,
+         %{
+           status: 200,
+           body: [
+             %{
+               "id" => 1,
+               "body" => "Looks useful.",
+               "html_url" => "https://github.com/tuist/hive/issues/42#issuecomment-1",
+               "user" => %{"login" => "octo", "avatar_url" => "https://avatar/octo"},
+               "created_at" => "2026-06-01T00:00:00Z",
+               "updated_at" => "2026-06-01T00:00:00Z"
+             }
+           ]
+         }}
+      end
+
+      assert {:ok, [comment]} =
+               Issues.list_comments(repository(), 42,
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+
+      assert comment.id == 1
+      assert comment.body == "Looks useful."
+      assert comment.user_login == "octo"
+      assert comment.user_avatar_url == "https://avatar/octo"
+    end
+
+    test "returns GitHub API errors for comments" do
+      request = fn _request ->
+        {:ok, %{status: 404, body: %{"message" => "Not Found"}}}
+      end
+
+      assert {:error, {:unexpected_status, 404, %{"message" => "Not Found"}}} =
+               Issues.list_comments(repository(), 42,
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+    end
+  end
 end

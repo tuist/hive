@@ -5,6 +5,8 @@ defmodule Hive.ForageTest do
   alias Hive.Accounts
   alias Hive.Auth
   alias Hive.Forage
+  alias Hive.Forage.GitHubIssue
+  alias Hive.GitHub.Issues
   alias Hive.Meadows
 
   defp user(attrs \\ %{}) do
@@ -184,6 +186,7 @@ defmodule Hive.ForageTest do
         )
 
       assert feature_request.user_id == user.id
+      assert feature_request.type == :feature_request
       assert feature_request.visibility == :public
       assert feature_request.status == :open
     end
@@ -191,6 +194,181 @@ defmodule Hive.ForageTest do
     test "returns an error changeset for invalid attributes" do
       assert {:error, %Ecto.Changeset{valid?: false}} =
                Forage.create_feature_request(%{"title" => "", "description" => "short"}, user())
+    end
+  end
+
+  describe "create_forage_item/2" do
+    test "stores the selected manual forage item type" do
+      user = user()
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "bug_report",
+            "title" => "Crash on launch",
+            "description" => "The dashboard crashes during launch."
+          },
+          user
+        )
+
+      assert item.type == :bug_report
+      assert item.user_id == user.id
+      assert item.status == :open
+    end
+  end
+
+  describe "update_forage_item/3" do
+    test "allows the submitting user to update their manual item" do
+      user = user()
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "bug_report",
+            "title" => "Crash on launch",
+            "description" => "The dashboard crashes during launch."
+          },
+          user
+        )
+
+      assert {:ok, item} =
+               Forage.update_forage_item(
+                 item,
+                 %{
+                   "type" => "feedback",
+                   "title" => "Launch flow is confusing",
+                   "description" => "The dashboard launch flow needs clearer feedback."
+                 },
+                 user
+               )
+
+      assert item.type == :feedback
+      assert item.title == "Launch flow is confusing"
+    end
+
+    test "rejects updates from other users" do
+      author = user_with_email("forage-author")
+      other_user = user_with_email("forage-other")
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "bug_report",
+            "title" => "Crash on launch",
+            "description" => "The dashboard crashes during launch."
+          },
+          author
+        )
+
+      assert Forage.update_forage_item(
+               item,
+               %{"title" => "Hijacked", "description" => "This should not land."},
+               other_user
+             ) == {:error, :unauthorized}
+    end
+  end
+
+  describe "forage item comments" do
+    test "fetches GitHub issue comments on demand without syncing them" do
+      meadow = meadow_with_repo!([])
+      repository = hd(meadow.github_repositories)
+
+      Forage.reconcile_repository_github_issues(repository, [
+        %{number: 42, title: "Crash on launch", body: "Detail"}
+      ])
+
+      issue = Repo.get_by!(GitHubIssue, github_repository_id: repository.id, number: 42)
+
+      expect(Issues, :list_comments, fn fetched_repository, 42, [] ->
+        assert fetched_repository.id == repository.id
+
+        {:ok,
+         [
+           %Issues.Comment{
+             id: 1,
+             body: "I can reproduce this from GitHub.",
+             html_url: "https://github.com/owner/repo/issues/42#issuecomment-1",
+             user_login: "octo",
+             user_avatar_url: "https://avatar/octo",
+             created_at: "2026-06-01T00:00:00Z"
+           }
+         ]}
+      end)
+
+      assert {:ok, selected} =
+               Forage.get_item_for_user("github_issue:#{issue.id}", nil,
+                 fetch_github_comments?: true
+               )
+
+      assert [
+               %Issues.Comment{
+                 body: "I can reproduce this from GitHub.",
+                 user_login: "octo"
+               }
+             ] = selected.comments
+
+      assert Repo.aggregate(Forage.Comment, :count) == 0
+    end
+
+    test "adds and returns comments for manual forage items" do
+      user = user()
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feature_request",
+            "title" => "GitHub discussions import",
+            "description" => "Import public GitHub discussions into forage."
+          },
+          user
+        )
+
+      assert {:ok, comment} = Forage.add_comment(item, %{"body" => "Worth doing."}, user)
+      assert comment.user_id == user.id
+
+      assert {:ok, selected} = Forage.get_item_for_user("manual:#{item.id}", nil)
+      assert [%{body: "Worth doing.", user: %{email: "alice@example.com"}}] = selected.comments
+    end
+
+    test "lets comment authors update their comments" do
+      user = user()
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Helpful dashboard",
+            "description" => "The dashboard makes prioritization much clearer."
+          },
+          user
+        )
+
+      {:ok, comment} = Forage.add_comment(item, %{"body" => "Initial note."}, user)
+
+      assert {:ok, comment} =
+               Forage.update_comment(comment, %{"body" => "Updated note."}, user)
+
+      assert comment.body == "Updated note."
+    end
+
+    test "rejects comment updates from other users" do
+      author = user_with_email("forage-comment-author")
+      other_user = user_with_email("forage-comment-other")
+
+      {:ok, item} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Helpful dashboard",
+            "description" => "The dashboard makes prioritization much clearer."
+          },
+          author
+        )
+
+      {:ok, comment} = Forage.add_comment(item, %{"body" => "Initial note."}, author)
+
+      assert Forage.update_comment(comment, %{"body" => "Hijacked."}, other_user) ==
+               {:error, :unauthorized}
     end
   end
 
@@ -207,6 +385,46 @@ defmodule Hive.ForageTest do
       assert [feature_request] = Forage.list_feature_requests()
       assert feature_request.user.id == user.id
       assert feature_request.user.email == "alice@example.com"
+    end
+
+    test "only returns feature request typed manual items" do
+      user = user()
+
+      {:ok, _feedback} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Great dashboard",
+            "description" => "The dashboard makes planning easier."
+          },
+          user
+        )
+
+      assert Forage.list_feature_requests() == []
+    end
+  end
+
+  describe "list_forage_items_for_user/2" do
+    test "returns manual items in the unified read model" do
+      user = user()
+
+      {:ok, _feedback} =
+        Forage.create_forage_item(
+          %{
+            "type" => "feedback",
+            "title" => "Great dashboard",
+            "description" => "The dashboard makes planning easier."
+          },
+          user
+        )
+
+      assert {[item], %{total_count: 1}} =
+               Forage.list_forage_items_for_user(nil, type: :feedback)
+
+      assert item.type == :feedback
+      assert item.title == "Great dashboard"
+      assert item.source_label == "Hive"
+      assert item.external_label == user.email
     end
   end
 end

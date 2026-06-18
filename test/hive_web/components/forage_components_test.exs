@@ -55,18 +55,19 @@ defmodule HiveWeb.ForageComponentsTest do
     end
   end
 
-  describe "new_feature_request/1" do
-    test "renders the request form" do
-      form = to_form(Forage.change_feature_request(), as: :feature_request)
+  describe "new_item/1" do
+    test "renders the item form" do
+      form = to_form(Forage.change_forage_item(), as: :forage_item)
       assigns = %{form: form}
 
       html =
         rendered_to_string(~H"""
-        <ForageComponents.new_feature_request form={@form} user_name="alice@example.com" />
+        <ForageComponents.new_item form={@form} user_name="alice@example.com" />
         """)
 
       assert html =~ "Requesting as"
       assert html =~ "alice@example.com"
+      assert html =~ "Type"
       assert html =~ "Title"
       assert html =~ "Description"
       assert html =~ ~s(phx-submit="save")
