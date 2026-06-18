@@ -16,6 +16,9 @@ defmodule Hive.Specs do
   alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
 
+  @spec_number_lock_namespace 0x48695645
+  @spec_number_lock_key 0x53504353
+
   def can_create?(user), do: Auth.member?(user)
   def can_edit?(_spec, user), do: Auth.member?(user)
   def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
@@ -213,6 +216,7 @@ defmodule Hive.Specs do
            |> Spec.changeset(attrs)
            |> Changeset.put_change(:created_by_user_id, user.id)
            |> Changeset.put_change(:updated_by_user_id, user.id)
+           |> put_next_spec_number()
            |> Repo.insert(),
          {:ok, spec} <- put_meadows(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
@@ -220,6 +224,24 @@ defmodule Hive.Specs do
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  defp put_next_spec_number(%Changeset{valid?: true} = changeset) do
+    lock_specs_for_numbering()
+    Changeset.put_change(changeset, :number, next_spec_number())
+  end
+
+  defp put_next_spec_number(%Changeset{} = changeset), do: changeset
+
+  defp lock_specs_for_numbering do
+    Repo.query!(
+      "SELECT pg_advisory_xact_lock($1::integer, $2::integer)",
+      [@spec_number_lock_namespace, @spec_number_lock_key]
+    )
+  end
+
+  defp next_spec_number do
+    Repo.one!(from(spec in Spec, select: fragment("COALESCE(MAX(?), 0) + 1", spec.number)))
   end
 
   defp update_spec_transaction(spec, attrs, user) do
