@@ -50,6 +50,29 @@ defmodule HiveWeb.AuthControllerTest do
     assert response =~ ~s|href="/auth/oidc"|
   end
 
+  test "GET /login stores a local return path for the next sign in", %{conn: conn} do
+    stub(Auth, :private?, fn -> true end)
+
+    stub(Auth, :providers, fn ->
+      [github: %{display_name: "GitHub", allowed_domains: []}]
+    end)
+
+    conn = get(conn, ~p"/login?return_to=/ops/slack")
+
+    assert html_response(conn, 200) =~ "Continue with GitHub"
+    assert get_session(conn, :user_return_to) == "/ops/slack"
+  end
+
+  test "GET /login ignores external return paths", %{conn: conn} do
+    stub(Auth, :private?, fn -> true end)
+    stub(Auth, :providers, fn -> [] end)
+
+    conn = get(conn, ~p"/login?return_to=https://example.com")
+
+    assert html_response(conn, 200) =~ "No identity provider is configured"
+    refute get_session(conn, :user_return_to)
+  end
+
   test "GET /login renders a GitHub button when GitHub is configured", %{conn: conn} do
     stub(Auth, :private?, fn -> true end)
 

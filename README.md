@@ -31,9 +31,9 @@ When an LLM is configured, Hive can continuously evolve its meadows from
 new forage items and specs, keeping the taxonomy aligned with durable
 Tuist business domains instead of one-off tickets or vague buckets.
 
-Hive can also connect Slack workspaces so organization members can turn
-Slack messages into forage items and receive bot replies in Slack
-threads.
+Hive can also connect Slack workspaces. Instance admins manage workspace
+installs, and signed-in users can turn Slack messages into forage items
+or receive bot replies in Slack threads.
 
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
@@ -87,7 +87,8 @@ URLs:
 For Tuist's instance, replace `<your-hive-host>` with `hive.tuist.dev`.
 To install the same app in workspaces beyond the app's development
 workspace, enable Slack Public Distribution. App Directory submission is
-not required for private install links.
+not required for private install links. Instance admins manage workspace
+installs from `/ops/slack`.
 
 ## Documentation
 

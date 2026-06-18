@@ -5,6 +5,7 @@ defmodule HiveWeb.OpenGraphTest do
   alias HiveWeb.AccountLive
   alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
+  alias HiveWeb.OpsLive
   alias HiveWeb.PageHTML
 
   defmodule EnabledStorage do
@@ -66,6 +67,7 @@ defmodule HiveWeb.OpenGraphTest do
     page_data = [
       PageHTML.open_graph(),
       AccountLive.Identities.open_graph(),
+      OpsLive.Slack.open_graph(),
       ForageLive.Index.open_graph(%{total: 3, open: 2, meadows: 1}),
       ForageLive.FeatureRequests.open_graph(feature_requests),
       ForageLive.NewFeatureRequest.open_graph()

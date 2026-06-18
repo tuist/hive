@@ -168,6 +168,13 @@ defmodule HiveWeb.Layouts do
             href={~p"/audit"}
             selected={String.starts_with?(@current_path, ~p"/audit")}
           />
+          <.sidebar_item
+            :if={@admin?}
+            label="Ops"
+            icon="brand_slack"
+            href={~p"/ops/slack"}
+            selected={String.starts_with?(@current_path, "/ops")}
+          />
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}
@@ -206,11 +213,43 @@ defmodule HiveWeb.Layouts do
             href={~p"/account/identities"}
             selected={String.starts_with?(@current_path, ~p"/account/identities")}
           />
+        </.sidebar>
+        <section data-part="content">
+          {render_slot(@inner_block)}
+        </section>
+      </section>
+    </main>
+    """
+  end
+
+  attr :product_name, :string, required: true
+  attr :user_name, :string, required: true
+  attr :user_email, :string, default: nil
+  attr :avatar_color, :string, required: true
+  attr :signed_in?, :boolean, default: false
+  attr :csrf_token, :string, required: true
+  attr :current_path, :string, default: "/"
+  slot :inner_block, required: true
+
+  def ops(assigns) do
+    ~H"""
+    <main class="layout">
+      <.headerbar
+        product_name={@product_name}
+        user_name={@user_name}
+        user_email={@user_email}
+        avatar_color={@avatar_color}
+        signed_in?={@signed_in?}
+        csrf_token={@csrf_token}
+      />
+      <.line_divider />
+      <section data-part="main">
+        <.sidebar>
           <.sidebar_item
             label="Slack"
             icon="brand_slack"
-            href={~p"/account/slack"}
-            selected={String.starts_with?(@current_path, ~p"/account/slack")}
+            href={~p"/ops/slack"}
+            selected={String.starts_with?(@current_path, ~p"/ops/slack")}
           />
         </.sidebar>
         <section data-part="content">
