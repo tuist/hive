@@ -486,7 +486,7 @@ defmodule HiveWeb.MeadowComponents do
         </:col>
         <:empty_state>
           <.table_empty_state
-            icon="bell"
+            icon="webhook"
             title="No webhooks yet"
             subtitle="Use New webhook to generate one."
           />
