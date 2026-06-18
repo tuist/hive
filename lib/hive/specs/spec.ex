@@ -11,7 +11,7 @@ defmodule Hive.Specs.Spec do
   @visibilities [:public, :private]
 
   schema "specs" do
-    field :number, :integer, read_after_writes: true
+    field :number, :integer
     field :title, :string
     field :body, :string
     field :summary, :string
@@ -56,6 +56,7 @@ defmodule Hive.Specs.Spec do
     |> validate_length(:body, min: 10, max: 20_000)
     |> validate_inclusion(:status, @statuses)
     |> validate_inclusion(:visibility, @visibilities)
+    |> unique_constraint(:number)
     |> validate_change(:summary, fn
       :summary, summary when is_binary(summary) ->
         if String.contains?(summary, "—"),

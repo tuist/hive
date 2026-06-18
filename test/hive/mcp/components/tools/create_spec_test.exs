@@ -7,12 +7,10 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
     user = mcp_user()
 
     response =
-      CreateSpec.call(mcp_conn(user), %{
-        "title" => "GitHub sign-in",
+      create_spec(user, "GitHub sign-in", %{
         "body" => "Add GitHub sign-in for requesters.",
         "summary" => "Let requesters authenticate with GitHub."
       })
-      |> response_json()
 
     assert %{"spec" => %{"number" => number, "revision" => 1}} = response
     assert is_integer(number)
@@ -22,5 +20,43 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
 
     assert [%{"revision" => 1, "title" => "GitHub sign-in"}] =
              response["spec"]["revisions"]
+  end
+
+  test "does not skip numbers when a create rolls back after inserting the spec" do
+    user = mcp_user("numbers@example.com")
+    first = create_spec(user, "First spec")
+
+    invalid_response =
+      CreateSpec.call(mcp_conn(user), %{
+        "title" => "Invalid meadow spec",
+        "body" => "This create reaches meadow association before failing.",
+        "meadow_ids" => [Ecto.UUID.generate()]
+      })
+      |> response_json()
+
+    assert %{
+             "error" => "invalid",
+             "details" => %{"meadow_ids" => ["contains unknown meadows"]}
+           } = invalid_response
+
+    second = create_spec(user, "Second spec")
+
+    assert second["spec"]["number"] == first["spec"]["number"] + 1
+  end
+
+  defp create_spec(user, title, attrs \\ %{}) do
+    attrs =
+      Map.merge(
+        %{
+          "title" => title,
+          "body" => "This spec has enough body text."
+        },
+        attrs
+      )
+
+    user
+    |> mcp_conn()
+    |> CreateSpec.call(attrs)
+    |> response_json()
   end
 end
