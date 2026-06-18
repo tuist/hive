@@ -177,7 +177,5 @@ the preview back via `chat.unfurl`. Supported surfaces:
   status. Manual items, GitHub issues, and Grafana alerts all unfurl
   through the same surface.
 
-Previews follow the same visibility rules as anonymous dashboard
-access. Private specs, private meadows, organization-only forage items,
-and Grafana alerts on private deployments are skipped: Slack just
-shows the bare link.
+Only public resources are unfurled. Anything that requires a session
+to view on the dashboard stays opaque, and Slack shows the bare link.
