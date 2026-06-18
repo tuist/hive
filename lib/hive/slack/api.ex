@@ -27,6 +27,13 @@ defmodule Hive.Slack.API do
   def update_message(installation, params), do: post(installation, "chat.update", params)
 
   @doc """
+  Attaches unfurl previews to a message via `chat.unfurl`. `params`
+  must include `"channel"`, `"ts"`, and an `"unfurls"` map keyed by
+  the URLs being unfurled.
+  """
+  def unfurl(installation, params), do: post(installation, "chat.unfurl", params)
+
+  @doc """
   Fetches a single channel's info via `conversations.info`.
   """
   def get_channel(installation, slack_channel_id) when is_binary(slack_channel_id),

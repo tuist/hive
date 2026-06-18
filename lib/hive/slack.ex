@@ -35,6 +35,8 @@ defmodule Hive.Slack do
     "groups:read",
     "im:history",
     "im:read",
+    "links:read",
+    "links:write",
     "mpim:history",
     "mpim:read",
     "users:read",

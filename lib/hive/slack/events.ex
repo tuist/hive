@@ -10,6 +10,7 @@ defmodule Hive.Slack.Events do
   alias Hive.Slack
   alias Hive.Slack.Installation
   alias Hive.Slack.Workers.RespondToConversation
+  alias Hive.Slack.Workers.UnfurlLinks
 
   @doc """
   Handles a verified Events API envelope for a known installation.
@@ -60,6 +61,18 @@ defmodule Hive.Slack.Events do
         _ -> :ok
       end
     end
+  end
+
+  defp handle_event(%{"type" => "link_shared"} = event, installation) do
+    channel = event["channel"]
+    message_ts = event["message_ts"]
+    urls = event |> Map.get("links", []) |> Enum.map(& &1["url"]) |> Enum.filter(&is_binary/1)
+
+    if is_binary(channel) and is_binary(message_ts) and urls != [] do
+      _ = UnfurlLinks.enqueue(installation.id, channel, message_ts, urls)
+    end
+
+    :ok
   end
 
   defp handle_event(event, _installation) do

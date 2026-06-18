@@ -9,6 +9,7 @@ defmodule Hive.Slack.EventsTest do
   alias Hive.Slack.Installation
   alias Hive.Slack.Message
   alias Hive.Slack.Workers.RespondToConversation
+  alias Hive.Slack.Workers.UnfurlLinks
 
   defp installation! do
     suffix = System.unique_integer([:positive])
@@ -90,6 +91,49 @@ defmodule Hive.Slack.EventsTest do
 
     assert :ok = Events.handle(envelope(event, installation.team_id), installation)
     assert Repo.all(Message) == []
+  end
+
+  test "link_shared events enqueue UnfurlLinks with the URLs Slack reports" do
+    installation = installation!()
+
+    event = %{
+      "type" => "link_shared",
+      "channel" => "C-1",
+      "message_ts" => "100.0",
+      "links" => [
+        %{"url" => "https://hive.example.com/specs/1"},
+        %{"url" => "https://hive.example.com/meadows/abc"}
+      ]
+    }
+
+    assert :ok = Events.handle(envelope(event, installation.team_id), installation)
+
+    assert_enqueued(
+      worker: UnfurlLinks,
+      args: %{
+        "installation_id" => installation.id,
+        "channel" => "C-1",
+        "message_ts" => "100.0",
+        "urls" => [
+          "https://hive.example.com/specs/1",
+          "https://hive.example.com/meadows/abc"
+        ]
+      }
+    )
+  end
+
+  test "link_shared events with no links are accepted without enqueuing" do
+    installation = installation!()
+
+    event = %{
+      "type" => "link_shared",
+      "channel" => "C-1",
+      "message_ts" => "100.0",
+      "links" => []
+    }
+
+    assert :ok = Events.handle(envelope(event, installation.team_id), installation)
+    assert all_enqueued() == []
   end
 
   test "unknown event types are accepted without crashing" do
