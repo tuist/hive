@@ -83,6 +83,8 @@ externalSecrets:
     field: "notesPlain"
 
 postgres:
+  annotations:
+    cnpg.io/skipEmptyWalArchiveCheck: enabled
   storageClass: hcloud-volumes
   backup:
     enabled: true
