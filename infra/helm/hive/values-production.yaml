@@ -32,11 +32,8 @@ env:
   HIVE_OBJECT_STORAGE_PROVIDER: "s3"
   HIVE_S3_FORCE_PATH_STYLE: "true"
   # LLM model identifier in ReqLLM `provider:model_id` form, shared by
-  # every agentic feature. We hit Fireworks directly via the OpenAI-
-  # compatible provider; the endpoint override lives in
-  # `HIVE_LLM_BASE_URL`. The API key is pulled from 1Password below.
-  HIVE_LLM_MODEL: "openai:accounts/fireworks/models/kimi-k2p7-code"
-  HIVE_LLM_BASE_URL: "https://api.fireworks.ai/inference/v1"
+  # every agentic feature. The API key is pulled from 1Password below.
+  HIVE_LLM_MODEL: "fireworks_ai:accounts/fireworks/models/kimi-k2p7-code"
 
 externalSecrets:
   enabled: true
