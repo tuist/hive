@@ -137,6 +137,7 @@ defmodule HiveWeb.Router do
       live "/specs/:number", SpecLive.Show
       live "/specs/:number/edit", SpecLive.Edit
       live "/drops", DropsLive.Index
+      live "/drops/subscribe", DropsLive.Subscribe
       live "/drops/:id", DropsLive.Show
     end
 

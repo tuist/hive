@@ -8,7 +8,6 @@ defmodule HiveWeb.DropsLive.Index do
 
   alias Hive.Drops
   alias Hive.Meadows
-  alias HiveWeb.Endpoint
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
   alias HiveWeb.OpenGraph
@@ -52,7 +51,6 @@ defmodule HiveWeb.DropsLive.Index do
        atom_href: "/drops/atom.xml",
        rss_href: "/drops/rss.xml"
      })
-     |> assign(:subscribe_meadow_ids, MapSet.new())
      |> assign(OpenGraph.assigns(open_graph()))}
   end
 
@@ -122,25 +120,6 @@ defmodule HiveWeb.DropsLive.Index do
      |> push_event("close-popover", %{id: "all", all: true})}
   end
 
-  def handle_event("toggle_subscribe_meadow", %{"data" => id}, socket) do
-    selected =
-      if MapSet.member?(socket.assigns.subscribe_meadow_ids, id) do
-        MapSet.delete(socket.assigns.subscribe_meadow_ids, id)
-      else
-        MapSet.put(socket.assigns.subscribe_meadow_ids, id)
-      end
-
-    {:noreply, assign(socket, :subscribe_meadow_ids, selected)}
-  end
-
-  def handle_event("clear_subscribe_meadows", _params, socket) do
-    {:noreply, assign(socket, :subscribe_meadow_ids, MapSet.new())}
-  end
-
-  def handle_event("close_subscribe", _params, socket) do
-    {:noreply, push_event(socket, "close-modal", %{id: "subscribe-modal"})}
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -164,11 +143,11 @@ defmodule HiveWeb.DropsLive.Index do
             <p>Shipped updates from GitHub releases and changelog feeds across every meadow.</p>
           </div>
           <div data-part="header-actions">
-            <.subscribe_modal
-              meadows={@meadows}
-              selected_ids={@subscribe_meadow_ids}
-              endpoint_url={endpoint_url()}
-            />
+            <.link navigate={~p"/drops/subscribe"}>
+              <.button label="Subscribe" size="medium" variant="secondary">
+                <:icon_left><.icon name="rss" /></:icon_left>
+              </.button>
+            </.link>
           </div>
         </div>
 
@@ -223,6 +202,9 @@ defmodule HiveWeb.DropsLive.Index do
               <:col :let={drop} label="Version">
                 <.text_cell :if={drop.version} label={drop.version} />
                 <.text_cell :if={is_nil(drop.version)} label="—" />
+              </:col>
+              <:col :let={drop} label="Project">
+                <.text_cell label={project_chips(drop.meadows)} />
               </:col>
               <:col :let={drop} label="Meadows">
                 <.text_cell label={meadow_chips(drop.meadows)} />
@@ -402,157 +384,17 @@ defmodule HiveWeb.DropsLive.Index do
   defp meadow_chips(nil), do: "Unclassified"
   defp meadow_chips(meadows), do: Enum.map_join(meadows, ", ", & &1.name)
 
-  defp endpoint_url, do: Endpoint.url()
+  defp project_chips([]), do: "—"
+  defp project_chips(nil), do: "—"
 
-  attr :meadows, :list, required: true
-  attr :selected_ids, MapSet, required: true
-  attr :endpoint_url, :string, required: true
-
-  defp subscribe_modal(assigns) do
-    assigns =
-      assigns
-      |> assign(
-        :atom_url,
-        feed_url(assigns.endpoint_url, "/drops/atom.xml", assigns.selected_ids)
-      )
-      |> assign(
-        :rss_url,
-        feed_url(assigns.endpoint_url, "/drops/rss.xml", assigns.selected_ids)
-      )
-
-    ~H"""
-    <.modal
-      id="subscribe-modal"
-      title="Subscribe to drops"
-      description="Pick the meadows you want updates from. Leave empty to subscribe to every meadow."
-      header_type="icon"
-      header_size="large"
-      on_dismiss="close_subscribe"
-    >
-      <:trigger :let={attrs}>
-        <.button label="Subscribe" size="medium" variant="secondary" {attrs}>
-          <:icon_left><.icon name="rss" /></:icon_left>
-        </.button>
-      </:trigger>
-      <:header_icon>
-        <.icon name="rss" />
-      </:header_icon>
-
-      <div data-part="subscribe-modal-body">
-        <div :if={@meadows == []} data-part="empty-meadows">
-          <p>No meadows yet. Create one to start filtering subscriptions.</p>
-        </div>
-
-        <div :if={@meadows != []} data-part="meadow-picker">
-          <div data-part="picker-row">
-            <span data-part="picker-label">Meadows</span>
-            <div data-part="picker-controls">
-              <.dropdown
-                id="subscribe-meadow-dropdown"
-                size="medium"
-                label={picker_trigger_label(@selected_ids, @meadows)}
-              >
-                <.dropdown_item
-                  :for={meadow <- @meadows}
-                  value={meadow.id}
-                  label={meadow.name}
-                  size="large"
-                  description={meadow.description}
-                  checked={MapSet.member?(@selected_ids, meadow.id)}
-                  on_click="toggle_subscribe_meadow"
-                />
-              </.dropdown>
-              <.button
-                :if={MapSet.size(@selected_ids) > 0}
-                label="Clear"
-                variant="secondary"
-                size="medium"
-                phx-click="clear_subscribe_meadows"
-              />
-            </div>
-          </div>
-        </div>
-
-        <.line_divider />
-
-        <div data-part="feed-urls">
-          <div data-part="feed-url-row">
-            <span data-part="feed-url-label">Atom</span>
-            <div data-part="read-only-value">
-              <code>{@atom_url}</code>
-              <.button
-                id="copy-atom-url"
-                variant="secondary"
-                size="small"
-                icon_only
-                type="button"
-                phx-hook="Clipboard"
-                data-clipboard-value={@atom_url}
-                aria-label="Copy Atom feed URL"
-              >
-                <.icon name="copy" />
-              </.button>
-            </div>
-          </div>
-          <div data-part="feed-url-row">
-            <span data-part="feed-url-label">RSS</span>
-            <div data-part="read-only-value">
-              <code>{@rss_url}</code>
-              <.button
-                id="copy-rss-url"
-                variant="secondary"
-                size="small"
-                icon_only
-                type="button"
-                phx-hook="Clipboard"
-                data-clipboard-value={@rss_url}
-                aria-label="Copy RSS feed URL"
-              >
-                <.icon name="copy" />
-              </.button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <:footer>
-        <.modal_footer>
-          <:action>
-            <.button
-              label="Done"
-              variant="primary"
-              size="medium"
-              type="button"
-              phx-click="close_subscribe"
-            />
-          </:action>
-        </.modal_footer>
-      </:footer>
-    </.modal>
-    """
-  end
-
-  defp picker_trigger_label(selected_ids, meadows) do
-    case MapSet.size(selected_ids) do
-      0 -> "All meadows"
-      1 -> selected_meadow_name(selected_ids, meadows)
-      n -> "#{n} selected"
-    end
-  end
-
-  defp selected_meadow_name(selected_ids, meadows) do
-    [id] = MapSet.to_list(selected_ids)
-
-    case Enum.find(meadows, &(&1.id == id)) do
-      %{name: name} -> name
-      _ -> "1 selected"
-    end
-  end
-
-  defp feed_url(endpoint, path, selected_ids) do
-    case Enum.sort(MapSet.to_list(selected_ids)) do
-      [] -> endpoint <> path
-      ids -> endpoint <> path <> "?meadow_ids=" <> Enum.join(ids, ",")
+  defp project_chips(meadows) do
+    meadows
+    |> Enum.map(fn meadow -> meadow.project && meadow.project.name end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> case do
+      [] -> "—"
+      names -> Enum.join(names, ", ")
     end
   end
 end

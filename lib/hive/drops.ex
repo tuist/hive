@@ -52,7 +52,7 @@ defmodule Hive.Drops do
       |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
       |> limit(^page_size)
       |> offset(^((page - 1) * page_size))
-      |> preload([:meadows, :github_repository, :drop_source])
+      |> preload(meadows: :project, github_repository: [], drop_source: [])
       |> Repo.all()
 
     {entries,
@@ -74,7 +74,7 @@ defmodule Hive.Drops do
     )
     |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
     |> limit(^limit)
-    |> preload([:meadows, :github_repository, :drop_source])
+    |> preload(meadows: :project, github_repository: [], drop_source: [])
     |> Repo.all()
   end
 
