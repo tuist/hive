@@ -51,7 +51,7 @@ Hive currently uses agents for:
   agentic feature is disabled.
 - `HIVE_LLM_MODEL`: the model in `provider:model_id` form, for
   example `anthropic:claude-haiku-4-5` or
-  `openai:accounts/fireworks/models/kimi-k2p5`. Required when
+  `openai:accounts/fireworks/models/kimi-k2p7-code`. Required when
   `HIVE_LLM_API_KEY` is set.
 - `HIVE_LLM_BASE_URL`: optional endpoint override. Use it to point at
   a compatible provider that isn't reachable at its vendor's default
@@ -85,7 +85,7 @@ you point ReqLLM at the OpenAI provider and override the base URL:
 
 ```bash
 HIVE_LLM_API_KEY=fw_...
-HIVE_LLM_MODEL=openai:accounts/fireworks/models/kimi-k2p5
+HIVE_LLM_MODEL=openai:accounts/fireworks/models/kimi-k2p7-code
 HIVE_LLM_BASE_URL=https://api.fireworks.ai/inference/v1
 ```
 

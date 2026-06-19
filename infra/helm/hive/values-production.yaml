@@ -35,7 +35,7 @@ env:
   # every agentic feature. We hit Fireworks directly via the OpenAI-
   # compatible provider; the endpoint override lives in
   # `HIVE_LLM_BASE_URL`. The API key is pulled from 1Password below.
-  HIVE_LLM_MODEL: "openai:accounts/fireworks/models/kimi-k2p5"
+  HIVE_LLM_MODEL: "openai:accounts/fireworks/models/kimi-k2p7-code"
   HIVE_LLM_BASE_URL: "https://api.fireworks.ai/inference/v1"
 
 externalSecrets:
