@@ -77,8 +77,8 @@ URL can go straight into a reader.
 
 ## Managing RSS sources
 
-Admins (users with the `admin` role; see [Audit](./audit)) manage RSS
-sources from `/ops/drops`. From the ops page admins can:
+Admins (users with the `admin` role; see [Authorization](./authorization))
+manage RSS sources from `/ops/drops`. From the ops page admins can:
 
 - Add a new source (URL + optional label).
 - Enable or disable a source. Disabled sources stay in the database

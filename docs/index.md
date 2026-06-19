@@ -3,17 +3,14 @@ layout: home
 
 hero:
   name: "Hive"
-  text: "Agentic meadow orchestration."
-  tagline: Hive is Tuist's home for spec-driven product work, agentic workflows, and the operational signal that surrounds them.
+  text: "Agentic product building."
+  tagline: A hive of bees foraging across the meadows of your product, turning specs into shipped work and shipped work into the signal you follow.
   image:
     src: /logo.png
     alt: Hive
   actions:
     - theme: brand
-      text: Why Hive
-      link: /guide/why
-    - theme: alt
-      text: Self-host
+      text: Get started
       link: /guide/self-hosting/
     - theme: alt
       text: View on GitHub
