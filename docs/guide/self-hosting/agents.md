@@ -42,6 +42,16 @@ Hive currently uses agents for:
   LLM failure recover on the next tick. When no LLM is configured, each
   issue is linked to every meadow attached to its repository, matching
   pre-classification behaviour.
+- Drop release rewriting: when a GitHub release is ingested as a drop,
+  Hive queues a job that asks the agent to rewrite the release notes
+  into a user-facing markdown changelog. The agent resolves any issues
+  and pull requests referenced in the release body so it can describe
+  what changed in product terms without leaking pull-request numbers,
+  contributor handles, or internal labels. Re-runs are skipped while a
+  rewritten body is already on the drop; if the upstream release notes
+  change, the rewrite is invalidated and re-runs on the next sync.
+  When no LLM is configured, drops keep showing the raw release notes
+  unchanged.
 
 ## Configuration
 

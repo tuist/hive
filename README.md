@@ -46,6 +46,24 @@ items, edit the items they created, and comment on manual forage items
 from Hive. GitHub issue items show the issue discussion from GitHub so
 reviewers can read the latest thread without Hive storing a second copy.
 
+## Drops
+
+Drops aggregate shipped updates so people can follow what each meadow
+has actually released. Two sources feed it:
+
+- **GitHub Releases** are ingested automatically from every repository
+  connected to a meadow. No configuration needed beyond connecting the
+  repository.
+- **RSS / Atom changelog feeds** can be registered per meadow from
+  `/ops/drops` (admin only). Hive polls every enabled feed every 15
+  minutes and merges its entries into the drops timeline.
+
+Drops are visible everywhere meadows are: drops from public meadows are
+visible to anyone, drops from private meadows are visible to
+organization members. The `/drops` index supports filtering by meadow
+and source type. Each meadow's drops also surface through the existing
+per-meadow merged feed at `/meadows/:id/atom.xml`.
+
 ## Our instance
 
 Tuist runs the canonical Hive instance at
@@ -70,8 +88,12 @@ version):
 - `/forage/atom.xml` — feature requests, bug reports, feedback, GitHub
   issues, and Grafana alerts visible to the subscriber.
 - `/specs/atom.xml`
-- `/meadows/:id/atom.xml` — the GitHub issues and Grafana alerts that
-  belong to one meadow, merged into a single timeline.
+- `/drops/atom.xml` — shipped updates across every meadow. Add
+  `?meadow_ids=<id>,<id>` to subscribe only to drops from a subset of
+  meadows.
+- `/meadows/:id/atom.xml` — the GitHub issues, Grafana alerts, and
+  drops that belong to one meadow, merged into a single timeline.
+- `/meadows/:id/drops/atom.xml` — only the drops for a single meadow.
 
 ## Slack
 

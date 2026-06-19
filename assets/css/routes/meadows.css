@@ -81,6 +81,46 @@
     gap: var(--noora-spacing-7);
   }
 
+  & [data-part="meadow-readonly"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-5);
+    margin: 0;
+    padding: 0;
+
+    & [data-part="row"] {
+      display: grid;
+      grid-template-columns: minmax(140px, 200px) 1fr;
+      align-items: center;
+      gap: var(--noora-spacing-5);
+
+      @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+        gap: var(--noora-spacing-2);
+      }
+    }
+
+    & dt {
+      margin: 0;
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    }
+
+    & dd {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--noora-spacing-2);
+    }
+
+    & [data-part="repository-cell"] {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--noora-spacing-2);
+    }
+  }
+
   & [data-part="webhooks-card"] {
     display: flex;
     flex-direction: column;

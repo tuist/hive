@@ -1,0 +1,68 @@
+defmodule HiveWeb.DropsLive.ShowTest do
+  use HiveWeb.ConnCase, async: true
+
+  alias Hive.Drops
+  alias Hive.Meadows
+
+  defp unique_meadow_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
+
+  defp insert_drop!(meadow, overrides \\ %{}) do
+    attrs =
+      Map.merge(
+        %{
+          source_type: :github_release,
+          external_id: "tuist/hive@v0.25.0#slack-#{System.unique_integer([:positive])}",
+          title: "Slack workspace management moved to Ops",
+          body:
+            "Admins now manage connected Slack workspaces from the Ops surface at `/ops/slack`.",
+          url: "https://github.com/tuist/hive/releases/tag/v0.25.0",
+          version: "v0.25.0",
+          published_at: ~U[2026-06-18 09:30:00Z]
+        },
+        overrides
+      )
+
+    {:ok, drop} = Drops.upsert_drop(attrs)
+    Drops.replace_drop_meadows(drop, [meadow.id])
+    drop
+  end
+
+  test "renders a drop from a public meadow to anonymous visitors", %{conn: conn} do
+    {:ok, meadow} =
+      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "public"})
+
+    drop = insert_drop!(meadow)
+
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+
+    assert html =~ "Slack workspace management moved to Ops"
+    assert html =~ "v0.25.0"
+    assert html =~ meadow.name
+    assert html =~ "Open original"
+  end
+
+  test "redirects anonymous visitors away from drops in a private meadow", %{conn: conn} do
+    {:ok, meadow} =
+      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "private"})
+
+    drop = insert_drop!(meadow)
+
+    assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.id}")
+  end
+
+  test "shows the version chip when present", %{conn: conn} do
+    {:ok, meadow} =
+      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "public"})
+
+    drop = insert_drop!(meadow, %{version: "v4.7.0"})
+
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+
+    assert html =~ "v4.7.0"
+  end
+
+  test "redirects when the drop does not exist", %{conn: conn} do
+    assert {:error, {:redirect, %{to: "/drops"}}} =
+             live(conn, ~p"/drops/00000000-0000-0000-0000-000000000000")
+  end
+end

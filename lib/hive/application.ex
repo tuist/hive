@@ -20,6 +20,7 @@ defmodule Hive.Application do
         HiveWeb.Endpoint,
         Hive.Forage.GitHubIssueSyncer
       ]
+      |> maybe_add_drops_syncers()
       |> maybe_add_open_graph_browser_pool()
       |> maybe_add_oban()
 
@@ -38,6 +39,14 @@ defmodule Hive.Application do
       List.insert_at(children, -1, HiveWeb.OpenGraph.browser_pool_child_spec())
     else
       children
+    end
+  end
+
+  defp maybe_add_drops_syncers(children) do
+    if Application.get_env(:hive, :drops, [])[:syncers_enabled] == false do
+      children
+    else
+      children ++ [Hive.Drops.GitHubReleasesSyncer, Hive.Drops.RssSyncer]
     end
   end
 

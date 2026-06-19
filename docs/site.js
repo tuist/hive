@@ -32,6 +32,7 @@ export const site = {
           { text: "Authentication", link: "/guide/self-hosting/authentication" },
           { text: "Agents", link: "/guide/self-hosting/agents" },
           { text: "Audit", link: "/guide/self-hosting/audit" },
+          { text: "Drops", link: "/guide/self-hosting/drops" },
           { text: "Slack", link: "/guide/self-hosting/slack" },
           { text: "Deployment", link: "/guide/self-hosting/deployment" },
         ],

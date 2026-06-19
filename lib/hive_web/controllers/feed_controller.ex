@@ -12,6 +12,7 @@ defmodule HiveWeb.FeedController do
   use HiveWeb, :controller
 
   alias Hive.Auth
+  alias Hive.Drops
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Meadows
@@ -37,8 +38,14 @@ defmodule HiveWeb.FeedController do
   def specs_atom(conn, _params), do: send_feed(conn, :atom, specs_feed(conn))
   def specs_rss(conn, _params), do: send_feed(conn, :rss, specs_feed(conn))
 
+  def drops_atom(conn, params), do: send_feed(conn, :atom, drops_feed(conn, params))
+  def drops_rss(conn, params), do: send_feed(conn, :rss, drops_feed(conn, params))
+
   def meadow_atom(conn, %{"id" => id}), do: serve_meadow(conn, id, :atom)
   def meadow_rss(conn, %{"id" => id}), do: serve_meadow(conn, id, :rss)
+
+  def meadow_drops_atom(conn, %{"id" => id}), do: serve_meadow_drops(conn, id, :atom)
+  def meadow_drops_rss(conn, %{"id" => id}), do: serve_meadow_drops(conn, id, :rss)
 
   defp forage_feed(conn) do
     user = Auth.current_user(conn)
@@ -127,21 +134,95 @@ defmodule HiveWeb.FeedController do
         do: Grafana.list_alerts_for_meadow(meadow.id),
         else: []
 
+    drops = Drops.list_drops_for_meadow(meadow)
+
     entries =
       (Enum.map(issues, &github_issue_entry/1) ++
-         Enum.map(alerts, &grafana_alert_entry(conn, &1)))
+         Enum.map(alerts, &grafana_alert_entry(conn, &1)) ++
+         Enum.map(drops, &drop_entry/1))
       |> Enum.sort_by(& &1.updated, {:desc, DateTime})
 
     %{
       id: feed_id(conn),
       title: "Hive · #{meadow.name}",
-      subtitle: meadow.description || "Forage items belonging to the #{meadow.name} meadow.",
+      subtitle: meadow.description || "Updates belonging to the #{meadow.name} meadow.",
       updated: latest_entry_updated(entries),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/meadows/#{meadow.id}"),
       entries: entries
     }
   end
+
+  defp drops_feed(conn, params) do
+    user = Auth.current_user(conn)
+    meadow_ids = parse_meadow_ids(params["meadow_ids"])
+
+    {drops, _meta} =
+      Drops.list_drops(user: user, meadow_ids: meadow_ids, page_size: :all)
+
+    %{
+      id: feed_id(conn),
+      title: "Hive · Drops",
+      subtitle: "Shipped updates from GitHub releases and changelog feeds across every meadow.",
+      updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/drops"),
+      entries: Enum.map(drops, &drop_entry/1)
+    }
+  end
+
+  defp serve_meadow_drops(conn, id, format) do
+    user = Auth.current_user(conn)
+
+    case Meadows.fetch_visible_meadow(id, user) do
+      {:ok, meadow} -> send_feed(conn, format, meadow_drops_feed(conn, meadow))
+      {:error, :not_found} -> not_found(conn, format)
+    end
+  end
+
+  defp meadow_drops_feed(conn, meadow) do
+    drops = Drops.list_drops_for_meadow(meadow)
+
+    %{
+      id: feed_id(conn),
+      title: "Hive · #{meadow.name} drops",
+      subtitle:
+        meadow.description ||
+          "Shipped updates from the #{meadow.name} meadow.",
+      updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/drops?meadow_ids=#{meadow.id}"),
+      entries: Enum.map(drops, &drop_entry/1)
+    }
+  end
+
+  defp drop_entry(drop) do
+    repo_prefix =
+      case drop.github_repository do
+        %{owner: owner, name: name} -> "#{owner}/#{name}: "
+        _other -> ""
+      end
+
+    %{
+      id: "urn:hive:drop:#{drop.id}",
+      title: repo_prefix <> drop.title,
+      updated: drop.published_at || drop.updated_at,
+      url: drop.url,
+      summary: drop.body
+    }
+  end
+
+  defp parse_meadow_ids(nil), do: []
+
+  defp parse_meadow_ids(value) when is_binary(value) do
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp parse_meadow_ids(_value), do: []
 
   defp latest_entry_updated([]), do: DateTime.utc_now() |> DateTime.truncate(:second)
   defp latest_entry_updated([first | _rest]), do: first.updated

@@ -162,6 +162,12 @@ defmodule HiveWeb.Layouts do
             selected={String.starts_with?(@current_path, "/specs")}
           />
           <.sidebar_item
+            label="Drops"
+            icon="package"
+            href={~p"/drops"}
+            selected={String.starts_with?(@current_path, ~p"/drops")}
+          />
+          <.sidebar_item
             :if={@admin?}
             label="Audit"
             icon="history"
@@ -250,6 +256,12 @@ defmodule HiveWeb.Layouts do
             icon="brand_slack"
             href={~p"/ops/slack"}
             selected={String.starts_with?(@current_path, ~p"/ops/slack")}
+          />
+          <.sidebar_item
+            label="Drops"
+            icon="package"
+            href={~p"/ops/drops"}
+            selected={String.starts_with?(@current_path, ~p"/ops/drops")}
           />
         </.sidebar>
         <section data-part="content">
