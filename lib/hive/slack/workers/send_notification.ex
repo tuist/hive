@@ -45,22 +45,28 @@ defmodule Hive.Slack.Workers.SendNotification do
   defp post_to_targets(event, message) do
     event
     |> Slack.notification_targets_for()
-    |> Enum.reduce_while(:ok, fn installation, :ok ->
-      if Installation.connected?(installation) do
-        message = Map.put(message, "channel", installation.notification_channel_id)
+    |> Enum.reduce_while(:ok, &post_to_target(&1, message, &2))
+  end
 
-        case API.post_message(installation, message) do
-          {:ok, _} ->
-            {:cont, :ok}
+  defp post_to_target(%Installation{} = installation, message, :ok) do
+    if Installation.connected?(installation) do
+      do_post_to_target(installation, message)
+    else
+      {:cont, :ok}
+    end
+  end
 
-          {:error, reason} ->
-            Logger.warning("[Slack.SendNotification] post failed: #{inspect(reason)}")
-            {:halt, {:error, reason}}
-        end
-      else
+  defp do_post_to_target(%Installation{} = installation, message) do
+    message = Map.put(message, "channel", installation.notification_channel_id)
+
+    case API.post_message(installation, message) do
+      {:ok, _} ->
         {:cont, :ok}
-      end
-    end)
+
+      {:error, reason} ->
+        Logger.warning("[Slack.SendNotification] post failed: #{inspect(reason)}")
+        {:halt, {:error, reason}}
+    end
   end
 
   defp message_for("spec.created", %{"spec_id" => spec_id}) do

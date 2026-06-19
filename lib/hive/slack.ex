@@ -399,23 +399,33 @@ defmodule Hive.Slack do
   end
 
   defp maybe_link_hive_user(attrs) do
-    email = attrs[:email] || attrs["email"]
-    linked_user_id = attrs[:linked_user_id] || attrs["linked_user_id"]
-
-    cond do
-      is_binary(linked_user_id) and linked_user_id != "" ->
-        attrs
-
-      is_binary(email) and email != "" ->
-        case Accounts.get_user_by_email(email) do
-          nil -> attrs
-          user -> Map.put(attrs, :linked_user_id, user.id)
-        end
-
-      true ->
-        attrs
+    if linked_user_id?(attrs) do
+      attrs
+    else
+      link_hive_user_by_email(attrs)
     end
   end
+
+  defp linked_user_id?(attrs) do
+    linked_user_id = attrs[:linked_user_id] || attrs["linked_user_id"]
+    is_binary(linked_user_id) and linked_user_id != ""
+  end
+
+  defp link_hive_user_by_email(attrs) do
+    attrs
+    |> Map.get(:email, attrs["email"])
+    |> find_hive_user_by_email()
+    |> case do
+      nil -> attrs
+      user -> Map.put(attrs, :linked_user_id, user.id)
+    end
+  end
+
+  defp find_hive_user_by_email(email) when is_binary(email) and email != "" do
+    Accounts.get_user_by_email(email)
+  end
+
+  defp find_hive_user_by_email(_email), do: nil
 
   @doc """
   Inserts a Slack message under a channel + installation. Returns
