@@ -123,9 +123,9 @@ defmodule HiveWeb.OpenGraphController do
     %{
       total: meta.total_count,
       open: Enum.count(items, &(&1.status in [:open, :firing])),
-      meadows:
+      domains:
         items
-        |> Enum.flat_map(& &1.meadows)
+        |> Enum.flat_map(& &1.domains)
         |> Enum.map(& &1.id)
         |> Enum.uniq()
         |> length()

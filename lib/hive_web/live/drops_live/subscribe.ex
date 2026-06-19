@@ -6,7 +6,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
 
   import Noora.CheckboxControl
 
-  alias Hive.Meadows
+  alias Hive.Domains
   alias HiveWeb.Endpoint
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -14,9 +14,9 @@ defmodule HiveWeb.DropsLive.Subscribe do
   def open_graph do
     %{
       description:
-        "Subscribe to Hive drops via Atom or RSS. Pick the meadows you want updates from and copy the matching feed URL.",
+        "Subscribe to Hive drops via Atom or RSS. Pick the domains you want updates from and copy the matching feed URL.",
       eyebrow: "Drops",
-      highlights: ["Atom 1.0", "RSS 2.0", "Per-meadow filtering"],
+      highlights: ["Atom 1.0", "RSS 2.0", "Per-domain filtering"],
       id: "drops-subscribe",
       path: "/drops/subscribe",
       title: "Subscribe to drops"
@@ -25,12 +25,12 @@ defmodule HiveWeb.DropsLive.Subscribe do
 
   @impl true
   def mount(_params, _session, socket) do
-    meadows = Meadows.list_visible_meadows(socket.assigns[:current_user])
+    domains = Domains.list_visible_domains(socket.assigns[:current_user])
 
     {:ok,
      socket
      |> assign(:page_title, "Subscribe to drops · #{socket.assigns.product_name}")
-     |> assign(:meadows, meadows)
+     |> assign(:domains, domains)
      |> assign(:selected_ids, MapSet.new())
      |> assign(:atom_feed, %{
        title: "Hive · Drops",
@@ -43,15 +43,15 @@ defmodule HiveWeb.DropsLive.Subscribe do
   @impl true
   def handle_params(params, _uri, socket) do
     selected =
-      params["meadow_ids"]
-      |> parse_meadow_ids()
+      params["domain_ids"]
+      |> parse_domain_ids()
       |> MapSet.new()
 
     {:noreply, assign(socket, :selected_ids, selected)}
   end
 
   @impl true
-  def handle_event("toggle_meadow", %{"data" => id}, socket) do
+  def handle_event("toggle_domain", %{"data" => id}, socket) do
     selected =
       if MapSet.member?(socket.assigns.selected_ids, id),
         do: MapSet.delete(socket.assigns.selected_ids, id),
@@ -90,8 +90,8 @@ defmodule HiveWeb.DropsLive.Subscribe do
             <.badge label="Drops" color="information" style="light-fill" />
             <h1>Subscribe to drops</h1>
             <p>
-              Pick the meadows you want updates from and copy the matching Atom or RSS URL into
-              your reader. Leave the picker empty to subscribe to every meadow on this instance.
+              Pick the domains you want updates from and copy the matching Atom or RSS URL into
+              your reader. Leave the picker empty to subscribe to every domain on this instance.
             </p>
           </div>
         </div>
@@ -143,7 +143,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
           </.card_section>
         </.card>
 
-        <.card title="Meadows" icon="rss">
+        <.card title="Domains" icon="rss">
           <:actions :if={MapSet.size(@selected_ids) > 0}>
             <.button
               label="Clear"
@@ -154,27 +154,27 @@ defmodule HiveWeb.DropsLive.Subscribe do
           </:actions>
 
           <.card_section>
-            <div data-part="meadows-card-body">
+            <div data-part="domains-card-body">
               <p data-part="picker-help">
-                Tick the meadows you want updates from. Leave them all unchecked to subscribe to every meadow on this instance.
+                Tick the domains you want updates from. Leave them all unchecked to subscribe to every domain on this instance.
               </p>
 
-              <p :if={@meadows == []} data-part="empty">
-                No meadows yet. Create one to start filtering subscriptions.
+              <p :if={@domains == []} data-part="empty">
+                No domains yet. Create one to start filtering subscriptions.
               </p>
 
-              <.table :if={@meadows != []} id="subscribe-meadows-table" rows={@meadows}>
-              <:col :let={meadow} label="Meadow">
+              <.table :if={@domains != []} id="subscribe-domains-table" rows={@domains}>
+              <:col :let={domain} label="Domain">
                 <label
-                  id={"subscribe-meadow-row-#{meadow.id}"}
-                  data-part="meadow-row"
-                  phx-click="toggle_meadow"
-                  phx-value-data={meadow.id}
+                  id={"subscribe-domain-row-#{domain.id}"}
+                  data-part="domain-row"
+                  phx-click="toggle_domain"
+                  phx-value-data={domain.id}
                 >
-                  <.checkbox_control checked={MapSet.member?(@selected_ids, meadow.id)} />
+                  <.checkbox_control checked={MapSet.member?(@selected_ids, domain.id)} />
                   <.text_and_description_cell
-                    label={meadow.name}
-                    description={meadow.description || "—"}
+                    label={domain.name}
+                    description={domain.description || "—"}
                   />
                 </label>
               </:col>
@@ -190,18 +190,18 @@ defmodule HiveWeb.DropsLive.Subscribe do
   defp feed_url(path, selected_ids) do
     case Enum.sort(MapSet.to_list(selected_ids)) do
       [] -> Endpoint.url() <> path
-      ids -> Endpoint.url() <> path <> "?meadow_ids=" <> Enum.join(ids, ",")
+      ids -> Endpoint.url() <> path <> "?domain_ids=" <> Enum.join(ids, ",")
     end
   end
 
-  defp parse_meadow_ids(nil), do: []
+  defp parse_domain_ids(nil), do: []
 
-  defp parse_meadow_ids(value) when is_binary(value) do
+  defp parse_domain_ids(value) when is_binary(value) do
     value
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
 
-  defp parse_meadow_ids(_), do: []
+  defp parse_domain_ids(_), do: []
 end

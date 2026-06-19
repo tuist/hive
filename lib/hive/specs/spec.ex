@@ -18,7 +18,7 @@ defmodule Hive.Specs.Spec do
     field :status, Ecto.Enum, values: @statuses, default: :draft
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
     field :lock_version, :integer, default: 1
-    field :meadow_ids, {:array, :binary_id}, virtual: true
+    field :domain_ids, {:array, :binary_id}, virtual: true
     field :last_activity_at, :utc_datetime, virtual: true
     field :has_new_activity, :boolean, virtual: true, default: false
 
@@ -28,9 +28,9 @@ defmodule Hive.Specs.Spec do
     has_many :comments, Hive.Specs.Comment
     has_many :revisions, Hive.Specs.Revision
 
-    many_to_many :meadows, Hive.Meadows.Meadow,
-      join_through: "meadows_specs",
-      join_keys: [spec_id: :id, meadow_id: :id],
+    many_to_many :domains, Hive.Domains.Domain,
+      join_through: "domains_specs",
+      join_keys: [spec_id: :id, domain_id: :id],
       on_replace: :delete
 
     timestamps(type: :utc_datetime)
@@ -40,7 +40,7 @@ defmodule Hive.Specs.Spec do
   def visibilities, do: @visibilities
 
   def changeset(spec, attrs) do
-    attrs = normalize_meadow_ids(attrs)
+    attrs = normalize_domain_ids(attrs)
 
     spec
     |> cast(attrs, [
@@ -50,7 +50,7 @@ defmodule Hive.Specs.Spec do
       :status,
       :visibility,
       :source_feature_request_id,
-      :meadow_ids
+      :domain_ids
     ])
     |> validate_required([:title, :body, :status, :visibility])
     |> validate_length(:title, max: 160)
@@ -77,22 +77,22 @@ defmodule Hive.Specs.Spec do
     |> optimistic_lock(:lock_version)
   end
 
-  defp normalize_meadow_ids(attrs) when is_map(attrs) do
+  defp normalize_domain_ids(attrs) when is_map(attrs) do
     cond do
-      Map.has_key?(attrs, "meadow_ids") ->
-        Map.put(attrs, "meadow_ids", normalize_meadow_id_values(attrs["meadow_ids"]))
+      Map.has_key?(attrs, "domain_ids") ->
+        Map.put(attrs, "domain_ids", normalize_domain_id_values(attrs["domain_ids"]))
 
-      Map.has_key?(attrs, :meadow_ids) ->
-        Map.put(attrs, :meadow_ids, normalize_meadow_id_values(attrs.meadow_ids))
+      Map.has_key?(attrs, :domain_ids) ->
+        Map.put(attrs, :domain_ids, normalize_domain_id_values(attrs.domain_ids))
 
       true ->
         attrs
     end
   end
 
-  defp normalize_meadow_ids(attrs), do: attrs
+  defp normalize_domain_ids(attrs), do: attrs
 
-  defp normalize_meadow_id_values(values) do
+  defp normalize_domain_id_values(values) do
     values
     |> List.wrap()
     |> Enum.reject(&(&1 in [nil, ""]))

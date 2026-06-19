@@ -5,20 +5,20 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GitHubIssueClassification
-  alias Hive.Forage.GitHubIssueMeadow
-  alias Hive.Meadows
+  alias Hive.Forage.GitHubIssueDomain
+  alias Hive.Domains
 
   defp unique, do: System.unique_integer([:positive])
 
-  defp create_meadow!(attrs) do
-    {:ok, meadow} = Meadows.create_meadow(attrs)
-    meadow
+  defp create_domain!(attrs) do
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
   end
 
-  defp create_meadow_with_new_repo!(name_prefix) do
+  defp create_domain_with_new_repo!(name_prefix) do
     suffix = unique()
 
-    create_meadow!(%{
+    create_domain!(%{
       name: "#{name_prefix}-#{suffix}",
       visibility: "public",
       github_repository_owner: "owner#{suffix}",
@@ -27,19 +27,19 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     })
   end
 
-  defp attach_meadow!(name_prefix, repository) do
+  defp attach_domain!(name_prefix, repository) do
     suffix = unique()
     repository = Repo.preload(repository, :project)
 
-    create_meadow!(%{
+    create_domain!(%{
       name: "#{name_prefix}-#{suffix}",
       visibility: "public",
       project_id: repository.project_id
     })
   end
 
-  defp seed_issue!(meadow) do
-    repo = hd(meadow.project.github_repositories)
+  defp seed_issue!(domain) do
+    repo = hd(domain.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repo, [
       %{number: 1, title: "An issue", body: "Some body"}
@@ -48,36 +48,36 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     {repo, Repo.get_by!(GitHubIssue, github_repository_id: repo.id, number: 1)}
   end
 
-  test "links every candidate meadow when the LLM is unavailable" do
-    meadow_a = create_meadow_with_new_repo!("alpha")
-    repo = hd(meadow_a.project.github_repositories)
-    meadow_b = attach_meadow!("beta", repo)
+  test "links every candidate domain when the LLM is unavailable" do
+    domain_a = create_domain_with_new_repo!("alpha")
+    repo = hd(domain_a.project.github_repositories)
+    domain_b = attach_domain!("beta", repo)
 
-    {_repo, issue} = seed_issue!(meadow_a)
+    {_repo, issue} = seed_issue!(domain_a)
 
     assert {:ok, ids} =
              GitHubIssueClassification.classify(issue.id, agents_enabled?: fn -> false end)
 
-    assert Enum.sort(ids) == Enum.sort([meadow_a.id, meadow_b.id])
+    assert Enum.sort(ids) == Enum.sort([domain_a.id, domain_b.id])
 
-    persisted = Repo.preload(Repo.get!(GitHubIssue, issue.id), :meadows)
+    persisted = Repo.preload(Repo.get!(GitHubIssue, issue.id), :domains)
 
-    assert Enum.sort(Enum.map(persisted.meadows, & &1.id)) ==
-             Enum.sort([meadow_a.id, meadow_b.id])
+    assert Enum.sort(Enum.map(persisted.domains, & &1.id)) ==
+             Enum.sort([domain_a.id, domain_b.id])
 
     refute is_nil(persisted.classified_at)
   end
 
-  test "keeps only the meadow ids the agent picked from the candidate set" do
-    meadow_a = create_meadow_with_new_repo!("alpha")
-    repo = hd(meadow_a.project.github_repositories)
-    meadow_b = attach_meadow!("beta", repo)
-    unrelated = create_meadow_with_new_repo!("unrelated")
+  test "keeps only the domain ids the agent picked from the candidate set" do
+    domain_a = create_domain_with_new_repo!("alpha")
+    repo = hd(domain_a.project.github_repositories)
+    domain_b = attach_domain!("beta", repo)
+    unrelated = create_domain_with_new_repo!("unrelated")
 
-    {_repo, issue} = seed_issue!(meadow_a)
+    {_repo, issue} = seed_issue!(domain_a)
 
     runner = fn _input ->
-      {:ok, %{meadow_ids: [meadow_b.id, unrelated.id, "not-a-meadow"]}}
+      {:ok, %{domain_ids: [domain_b.id, unrelated.id, "not-a-domain"]}}
     end
 
     assert {:ok, [chosen]} =
@@ -86,17 +86,17 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
                runner: runner
              )
 
-    assert chosen == meadow_b.id
+    assert chosen == domain_b.id
 
-    persisted = Repo.preload(Repo.get!(GitHubIssue, issue.id), :meadows)
-    assert Enum.map(persisted.meadows, & &1.id) == [meadow_b.id]
+    persisted = Repo.preload(Repo.get!(GitHubIssue, issue.id), :domains)
+    assert Enum.map(persisted.domains, & &1.id) == [domain_b.id]
   end
 
   test "produces no links when the agent returns an empty list" do
-    meadow = create_meadow_with_new_repo!("alpha")
-    {_repo, issue} = seed_issue!(meadow)
+    domain = create_domain_with_new_repo!("alpha")
+    {_repo, issue} = seed_issue!(domain)
 
-    runner = fn _input -> {:ok, %{meadow_ids: []}} end
+    runner = fn _input -> {:ok, %{domain_ids: []}} end
 
     assert {:ok, []} =
              GitHubIssueClassification.classify(issue.id,
@@ -104,13 +104,13 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
                runner: runner
              )
 
-    assert [] = Repo.all(GitHubIssueMeadow)
+    assert [] = Repo.all(GitHubIssueDomain)
     refute is_nil(Repo.get!(GitHubIssue, issue.id).classified_at)
   end
 
   test "returns the LLM error when the runner fails" do
-    meadow = create_meadow_with_new_repo!("alpha")
-    {_repo, issue} = seed_issue!(meadow)
+    domain = create_domain_with_new_repo!("alpha")
+    {_repo, issue} = seed_issue!(domain)
 
     runner = fn _input -> {:error, :ratelimited} end
 
@@ -122,8 +122,8 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
   end
 
   test "falls back to every candidate when the LLM is not configured at runtime" do
-    meadow = create_meadow_with_new_repo!("alpha")
-    {_repo, issue} = seed_issue!(meadow)
+    domain = create_domain_with_new_repo!("alpha")
+    {_repo, issue} = seed_issue!(domain)
 
     runner = fn _input -> {:error, :llm_not_configured} end
 
@@ -133,7 +133,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
                runner: runner
              )
 
-    assert chosen == meadow.id
+    assert chosen == domain.id
   end
 
   test "returns :not_found for an unknown id" do
@@ -141,9 +141,9 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
              GitHubIssueClassification.classify("00000000-0000-0000-0000-000000000001")
   end
 
-  test "leaves classified_at nil when the repository has no meadow attached" do
-    meadow = create_meadow_with_new_repo!("orphan")
-    repo = hd(meadow.project.github_repositories)
+  test "leaves classified_at nil when the repository has no domain attached" do
+    domain = create_domain_with_new_repo!("orphan")
+    repo = hd(domain.project.github_repositories)
 
     issue =
       Repo.insert!(
@@ -156,13 +156,13 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
         })
       )
 
-    Repo.delete!(meadow)
+    Repo.delete!(domain)
 
     assert {:ok, []} =
              GitHubIssueClassification.classify(issue.id, agents_enabled?: fn -> false end)
 
     refreshed = Repo.get!(GitHubIssue, issue.id)
     assert is_nil(refreshed.classified_at)
-    assert [] = Repo.all(GitHubIssueMeadow)
+    assert [] = Repo.all(GitHubIssueDomain)
   end
 end

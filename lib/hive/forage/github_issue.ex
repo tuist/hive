@@ -9,9 +9,9 @@ defmodule Hive.Forage.GitHubIssue do
 
   import Ecto.Changeset
 
-  alias Hive.Forage.GitHubIssueMeadow
-  alias Hive.Meadows.GitHubRepository
-  alias Hive.Meadows.Meadow
+  alias Hive.Forage.GitHubIssueDomain
+  alias Hive.Domains.GitHubRepository
+  alias Hive.Domains.Domain
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -26,9 +26,9 @@ defmodule Hive.Forage.GitHubIssue do
 
     belongs_to :github_repository, GitHubRepository
 
-    many_to_many :meadows, Meadow,
-      join_through: GitHubIssueMeadow,
-      join_keys: [forage_github_issue_id: :id, meadow_id: :id]
+    many_to_many :domains, Domain,
+      join_through: GitHubIssueDomain,
+      join_keys: [forage_github_issue_id: :id, domain_id: :id]
 
     timestamps(type: :utc_datetime)
   end

@@ -5,20 +5,20 @@ defmodule Hive.Drops.ReleaseBodyRewriterTest do
   alias Hive.Drops
   alias Hive.Drops.Drop
   alias Hive.Drops.ReleaseBodyRewriter
-  alias Hive.Meadows
+  alias Hive.Domains
 
   setup :verify_on_exit!
 
   test "rewrites the body and stamps rewritten_at when agents are enabled" do
-    {:ok, meadow} =
-      Meadows.create_meadow(%{
+    {:ok, domain} =
+      Domains.create_domain(%{
         name: "Hive",
         visibility: "public",
         github_repository_owner: "tuist",
         github_repository_name: "hive"
       })
 
-    [repository | _] = meadow.project.github_repositories
+    [repository | _] = domain.project.github_repositories
 
     raw_body = """
     Highlights for the v0.25.0 release.
@@ -65,7 +65,7 @@ defmodule Hive.Drops.ReleaseBodyRewriterTest do
   end
 
   test "returns :skipped when agents are disabled" do
-    {:ok, _meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+    {:ok, _domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
     {:ok, drop} =
       Drops.upsert_release_drop(%{
@@ -83,7 +83,7 @@ defmodule Hive.Drops.ReleaseBodyRewriterTest do
   end
 
   test "returns :skipped when the drop has already been rewritten" do
-    {:ok, _meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+    {:ok, _domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
     {:ok, drop} =
       Drops.upsert_release_drop(%{

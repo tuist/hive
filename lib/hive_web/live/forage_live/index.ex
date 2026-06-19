@@ -5,7 +5,7 @@ defmodule HiveWeb.ForageLive.Index do
 
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
   alias Hive.Specs
   alias HiveWeb.ForageComponents
   alias HiveWeb.ForageLive.Show
@@ -25,7 +25,7 @@ defmodule HiveWeb.ForageLive.Index do
       highlights: [
         "#{stats.total} items",
         "#{stats.open} open signals",
-        "#{stats.meadows} meadows"
+        "#{stats.domains} domains"
       ],
       id: "forage",
       path: "/forage",
@@ -42,7 +42,7 @@ defmodule HiveWeb.ForageLive.Index do
      |> assign(:active_filters, [])
      |> assign(:items, [])
      |> assign(:meta, %{total_count: 0, total_pages: 1, current_page: 1, page_size: @page_size})
-     |> assign(:stats, %{total: 0, open: 0, meadows: 0})
+     |> assign(:stats, %{total: 0, open: 0, domains: 0})
      |> assign(:uri, URI.parse("/forage"))
      |> assign(:query, "")
      |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
@@ -61,7 +61,7 @@ defmodule HiveWeb.ForageLive.Index do
        atom_href: "/forage/atom.xml",
        rss_href: "/forage/rss.xml"
      })
-     |> assign(OpenGraph.assigns(open_graph(%{total: 0, open: 0, meadows: 0})))}
+     |> assign(OpenGraph.assigns(open_graph(%{total: 0, open: 0, domains: 0})))}
   end
 
   @impl true
@@ -324,7 +324,7 @@ defmodule HiveWeb.ForageLive.Index do
       query: Query.present_string(query),
       type: filter_value(active_filters, "type"),
       status: filter_value(active_filters, "status"),
-      meadow_id: filter_value(active_filters, "meadow"),
+      domain_id: filter_value(active_filters, "domain"),
       repository_id: filter_value(active_filters, "repository")
     ]
   end
@@ -342,9 +342,9 @@ defmodule HiveWeb.ForageLive.Index do
     %{
       total: meta.total_count,
       open: Enum.count(items, &(&1.status in [:open, :firing])),
-      meadows:
+      domains:
         items
-        |> Enum.flat_map(& &1.meadows)
+        |> Enum.flat_map(& &1.domains)
         |> Enum.map(& &1.id)
         |> Enum.uniq()
         |> length()
@@ -495,7 +495,7 @@ defmodule HiveWeb.ForageLive.Index do
       option_filter("status", "Status", options.statuses, &Forage.item_status_label/1,
         searchable: false
       ),
-      option_filter("meadow", "Meadow", options.meadows, & &1.name, searchable: true),
+      option_filter("domain", "Domain", options.domains, & &1.name, searchable: true),
       option_filter(
         "repository",
         "Repository",

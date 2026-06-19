@@ -11,9 +11,9 @@ defmodule HiveWeb.ProjectLive.Index do
   def open_graph do
     %{
       description:
-        "Projects are the products, codebases, and services this Hive tracks. Each project owns repositories, meadows, and drop sources.",
+        "Projects are the products, codebases, and services this Hive tracks. Each project owns repositories, domains, and drop sources.",
       eyebrow: "Projects",
-      highlights: ["Top-level grouping", "Owns repositories", "Owns meadows"],
+      highlights: ["Top-level grouping", "Owns repositories", "Owns domains"],
       id: "projects",
       path: "/projects",
       title: "Projects"
@@ -51,7 +51,7 @@ defmodule HiveWeb.ProjectLive.Index do
             <h1>Projects</h1>
             <p>
               The products, codebases, and services this Hive instance tracks. Each project owns
-              its connected GitHub repositories and the meadows (sub-domains) the team slices by.
+              its connected GitHub repositories and the domains (sub-domains) the team slices by.
             </p>
           </div>
         </div>

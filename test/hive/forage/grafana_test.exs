@@ -4,16 +4,16 @@ defmodule Hive.Forage.GrafanaTest do
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Forage.GrafanaAlert
-  alias Hive.Meadows
-  alias Hive.Meadows.Webhooks
+  alias Hive.Domains
+  alias Hive.Domains.Webhooks
 
   setup do
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
 
     {:ok, {webhook, _token}} =
-      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, meadow: meadow, webhook: webhook}
+    {:ok, domain: domain, webhook: webhook}
   end
 
   test "ingest/3 inserts an alert from a firing payload", ctx do
@@ -35,7 +35,7 @@ defmodule Hive.Forage.GrafanaTest do
       ]
     }
 
-    assert {:ok, [%GrafanaAlert{} = alert]} = Grafana.ingest(ctx.meadow, ctx.webhook, payload)
+    assert {:ok, [%GrafanaAlert{} = alert]} = Grafana.ingest(ctx.domain, ctx.webhook, payload)
     assert alert.status == :firing
     assert alert.title == "Latency over budget"
     assert alert.summary == "p95 > 500ms"
@@ -44,7 +44,7 @@ defmodule Hive.Forage.GrafanaTest do
     assert alert.labels == %{"alertname" => "HighLatency"}
     assert alert.starts_at == ~U[2026-06-10 12:00:00Z]
     assert alert.ends_at == nil
-    assert alert.meadow_id == ctx.meadow.id
+    assert alert.domain_id == ctx.domain.id
     assert alert.webhook_id == ctx.webhook.id
   end
 
@@ -52,10 +52,10 @@ defmodule Hive.Forage.GrafanaTest do
     firing = base_payload("firing", "fp-1")
     resolved = base_payload("resolved", "fp-1")
 
-    assert {:ok, [first]} = Grafana.ingest(ctx.meadow, ctx.webhook, firing)
+    assert {:ok, [first]} = Grafana.ingest(ctx.domain, ctx.webhook, firing)
     assert first.status == :firing
 
-    assert {:ok, [second]} = Grafana.ingest(ctx.meadow, ctx.webhook, resolved)
+    assert {:ok, [second]} = Grafana.ingest(ctx.domain, ctx.webhook, resolved)
     assert second.id == first.id
     assert second.status == :resolved
     assert [%GrafanaAlert{}] = Forage.list_grafana_alerts()
@@ -63,7 +63,7 @@ defmodule Hive.Forage.GrafanaTest do
 
   test "ingest/3 rejects a payload without alerts", ctx do
     assert {:error, :invalid_payload} =
-             Grafana.ingest(ctx.meadow, ctx.webhook, %{"foo" => "bar"})
+             Grafana.ingest(ctx.domain, ctx.webhook, %{"foo" => "bar"})
   end
 
   test "ingest/3 derives a fingerprint when Grafana doesn't send one", ctx do
@@ -78,7 +78,7 @@ defmodule Hive.Forage.GrafanaTest do
       ]
     }
 
-    assert {:ok, [alert]} = Grafana.ingest(ctx.meadow, ctx.webhook, payload)
+    assert {:ok, [alert]} = Grafana.ingest(ctx.domain, ctx.webhook, payload)
     assert is_binary(alert.fingerprint) and byte_size(alert.fingerprint) > 0
   end
 

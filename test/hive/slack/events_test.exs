@@ -102,7 +102,7 @@ defmodule Hive.Slack.EventsTest do
       "message_ts" => "100.0",
       "links" => [
         %{"url" => "https://hive.example.com/specs/1"},
-        %{"url" => "https://hive.example.com/meadows/abc"}
+        %{"url" => "https://hive.example.com/domains/abc"}
       ]
     }
 
@@ -116,7 +116,7 @@ defmodule Hive.Slack.EventsTest do
         "message_ts" => "100.0",
         "urls" => [
           "https://hive.example.com/specs/1",
-          "https://hive.example.com/meadows/abc"
+          "https://hive.example.com/domains/abc"
         ]
       }
     )

@@ -3,18 +3,18 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
 
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Repo
 
   defp unique, do: System.unique_integer([:positive])
 
-  defp create_meadow!(attrs) do
-    {:ok, meadow} = Meadows.create_meadow(attrs)
-    meadow
+  defp create_domain!(attrs) do
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
   end
 
-  defp seed_issue!(meadow, opts) do
-    repository = hd(meadow.project.github_repositories)
+  defp seed_issue!(domain, opts) do
+    repository = hd(domain.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{
@@ -30,8 +30,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   test "hides private GitHub issues from guests", %{conn: conn} do
     suffix = unique()
 
-    meadow =
-      create_meadow!(%{
+    domain =
+      create_domain!(%{
         name: "atlas-#{suffix}",
         visibility: "private",
         github_repository_owner: "owner#{suffix}",
@@ -39,18 +39,18 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow, number: 3, title: "Private crash")
+    seed_issue!(domain, number: 3, title: "Private crash")
 
     {:ok, _view, html} = live(conn, ~p"/forage")
 
     refute html =~ "Private crash"
   end
 
-  test "renders cached issues for a guest when a public meadow/repo pair exists", %{conn: conn} do
+  test "renders cached issues for a guest when a public domain/repo pair exists", %{conn: conn} do
     suffix = unique()
 
-    meadow =
-      create_meadow!(%{
+    domain =
+      create_domain!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -58,7 +58,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow, number: 7, title: "Crash on launch", body: "Detail")
+    seed_issue!(domain, number: 7, title: "Crash on launch", body: "Detail")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 
@@ -70,8 +70,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   test "opens GitHub issues on a dedicated item detail page", %{conn: conn} do
     suffix = unique()
 
-    meadow =
-      create_meadow!(%{
+    domain =
+      create_domain!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -79,7 +79,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    repository = seed_issue!(meadow, number: 42, title: "Crash on launch", body: "Detail")
+    repository = seed_issue!(domain, number: 42, title: "Crash on launch", body: "Detail")
     issue = Repo.get_by!(GitHubIssue, github_repository_id: repository.id, number: 42)
 
     {:ok, view, _html} = live(conn, ~p"/forage")
@@ -98,7 +98,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     refute html =~ "Add context or feedback with Markdown"
   end
 
-  test "shows the empty state when a member has no meadows with repositories", %{conn: conn} do
+  test "shows the empty state when a member has no domains with repositories", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
@@ -120,8 +120,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    meadow =
-      create_meadow!(%{
+    domain =
+      create_domain!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -129,7 +129,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow, number: 1, title: "Still open")
+    seed_issue!(domain, number: 1, title: "Still open")
 
     {:ok, _view, html} =
       live(
@@ -142,35 +142,35 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     assert html =~ "Open"
   end
 
-  test "filters issues by meadow through URL params", %{conn: conn} do
+  test "filters issues by domain through URL params", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    meadow_a =
-      create_meadow!(%{
-        name: "meadow-a-#{suffix}",
+    domain_a =
+      create_domain!(%{
+        name: "domain-a-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-a-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    meadow_b =
-      create_meadow!(%{
-        name: "meadow-b-#{suffix}",
+    domain_b =
+      create_domain!(%{
+        name: "domain-b-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-b-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow_a, number: 1, title: "Issue for A")
-    seed_issue!(meadow_b, number: 2, title: "Issue for B")
+    seed_issue!(domain_a, number: 1, title: "Issue for A")
+    seed_issue!(domain_b, number: 2, title: "Issue for B")
 
     {:ok, _view, html} =
       live(
         conn,
-        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=open&filter_meadow_op===&filter_meadow_val=#{meadow_a.id}"
+        ~p"/forage?filter_type_op===&filter_type_val=github_issue&filter_status_op===&filter_status_val=open&filter_domain_op===&filter_domain_val=#{domain_a.id}"
       )
 
     assert html =~ "Issue for A"
@@ -181,28 +181,28 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    meadow_a =
-      create_meadow!(%{
-        name: "meadow-a-#{suffix}",
+    domain_a =
+      create_domain!(%{
+        name: "domain-a-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-a-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    meadow_b =
-      create_meadow!(%{
-        name: "meadow-b-#{suffix}",
+    domain_b =
+      create_domain!(%{
+        name: "domain-b-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo-b-#{suffix}",
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow_a, number: 1, title: "Issue for A")
-    seed_issue!(meadow_b, number: 2, title: "Issue for B")
+    seed_issue!(domain_a, number: 1, title: "Issue for A")
+    seed_issue!(domain_b, number: 2, title: "Issue for B")
 
-    repository_b = hd(meadow_b.project.github_repositories)
+    repository_b = hd(domain_b.project.github_repositories)
 
     {:ok, _view, html} =
       live(
@@ -218,8 +218,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
     suffix = unique()
 
-    meadow =
-      create_meadow!(%{
+    domain =
+      create_domain!(%{
         name: "hive-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -227,7 +227,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(meadow, number: 1, title: "Open one")
+    seed_issue!(domain, number: 1, title: "Open one")
 
     {:ok, _view, html} =
       live(
@@ -241,8 +241,8 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   test "hides issues from private repos when viewed by a guest", %{conn: conn} do
     suffix = unique()
 
-    private_meadow =
-      create_meadow!(%{
+    private_domain =
+      create_domain!(%{
         name: "atlas-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -250,10 +250,10 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "private"
       })
 
-    seed_issue!(private_meadow, number: 1, title: "Private issue", body: "Sensitive")
+    seed_issue!(private_domain, number: 1, title: "Private issue", body: "Sensitive")
 
-    public_meadow =
-      create_meadow!(%{
+    public_domain =
+      create_domain!(%{
         name: "public-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -261,7 +261,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
         github_repository_visibility: "public"
       })
 
-    seed_issue!(public_meadow, number: 2, title: "Public issue", body: "Open")
+    seed_issue!(public_domain, number: 2, title: "Public issue", body: "Open")
 
     {:ok, _view, html} = follow_default_filter(conn, ~p"/forage/github-issues")
 

@@ -133,7 +133,7 @@ defmodule HiveWeb.LayoutsTest do
       )
     end
 
-    test "renders the meadow name and the slotted content" do
+    test "renders the domain name and the slotted content" do
       html = render_dashboard(assigns())
 
       assert html =~ "Hive"
@@ -172,17 +172,17 @@ defmodule HiveWeb.LayoutsTest do
       refute html =~ "/forage/feature-requests"
     end
 
-    test "shows Meadows at the top of the sidebar for any visitor" do
+    test "shows Domains at the top of the sidebar for any visitor" do
       html =
         render_dashboard(
           assigns(%{
             signed_in?: false,
-            current_path: "/meadows"
+            current_path: "/domains"
           })
         )
 
-      assert html =~ "Meadows"
-      assert html =~ ~s(href="/meadows")
+      assert html =~ "Domains"
+      assert html =~ ~s(href="/domains")
     end
 
     test "does not show account navigation in the dashboard sidebar" do
@@ -212,7 +212,7 @@ defmodule HiveWeb.LayoutsTest do
       refute html =~ "Slack"
       refute html =~ "/ops/slack"
       refute html =~ "Feature requests"
-      refute html =~ "/meadows"
+      refute html =~ "/domains"
     end
   end
 

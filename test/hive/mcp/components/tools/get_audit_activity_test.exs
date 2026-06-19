@@ -8,17 +8,17 @@ defmodule Hive.MCP.Components.Tools.GetAuditActivityTest do
     admin = mcp_user("admin@example.com") |> set_role(:admin)
 
     {:ok, activity} =
-      Audit.log("meadow.created", %{
+      Audit.log("domain.created", %{
         interface: "mcp",
-        target_type: "meadow",
-        target_id: "meadow-1"
+        target_type: "domain",
+        target_id: "domain-1"
       })
 
     response = GetAuditActivity.call(mcp_conn(admin), %{"activity_id" => activity.id})
     data = response_json(response)
 
     assert data["activity"]["id"] == activity.id
-    assert data["activity"]["action"] == "meadow.created"
+    assert data["activity"]["action"] == "domain.created"
   end
 
   test "rejects non-admin users" do

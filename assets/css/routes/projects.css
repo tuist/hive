@@ -29,7 +29,7 @@
   }
 
   & [data-part="project-link"],
-  & [data-part="meadow-link"] {
+  & [data-part="domain-link"] {
     display: block;
     color: inherit;
     text-decoration: none;
@@ -41,7 +41,7 @@
   }
 
   & [data-part="repo-list"],
-  & [data-part="meadow-list"] {
+  & [data-part="domain-list"] {
     list-style: none;
     padding: 0;
     margin: 0;

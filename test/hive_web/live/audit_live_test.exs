@@ -17,12 +17,12 @@ defmodule HiveWeb.AuditLiveTest do
       })
 
     {:ok, _activity} =
-      Audit.log("meadow.created", %{
+      Audit.log("domain.created", %{
         interface: "mcp",
         actor_name: "MCP User",
-        target_type: "meadow",
-        target_id: "meadow-1",
-        target_label: "MCP Meadow"
+        target_type: "domain",
+        target_id: "domain-1",
+        target_label: "MCP Domain"
       })
 
     filter_params = %{"filter_interface_op" => "==", "filter_interface_val" => "mcp"}
@@ -30,7 +30,7 @@ defmodule HiveWeb.AuditLiveTest do
 
     assert has_element?(view, "#audit")
     assert has_element?(view, "#audit-table")
-    assert has_element?(view, ~s(a[data-part="target-link"][href="/meadows/meadow-1"]))
+    assert has_element?(view, ~s(a[data-part="target-link"][href="/domains/domain-1"]))
 
     view
     |> form("#audit-search-form", search: %{query: "MCP User"})

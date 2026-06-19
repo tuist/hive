@@ -4,8 +4,8 @@ defmodule HiveWeb.FeedControllerTest do
   alias Hive.Accounts
   alias Hive.Forage
   alias Hive.Forage.Grafana
-  alias Hive.Meadows
-  alias Hive.Meadows.Webhooks
+  alias Hive.Domains
+  alias Hive.Domains.Webhooks
   alias Hive.Specs
 
   defp user(email) do
@@ -300,26 +300,26 @@ defmodule HiveWeb.FeedControllerTest do
     end
   end
 
-  describe "GET /meadows/:id/atom.xml" do
-    test "returns 404 for a missing meadow", %{conn: conn} do
-      conn = get(conn, ~p"/meadows/00000000-0000-0000-0000-000000000000/atom.xml")
+  describe "GET /domains/:id/atom.xml" do
+    test "returns 404 for a missing domain", %{conn: conn} do
+      conn = get(conn, ~p"/domains/00000000-0000-0000-0000-000000000000/atom.xml")
 
       assert response(conn, 404) =~ "<error/>"
     end
 
-    test "returns 404 to anonymous viewers for a private meadow", %{conn: conn} do
-      {:ok, meadow} = Meadows.create_meadow(%{"name" => "Private", "visibility" => "private"})
+    test "returns 404 to anonymous viewers for a private domain", %{conn: conn} do
+      {:ok, domain} = Domains.create_domain(%{"name" => "Private", "visibility" => "private"})
 
-      conn = get(conn, ~p"/meadows/#{meadow.id}/atom.xml")
+      conn = get(conn, ~p"/domains/#{domain.id}/atom.xml")
 
       assert response(conn, 404) =~ "<error/>"
     end
 
-    test "lists GitHub issues for a public meadow with a public repository", %{conn: conn} do
+    test "lists GitHub issues for a public domain with a public repository", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, meadow} =
-        Meadows.create_meadow(%{
+      {:ok, domain} =
+        Domains.create_domain(%{
           name: "atlas-#{suffix}",
           visibility: "public",
           github_repository_owner: "tuist",
@@ -327,13 +327,13 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(meadow.project.github_repositories)
+      repository = hd(domain.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Add dark mode", body: "Please."}
       ])
 
-      body = conn |> get(~p"/meadows/#{meadow.id}/atom.xml") |> response(200)
+      body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
       assert body =~ "<feed xmlns="
       assert body =~ "<title>Hive · atlas-#{suffix}</title>"
@@ -346,14 +346,14 @@ defmodule HiveWeb.FeedControllerTest do
       {conn, _user} = sign_in(conn, "member@example.com")
       suffix = System.unique_integer([:positive])
 
-      {:ok, meadow} =
-        Meadows.create_meadow(%{name: "ops-#{suffix}", visibility: "public"})
+      {:ok, domain} =
+        Domains.create_domain(%{name: "ops-#{suffix}", visibility: "public"})
 
       {:ok, {webhook, _token}} =
-        Webhooks.create(meadow, %{"source" => "grafana", "name" => "grafana-webhook"})
+        Webhooks.create(domain, %{"source" => "grafana", "name" => "grafana-webhook"})
 
       {:ok, _alerts} =
-        Grafana.ingest(meadow, webhook, %{
+        Grafana.ingest(domain, webhook, %{
           "alerts" => [
             %{
               "status" => "firing",
@@ -364,7 +364,7 @@ defmodule HiveWeb.FeedControllerTest do
           ]
         })
 
-      body = conn |> get(~p"/meadows/#{meadow.id}/atom.xml") |> response(200)
+      body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
       assert body =~ "Latency spiking"
       assert body =~ "[Firing]"
@@ -373,14 +373,14 @@ defmodule HiveWeb.FeedControllerTest do
     test "hides grafana alerts from anonymous viewers", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, meadow} =
-        Meadows.create_meadow(%{name: "ops-#{suffix}", visibility: "public"})
+      {:ok, domain} =
+        Domains.create_domain(%{name: "ops-#{suffix}", visibility: "public"})
 
       {:ok, {webhook, _token}} =
-        Webhooks.create(meadow, %{"source" => "grafana", "name" => "grafana-webhook"})
+        Webhooks.create(domain, %{"source" => "grafana", "name" => "grafana-webhook"})
 
       {:ok, _alerts} =
-        Grafana.ingest(meadow, webhook, %{
+        Grafana.ingest(domain, webhook, %{
           "alerts" => [
             %{
               "status" => "firing",
@@ -391,18 +391,18 @@ defmodule HiveWeb.FeedControllerTest do
           ]
         })
 
-      body = conn |> get(~p"/meadows/#{meadow.id}/atom.xml") |> response(200)
+      body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
       refute body =~ "Latency spiking"
     end
   end
 
-  describe "GET /meadows/:id/rss.xml" do
+  describe "GET /domains/:id/rss.xml" do
     test "renders the same content as Atom in RSS 2.0 wrapping", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, meadow} =
-        Meadows.create_meadow(%{
+      {:ok, domain} =
+        Domains.create_domain(%{
           name: "atlas-#{suffix}",
           visibility: "public",
           github_repository_owner: "tuist",
@@ -410,13 +410,13 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(meadow.project.github_repositories)
+      repository = hd(domain.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 7, title: "Dark mode", body: "Please."}
       ])
 
-      conn = get(conn, ~p"/meadows/#{meadow.id}/rss.xml")
+      conn = get(conn, ~p"/domains/#{domain.id}/rss.xml")
       assert response_content_type(conn, :xml) =~ "application/rss+xml"
       body = response(conn, 200)
 
@@ -425,19 +425,19 @@ defmodule HiveWeb.FeedControllerTest do
     end
   end
 
-  describe "meadow feed discovery" do
-    test "meadow detail advertises feeds and renders the dropdown", %{conn: conn} do
-      {:ok, meadow} = Meadows.create_meadow(%{"name" => "Hive", "visibility" => "public"})
+  describe "domain feed discovery" do
+    test "domain detail advertises feeds and renders the dropdown", %{conn: conn} do
+      {:ok, domain} = Domains.create_domain(%{"name" => "Hive", "visibility" => "public"})
 
-      body = conn |> get(~p"/meadows/#{meadow.id}") |> html_response(200)
-
-      assert body =~
-               ~s(rel="alternate" type="application/atom+xml" title="Hive · Hive" href="/meadows/#{meadow.id}/atom.xml")
+      body = conn |> get(~p"/domains/#{domain.id}") |> html_response(200)
 
       assert body =~
-               ~s(rel="alternate" type="application/rss+xml" title="Hive · Hive" href="/meadows/#{meadow.id}/rss.xml")
+               ~s(rel="alternate" type="application/atom+xml" title="Hive · Hive" href="/domains/#{domain.id}/atom.xml")
 
-      assert body =~ ~s(id="meadow-#{meadow.id}-feeds-dropdown")
+      assert body =~
+               ~s(rel="alternate" type="application/rss+xml" title="Hive · Hive" href="/domains/#{domain.id}/rss.xml")
+
+      assert body =~ ~s(id="domain-#{domain.id}-feeds-dropdown")
     end
   end
 end

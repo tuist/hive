@@ -6,15 +6,15 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GitHubIssueClassificationSweeper
   alias Hive.Forage.GitHubIssueClassificationWorker
-  alias Hive.Meadows
+  alias Hive.Domains
 
   defp unique, do: System.unique_integer([:positive])
 
   defp create_repository! do
     suffix = unique()
 
-    {:ok, meadow} =
-      Meadows.create_meadow(%{
+    {:ok, domain} =
+      Domains.create_domain(%{
         name: "sweeper-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -22,7 +22,7 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
         github_repository_visibility: "public"
       })
 
-    hd(meadow.project.github_repositories)
+    hd(domain.project.github_repositories)
   end
 
   defp insert_issue!(repository, number, attrs \\ %{}) do

@@ -6,7 +6,7 @@ defmodule Hive.SpecsTest do
   alias Hive.Accounts
   alias Hive.Auth
   alias Hive.Forage
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Repo
   alias Hive.Slack.Installation
   alias Hive.Specs
@@ -93,22 +93,22 @@ defmodule Hive.SpecsTest do
       assert {"cannot contain em dashes", []} = changeset.errors[:summary]
     end
 
-    test "associates specs with meadows" do
+    test "associates specs with domains" do
       user = user()
-      {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+      {:ok, domain} = Domains.create_domain(%{name: "Hive"})
 
       assert {:ok, spec} =
                Specs.create_spec(
                  %{
                    "title" => "GitHub sign-in",
                    "body" => "Add GitHub sign-in for requesters.",
-                   "meadow_ids" => [meadow.id]
+                   "domain_ids" => [domain.id]
                  },
                  user
                )
 
       spec = Specs.get_spec!(spec.id)
-      assert Enum.map(spec.meadows, & &1.name) == ["Hive"]
+      assert Enum.map(spec.domains, & &1.name) == ["Hive"]
     end
 
     test "enqueues a Slack notification when configured" do
@@ -184,30 +184,30 @@ defmodule Hive.SpecsTest do
       assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public.id]
     end
 
-    test "uses spec visibility before meadow visibility" do
+    test "uses spec visibility before domain visibility" do
       member = user("member@tuist.dev")
       contributor = user("contributor@example.com")
-      {:ok, public_meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
-      {:ok, private_meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
+      {:ok, public_domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
+      {:ok, private_domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
 
-      {:ok, public_spec_on_private_meadow} =
+      {:ok, public_spec_on_private_domain} =
         Specs.create_spec(
           %{
             "title" => "Public spec",
             "body" => "Initial proposal.",
             "visibility" => "public",
-            "meadow_ids" => [private_meadow.id]
+            "domain_ids" => [private_domain.id]
           },
           member
         )
 
-      {:ok, private_spec_on_public_meadow} =
+      {:ok, private_spec_on_public_domain} =
         Specs.create_spec(
           %{
             "title" => "Private spec",
             "body" => "Initial proposal.",
             "visibility" => "private",
-            "meadow_ids" => [public_meadow.id]
+            "domain_ids" => [public_domain.id]
           },
           member
         )
@@ -217,27 +217,27 @@ defmodule Hive.SpecsTest do
         _user -> false
       end)
 
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_meadow.id), member)
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_meadow.id), contributor)
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_meadow.id), nil)
-      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_meadow.id), contributor)
-      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_meadow.id), nil)
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), member)
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), contributor)
+      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), nil)
+      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_domain.id), contributor)
+      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_domain.id), nil)
 
-      assert Specs.effective_visibility(Specs.get_spec!(public_spec_on_private_meadow.id)) ==
+      assert Specs.effective_visibility(Specs.get_spec!(public_spec_on_private_domain.id)) ==
                :public
 
-      assert Specs.effective_visibility(Specs.get_spec!(private_spec_on_public_meadow.id)) ==
+      assert Specs.effective_visibility(Specs.get_spec!(private_spec_on_public_domain.id)) ==
                :private
 
       assert Specs.list_specs(user: member) |> Enum.map(& &1.id) |> Enum.sort() ==
-               Enum.sort([private_spec_on_public_meadow.id, public_spec_on_private_meadow.id])
+               Enum.sort([private_spec_on_public_domain.id, public_spec_on_private_domain.id])
 
       assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [
-               public_spec_on_private_meadow.id
+               public_spec_on_private_domain.id
              ]
 
       assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [
-               public_spec_on_private_meadow.id
+               public_spec_on_private_domain.id
              ]
     end
   end
@@ -274,17 +274,17 @@ defmodule Hive.SpecsTest do
       assert [lock_version: {"is stale", [stale: true]}] = changeset.errors
     end
 
-    test "updates associated meadows" do
+    test "updates associated domains" do
       user = user()
-      {:ok, hive} = Meadows.create_meadow(%{name: "Hive"})
-      {:ok, noora} = Meadows.create_meadow(%{name: "Noora"})
+      {:ok, hive} = Domains.create_domain(%{name: "Hive"})
+      {:ok, noora} = Domains.create_domain(%{name: "Noora"})
 
       {:ok, spec} =
         Specs.create_spec(
           %{
             "title" => "Draft",
             "body" => "Initial proposal.",
-            "meadow_ids" => [hive.id]
+            "domain_ids" => [hive.id]
           },
           user
         )
@@ -295,13 +295,13 @@ defmodule Hive.SpecsTest do
                  %{
                    "title" => "Draft",
                    "body" => "Initial proposal.",
-                   "meadow_ids" => [noora.id]
+                   "domain_ids" => [noora.id]
                  },
                  user
                )
 
       spec = Specs.get_spec!(spec.id)
-      assert Enum.map(spec.meadows, & &1.name) == ["Noora"]
+      assert Enum.map(spec.domains, & &1.name) == ["Noora"]
     end
   end
 

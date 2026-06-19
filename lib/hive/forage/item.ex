@@ -28,6 +28,6 @@ defmodule Hive.Forage.Item do
     :comments,
     :comments_status,
     :comments_error,
-    meadows: []
+    domains: []
   ]
 end

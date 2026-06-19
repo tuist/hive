@@ -151,10 +151,10 @@ defmodule HiveWeb.Layouts do
             selected={String.starts_with?(@current_path, ~p"/projects")}
           />
           <.sidebar_item
-            label="Meadows"
+            label="Domains"
             icon="treemap"
-            href={~p"/meadows"}
-            selected={String.starts_with?(@current_path, ~p"/meadows")}
+            href={~p"/domains"}
+            selected={String.starts_with?(@current_path, ~p"/domains")}
           />
           <.sidebar_item
             label="Forage"

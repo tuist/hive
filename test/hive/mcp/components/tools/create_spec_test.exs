@@ -28,15 +28,15 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
 
     invalid_response =
       CreateSpec.call(mcp_conn(user), %{
-        "title" => "Invalid meadow spec",
-        "body" => "This create reaches meadow association before failing.",
-        "meadow_ids" => [Ecto.UUID.generate()]
+        "title" => "Invalid domain spec",
+        "body" => "This create reaches domain association before failing.",
+        "domain_ids" => [Ecto.UUID.generate()]
       })
       |> response_json()
 
     assert %{
              "error" => "invalid",
-             "details" => %{"meadow_ids" => ["contains unknown meadows"]}
+             "details" => %{"domain_ids" => ["contains unknown domains"]}
            } = invalid_response
 
     second = create_spec(user, "Second spec")

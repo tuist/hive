@@ -13,9 +13,9 @@ behavior.
 
 Hive currently uses agents for:
 
-- Meadow evolution: when new forage items or specs arrive, Hive queues a
+- Domain evolution: when new forage items or specs arrive, Hive queues a
   debounced evolution job. A periodic job runs as well. The agent
-  reviews recent work signals and current meadows, then proposes only
+  reviews recent work signals and current domains, then proposes only
   create or update changes. Hive applies those changes through normal
   validation and skips suggestions that are too generic, too specific,
   or outside Tuist's business domains.
@@ -31,18 +31,18 @@ Hive currently uses agents for:
   draft a short reply, posted back in the same thread. When no LLM is
   configured, the bot stays silent. See [Slack](./slack) for the
   workspace install flow.
-- GitHub issue meadow classification: each time the syncer sees a new
+- GitHub issue domain classification: each time the syncer sees a new
   issue or notices that an issue's title or body changed, Hive queues a
-  job that asks the agent which meadows the issue actually belongs to.
-  The candidates are the meadows attached to the issue's repository, so
+  job that asks the agent which domains the issue actually belongs to.
+  The candidates are the domains attached to the issue's repository, so
   the answer is always a subset of that set. The dashboard renders the
-  meadow badges from this classification, not from the repository's
-  meadow membership, so an issue in `tuist/tuist` only appears under
+  domain badges from this classification, not from the repository's
+  domain membership, so an issue in `tuist/tuist` only appears under
   Cache when its substance is about caching. A scheduled sweeper also
   re-classifies any cached issue still missing a classification, so
   rows that existed before classification shipped or that hit a transient
   LLM failure recover on the next tick. When no LLM is configured, each
-  issue is linked to every meadow attached to its repository, matching
+  issue is linked to every domain attached to its repository, matching
   pre-classification behaviour.
 - Drop release rewriting: when a GitHub release is ingested as a drop,
   Hive queues a job that asks the agent to rewrite the release notes

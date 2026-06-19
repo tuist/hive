@@ -13,7 +13,7 @@ defmodule HiveWeb.ForageComponents do
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
 
@@ -62,7 +62,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title="Items" value={@stats.total} legend="primary" />
         <.forage_widget title="Open signals" value={@stats.open} legend="secondary" />
-        <.forage_widget title="Meadows" value={@stats.meadows} legend="tertiary" />
+        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
       </div>
 
       <.card icon="rss" title="Forage items">
@@ -132,17 +132,17 @@ defmodule HiveWeb.ForageComponents do
                 style="light-fill"
               />
             </:col>
-            <:col :let={item} label="Meadows">
-              <div data-part="item-table-meadows">
+            <:col :let={item} label="Domains">
+              <div data-part="item-table-domains">
                 <.badge
-                  :for={meadow <- item.meadows}
-                  label={meadow.name}
+                  :for={domain <- item.domains}
+                  label={domain.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
                 />
-                <span :if={item.meadows == []} data-part="empty-meadows">
-                  No meadows
+                <span :if={item.domains == []} data-part="empty-domains">
+                  No domains
                 </span>
               </div>
             </:col>
@@ -325,13 +325,13 @@ defmodule HiveWeb.ForageComponents do
               </div>
             </div>
 
-            <div :if={@item.meadows != []} data-part="metadata-row">
+            <div :if={@item.domains != []} data-part="metadata-row">
               <div data-part="metadata">
-                <div data-part="title">Meadows</div>
+                <div data-part="title">Domains</div>
                 <div data-part="metadata-badges">
                   <.badge
-                    :for={meadow <- @item.meadows}
-                    label={meadow.name}
+                    :for={domain <- @item.domains}
+                    label={domain.name}
                     color="neutral"
                     style="light-fill"
                     size="large"
@@ -658,7 +658,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title="Active" value={@stats.firing} legend="primary" />
         <.forage_widget title="Resolved" value={@stats.resolved} legend="secondary" />
-        <.forage_widget title="Meadows" value={@stats.meadows} legend="tertiary" />
+        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -667,7 +667,7 @@ defmodule HiveWeb.ForageComponents do
             <div data-part="empty-icon"><.bell /></div>
             <h2>No Grafana alerts yet</h2>
             <p>
-              Generate a webhook on a meadow in settings and point a Grafana
+              Generate a webhook on a domain in settings and point a Grafana
               contact point at it. Firing and resolved deliveries will thread
               into one item per alert.
             </p>
@@ -689,8 +689,8 @@ defmodule HiveWeb.ForageComponents do
                   dot={true}
                 />
                 <.badge
-                  :if={alert.meadow}
-                  label={alert.meadow.name}
+                  :if={alert.domain}
+                  label={alert.domain.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
@@ -715,7 +715,7 @@ defmodule HiveWeb.ForageComponents do
     %{
       firing: Enum.count(alerts, &(&1.status == :firing)),
       resolved: Enum.count(alerts, &(&1.status == :resolved)),
-      meadows: alerts |> Enum.map(& &1.meadow_id) |> Enum.uniq() |> length()
+      domains: alerts |> Enum.map(& &1.domain_id) |> Enum.uniq() |> length()
     }
   end
 
@@ -738,7 +738,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title={String.capitalize(@stats.state_label)} value={@stats.total} legend="primary" />
         <.forage_widget title="Repositories" value={@stats.repositories} legend="secondary" />
-        <.forage_widget title="Meadows" value={@stats.meadows} legend="tertiary" />
+        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -760,14 +760,14 @@ defmodule HiveWeb.ForageComponents do
             <div data-part="empty-icon"><.icon name={@source.icon} /></div>
             <h2>No {@stats.state_label} to show</h2>
             <p>
-              Connect a GitHub repository to a meadow in
-              <a href={~p"/meadows"}>Meadows</a>
+              Connect a GitHub repository to a domain in
+              <a href={~p"/domains"}>Domains</a>
               and matching issues will appear here once they have been synced.
             </p>
           </div>
 
           <div :if={@entries != []} data-part="issue-list">
-            <article :for={{repository, issue, meadows} <- @entries} data-part="issue-row">
+            <article :for={{repository, issue, domains} <- @entries} data-part="issue-row">
               <div data-part="issue-copy">
                 <h2>
                   <a
@@ -789,8 +789,8 @@ defmodule HiveWeb.ForageComponents do
                     <:icon><.brand_github /></:icon>
                   </.badge>
                   <.badge
-                    :for={meadow <- meadows}
-                    label={meadow.name}
+                    :for={domain <- domains}
+                    label={domain.name}
                     color="information"
                     style="light-fill"
                     size="large"

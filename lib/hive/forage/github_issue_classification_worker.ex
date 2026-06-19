@@ -1,6 +1,6 @@
 defmodule Hive.Forage.GitHubIssueClassificationWorker do
   @moduledoc """
-  Runs the GitHub issue meadow classifier asynchronously so the syncer can
+  Runs the GitHub issue domain classifier asynchronously so the syncer can
   return without waiting for the LLM. Jobs are de-duplicated per issue
   while they sit in the queue.
   """
@@ -17,7 +17,7 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
   @doc """
   Enqueues a classification job for the given issue id. Returns
   `:skipped` when agentic workflows are dormant; the syncer falls back to
-  linking every candidate meadow in that case.
+  linking every candidate domain in that case.
   """
   def enqueue(issue_id, opts \\ []) when is_binary(issue_id) do
     agents_enabled? = Keyword.get(opts, :agents_enabled?, &Hive.Agents.enabled?/0)
@@ -34,8 +34,8 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"issue_id" => issue_id}}) do
     case GitHubIssueClassification.classify(issue_id) do
-      {:ok, _meadow_ids} ->
-        Hive.Meadows.schedule_evolution()
+      {:ok, _domain_ids} ->
+        Hive.Domains.schedule_evolution()
         :ok
 
       {:error, :not_found} ->

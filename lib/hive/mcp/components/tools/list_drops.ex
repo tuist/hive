@@ -7,9 +7,9 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
     schema: %{
       "type" => "object",
       "properties" => %{
-        "meadow_id" => %{
+        "domain_id" => %{
           "type" => "string",
-          "description" => "Restrict to a single meadow id."
+          "description" => "Restrict to a single domain id."
         },
         "source_type" => %{
           "type" => "string",
@@ -27,7 +27,7 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
 
   @impl EMCP.Tool
   def description,
-    do: "List shipped-update drops, optionally filtered by meadow or source type."
+    do: "List shipped-update drops, optionally filtered by domain or source type."
 
   @impl EMCP.Tool
   def call(conn, args) do
@@ -37,7 +37,7 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
 
     opts =
       [user: user, page: page, page_size: page_size]
-      |> put_present(:meadow_ids, wrap(args["meadow_id"]))
+      |> put_present(:domain_ids, wrap(args["domain_id"]))
       |> put_present(:source_type, parse_source_type(args["source_type"]))
 
     {drops, meta} = Drops.list_drops(opts)

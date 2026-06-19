@@ -2,11 +2,11 @@ defmodule HiveWeb.DropsLive.ShowTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Drops
-  alias Hive.Meadows
+  alias Hive.Domains
 
-  defp unique_meadow_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
+  defp unique_domain_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
 
-  defp insert_drop!(meadow, overrides \\ %{}) do
+  defp insert_drop!(domain, overrides \\ %{}) do
     attrs =
       Map.merge(
         %{
@@ -23,38 +23,38 @@ defmodule HiveWeb.DropsLive.ShowTest do
       )
 
     {:ok, drop} = Drops.upsert_drop(attrs)
-    Drops.replace_drop_meadows(drop, [meadow.id])
+    Drops.replace_drop_domains(drop, [domain.id])
     drop
   end
 
-  test "renders a drop from a public meadow to anonymous visitors", %{conn: conn} do
-    {:ok, meadow} =
-      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "public"})
+  test "renders a drop from a public domain to anonymous visitors", %{conn: conn} do
+    {:ok, domain} =
+      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
 
-    drop = insert_drop!(meadow)
+    drop = insert_drop!(domain)
 
     {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
 
     assert html =~ "Slack workspace management moved to Ops"
     assert html =~ "v0.25.0"
-    assert html =~ meadow.name
+    assert html =~ domain.name
     assert html =~ "Open original"
   end
 
-  test "redirects anonymous visitors away from drops in a private meadow", %{conn: conn} do
-    {:ok, meadow} =
-      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "private"})
+  test "redirects anonymous visitors away from drops in a private domain", %{conn: conn} do
+    {:ok, domain} =
+      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "private"})
 
-    drop = insert_drop!(meadow)
+    drop = insert_drop!(domain)
 
     assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.id}")
   end
 
   test "shows the version chip when present", %{conn: conn} do
-    {:ok, meadow} =
-      Meadows.create_meadow(%{"name" => unique_meadow_name("Hive"), "visibility" => "public"})
+    {:ok, domain} =
+      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
 
-    drop = insert_drop!(meadow, %{version: "v4.7.0"})
+    drop = insert_drop!(domain, %{version: "v4.7.0"})
 
     {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
 

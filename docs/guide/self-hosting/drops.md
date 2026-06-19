@@ -1,6 +1,6 @@
 ## Drops
 
-Drops aggregate shipped updates so people can follow what each meadow
+Drops aggregate shipped updates so people can follow what each domain
 has actually released. A drop is a single user-facing update, for
 example a shipped feature, a fix, or a changelog entry, optionally
 tagged with a version (`v0.25.0`, `4.7.0`). Drops are read-only from
@@ -12,27 +12,27 @@ typing into a form.
 Two source types feed drops:
 
 - **GitHub Releases**: every release published on a repository
-  connected to a meadow is ingested automatically. No configuration
-  is required beyond the meadow's existing repository binding. New
+  connected to a domain is ingested automatically. No configuration
+  is required beyond the domain's existing repository binding. New
   releases appear in `/drops` within fifteen minutes, attached to the
-  meadows linked to the release's repository.
+  domains linked to the release's repository.
 - **RSS / Atom changelog feeds**: any public RSS or Atom feed can be
   registered as a source from `/ops/drops` (admin only). Sources are
-  global: you do not pick a meadow at registration time. Hive polls
+  global: you do not pick a domain at registration time. Hive polls
   every enabled feed on the same fifteen-minute interval and routes
   every ingested entry through the classifier.
 
-## Routing entries to meadows
+## Routing entries to domains
 
 Each new RSS entry is processed by a classifier that decides which
-meadows it belongs to. The classifier reads the entry's title and
-body, compares them against the description of each meadow, and links
-the drop to the meadows whose substance it actually matches. A single
-entry can end up linked to zero, one, or several meadows.
+domains it belongs to. The classifier reads the entry's title and
+body, compares them against the description of each domain, and links
+the drop to the domains whose substance it actually matches. A single
+entry can end up linked to zero, one, or several domains.
 
 When an LLM is configured (see [Agents](./agents)) the classifier asks
 the agent to pick the right subset. When no LLM is configured, the
-classifier falls back to linking the entry to every meadow so the
+classifier falls back to linking the entry to every domain so the
 dashboard still has something to show; this matches the fallback used
 for GitHub issue classification. A sweeper retries any drop still
 missing a classification, so transient LLM failures and drops created
@@ -60,19 +60,19 @@ Every list-style surface in Hive ships an Atom 1.0 feed at
 exception:
 
 - `/drops/atom.xml`: every drop the subscriber is allowed to see.
-- `/drops/atom.xml?meadow_ids=<id>,<id>`: only drops linked to the
-  listed meadows.
-- `/meadows/:id/drops/atom.xml`: only the drops for one meadow.
-- `/meadows/:id/atom.xml`: the meadow's merged feed (GitHub issues,
+- `/drops/atom.xml?domain_ids=<id>,<id>`: only drops linked to the
+  listed domains.
+- `/domains/:id/drops/atom.xml`: only the drops for one domain.
+- `/domains/:id/atom.xml`: the domain's merged feed (GitHub issues,
   Grafana alerts, and drops together).
 
 Replace `atom.xml` with `rss.xml` for the RSS 2.0 version. Visibility
 is enforced the same way as the HTML page: anonymous subscribers only
-see drops linked to a public meadow.
+see drops linked to a public domain.
 
 The `Subscribe` button on `/drops` opens a picker that lets visitors
-choose which meadows they want, generates the matching URL with the
-right `meadow_ids` query parameter, and exposes a copy button so the
+choose which domains they want, generates the matching URL with the
+right `domain_ids` query parameter, and exposes a copy button so the
 URL can go straight into a reader.
 
 ## Managing RSS sources
