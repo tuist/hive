@@ -22,8 +22,10 @@ Hive currently uses agents for:
 - Spec revision summaries: whenever a spec is edited after its first
   draft, Hive queues a job that asks the agent to describe what
   changed between the previous and the new revision. The summary
-  appears in the draft history on the spec page. When no LLM is
-  configured, the history falls back to a counts-based heuristic.
+  appears in the draft history on the spec page. A scheduled sweeper
+  also backfills revisions whose summary is still missing, spawning one
+  worker job per revision so failures retry independently. When no LLM
+  is configured, the history falls back to a counts-based heuristic.
 - Slack thread replies: when Hive's Slack bot is `@`-mentioned, Hive
   queues a job that reads the thread context and asks the agent to
   draft a short reply, posted back in the same thread. When no LLM is
