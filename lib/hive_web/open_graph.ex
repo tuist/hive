@@ -38,7 +38,7 @@ defmodule HiveWeb.OpenGraph do
     ]
   end
 
-  def path(data), do: "/open-graph/#{data.id}/#{hash(data)}"
+  def path(data), do: "/open-graph/#{data.id}/#{hash(data)}.jpg"
 
   def object_key(data), do: "open-graph/#{data.id}/#{hash(data)}.jpg"
 

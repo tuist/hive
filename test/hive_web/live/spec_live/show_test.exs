@@ -31,12 +31,48 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Revision 1"
 
     conn = get(conn, ~p"/specs/#{spec.number}")
-    assert html_response(conn, 200) =~ ~s|property="og:image"|
+    response = html_response(conn, 200)
+
+    assert response =~ ~s|>GitHub sign-in · Hive</title>|
+    assert response =~ ~s(property="og:title" content="GitHub sign-in | Hive")
+    assert response =~ ~s(/specs/#{spec.number}")
+    assert response =~ ~s|property="og:image"|
+    assert response =~ ~s|.jpg"|
 
     spec = Specs.get_spec!(spec.id)
     open_graph = HiveWeb.SpecLive.Show.open_graph(spec)
     assert open_graph.eyebrow == "Spec ##{spec.number}"
     assert open_graph.author == %{handle: "@alice", initials: "a"}
+  end
+
+  test "renders public spec head metadata for anonymous visitors", %{conn: conn} do
+    {_conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Move object storage into the cluster",
+          "body" => "Use Rook and Ceph to provide object storage from the Kubernetes cluster.",
+          "summary" => "Move object storage to Kubernetes with Rook and Ceph.",
+          "visibility" => "public"
+        },
+        user
+      )
+
+    conn = Phoenix.ConnTest.build_conn() |> get(~p"/specs/#{spec.number}")
+    response = html_response(conn, 200)
+
+    assert response =~ ~s|>Move object storage into the cluster · Hive</title>|
+
+    assert response =~
+             ~s(property="og:title" content="Move object storage into the cluster | Hive")
+
+    assert response =~
+             ~s(property="og:description" content="Move object storage to Kubernetes with Rook and Ceph.")
+
+    assert response =~ ~s(property="og:image")
+    assert response =~ ~s(/open-graph/spec-#{spec.number}/)
+    assert response =~ ~s|.jpg"|
   end
 
   test "requires authentication to comment", %{conn: conn} do
