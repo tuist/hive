@@ -13,6 +13,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
   alias Hive.Audit
   alias Hive.Auth
   alias Hive.Forage
+  alias Hive.Specs
 
   def on_mount(:default, _params, session, socket) do
     socket = assign_chrome(socket, session)
@@ -43,6 +44,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
     |> assign(:admin?, Auth.admin?(user))
     |> assign(:csrf_token, Plug.CSRFProtection.get_csrf_token())
     |> assign(:forage_sources, Forage.visible_sources(user))
+    |> assign(:specs_have_new_activity?, Specs.has_new_activity_for_user?(user))
     |> assign(:current_path, "/")
   end
 

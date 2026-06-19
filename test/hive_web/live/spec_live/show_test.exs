@@ -399,6 +399,77 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ "This revision updated the proposal body"
   end
 
+  test "records a view for the signed-in user", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    assert Hive.Repo.all(Specs.View) == []
+
+    {:ok, _view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    [view] = Hive.Repo.all(Specs.View)
+    assert view.spec_id == spec.id
+    assert view.user_id == user.id
+  end
+
+  test "does not record a view for anonymous visitors" do
+    {_, user} = sign_in(Phoenix.ConnTest.build_conn(), "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    {:ok, _view, _html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs/#{spec.number}")
+
+    assert Hive.Repo.all(Specs.View) == []
+  end
+
+  test "does not show a new-activity indicator on a first visit", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
+    refute html =~ ~s|>New activity<|
+    refute html =~ ~s|>New<|
+  end
+
+  test "shows the new-activity header badge and per-comment tag after activity since last visit",
+       %{conn: conn} do
+    {author_conn, author} = sign_in(conn, "author@example.com")
+    {reader_conn, reader} = sign_in(conn, "reader@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Visible", "body" => "Initial proposal."}, author)
+
+    {:ok, old_comment} =
+      Specs.add_comment(spec, %{"body" => "Previously seen note."}, author)
+
+    {:ok, _view, _html} = live(reader_conn, ~p"/specs/#{spec.number}")
+    require Ecto.Query
+
+    {1, _} =
+      Hive.Repo.update_all(
+        Ecto.Query.from(view in Specs.View,
+          where: view.user_id == ^reader.id and view.spec_id == ^spec.id
+        ),
+        set: [last_viewed_at: ~U[2020-01-01 00:00:00.000000Z]]
+      )
+
+    {:ok, fresh_comment} =
+      Specs.add_comment(spec, %{"body" => "Fresh note for the reader."}, author)
+
+    {:ok, _view, html} = live(reader_conn, ~p"/specs/#{spec.number}")
+    assert html =~ ~s|>New activity<|
+    assert html =~ "comment-#{fresh_comment.id}"
+    refute html =~ ~s|id="comment-#{old_comment.id}"[^>]*>\\s*<.*>New<|
+
+    {:ok, _view, html2} = live(author_conn, ~p"/specs/#{spec.number}")
+    refute html2 =~ ~s|>New activity<|
+  end
+
   test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
 

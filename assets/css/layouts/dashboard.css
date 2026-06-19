@@ -29,6 +29,26 @@
         white-space: nowrap;
       }
 
+      & [data-part="item"][data-new-activity="true"] {
+        position: relative;
+
+        & .noora-tab-menu-vertical {
+          padding-right: var(--noora-spacing-8);
+        }
+
+        &::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          right: var(--noora-spacing-4);
+          transform: translateY(-50%);
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--noora-purple-500);
+        }
+      }
+
       & [data-part="forage-sources"],
       & [data-part="settings"] {
         & > summary {

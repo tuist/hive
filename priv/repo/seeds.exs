@@ -17,6 +17,7 @@ alias Hive.Specs
 alias Hive.Specs.Comment
 alias Hive.Specs.Revision
 alias Hive.Specs.Spec
+alias Hive.Specs.View, as: SpecView
 
 account_identities = [
   {"test@hive.dev", "google", "google-test-hive-dev"},
@@ -609,6 +610,45 @@ Enum.each(specs, fn seed ->
       {:ok, _comment} = Specs.add_comment(spec, comment_attrs, comment_user)
     end
   end)
+end)
+
+# Demo spec_views for the dev admin so the "New activity" badge appears on the
+# Specs index without manual clicking. Each entry says: "pretend the dev user
+# opened this spec on `viewed_at`." If the spec has been updated or commented
+# since, the badge shows.
+spec_view_seeds = [
+  %{
+    user_email: "test@hive.dev",
+    spec_titles: ["GitHub Discussions forage import"],
+    viewed_at: ~U[2020-01-01 00:00:00.000000Z]
+  },
+  %{
+    user_email: "test@hive.dev",
+    spec_titles: ["Feature request subscriptions"],
+    viewed_at: ~U[2020-01-01 00:00:00.000000Z]
+  },
+  %{
+    user_email: "test@hive.dev",
+    spec_titles: ["Spec revision workflow for MCP clients"],
+    viewed_at: DateTime.utc_now()
+  }
+]
+
+Enum.each(spec_view_seeds, fn seed ->
+  with %{} = user <- Accounts.get_user_by_email(seed.user_email),
+       %Spec{} = spec <-
+         Spec |> where([spec], spec.title in ^seed.spec_titles) |> Repo.all() |> List.first() do
+    SpecView
+    |> where([view], view.user_id == ^user.id and view.spec_id == ^spec.id)
+    |> Repo.delete_all()
+
+    %SpecView{}
+    |> Ecto.Changeset.cast(
+      %{user_id: user.id, spec_id: spec.id, last_viewed_at: seed.viewed_at},
+      [:user_id, :spec_id, :last_viewed_at]
+    )
+    |> Repo.insert!()
+  end
 end)
 
 meadow_webhooks = [

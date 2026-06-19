@@ -19,6 +19,8 @@ defmodule Hive.Specs.Spec do
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
     field :lock_version, :integer, default: 1
     field :meadow_ids, {:array, :binary_id}, virtual: true
+    field :last_activity_at, :utc_datetime, virtual: true
+    field :has_new_activity, :boolean, virtual: true, default: false
 
     belongs_to :source_feature_request, Hive.Forage.FeatureRequest
     belongs_to :created_by_user, Hive.Accounts.User
