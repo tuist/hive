@@ -19,9 +19,9 @@ defmodule HiveWeb.OpsLive.Drops do
   def open_graph do
     %{
       description:
-        "Register RSS/Atom changelog sources for each meadow. GitHub Releases is implicit.",
+        "Register RSS/Atom changelog sources for each domain. GitHub Releases is implicit.",
       eyebrow: "Ops",
-      highlights: ["RSS / Atom sources", "Per-meadow registration", "Polled every 15 minutes"],
+      highlights: ["RSS / Atom sources", "Per-domain registration", "Polled every 15 minutes"],
       id: "ops-drops",
       path: "/ops/drops",
       title: "Drops"
@@ -156,7 +156,7 @@ defmodule HiveWeb.OpsLive.Drops do
             <h1>Drops</h1>
             <p>
               Register RSS/Atom changelog feeds. Each ingested entry is routed to one or
-              more meadows by the classifier. GitHub Releases for any connected repository
+              more domains by the classifier. GitHub Releases for any connected repository
               are ingested automatically and don't need a source here.
             </p>
           </div>
@@ -249,7 +249,7 @@ defmodule HiveWeb.OpsLive.Drops do
     <.modal
       id="new-drop-source-modal"
       title="Add an RSS source"
-      description="Register an RSS or Atom changelog feed. Hive routes each ingested entry to one or more meadows automatically."
+      description="Register an RSS or Atom changelog feed. Hive routes each ingested entry to one or more domains automatically."
       header_type="icon"
       header_size="large"
       on_dismiss="cancel_new_source"
@@ -271,7 +271,7 @@ defmodule HiveWeb.OpsLive.Drops do
         data-part="form"
       >
         <div :if={@projects == []} data-part="empty-projects">
-          <p>Create a project first; sources are routed into a project's meadows.</p>
+          <p>Create a project first; sources are routed into a project's domains.</p>
         </div>
 
         <div :if={@projects != []} data-part="select-field">

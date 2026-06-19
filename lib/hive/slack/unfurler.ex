@@ -10,7 +10,7 @@ defmodule Hive.Slack.Unfurler do
 
   @unfurlers [
     Hive.Specs.SlackUnfurl,
-    Hive.Meadows.SlackUnfurl,
+    Hive.Domains.SlackUnfurl,
     Hive.Forage.SlackUnfurl
   ]
 

@@ -1,20 +1,20 @@
 defmodule Hive.Projects do
   @moduledoc """
   Projects are the top-level groupings tracked by a Hive instance: a
-  product, codebase, or service. Each project owns its meadows
+  product, codebase, or service. Each project owns its domains
   (sub-domains), its connected GitHub repositories, and the RSS sources
-  whose entries feed those meadows.
+  whose entries feed those domains.
 
   For instances that only care about one product (the "Kura case"),
-  the operator can create a single project with zero meadows and the
+  the operator can create a single project with zero domains and the
   rest of the dashboard treats every drop as belonging to that project.
   """
 
   import Ecto.Query
 
   alias Hive.Auth
-  alias Hive.Meadows.GitHubRepository
-  alias Hive.Meadows.Meadow
+  alias Hive.Domains.GitHubRepository
+  alias Hive.Domains.Domain
   alias Hive.Projects.Project
   alias Hive.Repo
 
@@ -38,7 +38,7 @@ defmodule Hive.Projects do
   def get_project!(id) do
     Project
     |> Repo.get!(id)
-    |> Repo.preload([:meadows, :github_repositories])
+    |> Repo.preload([:domains, :github_repositories])
   end
 
   def fetch_visible_project(id, user) do
@@ -76,13 +76,13 @@ defmodule Hive.Projects do
   def delete_project(%Project{} = project), do: Repo.delete(project)
 
   @doc """
-  Lists meadows belonging to the given project. Useful as the candidate
-  set for `Hive.Drops.MeadowClassification`.
+  Lists domains belonging to the given project. Useful as the candidate
+  set for `Hive.Drops.DomainClassification`.
   """
-  def list_meadows_for_project(project_id) when is_binary(project_id) do
-    Meadow
-    |> where([meadow], meadow.project_id == ^project_id)
-    |> order_by([meadow], asc: meadow.name)
+  def list_domains_for_project(project_id) when is_binary(project_id) do
+    Domain
+    |> where([domain], domain.project_id == ^project_id)
+    |> order_by([domain], asc: domain.name)
     |> Repo.all()
   end
 
@@ -97,5 +97,5 @@ defmodule Hive.Projects do
   end
 
   defp preload(project),
-    do: Repo.preload(project, [:meadows, :github_repositories])
+    do: Repo.preload(project, [:domains, :github_repositories])
 end

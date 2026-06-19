@@ -13,7 +13,7 @@ defmodule Hive.Drops.ReleaseBodyRewriter do
   alias Hive.Drops
   alias Hive.Drops.Agents.ReleaseRewriterAgent
   alias Hive.Drops.Drop
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
 
   @max_body_chars 16_000
 
@@ -34,7 +34,7 @@ defmodule Hive.Drops.ReleaseBodyRewriter do
   end
 
   defp do_rewrite(drop, opts) do
-    drop = Hive.Repo.preload(drop, [:meadows, :github_repository])
+    drop = Hive.Repo.preload(drop, [:domains, :github_repository])
     input = build_input(drop)
     runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
 
@@ -53,13 +53,13 @@ defmodule Hive.Drops.ReleaseBodyRewriter do
   defp handle_agent_result({:error, reason}, _drop), do: {:error, reason}
 
   defp build_input(drop) do
-    meadows = drop.meadows || []
+    domains = drop.domains || []
 
     %{
-      meadow: %{
-        name: Enum.map_join(meadows, ", ", & &1.name),
+      domain: %{
+        name: Enum.map_join(domains, ", ", & &1.name),
         description:
-          meadows |> Enum.map(& &1.description) |> Enum.reject(&is_nil/1) |> Enum.join(" / ")
+          domains |> Enum.map(& &1.description) |> Enum.reject(&is_nil/1) |> Enum.join(" / ")
       },
       repository: repository_label(drop.github_repository),
       release: %{

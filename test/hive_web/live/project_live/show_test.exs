@@ -1,19 +1,19 @@
 defmodule HiveWeb.ProjectLive.ShowTest do
   use HiveWeb.ConnCase, async: true
 
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Projects
 
-  test "renders a public project's repositories and meadows", %{conn: conn} do
+  test "renders a public project's repositories and domains", %{conn: conn} do
     {:ok, project} =
       Projects.create_project(%{
         name: "Hive",
-        description: "Agentic meadows.",
+        description: "Agentic domains.",
         visibility: "public"
       })
 
-    {:ok, _meadow} =
-      Meadows.create_meadow(%{
+    {:ok, _domain} =
+      Domains.create_domain(%{
         name: "Hive",
         project_id: project.id,
         github_repository_owner: "tuist",
@@ -23,7 +23,7 @@ defmodule HiveWeb.ProjectLive.ShowTest do
     {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}")
 
     assert html =~ "Hive"
-    assert html =~ "Agentic meadows."
+    assert html =~ "Agentic domains."
     assert html =~ "tuist/hive"
   end
 
@@ -39,11 +39,11 @@ defmodule HiveWeb.ProjectLive.ShowTest do
              live(conn, ~p"/projects/00000000-0000-0000-0000-000000000000")
   end
 
-  test "renders the empty state when the project has no meadows", %{conn: conn} do
+  test "renders the empty state when the project has no domains", %{conn: conn} do
     {:ok, project} = Projects.create_project(%{name: "Kura", visibility: "public"})
 
     {:ok, _view, html} = live(conn, ~p"/projects/#{project.id}")
 
-    assert html =~ "No meadows defined"
+    assert html =~ "No domains defined"
   end
 end

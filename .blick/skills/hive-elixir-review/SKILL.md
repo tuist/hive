@@ -200,7 +200,7 @@ Commit scopes and Helm chart releases from `helm`-scoped commits.
 
 ## 7. LiveView lifecycle
 
-The forage, dashboard, meadow, and spec sections use Phoenix LiveView.
+The forage, dashboard, domain, and spec sections use Phoenix LiveView.
 These rules catch lifecycle bugs that need semantic context (which
 routes are tenant-scoped, what counts as "slow", which collections grow)
 and so live outside credo.

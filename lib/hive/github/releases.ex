@@ -22,7 +22,7 @@ defmodule Hive.GitHub.Releases do
 
   @doc """
   Lists published releases for a repository identified by `owner` and
-  `name`. Accepts a `Hive.Meadows.GitHubRepository` or any map exposing
+  `name`. Accepts a `Hive.Domains.GitHubRepository` or any map exposing
   `:owner` and `:name` keys.
   """
   def list_releases(repository, opts \\ []) do

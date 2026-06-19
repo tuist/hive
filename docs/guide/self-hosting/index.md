@@ -17,18 +17,18 @@ one place:
 - **Projects** group everything by product, codebase, or service the
   instance tracks. A project owns its connected GitHub repositories
   and the RSS sources that feed it.
-- **Meadows** are optional sub-domains *inside* a project, so a team
+- **Domains** are optional sub-domains *inside* a project, so a team
   can split a project into smaller buckets the classifier routes
   issues and drops into. A single-product instance can keep zero
-  meadows; a multi-domain project can carry several.
+  domains; a multi-domain project can carry several.
 - **Specs** capture intent, decisions, and the surface area of a piece
   of work in a form both humans and agents can read.
 - **Forage** brings feature requests, bug reports, feedback, GitHub
   issues, and Grafana alerts into one triage queue, scoped to the
-  meadows each viewer can see.
+  domains each viewer can see.
 - **Drops** aggregate shipped updates (GitHub releases and changelog
   feeds) into a stream subscribers can follow per project or per
-  meadow.
+  domain.
 
 The goal is a small, opinionated surface that a team can adopt without
 adopting an entire methodology.

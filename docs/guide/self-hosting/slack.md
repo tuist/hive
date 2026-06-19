@@ -13,7 +13,7 @@ Once a workspace is installed, Hive can:
   shortcut (right-click a message, "More message shortcuts", pick the
   shortcut).
 - Unfurl Hive links inline. When a workspace member pastes a link to a
-  spec, meadow, or forage item, Slack expands the message with a
+  spec, domain, or forage item, Slack expands the message with a
   preview of the resource. Only resources that an anonymous visitor
   could see on the dashboard are previewed; private specs and
   organization-only forage items stay opaque.
@@ -196,7 +196,7 @@ connected channel. Hive looks each URL up, builds a preview, and posts
 the preview back via `chat.unfurl`. Supported surfaces:
 
 - `/specs/:number`: title, summary or first body line, and status.
-- `/meadows/:id`: name and description.
+- `/domains/:id`: name and description.
 - `/forage/items/:origin/:id`: title, description excerpt, type, and
   status. Manual items, GitHub issues, and Grafana alerts all unfurl
   through the same surface.

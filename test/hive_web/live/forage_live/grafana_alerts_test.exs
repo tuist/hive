@@ -4,18 +4,18 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
 
   alias Hive.Auth
   alias Hive.Forage.Grafana
-  alias Hive.Meadows
-  alias Hive.Meadows.Webhooks
+  alias Hive.Domains
+  alias Hive.Domains.Webhooks
 
   test "hides organization-only alerts from guests", %{conn: conn} do
     Mimic.stub(Auth, :member?, fn _ -> false end)
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Guest hidden"})
+    {:ok, domain} = Domains.create_domain(%{name: "Guest hidden"})
 
     {:ok, {webhook, _}} =
-      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
 
     {:ok, [_]} =
-      Grafana.ingest(meadow, webhook, %{
+      Grafana.ingest(domain, webhook, %{
         "alerts" => [
           %{
             "status" => "firing",
@@ -41,15 +41,15 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
     assert html =~ "No forage items found"
   end
 
-  test "lists ingested alerts with meadow and status", %{conn: conn} do
+  test "lists ingested alerts with domain and status", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
 
     {:ok, {webhook, _}} =
-      Webhooks.create(meadow, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
 
     {:ok, [_]} =
-      Grafana.ingest(meadow, webhook, %{
+      Grafana.ingest(domain, webhook, %{
         "status" => "firing",
         "alerts" => [
           %{

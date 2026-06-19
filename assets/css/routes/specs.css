@@ -120,22 +120,22 @@
     }
   }
 
-  & [data-part="meadow-list"],
-  & [data-part="spec-table-meadows"] {
+  & [data-part="domain-list"],
+  & [data-part="spec-table-domains"] {
     display: flex;
     flex-wrap: wrap;
     gap: var(--noora-spacing-2);
     min-width: 0;
   }
 
-  & [data-part="meadow-list"] {
+  & [data-part="domain-list"] {
     margin-top: var(--noora-spacing-1);
   }
 
-  & [data-part="spec-table-meadows"] {
+  & [data-part="spec-table-domains"] {
     padding: var(--noora-spacing-6) var(--noora-spacing-7);
 
-    & [data-part="empty-meadows"] {
+    & [data-part="empty-domains"] {
       color: var(--noora-surface-label-tertiary);
       font: var(--noora-font-weight-regular) var(--noora-font-body-small);
     }

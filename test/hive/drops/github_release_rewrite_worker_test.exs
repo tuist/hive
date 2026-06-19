@@ -5,7 +5,7 @@ defmodule Hive.Drops.GitHubReleaseRewriteWorkerTest do
   alias Hive.Drops
   alias Hive.Drops.Drop
   alias Hive.Drops.GitHubReleaseRewriteWorker
-  alias Hive.Meadows
+  alias Hive.Domains
 
   describe "enqueue/2" do
     test "returns :skipped when agents are disabled" do
@@ -50,7 +50,7 @@ defmodule Hive.Drops.GitHubReleaseRewriteWorkerTest do
     end
 
     test "enqueues an Oban job when agents are enabled and the drop is fresh" do
-      {:ok, _meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+      {:ok, _domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
       {:ok, drop} =
         Drops.upsert_release_drop(%{

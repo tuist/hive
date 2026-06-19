@@ -39,7 +39,7 @@ defmodule HiveWeb.Router do
     pipe_through :json_api
 
     post "/github", GitHubWebhookController, :create
-    post "/meadows/:meadow_id/:source/:token", MeadowWebhookController, :create
+    post "/domains/:domain_id/:source/:token", DomainWebhookController, :create
   end
 
   scope "/api/slack", HiveWeb do
@@ -92,10 +92,10 @@ defmodule HiveWeb.Router do
       get "/specs/rss.xml", FeedController, :specs_rss
       get "/drops/atom.xml", FeedController, :drops_atom
       get "/drops/rss.xml", FeedController, :drops_rss
-      get "/meadows/:id/atom.xml", FeedController, :meadow_atom
-      get "/meadows/:id/rss.xml", FeedController, :meadow_rss
-      get "/meadows/:id/drops/atom.xml", FeedController, :meadow_drops_atom
-      get "/meadows/:id/drops/rss.xml", FeedController, :meadow_drops_rss
+      get "/domains/:id/atom.xml", FeedController, :domain_atom
+      get "/domains/:id/rss.xml", FeedController, :domain_rss
+      get "/domains/:id/drops/atom.xml", FeedController, :domain_drops_atom
+      get "/domains/:id/drops/rss.xml", FeedController, :domain_drops_rss
     end
 
     scope "/oauth2", OAuth do
@@ -141,11 +141,11 @@ defmodule HiveWeb.Router do
       live "/drops/:id", DropsLive.Show
     end
 
-    live_session :meadows,
+    live_session :domains,
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
-      live "/meadows", MeadowLive.Index
-      live "/meadows/:id", MeadowLive.Show
+      live "/domains", DomainLive.Index
+      live "/domains/:id", DomainLive.Show
     end
 
     live_session :projects,

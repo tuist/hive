@@ -5,7 +5,7 @@ defmodule Hive.DropsTest do
   alias Hive.Drops
   alias Hive.Drops.Drop
   alias Hive.Drops.DropSource
-  alias Hive.Meadows
+  alias Hive.Domains
 
   describe "upsert_drop/1" do
     test "inserts a drop and upserts an existing one by (source_type, external_id)" do
@@ -29,9 +29,9 @@ defmodule Hive.DropsTest do
   end
 
   describe "list_drops/1" do
-    test "anonymous viewers only see drops from public meadows" do
-      public = create_meadow!(%{name: "Public meadow", visibility: :public})
-      private = create_meadow!(%{name: "Private meadow", visibility: :private})
+    test "anonymous viewers only see drops from public domains" do
+      public = create_domain!(%{name: "Public domain", visibility: :public})
+      private = create_domain!(%{name: "Private domain", visibility: :private})
 
       {:ok, public_drop} = insert_drop(public)
       {:ok, _hidden_drop} = insert_drop(private)
@@ -42,10 +42,10 @@ defmodule Hive.DropsTest do
       assert meta.total_entries == 1
     end
 
-    test "members see drops from every meadow" do
+    test "members see drops from every domain" do
       member = create_member!()
-      public = create_meadow!(%{name: "Public", visibility: :public})
-      private = create_meadow!(%{name: "Private", visibility: :private})
+      public = create_domain!(%{name: "Public", visibility: :public})
+      private = create_domain!(%{name: "Private", visibility: :private})
 
       {:ok, _public_drop} = insert_drop(public)
       {:ok, _private_drop} = insert_drop(private)
@@ -55,24 +55,24 @@ defmodule Hive.DropsTest do
       assert length(drops) == 2
     end
 
-    test "filters by meadow_ids" do
-      a = create_meadow!(%{name: "A"})
-      b = create_meadow!(%{name: "B"})
+    test "filters by domain_ids" do
+      a = create_domain!(%{name: "A"})
+      b = create_domain!(%{name: "B"})
 
       {:ok, drop_a} = insert_drop(a)
       {:ok, _drop_b} = insert_drop(b)
 
-      {drops, _meta} = Drops.list_drops(user: nil, meadow_ids: [a.id])
+      {drops, _meta} = Drops.list_drops(user: nil, domain_ids: [a.id])
 
       assert Enum.map(drops, & &1.id) == [drop_a.id]
     end
 
     test "filters by source_type and search text" do
-      meadow = create_meadow!()
-      {:ok, gh_drop} = insert_drop(meadow, %{source_type: :github_release, title: "v1.2.3"})
+      domain = create_domain!()
+      {:ok, gh_drop} = insert_drop(domain, %{source_type: :github_release, title: "v1.2.3"})
 
       {:ok, _rss_drop} =
-        insert_drop(meadow, %{
+        insert_drop(domain, %{
           source_type: :rss,
           external_id: "rss-1",
           title: "Marketing post"
@@ -125,10 +125,10 @@ defmodule Hive.DropsTest do
     end
   end
 
-  defp create_meadow!(attrs \\ %{}) do
-    attrs = Map.merge(%{name: "Meadow #{System.unique_integer([:positive])}"}, attrs)
-    {:ok, meadow} = Meadows.create_meadow(attrs)
-    meadow
+  defp create_domain!(attrs \\ %{}) do
+    attrs = Map.merge(%{name: "Domain #{System.unique_integer([:positive])}"}, attrs)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
   end
 
   defp create_member! do
@@ -143,7 +143,7 @@ defmodule Hive.DropsTest do
     user
   end
 
-  defp insert_drop(meadow, overrides \\ %{}) do
+  defp insert_drop(domain, overrides \\ %{}) do
     attrs =
       Map.merge(
         %{
@@ -158,7 +158,7 @@ defmodule Hive.DropsTest do
       )
 
     with {:ok, drop} <- Drops.upsert_drop(attrs) do
-      Drops.replace_drop_meadows(drop, [meadow.id])
+      Drops.replace_drop_domains(drop, [domain.id])
       {:ok, drop}
     end
   end

@@ -3,7 +3,7 @@ defmodule HiveWeb.SpecLive.Edit do
 
   use HiveWeb, :live_view
 
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Specs
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -11,7 +11,7 @@ defmodule HiveWeb.SpecLive.Edit do
 
   def open_graph(spec) do
     %{
-      description: "Edit an existing meadow proposal.",
+      description: "Edit an existing domain proposal.",
       eyebrow: "Spec",
       highlights: ["Editable proposal", "Optimistic locking", "Member only"],
       id: "specs-edit-#{spec.number}",
@@ -29,7 +29,7 @@ defmodule HiveWeb.SpecLive.Edit do
        socket
        |> assign(:page_title, "Edit #{spec.title} · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph(spec)))
-       |> assign(:meadows, Meadows.list_meadows())
+       |> assign(:domains, Domains.list_domains())
        |> assign(:spec, spec)
        |> assign_form(Specs.change_spec(spec))}
     else
@@ -112,7 +112,7 @@ defmodule HiveWeb.SpecLive.Edit do
         form={@form}
         title="Edit spec"
         action_label="Save spec"
-        meadows={@meadows}
+        domains={@domains}
         source={@spec.source_feature_request}
       />
     </Layouts.dashboard>

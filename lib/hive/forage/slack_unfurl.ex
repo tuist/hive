@@ -4,7 +4,7 @@ defmodule Hive.Forage.SlackUnfurl do
 
   Items are fetched as the anonymous user so only items that anyone
   visiting the dashboard could see are surfaced; organization-only
-  feature requests, Grafana alerts, and private-meadow GitHub issues
+  feature requests, Grafana alerts, and private-domain GitHub issues
   are skipped.
   """
 

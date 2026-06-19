@@ -19,7 +19,7 @@ defmodule Hive.Drops.Agents.ReleaseRewriterAgent do
   @input_schema %{
     type: "object",
     properties: %{
-      meadow: %{
+      domain: %{
         type: "object",
         properties: %{
           name: %{type: "string"},
@@ -41,7 +41,7 @@ defmodule Hive.Drops.Agents.ReleaseRewriterAgent do
         additionalProperties: false
       }
     },
-    required: ["meadow", "release"],
+    required: ["domain", "release"],
     additionalProperties: false
   }
 
@@ -92,7 +92,7 @@ defmodule Hive.Drops.Agents.ReleaseRewriterAgent do
     - Keep the whole body under ~250 words even if the source is long.
     - If the source body is empty, missing, or auto-generated boilerplate
       with no substance, output a single sentence summarising the tag
-      from the meadow's perspective.
+      from the domain's perspective.
 
     #{StyleGuide.prose_rules()}
     """

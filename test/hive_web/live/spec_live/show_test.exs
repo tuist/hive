@@ -4,7 +4,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
   alias Hive.Accounts
   alias Hive.Auth
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Specs
   alias Hive.Specs.RevisionSummaries
 
@@ -107,18 +107,18 @@ defmodule HiveWeb.SpecLive.ShowTest do
              live(contributor_conn, ~p"/specs/#{spec.number}")
   end
 
-  test "shows public specs attached to private meadows to contributors", %{conn: conn} do
+  test "shows public specs attached to private domains to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
+    {:ok, domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Public meadow spec",
+          "title" => "Public domain spec",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "meadow_ids" => [meadow.id]
+          "domain_ids" => [domain.id]
         },
         member
       )
@@ -129,20 +129,20 @@ defmodule HiveWeb.SpecLive.ShowTest do
     end)
 
     assert {:ok, _view, html} = live(contributor_conn, ~p"/specs/#{spec.number}")
-    assert html =~ "Public meadow spec"
+    assert html =~ "Public domain spec"
   end
 
-  test "labels public specs attached to private meadows as public for members", %{conn: conn} do
+  test "labels public specs attached to private domains as public for members", %{conn: conn} do
     {conn, member} = sign_in(conn, "member@tuist.dev")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
+    {:ok, domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
-          "title" => "Public meadow spec",
+          "title" => "Public domain spec",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "meadow_ids" => [meadow.id]
+          "domain_ids" => [domain.id]
         },
         member
       )

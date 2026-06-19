@@ -1,6 +1,6 @@
 defmodule Hive.Specs do
   @moduledoc """
-  Editable meadow proposals that can be shaped from forage.
+  Editable domain proposals that can be shaped from forage.
   """
 
   import Ecto.Query
@@ -9,7 +9,7 @@ defmodule Hive.Specs do
   alias Hive.Accounts.User
   alias Hive.Audit
   alias Hive.Auth
-  alias Hive.Meadows.Meadow
+  alias Hive.Domains.Domain
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
@@ -54,7 +54,7 @@ defmodule Hive.Specs do
     do: visibility
 
   def effective_visibility(%Spec{} = spec) do
-    if has_private_meadow?(spec), do: :private, else: :public
+    if has_private_domain?(spec), do: :private, else: :public
   end
 
   def list_specs(opts \\ []) do
@@ -66,7 +66,7 @@ defmodule Hive.Specs do
       |> maybe_filter_by_status(status)
       |> maybe_filter_by_visibility(user)
       |> order_by([spec], desc: spec.updated_at)
-      |> preload([:source_feature_request, :created_by_user, :updated_by_user, :meadows])
+      |> preload([:source_feature_request, :created_by_user, :updated_by_user, :domains])
       |> Repo.all()
 
     decorate_with_activity(specs, user)
@@ -190,19 +190,19 @@ defmodule Hive.Specs do
     if Auth.member?(user) do
       query
     else
-      private_meadow_spec_ids =
-        from(meadow in Meadow,
-          join: meadow_spec in "meadows_specs",
-          on: meadow_spec.meadow_id == meadow.id,
-          where: meadow.visibility == :private,
-          select: meadow_spec.spec_id
+      private_domain_spec_ids =
+        from(domain in Domain,
+          join: domain_spec in "domains_specs",
+          on: domain_spec.domain_id == domain.id,
+          where: domain.visibility == :private,
+          select: domain_spec.spec_id
         )
 
       where(
         query,
         [spec],
         spec.visibility == :public or
-          (is_nil(spec.visibility) and spec.id not in subquery(private_meadow_spec_ids))
+          (is_nil(spec.visibility) and spec.id not in subquery(private_domain_spec_ids))
       )
     end
   end
@@ -280,7 +280,7 @@ defmodule Hive.Specs do
       :source_feature_request,
       :created_by_user,
       :updated_by_user,
-      :meadows,
+      :domains,
       comments: ^comments_query,
       revisions: ^revisions_query
     ])
@@ -288,9 +288,9 @@ defmodule Hive.Specs do
 
   def change_spec(spec \\ %Spec{}, attrs \\ %{}) do
     spec
-    |> preload_meadows()
+    |> preload_domains()
     |> Spec.changeset(attrs)
-    |> maybe_put_existing_meadow_ids(attrs)
+    |> maybe_put_existing_domain_ids(attrs)
   end
 
   def create_spec(attrs, %User{} = user) do
@@ -300,7 +300,7 @@ defmodule Hive.Specs do
         {:ok, spec} ->
           record_spec_event("spec.created", spec, user)
           SendNotification.enqueue("spec.created", %{"spec_id" => spec.id})
-          Hive.Meadows.schedule_evolution()
+          Hive.Domains.schedule_evolution()
           {:ok, spec}
 
         {:error, reason} ->
@@ -319,7 +319,7 @@ defmodule Hive.Specs do
       |> case do
         {:ok, updated_spec} ->
           record_spec_event("spec.updated", updated_spec, user)
-          Hive.Meadows.schedule_evolution()
+          Hive.Domains.schedule_evolution()
           {:ok, updated_spec}
 
         {:error, reason} ->
@@ -340,7 +340,7 @@ defmodule Hive.Specs do
            |> Changeset.put_change(:updated_by_user_id, user.id)
            |> put_next_spec_number()
            |> Repo.insert(),
-         {:ok, spec} <- put_meadows(spec, attrs),
+         {:ok, spec} <- put_domains(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
       spec
     else
@@ -372,7 +372,7 @@ defmodule Hive.Specs do
            |> Spec.update_changeset(attrs)
            |> Changeset.put_change(:updated_by_user_id, user.id)
            |> Repo.update(stale_error_field: :lock_version),
-         {:ok, spec} <- put_meadows(spec, attrs),
+         {:ok, spec} <- put_domains(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
       spec
     else
@@ -449,14 +449,14 @@ defmodule Hive.Specs do
 
   defp spec_topic(id), do: "#{@topic_prefix}:#{id}"
 
-  defp preload_meadows(%Spec{} = spec), do: Repo.preload(spec, :meadows)
+  defp preload_domains(%Spec{} = spec), do: Repo.preload(spec, :domains)
 
-  defp maybe_put_existing_meadow_ids(changeset, attrs) do
-    if meadow_ids_present?(attrs) do
+  defp maybe_put_existing_domain_ids(changeset, attrs) do
+    if domain_ids_present?(attrs) do
       changeset
     else
-      meadows = get_field_or_loaded_assoc(changeset.data, :meadows)
-      Changeset.put_change(changeset, :meadow_ids, Enum.map(meadows, & &1.id))
+      domains = get_field_or_loaded_assoc(changeset.data, :domains)
+      Changeset.put_change(changeset, :domain_ids, Enum.map(domains, & &1.id))
     end
   end
 
@@ -467,54 +467,54 @@ defmodule Hive.Specs do
     end
   end
 
-  defp has_private_meadow?(%Spec{meadows: %Ecto.Association.NotLoaded{}, id: id})
+  defp has_private_domain?(%Spec{domains: %Ecto.Association.NotLoaded{}, id: id})
        when is_binary(id) do
     Repo.exists?(
-      from(meadow in Meadow,
-        join: meadow_spec in "meadows_specs",
-        on: meadow_spec.meadow_id == meadow.id,
-        where: meadow_spec.spec_id == ^id and meadow.visibility == :private
+      from(domain in Domain,
+        join: domain_spec in "domains_specs",
+        on: domain_spec.domain_id == domain.id,
+        where: domain_spec.spec_id == ^id and domain.visibility == :private
       )
     )
   end
 
-  defp has_private_meadow?(%Spec{meadows: meadows}) when is_list(meadows) do
-    Enum.any?(meadows, &(&1.visibility == :private))
+  defp has_private_domain?(%Spec{domains: domains}) when is_list(domains) do
+    Enum.any?(domains, &(&1.visibility == :private))
   end
 
-  defp has_private_meadow?(_spec), do: false
+  defp has_private_domain?(_spec), do: false
 
-  defp put_meadows(%Spec{} = spec, attrs) do
-    if meadow_ids_present?(attrs) do
-      meadow_ids = normalized_meadow_ids(attrs)
-      meadows = Repo.all(from(meadow in Meadow, where: meadow.id in ^meadow_ids))
+  defp put_domains(%Spec{} = spec, attrs) do
+    if domain_ids_present?(attrs) do
+      domain_ids = normalized_domain_ids(attrs)
+      domains = Repo.all(from(domain in Domain, where: domain.id in ^domain_ids))
 
-      if length(meadows) == length(meadow_ids) do
+      if length(domains) == length(domain_ids) do
         spec
-        |> Repo.preload(:meadows)
+        |> Repo.preload(:domains)
         |> Changeset.change()
-        |> Changeset.put_assoc(:meadows, meadows)
+        |> Changeset.put_assoc(:domains, domains)
         |> Repo.update()
       else
         {:error,
          spec
          |> Spec.changeset(attrs)
-         |> Changeset.add_error(:meadow_ids, "contains unknown meadows")}
+         |> Changeset.add_error(:domain_ids, "contains unknown domains")}
       end
     else
       {:ok, spec}
     end
   end
 
-  defp meadow_ids_present?(attrs) when is_map(attrs) do
-    Map.has_key?(attrs, "meadow_ids") or Map.has_key?(attrs, :meadow_ids)
+  defp domain_ids_present?(attrs) when is_map(attrs) do
+    Map.has_key?(attrs, "domain_ids") or Map.has_key?(attrs, :domain_ids)
   end
 
-  defp meadow_ids_present?(_attrs), do: false
+  defp domain_ids_present?(_attrs), do: false
 
-  defp normalized_meadow_ids(attrs) do
+  defp normalized_domain_ids(attrs) do
     attrs
-    |> Map.get("meadow_ids", Map.get(attrs, :meadow_ids, []))
+    |> Map.get("domain_ids", Map.get(attrs, :domain_ids, []))
     |> List.wrap()
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.uniq()

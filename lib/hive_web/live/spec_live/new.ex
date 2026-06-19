@@ -4,7 +4,7 @@ defmodule HiveWeb.SpecLive.New do
   use HiveWeb, :live_view
 
   alias Hive.Forage
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Specs
   alias Hive.Specs.Spec
   alias HiveWeb.Layouts
@@ -46,7 +46,7 @@ defmodule HiveWeb.SpecLive.New do
        socket
        |> assign(:page_title, "New spec · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph()))
-       |> assign(:meadows, Meadows.list_meadows())
+       |> assign(:domains, Domains.list_domains())
        |> assign(:source, source)
        |> assign_form(Specs.change_spec(%Spec{}, attrs))}
     else
@@ -126,7 +126,7 @@ defmodule HiveWeb.SpecLive.New do
         form={@form}
         title="New spec"
         action_label="Create spec"
-        meadows={@meadows}
+        domains={@domains}
         source={@source}
       />
     </Layouts.dashboard>

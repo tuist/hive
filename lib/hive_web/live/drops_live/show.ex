@@ -74,12 +74,12 @@ defmodule HiveWeb.DropsLive.Show do
             </div>
             <h1>{Markdown.inline(@drop.title)}</h1>
             <div data-part="meta">
-              <span :for={meadow <- @drop.meadows || []}>
-                <.link navigate={~p"/meadows/#{meadow.id}"} data-part="meadow-link">
-                  {meadow.name}
+              <span :for={domain <- @drop.domains || []}>
+                <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-link">
+                  {domain.name}
                 </.link>
               </span>
-              <span :if={(@drop.meadows || []) == []}>Unclassified</span>
+              <span :if={(@drop.domains || []) == []}>Unclassified</span>
               <span :if={@drop.published_at}>
                 {Calendar.strftime(@drop.published_at, "%b %d, %Y · %H:%M UTC")}
               </span>
@@ -119,7 +119,7 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp description(drop) do
     case drop.body do
-      nil -> "Shipped update from the #{meadow_name(drop)} meadow."
+      nil -> "Shipped update from the #{domain_name(drop)} domain."
       body -> Markdown.preview(body, 180)
     end
   end
@@ -137,15 +137,15 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp highlights(drop) do
     [
-      meadow_name(drop),
+      domain_name(drop),
       drop.version,
       Drops.source_type_label(drop.source_type)
     ]
     |> Enum.reject(&(is_nil(&1) or &1 == ""))
   end
 
-  defp meadow_name(%{meadows: [%{name: name} | _]}), do: name
-  defp meadow_name(_drop), do: "Unclassified"
+  defp domain_name(%{domains: [%{name: name} | _]}), do: name
+  defp domain_name(_drop), do: "Unclassified"
 
   defp source_badge_color(:github_release), do: "focus"
   defp source_badge_color(:rss), do: "information"

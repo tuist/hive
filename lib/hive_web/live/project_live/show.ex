@@ -12,11 +12,11 @@ defmodule HiveWeb.ProjectLive.Show do
     %{
       description:
         project.description ||
-          "Repositories, meadows, and drop sources tracked under the #{project.name} project.",
+          "Repositories, domains, and drop sources tracked under the #{project.name} project.",
       eyebrow: "Project",
       highlights: [
         project.name,
-        "#{length(project.meadows)} meadows",
+        "#{length(project.domains)} domains",
         "#{length(project.github_repositories)} repositories"
       ],
       id: "project-#{project.id}",
@@ -82,15 +82,15 @@ defmodule HiveWeb.ProjectLive.Show do
           </.card_section>
         </.card>
 
-        <.card title="Meadows" icon="treemap">
+        <.card title="Domains" icon="treemap">
           <.card_section>
-            <div :if={@project.meadows == []} data-part="empty">
-              <p>No meadows defined. Drops from this project will appear as Unclassified.</p>
+            <div :if={@project.domains == []} data-part="empty">
+              <p>No domains defined. Drops from this project will appear as Unclassified.</p>
             </div>
-            <ul :if={@project.meadows != []} data-part="meadow-list">
-              <li :for={meadow <- @project.meadows}>
-                <.link navigate={~p"/meadows/#{meadow.id}"} data-part="meadow-link">
-                  <.badge label={meadow.name} color="information" style="light-fill" />
+            <ul :if={@project.domains != []} data-part="domain-list">
+              <li :for={domain <- @project.domains}>
+                <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-link">
+                  <.badge label={domain.name} color="information" style="light-fill" />
                 </.link>
               </li>
             </ul>
