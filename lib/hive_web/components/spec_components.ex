@@ -120,6 +120,7 @@ defmodule HiveWeb.SpecComponents do
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
   attr :expanded_revision_rows, :list, required: true
+  attr :revision_summaries_enabled?, :boolean, default: false
 
   def show(assigns) do
     ~H"""
@@ -207,7 +208,11 @@ defmodule HiveWeb.SpecComponents do
                     size="large"
                     title={revision_summary_title(revision)}
                   >
-                    <p>{revision_summary(revision, @spec.revisions)}</p>
+                    <p>{revision_summary(
+                      revision,
+                      @spec.revisions,
+                      @revision_summaries_enabled?
+                    )}</p>
                   </.alert>
                 </div>
               </:expanded_content>
@@ -541,15 +546,19 @@ defmodule HiveWeb.SpecComponents do
   defp revision_summary_title(%{revision: 1}), do: "Initial draft"
   defp revision_summary_title(revision), do: "Revision #{revision.revision} summary"
 
-  defp revision_summary(%{summary: summary}, _revisions)
+  defp revision_summary(%{summary: summary}, _revisions, _summaries_enabled?)
        when is_binary(summary) and summary != "",
        do: summary
 
-  defp revision_summary(%{revision: 1, status: status}, _revisions) do
+  defp revision_summary(%{revision: 1, status: status}, _revisions, _summaries_enabled?) do
     "Created the initial #{String.downcase(status_label(status))} proposal."
   end
 
-  defp revision_summary(revision, revisions) do
+  defp revision_summary(_revision, _revisions, true) do
+    "The agent-written summary is not available yet."
+  end
+
+  defp revision_summary(revision, revisions, false) do
     previous = Enum.find(revisions, &(&1.revision == revision.revision - 1))
 
     revision

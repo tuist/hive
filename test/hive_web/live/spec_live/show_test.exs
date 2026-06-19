@@ -6,6 +6,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Auth
   alias Hive.Meadows
   alias Hive.Specs
+  alias Hive.Specs.RevisionSummaries
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
@@ -396,5 +397,45 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     assert html =~ "Added a discussion import step."
     refute html =~ "This revision updated the proposal body"
+  end
+
+  test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "GitHub sign-in", "body" => "Keep source URL visible."},
+        user
+      )
+
+    {:ok, spec} =
+      Specs.update_spec(
+        Specs.get_spec!(spec.id),
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Keep source URL visible.\nImport discussion comments.",
+          "lock_version" => spec.lock_version
+        },
+        user
+      )
+
+    spec = Specs.get_spec!(spec.id)
+    revision = Enum.find(spec.revisions, &(&1.revision == 2))
+
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    html = render_click(view, "toggle-expand", %{"row-key" => "revision-#{revision.id}"})
+    assert html =~ "This revision expanded the proposal body with 1 addition."
+
+    runner = fn _input ->
+      {:ok, %{summary: "Added discussion comment importing to the proposal."}}
+    end
+
+    assert {:ok, _updated} = RevisionSummaries.summarize(revision.id, runner: runner)
+    :sys.get_state(view.pid)
+
+    html = render(view)
+    assert html =~ "Added discussion comment importing to the proposal."
+    refute html =~ "This revision expanded the proposal body with 1 addition."
   end
 end

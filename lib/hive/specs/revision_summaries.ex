@@ -6,8 +6,11 @@ defmodule Hive.Specs.RevisionSummaries do
 
   import Ecto.Query
 
+  require Logger
+
   alias Hive.Agents.Sessions
   alias Hive.Repo
+  alias Hive.Specs
   alias Hive.Specs.Agents.RevisionSummaryAgent
   alias Hive.Specs.Revision
 
@@ -33,23 +36,11 @@ defmodule Hive.Specs.RevisionSummaries do
 
       %Revision{} = previous ->
         runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
+        input = build_input(previous, revision)
 
-        case runner.(build_input(previous, revision)) do
-          {:ok, %{summary: summary}} when is_binary(summary) ->
-            store_summary(revision, summary)
-
-          {:ok, %{"summary" => summary}} when is_binary(summary) ->
-            store_summary(revision, summary)
-
-          {:ok, _other} ->
-            {:error, :invalid_agent_response}
-
-          {:error, :llm_not_configured} ->
-            :skipped
-
-          {:error, reason} ->
-            {:error, reason}
-        end
+        input
+        |> runner.()
+        |> handle_agent_result(revision, input, opts)
     end
   end
 
@@ -83,10 +74,104 @@ defmodule Hive.Specs.RevisionSummaries do
     Sessions.run_operation(agent, :summarize_revision, input, agent_opts)
   end
 
+  defp run_freeform_agent(input, opts) do
+    agent = Keyword.get(opts, :agent, RevisionSummaryAgent)
+    agent_opts = Keyword.get(opts, :agent_opts, [])
+
+    Sessions.run(agent, freeform_prompt(input), agent_opts)
+  end
+
+  defp handle_agent_result(result, revision, input, opts) do
+    case result do
+      {:ok, %{summary: summary}} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, %{"summary" => summary}} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, summary} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, _other} ->
+        run_fallback(revision, input, :invalid_agent_response, opts)
+
+      {:error, :llm_not_configured} ->
+        :skipped
+
+      {:error, reason} ->
+        if fallback_reason?(reason),
+          do: run_fallback(revision, input, reason, opts),
+          else: {:error, reason}
+    end
+  end
+
+  defp run_fallback(revision, input, reason, opts) do
+    Logger.warning(
+      "[Specs.RevisionSummaries] Structured summary failed with #{inspect(reason)}; retrying as freeform"
+    )
+
+    fallback_runner = Keyword.get(opts, :fallback_runner, &run_freeform_agent(&1, opts))
+
+    case fallback_runner.(input) do
+      {:ok, %{summary: summary}} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, %{"summary" => summary}} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, summary} when is_binary(summary) ->
+        store_summary(revision, summary)
+
+      {:ok, _other} ->
+        {:error, {:fallback_failed, reason, :invalid_agent_response}}
+
+      {:error, fallback_reason} ->
+        {:error, {:fallback_failed, reason, fallback_reason}}
+    end
+  end
+
+  defp fallback_reason?(:no_result_submitted), do: true
+  defp fallback_reason?({:invalid_output, _reason}), do: true
+  defp fallback_reason?(_reason), do: false
+
+  defp freeform_prompt(input) do
+    """
+    Compare the previous and current revisions and return only the revision
+    summary text. Do not wrap the summary in JSON or Markdown.
+
+    Previous revision:
+    ```json
+    #{JSON.encode!(input.previous)}
+    ```
+
+    Current revision:
+    ```json
+    #{JSON.encode!(input.current)}
+    ```
+    """
+  end
+
   defp store_summary(revision, summary) do
     revision
-    |> Revision.summary_changeset(String.trim(summary))
+    |> Revision.summary_changeset(normalize_summary(summary))
     |> Repo.update()
+    |> case do
+      {:ok, revision} ->
+        Specs.broadcast_revision_summary_updated(revision)
+        {:ok, revision}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp normalize_summary(summary) do
+    summary
+    |> String.trim()
+    |> String.replace(~r/\A```(?:text|markdown)?\s*/i, "")
+    |> String.replace(~r/\s*```\z/, "")
+    |> String.trim()
+    |> String.slice(0, 500)
   end
 
   defp truncate(value) when is_binary(value) do

@@ -37,7 +37,7 @@ spec:
       machineDeployments:
         - class: hcloud-worker
           name: md-0
-          replicas: 2
+          replicas: 4
           failureDomain: fsn1
           metadata:
             labels:

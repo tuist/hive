@@ -1,9 +1,11 @@
 defmodule Hive.Specs.RevisionSummaryWorkerTest do
   use Hive.DataCase, async: true
+  use Mimic
   use Oban.Testing, repo: Hive.Repo
 
   alias Hive.Accounts
   alias Hive.Specs
+  alias Hive.Specs.RevisionSummaries
   alias Hive.Specs.RevisionSummaryWorker
 
   defp user(email \\ "alice@example.com") do
@@ -58,5 +60,25 @@ defmodule Hive.Specs.RevisionSummaryWorkerTest do
 
     refreshed = Specs.get_spec!(spec.id)
     refute Enum.any?(refreshed.revisions, & &1.summary)
+  end
+
+  test "perform/1 sanitizes provider request errors before returning them to Oban" do
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (403): Openai API error",
+        status: 403,
+        response_body: "403 Forbidden",
+        request_body: "full prompt body"
+      )
+
+    expect(RevisionSummaries, :summarize, fn "revision-id" -> {:error, error} end)
+
+    result = RevisionSummaryWorker.perform(%Oban.Job{args: %{"revision_id" => "revision-id"}})
+
+    assert {:error, {:llm_request_failed, 403, message}} =
+             result
+
+    assert message == "API request failed (403): Provider response error (403): Openai API error"
+    refute inspect(result) =~ "full prompt body"
   end
 end
