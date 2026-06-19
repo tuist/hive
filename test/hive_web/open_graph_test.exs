@@ -33,7 +33,7 @@ defmodule HiveWeb.OpenGraphTest do
     data = open_graph_data()
 
     assert OpenGraph.hash(data) != OpenGraph.hash(%{data | description: "Different copy"})
-    assert OpenGraph.path(data) == "/open-graph/#{data.id}/#{OpenGraph.hash(data)}"
+    assert OpenGraph.path(data) == "/open-graph/#{data.id}/#{OpenGraph.hash(data)}.jpg"
     assert OpenGraph.object_key(data) == "open-graph/#{data.id}/#{OpenGraph.hash(data)}.jpg"
   end
 

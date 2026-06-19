@@ -118,6 +118,7 @@ externalSecrets:
 postgres:
   enabled: true
   instances: 2
+  annotations: {}
   storageSize: 20Gi
   # Empty string lets the cluster default storage class be used.
   storageClass: ""

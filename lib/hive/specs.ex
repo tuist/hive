@@ -17,6 +17,8 @@ defmodule Hive.Specs do
   alias Hive.Specs.Spec
   alias Hive.Specs.View
 
+  @pubsub Hive.PubSub
+  @topic_prefix "specs"
   @spec_number_lock_namespace 0x48695645
   @spec_number_lock_key 0x53504353
 
@@ -32,6 +34,20 @@ defmodule Hive.Specs do
 
   def can_view?(%Spec{} = spec, user),
     do: Auth.member?(user) or effective_visibility(spec) == :public
+
+  def subscribe_to_spec(%Spec{id: id}), do: subscribe_to_spec(id)
+
+  def subscribe_to_spec(id) when is_binary(id) do
+    Phoenix.PubSub.subscribe(@pubsub, spec_topic(id))
+  end
+
+  def broadcast_revision_summary_updated(%Revision{} = revision) do
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      spec_topic(revision.spec_id),
+      {:revision_summary_updated, revision.id}
+    )
+  end
 
   def effective_visibility(%Spec{visibility: visibility}) when visibility in [:public, :private],
     do: visibility
@@ -420,6 +436,8 @@ defmodule Hive.Specs do
   defp schedule_revision_summary(%Revision{id: id}) do
     RevisionSummaryWorker.enqueue(id)
   end
+
+  defp spec_topic(id), do: "#{@topic_prefix}:#{id}"
 
   defp preload_meadows(%Spec{} = spec), do: Repo.preload(spec, :meadows)
 

@@ -36,6 +36,7 @@ defmodule HiveWeb.SpecLive.Show do
 
       {:ok,
        socket
+       |> maybe_subscribe_to_spec(spec)
        |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
        |> assign(OpenGraph.assigns(open_graph(spec)))
        |> assign(:atom_feed, %{
@@ -46,6 +47,7 @@ defmodule HiveWeb.SpecLive.Show do
        |> assign_spec(spec)
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
        |> assign(:viewer_last_viewed_at, viewer_last_viewed_at)
+       |> assign(:revision_summaries_enabled?, Hive.Agents.enabled?())
        |> assign(:expanded_revision_rows, [])
        |> assign(:editing_comment_id, nil)
        |> assign_comment_form(Specs.change_comment())
@@ -56,6 +58,16 @@ defmodule HiveWeb.SpecLive.Show do
        |> put_flash(:error, "Only organization members can view this private spec.")
        |> redirect(to: ~p"/specs")}
     end
+  end
+
+  @impl true
+  def handle_info({:revision_summary_updated, _revision_id}, socket) do
+    spec = Specs.get_spec!(socket.assigns.spec.id)
+
+    {:noreply,
+     socket
+     |> assign_spec(spec)
+     |> assign(OpenGraph.assigns(open_graph(spec)))}
   end
 
   @impl true
@@ -217,6 +229,14 @@ defmodule HiveWeb.SpecLive.Show do
     assign(socket, :edit_comment_form, to_form(interpolate_errors(changeset), as: :comment_edit))
   end
 
+  defp maybe_subscribe_to_spec(socket, spec) do
+    if connected?(socket) do
+      Specs.subscribe_to_spec(spec)
+    end
+
+    socket
+  end
+
   defp clear_comment_edit(socket) do
     socket
     |> assign(:editing_comment_id, nil)
@@ -344,6 +364,7 @@ defmodule HiveWeb.SpecLive.Show do
         signed_in?={@signed_in?}
         expanded_revision_rows={@expanded_revision_rows}
         viewer_last_viewed_at={@viewer_last_viewed_at}
+        revision_summaries_enabled?={@revision_summaries_enabled?}
       />
     </Layouts.dashboard>
     """
