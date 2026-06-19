@@ -221,29 +221,24 @@ defmodule HiveWeb.ForageComponents do
   def item_detail(assigns) do
     ~H"""
     <section id="forage">
-      <div data-part="detail-page-header">
-        <div data-part="detail-page-title">
-          <div data-part="detail-page-icon">
-            <.icon name={item_icon(@item.type)} />
+      <div data-part="header">
+        <div data-part="title-group">
+          <div data-part="detail-kicker">
+            <.badge
+              label={Forage.item_type_label(@item.type)}
+              color={type_color(@item.type)}
+              style="light-fill"
+            />
+            <.badge
+              label={Forage.item_status_label(@item.status)}
+              color={Forage.item_status_color(@item.status)}
+              style="light-fill"
+            />
           </div>
-          <div data-part="detail-heading">
-            <div data-part="detail-kicker">
-              <.badge
-                label={Forage.item_type_label(@item.type)}
-                color={type_color(@item.type)}
-                style="light-fill"
-              />
-              <.badge
-                label={Forage.item_status_label(@item.status)}
-                color={Forage.item_status_color(@item.status)}
-                style="light-fill"
-              />
-            </div>
-            <h1>{Markdown.inline(@item.title)}</h1>
-          </div>
+          <h1>{Markdown.inline(@item.title)}</h1>
         </div>
 
-        <div data-part="detail-actions">
+        <div data-part="header-actions">
           <.button
             :if={@can_edit_item? and !@editing_item?}
             label="Edit"
