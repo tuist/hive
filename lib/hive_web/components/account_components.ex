@@ -8,6 +8,8 @@ defmodule HiveWeb.AccountComponents do
   attr :user, :any, required: true
   attr :providers, :list, required: true
   attr :identities, :list, required: true
+  attr :slack_enabled?, :boolean, default: false
+  attr :slack_profiles, :list, default: []
 
   def identities(assigns) do
     assigns =
@@ -74,8 +76,60 @@ defmodule HiveWeb.AccountComponents do
           </div>
         </.card_section>
       </.card>
+
+      <.card icon="brand_slack" title="Slack profile" data-part="slack-card">
+        <.card_section data-part="slack-section">
+          <div data-part="slack-copy">
+            <p>
+              Connect your Slack profile so Hive can send targeted notifications instead of posting every update to a channel.
+            </p>
+          </div>
+
+          <div :if={@slack_profiles != []} data-part="slack-profiles">
+            <article :for={profile <- @slack_profiles} data-part="slack-profile-row">
+              <.icon name="brand_slack" />
+              <div data-part="slack-profile-main">
+                <h2>{profile.installation.team_name || profile.installation.team_id}</h2>
+                <p>{slack_profile_label(profile)}</p>
+              </div>
+              <.badge label="Connected" color="success" style="light-fill" />
+            </article>
+          </div>
+
+          <div data-part="slack-actions">
+            <.button
+              :if={@slack_enabled?}
+              label="Connect Slack profile"
+              href={~p"/account/slack/new"}
+              variant="secondary"
+              size="medium"
+            >
+              <:icon_left><.icon name="link_icon" /></:icon_left>
+            </.button>
+            <.badge
+              :if={not @slack_enabled?}
+              label="Slack not configured"
+              color="neutral"
+              style="light-fill"
+            />
+          </div>
+        </.card_section>
+      </.card>
     </section>
     """
+  end
+
+  defp slack_profile_label(profile) do
+    cond do
+      is_binary(profile.email) and profile.email != "" ->
+        "#{profile.email} · #{profile.slack_user_id}"
+
+      is_binary(profile.name) and profile.name != "" ->
+        "#{profile.name} · #{profile.slack_user_id}"
+
+      true ->
+        profile.slack_user_id
+    end
   end
 
   defp provider_options(providers, identities) do

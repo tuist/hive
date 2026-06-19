@@ -33,7 +33,8 @@ Tuist business domains instead of one-off tickets or vague buckets.
 
 Hive can also connect Slack workspaces. Instance admins manage workspace
 installs, and signed-in users can turn Slack messages into forage items
-or receive bot replies in Slack threads.
+receive bot replies in Slack threads, or send spec activity
+notifications into a configured channel.
 
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
@@ -81,6 +82,7 @@ Hive connects to Slack through one Slack app per Hive deployment. Set
 URLs:
 
 - OAuth redirect URL: `https://<your-hive-host>/slack/install/callback`
+- Slack profile redirect URL: `https://<your-hive-host>/account/slack/callback`
 - Event subscriptions request URL: `https://<your-hive-host>/api/slack/events`
 - Interactivity request URL: `https://<your-hive-host>/api/slack/interactions`
 
@@ -89,6 +91,11 @@ To install the same app in workspaces beyond the app's development
 workspace, enable Slack Public Distribution. App Directory submission is
 not required for private install links. Instance admins manage workspace
 installs from `/ops/slack`.
+
+After a workspace is installed, users can connect their own Slack
+profile from `/account/identities`, and instance admins can configure
+spec activity notifications from `/ops/slack` by entering the Slack
+channel ID for that workspace.
 
 ## Documentation
 

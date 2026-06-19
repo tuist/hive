@@ -3,6 +3,9 @@ defmodule HiveWeb.AccountLive.IdentitiesTest do
 
   alias Hive.Accounts
   alias Hive.Auth
+  alias Hive.Repo
+  alias Hive.Slack.Installation
+  alias Hive.Slack.User, as: SlackUser
   alias HiveWeb.AccountLive.Identities
 
   test "redirects guests to login", %{conn: conn} do
@@ -55,11 +58,49 @@ defmodule HiveWeb.AccountLive.IdentitiesTest do
       ]
     end)
 
+    Mimic.stub(Hive.Slack, :enabled?, fn -> true end)
+
     {:ok, _view, html} = live(conn, ~p"/account/identities")
 
     assert html =~ "Google"
     assert html =~ "Connect GitHub"
     assert html =~ ~s(href="/auth/github")
+    assert html =~ "Connect Slack profile"
+    assert html =~ ~s(href="/account/slack/new")
+  end
+
+  test "renders connected Slack profiles", %{conn: conn} do
+    {conn, user} = sign_in(conn, "slack-linked@example.com")
+
+    {:ok, installation} =
+      %Installation{}
+      |> Installation.changeset(%{
+        team_id: "T1",
+        team_name: "Tuist Workspace",
+        bot_token: "xoxb-token",
+        installed_at: ~U[2026-06-17 12:00:00Z]
+      })
+      |> Repo.insert()
+
+    {:ok, _slack_user} =
+      %SlackUser{}
+      |> SlackUser.changeset(%{
+        installation_id: installation.id,
+        slack_user_id: "U1",
+        email: "different-slack@example.com",
+        linked_user_id: user.id
+      })
+      |> Repo.insert()
+
+    Mimic.stub(Hive.Slack, :enabled?, fn -> true end)
+
+    {:ok, _view, html} = live(conn, ~p"/account/identities")
+
+    assert html =~ "Slack profile"
+    assert html =~ "Tuist Workspace"
+    assert html =~ "different-slack@example.com"
+    assert html =~ "U1"
+    assert html =~ "Connected"
   end
 
   test "shows GitHub as unavailable when its OAuth provider is not configured", %{conn: conn} do

@@ -18,6 +18,8 @@ defmodule Hive.Slack do
   import Ecto.Query
 
   alias Hive.Accounts
+  alias Hive.Accounts.User
+  alias Hive.Audit
   alias Hive.Repo
   alias Hive.Slack.Channel
   alias Hive.Slack.Installation
@@ -42,11 +44,15 @@ defmodule Hive.Slack do
     "users:read",
     "users:read.email"
   ]
+  @notification_events ["spec.created", "spec.comment.created"]
+  @profile_scopes ["openid", "profile", "email"]
 
   @doc """
   Default OAuth bot scopes Hive requests at install time.
   """
   def default_bot_scopes, do: @default_bot_scopes
+
+  def profile_scopes, do: @profile_scopes
 
   @doc """
   Returns the configured Slack app credentials as a map, or `nil` when
@@ -80,6 +86,33 @@ defmodule Hive.Slack do
   """
   def enabled?, do: config() != nil
 
+  @doc """
+  Returns the product activity events Slack notifications support.
+  """
+  def notification_events, do: @notification_events
+
+  def default_notification_events, do: @notification_events
+
+  def notification_event_label("spec.created"), do: "New specs"
+  def notification_event_label("spec.comment.created"), do: "New spec comments"
+  def notification_event_label(event), do: event
+
+  def notification_targets_for(event) when is_binary(event) do
+    Installation
+    |> where([installation], is_nil(installation.disconnected_at))
+    |> where([installation], not is_nil(installation.bot_token) and installation.bot_token != "")
+    |> where(
+      [installation],
+      not is_nil(installation.notification_channel_id) and
+        installation.notification_channel_id != ""
+    )
+    |> Repo.all()
+    |> Enum.filter(&(event in notification_events_for(&1)))
+  end
+
+  def notification_enabled_for?(event) when is_binary(event),
+    do: notification_targets_for(event) != []
+
   defp scopes_value(nil), do: @default_bot_scopes
   defp scopes_value(""), do: @default_bot_scopes
 
@@ -96,6 +129,40 @@ defmodule Hive.Slack do
 
   defp scopes_value(value) when is_list(value), do: value
 
+  def notification_events_for(%Installation{notification_events: events})
+      when is_list(events) and events != [],
+      do: events
+
+  def notification_events_for(%Installation{}), do: default_notification_events()
+
+  def change_notification_settings(%Installation{} = installation, attrs \\ %{}) do
+    Installation.notification_changeset(installation, attrs, notification_events())
+  end
+
+  def update_notification_settings(%Installation{} = installation, attrs) do
+    installation
+    |> change_notification_settings(attrs)
+    |> Repo.update()
+    |> case do
+      {:ok, updated} ->
+        Audit.record("slack.notification_settings.updated", %{
+          target_type: "slack_installation",
+          target_id: updated.id,
+          target_label: updated.team_name || updated.team_id,
+          metadata: %{
+            team_id: updated.team_id,
+            notification_channel_id: updated.notification_channel_id,
+            notification_events: updated.notification_events
+          }
+        })
+
+        {:ok, updated}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
   @doc """
   Lists installations (most recent first), preloading the user that
   initially installed each workspace.
@@ -109,6 +176,172 @@ defmodule Hive.Slack do
 
   def get_installation(nil), do: nil
   def get_installation(id), do: Installation |> preload(:installed_by_user) |> Repo.get(id)
+
+  def get_linked_user_profile(%User{id: user_id}, installation_id)
+      when is_binary(installation_id) do
+    SlackUser
+    |> where([slack_user], slack_user.installation_id == ^installation_id)
+    |> where([slack_user], slack_user.linked_user_id == ^user_id)
+    |> preload(:installation)
+    |> Repo.one()
+  end
+
+  def get_linked_user_profile(_user, _installation_id), do: nil
+
+  def list_linked_user_profiles(%User{id: user_id}) do
+    SlackUser
+    |> where([slack_user], slack_user.linked_user_id == ^user_id)
+    |> preload(:installation)
+    |> order_by([slack_user], asc: slack_user.inserted_at)
+    |> Repo.all()
+  end
+
+  def list_linked_user_profiles(_user), do: []
+
+  def profile_authorize_url(redirect_uri, state, conf \\ config()) do
+    case conf do
+      nil ->
+        {:error, :not_configured}
+
+      %{client_id: client_id} ->
+        query =
+          URI.encode_query(%{
+            "client_id" => client_id,
+            "scope" => Enum.join(profile_scopes(), " "),
+            "redirect_uri" => redirect_uri,
+            "response_type" => "code",
+            "state" => state
+          })
+
+        {:ok, "https://slack.com/openid/connect/authorize?" <> query}
+    end
+  end
+
+  def complete_profile_link(code, redirect_uri, %User{} = user, opts \\ [])
+      when is_binary(code) do
+    conf = Keyword.get(opts, :config) || config()
+
+    case conf do
+      nil ->
+        {:error, :not_configured}
+
+      %{client_id: client_id, client_secret: client_secret} ->
+        with {:ok, token} <- request_profile_token(code, redirect_uri, client_id, client_secret),
+             {:ok, profile} <- request_profile_info(token),
+             {:ok, attrs} <- profile_attrs(profile),
+             %Installation{} = installation <-
+               find_active_installation_by_team_id(attrs.installation_team_id) ||
+                 {:error, :workspace_not_installed} do
+          link_user_profile(installation, attrs, user)
+        end
+    end
+  end
+
+  defp request_profile_token(code, redirect_uri, client_id, client_secret) do
+    body =
+      URI.encode_query(%{
+        "code" => code,
+        "redirect_uri" => redirect_uri,
+        "grant_type" => "authorization_code"
+      })
+
+    case Req.post("https://slack.com/api/openid.connect.token",
+           headers: [{"content-type", "application/x-www-form-urlencoded"}],
+           auth: {:basic, client_id <> ":" <> client_secret},
+           body: body
+         ) do
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true, "access_token" => token}}}
+      when is_binary(token) and token != "" ->
+        {:ok, token}
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => false, "error" => error}}} ->
+        {:error, {:slack_openid_error, error}}
+
+      {:ok, %Req.Response{status: status}} ->
+        {:error, {:slack_openid_http, status}}
+
+      {:error, reason} ->
+        {:error, {:slack_openid_transport, reason}}
+    end
+  end
+
+  defp request_profile_info(token) do
+    case Req.get("https://slack.com/api/openid.connect.userInfo",
+           headers: [{"authorization", "Bearer " <> token}]
+         ) do
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true} = body}} ->
+        {:ok, body}
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => false, "error" => error}}} ->
+        {:error, {:slack_openid_error, error}}
+
+      {:ok, %Req.Response{status: status}} ->
+        {:error, {:slack_openid_http, status}}
+
+      {:error, reason} ->
+        {:error, {:slack_openid_transport, reason}}
+    end
+  end
+
+  defp profile_attrs(profile) do
+    slack_user_id = profile["https://slack.com/user_id"] || profile["sub"]
+    team_id = profile["https://slack.com/team_id"]
+
+    if is_binary(slack_user_id) and slack_user_id != "" and is_binary(team_id) and team_id != "" do
+      {:ok,
+       %{
+         installation_team_id: team_id,
+         slack_user_id: slack_user_id,
+         email: profile["email"],
+         name: profile["name"],
+         real_name: profile["name"],
+         deleted: false,
+         is_bot: false
+       }}
+    else
+      {:error, :slack_openid_missing_identity}
+    end
+  end
+
+  defp link_user_profile(%Installation{} = installation, attrs, %User{} = user) do
+    attrs =
+      attrs
+      |> Map.drop([:installation_team_id])
+      |> Map.put(:linked_user_id, user.id)
+
+    Repo.transaction(fn ->
+      from(slack_user in SlackUser,
+        where:
+          slack_user.installation_id == ^installation.id and
+            slack_user.linked_user_id == ^user.id and
+            slack_user.slack_user_id != ^attrs.slack_user_id
+      )
+      |> Repo.update_all(set: [linked_user_id: nil])
+
+      case upsert_user(installation, attrs) do
+        {:ok, slack_user} -> slack_user
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, slack_user} ->
+        Audit.record("slack.profile.linked", %{
+          actor: user,
+          target_type: "slack_user",
+          target_id: slack_user.id,
+          target_label: installation.team_name || installation.team_id,
+          metadata: %{
+            team_id: installation.team_id,
+            slack_user_id: slack_user.slack_user_id
+          }
+        })
+
+        {:ok, slack_user}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
   @doc """
   Fetches an installation by Slack `team_id`. Returns `nil` if no row
@@ -167,14 +400,20 @@ defmodule Hive.Slack do
 
   defp maybe_link_hive_user(attrs) do
     email = attrs[:email] || attrs["email"]
+    linked_user_id = attrs[:linked_user_id] || attrs["linked_user_id"]
 
-    if is_binary(email) and email != "" do
-      case Accounts.get_user_by_email(email) do
-        nil -> attrs
-        user -> Map.put(attrs, :linked_user_id, user.id)
-      end
-    else
-      attrs
+    cond do
+      is_binary(linked_user_id) and linked_user_id != "" ->
+        attrs
+
+      is_binary(email) and email != "" ->
+        case Accounts.get_user_by_email(email) do
+          nil -> attrs
+          user -> Map.put(attrs, :linked_user_id, user.id)
+        end
+
+      true ->
+        attrs
     end
   end
 

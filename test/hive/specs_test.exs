@@ -1,12 +1,14 @@
 defmodule Hive.SpecsTest do
   use Hive.DataCase, async: true
   use Mimic
+  use Oban.Testing, repo: Hive.Repo
 
   alias Hive.Accounts
   alias Hive.Auth
   alias Hive.Forage
   alias Hive.Meadows
   alias Hive.Repo
+  alias Hive.Slack.Installation
   alias Hive.Specs
 
   defp user(email \\ "alice@example.com") do
@@ -27,6 +29,22 @@ defmodule Hive.SpecsTest do
       )
 
     feature_request
+  end
+
+  defp slack_notifications!(event) do
+    suffix = System.unique_integer([:positive])
+
+    {:ok, _installation} =
+      %Installation{}
+      |> Installation.changeset(%{
+        team_id: "T#{suffix}",
+        team_name: "Workspace #{suffix}",
+        bot_token: "xoxb-#{suffix}",
+        installed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        notification_channel_id: "C#{suffix}",
+        notification_events: [event]
+      })
+      |> Repo.insert()
   end
 
   describe "create_spec/2" do
@@ -91,6 +109,19 @@ defmodule Hive.SpecsTest do
 
       spec = Specs.get_spec!(spec.id)
       assert Enum.map(spec.meadows, & &1.name) == ["Hive"]
+    end
+
+    test "enqueues a Slack notification when configured" do
+      user = user()
+      slack_notifications!("spec.created")
+
+      assert {:ok, spec} =
+               Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      assert_enqueued(
+        worker: Hive.Slack.Workers.SendNotification,
+        args: %{"event" => "spec.created", "spec_id" => spec.id}
+      )
     end
   end
 
@@ -323,6 +354,19 @@ defmodule Hive.SpecsTest do
       assert {"should be at most %{count} character(s)",
               [count: 20_000, validation: :length, kind: :max, type: :string]} =
                changeset.errors[:body]
+    end
+
+    test "enqueues a Slack notification when configured" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+      slack_notifications!("spec.comment.created")
+
+      assert {:ok, comment} = Specs.add_comment(spec, %{"body" => "Looks useful."}, user)
+
+      assert_enqueued(
+        worker: Hive.Slack.Workers.SendNotification,
+        args: %{"event" => "spec.comment.created", "comment_id" => comment.id}
+      )
     end
 
     test "updates comments for their author" do

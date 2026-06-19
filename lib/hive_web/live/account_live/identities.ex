@@ -5,6 +5,7 @@ defmodule HiveWeb.AccountLive.Identities do
 
   alias Hive.Accounts
   alias Hive.Auth
+  alias Hive.Slack
   alias HiveWeb.AccountComponents
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -31,7 +32,9 @@ defmodule HiveWeb.AccountLive.Identities do
        |> assign(OpenGraph.assigns(open_graph()))
        |> assign(:account_user, user)
        |> assign(:identities, Enum.sort_by(user.identities, & &1.provider))
-       |> assign(:providers, Auth.providers())}
+       |> assign(:providers, Auth.providers())
+       |> assign(:slack_enabled?, Slack.enabled?())
+       |> assign(:slack_profiles, Slack.list_linked_user_profiles(user))}
     else
       {:ok,
        socket
@@ -56,6 +59,8 @@ defmodule HiveWeb.AccountLive.Identities do
         user={@account_user}
         identities={@identities}
         providers={@providers}
+        slack_enabled?={@slack_enabled?}
+        slack_profiles={@slack_profiles}
       />
     </Layouts.account>
     """
