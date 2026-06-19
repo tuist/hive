@@ -145,6 +145,12 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
+            label="Projects"
+            icon="apps"
+            href={~p"/projects"}
+            selected={String.starts_with?(@current_path, ~p"/projects")}
+          />
+          <.sidebar_item
             label="Meadows"
             icon="treemap"
             href={~p"/meadows"}
@@ -162,6 +168,12 @@ defmodule HiveWeb.Layouts do
             href={~p"/specs"}
             selected={String.starts_with?(@current_path, "/specs")}
             data-new-activity={if @specs_have_new_activity?, do: "true"}
+          />
+          <.sidebar_item
+            label="Drops"
+            icon="package"
+            href={~p"/drops"}
+            selected={String.starts_with?(@current_path, ~p"/drops")}
           />
           <.sidebar_item
             :if={@admin?}
@@ -245,6 +257,12 @@ defmodule HiveWeb.Layouts do
             icon="brand_slack"
             href={~p"/ops/slack"}
             selected={String.starts_with?(@current_path, ~p"/ops/slack")}
+          />
+          <.sidebar_item
+            label="Drops"
+            icon="package"
+            href={~p"/ops/drops"}
+            selected={String.starts_with?(@current_path, ~p"/ops/drops")}
           />
         </.sidebar>
         <section data-part="content">

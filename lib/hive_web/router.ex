@@ -90,8 +90,12 @@ defmodule HiveWeb.Router do
       get "/forage/grafana-alerts/rss.xml", FeedController, :grafana_alerts_rss
       get "/specs/atom.xml", FeedController, :specs_atom
       get "/specs/rss.xml", FeedController, :specs_rss
+      get "/drops/atom.xml", FeedController, :drops_atom
+      get "/drops/rss.xml", FeedController, :drops_rss
       get "/meadows/:id/atom.xml", FeedController, :meadow_atom
       get "/meadows/:id/rss.xml", FeedController, :meadow_rss
+      get "/meadows/:id/drops/atom.xml", FeedController, :meadow_drops_atom
+      get "/meadows/:id/drops/rss.xml", FeedController, :meadow_drops_rss
     end
 
     scope "/oauth2", OAuth do
@@ -132,6 +136,9 @@ defmodule HiveWeb.Router do
       live "/specs/new", SpecLive.New
       live "/specs/:number", SpecLive.Show
       live "/specs/:number/edit", SpecLive.Edit
+      live "/drops", DropsLive.Index
+      live "/drops/subscribe", DropsLive.Subscribe
+      live "/drops/:id", DropsLive.Show
     end
 
     live_session :meadows,
@@ -139,6 +146,13 @@ defmodule HiveWeb.Router do
       root_layout: {HiveWeb.Layouts, :root} do
       live "/meadows", MeadowLive.Index
       live "/meadows/:id", MeadowLive.Show
+    end
+
+    live_session :projects,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/projects", ProjectLive.Index
+      live "/projects/:id", ProjectLive.Show
     end
 
     live_session :account,
@@ -151,6 +165,7 @@ defmodule HiveWeb.Router do
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/ops/slack", OpsLive.Slack
+      live "/ops/drops", OpsLive.Drops
     end
 
     scope "/slack" do

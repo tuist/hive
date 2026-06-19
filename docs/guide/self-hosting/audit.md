@@ -30,41 +30,10 @@ trace which model produced the side effect.
 
 ## Who sees it
 
-Access to the audit trail is gated by a persisted role on the user
-record. There are three roles, ordered weakest to strongest:
-
-- `collaborator`: signed in, but not part of the org. The default
-  for anyone whose email domain is not in `HIVE_ORG_DOMAINS`.
-- `member`: part of the org. The default for users whose email
-  domain matches `HIVE_ORG_DOMAINS` at signup, or for every
-  signed-in user when no org domains are configured.
-- `admin`: explicitly promoted. Admins can see the trail at
-  `/audit` and call the audit MCP tools.
-
-The role is derived from the email domain the first time a user
-signs in and then stored. Changing `HIVE_ORG_DOMAINS` later does
-not reclassify existing users; promote and demote with
-`Hive.Accounts.update_user_role/2`.
-
-## Promoting an admin
-
-There is no UI for changing a user's role yet. Attach a remote IEx
-to a running instance and promote by email. For a Helm-deployed
-Hive, that looks like:
-
-```bash
-kubectl exec -it deploy/hive -- bin/hive remote
-```
-
-Then in the IEx prompt:
-
-```elixir
-user = Hive.Accounts.get_user_by_email("admin@example.com")
-{:ok, _user} = Hive.Accounts.update_user_role(user, :admin)
-```
-
-Demote the same way, passing `:member` instead. The change takes
-effect on the user's next request.
+Access to the audit trail is gated by the `admin` role on the user
+record. See [Authorization](./authorization) for the three roles,
+how they are derived from `HIVE_ORG_DOMAINS`, and how to promote a
+user to `admin`.
 
 ## MCP tools
 

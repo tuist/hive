@@ -22,7 +22,7 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
         github_repository_visibility: "public"
       })
 
-    hd(meadow.github_repositories)
+    hd(meadow.project.github_repositories)
   end
 
   defp insert_issue!(repository, number, attrs \\ %{}) do

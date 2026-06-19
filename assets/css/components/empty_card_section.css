@@ -1,0 +1,33 @@
+.noora-card__section {
+  &[data-empty] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: var(--noora-spacing-11);
+    padding-bottom: var(--noora-spacing-11);
+    gap: var(--noora-spacing-3);
+
+    & > [data-part="image"] {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 56px;
+      width: 56px;
+      border-radius: var(--noora-radius-4);
+      background: var(--noora-surface-background-secondary);
+      color: var(--noora-surface-label-secondary);
+
+      & svg {
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    & > [data-part="title"] {
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+      text-align: center;
+    }
+  }
+}

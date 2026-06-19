@@ -229,6 +229,10 @@ defmodule Hive.Audit do
   def resource_path("meadow", target_id, _metadata) when is_binary(target_id) and target_id != "",
     do: "/meadows/#{target_id}"
 
+  def resource_path("drop", _target_id, _metadata), do: "/drops"
+
+  def resource_path("drop_source", _target_id, _metadata), do: "/ops/drops"
+
   def resource_path(_target_type, _target_id, _metadata), do: nil
 
   def changeset_changes(%Ecto.Changeset{} = changeset) do

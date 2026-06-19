@@ -8,11 +8,19 @@ defmodule Hive.Ops.Policy do
 
   - **manage Slack workspaces** — restricted to users with the stored
     `:admin` role.
+  - **manage drop sources** — restricted to users with the stored
+    `:admin` role.
   """
 
   use LetMe.Policy
 
   object :slack_workspace do
+    action :manage do
+      allow(:admin)
+    end
+  end
+
+  object :drop_source do
     action :manage do
       allow(:admin)
     end

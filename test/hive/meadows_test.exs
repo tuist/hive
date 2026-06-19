@@ -4,7 +4,7 @@ defmodule Hive.MeadowsTest do
   alias Hive.Meadows
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
-  alias Hive.Meadows.MeadowRepository
+  alias Hive.Projects.Project
 
   describe "change_meadow/2" do
     test "is valid with a name" do
@@ -61,21 +61,23 @@ defmodule Hive.MeadowsTest do
   end
 
   describe "create_meadow/1" do
-    test "creates a meadow without a repository" do
+    test "auto-bootstraps a project named after the meadow" do
       assert {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
 
       assert meadow.name == "Hive"
       assert meadow.visibility == :public
-      assert meadow.github_repositories == []
+      assert meadow.project.name == "Hive"
+      assert meadow.project.github_repositories == []
     end
 
-    test "creates a private meadow" do
+    test "creates a private meadow under a private project" do
       assert {:ok, meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
 
       assert meadow.visibility == :private
+      assert meadow.project.visibility == :private
     end
 
-    test "creates a meadow with a GitHub repository" do
+    test "attaches a GitHub repository to the bootstrapped project" do
       assert {:ok, meadow} =
                Meadows.create_meadow(%{
                  name: "Hive",
@@ -85,27 +87,25 @@ defmodule Hive.MeadowsTest do
                })
 
       assert meadow.description == "Meadow orchestration"
-      assert [%GitHubRepository{owner: "tuist", name: "hive"}] = meadow.github_repositories
-      assert Repo.aggregate(MeadowRepository, :count) == 1
-    end
 
-    test "allows several meadows to share one repository" do
-      assert {:ok, _} =
-               Meadows.create_meadow(%{
-                 name: "Hive",
-                 github_repository_owner: "tuist",
-                 github_repository_name: "monorepo"
-               })
-
-      assert {:ok, _} =
-               Meadows.create_meadow(%{
-                 name: "Forge",
-                 github_repository_owner: "tuist",
-                 github_repository_name: "monorepo"
-               })
+      assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
+               meadow.project.github_repositories
 
       assert Repo.aggregate(GitHubRepository, :count) == 1
-      assert Repo.aggregate(MeadowRepository, :count) == 2
+    end
+
+    test "links a meadow to an existing project when project_id is supplied" do
+      {:ok, project} =
+        Hive.Projects.create_project(%{name: "Tuist", visibility: "public"})
+
+      assert {:ok, cache} =
+               Meadows.create_meadow(%{name: "Cache", project_id: project.id})
+
+      assert {:ok, generated} =
+               Meadows.create_meadow(%{name: "Generated", project_id: project.id})
+
+      assert cache.project.id == project.id
+      assert generated.project.id == project.id
     end
 
     test "rejects duplicate meadow names" do
@@ -130,7 +130,7 @@ defmodule Hive.MeadowsTest do
   end
 
   describe "list_meadows/0" do
-    test "returns meadows ordered by name with repositories preloaded" do
+    test "returns meadows ordered by name with their project preloaded" do
       assert {:ok, _} =
                Meadows.create_meadow(%{
                  name: "Forge",
@@ -143,12 +143,13 @@ defmodule Hive.MeadowsTest do
       assert [atlas, forge] = Meadows.list_meadows()
       assert atlas.name == "Atlas"
       assert forge.name == "Forge"
-      assert [%GitHubRepository{name: "forge"}] = forge.github_repositories
+      assert [%GitHubRepository{name: "forge"}] = forge.project.github_repositories
+      assert %Project{} = atlas.project
     end
   end
 
   describe "get_meadow!/1" do
-    test "returns a meadow with repositories preloaded" do
+    test "returns a meadow with its project's repositories preloaded" do
       assert {:ok, meadow} =
                Meadows.create_meadow(%{
                  name: "Hive",
@@ -157,12 +158,14 @@ defmodule Hive.MeadowsTest do
                })
 
       assert meadow = Meadows.get_meadow!(meadow.id)
-      assert [%GitHubRepository{owner: "tuist", name: "hive"}] = meadow.github_repositories
+
+      assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
+               meadow.project.github_repositories
     end
   end
 
   describe "delete_meadow/1" do
-    test "deletes the meadow and cascades its repository links" do
+    test "deletes the meadow but leaves the project's repository intact" do
       assert {:ok, meadow} =
                Meadows.create_meadow(%{
                  name: "Hive",
@@ -173,7 +176,6 @@ defmodule Hive.MeadowsTest do
       assert {:ok, _meadow} = Meadows.delete_meadow(meadow)
 
       assert Repo.aggregate(Meadow, :count) == 0
-      assert Repo.aggregate(MeadowRepository, :count) == 0
       assert Repo.aggregate(GitHubRepository, :count) == 1
     end
   end
@@ -194,7 +196,7 @@ defmodule Hive.MeadowsTest do
       assert meadow.visibility == :private
     end
 
-    test "replaces a meadow repository" do
+    test "replaces the project's repository when the form swaps it" do
       assert {:ok, meadow} =
                Meadows.create_meadow(%{
                  name: "Hive",
@@ -209,27 +211,8 @@ defmodule Hive.MeadowsTest do
                  github_repository_name: "tuist"
                })
 
-      assert [%GitHubRepository{owner: "tuist", name: "tuist"}] = meadow.github_repositories
-      assert Repo.aggregate(MeadowRepository, :count) == 1
-    end
-
-    test "clears a meadow repository when repository fields are empty" do
-      assert {:ok, meadow} =
-               Meadows.create_meadow(%{
-                 name: "Hive",
-                 github_repository_owner: "tuist",
-                 github_repository_name: "hive"
-               })
-
-      assert {:ok, meadow} =
-               Meadows.update_meadow(meadow, %{
-                 name: "Hive",
-                 github_repository_owner: "",
-                 github_repository_name: ""
-               })
-
-      assert meadow.github_repositories == []
-      assert Repo.aggregate(MeadowRepository, :count) == 0
+      assert [%GitHubRepository{owner: "tuist"} | _] =
+               meadow.project.github_repositories
     end
 
     test "keeps repositories when repository fields are omitted" do
@@ -245,7 +228,9 @@ defmodule Hive.MeadowsTest do
 
       assert meadow.name == "Hive app"
       assert meadow.visibility == :private
-      assert [%GitHubRepository{owner: "tuist", name: "hive"}] = meadow.github_repositories
+
+      assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
+               meadow.project.github_repositories
     end
   end
 end

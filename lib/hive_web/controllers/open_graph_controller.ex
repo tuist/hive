@@ -4,9 +4,11 @@ defmodule HiveWeb.OpenGraphController do
   use HiveWeb, :controller
 
   alias Hive.Auth
+  alias Hive.Drops
   alias Hive.Forage
   alias Hive.Specs
   alias HiveWeb.AccountLive
+  alias HiveWeb.DropsLive
   alias HiveWeb.ForageLive
   alias HiveWeb.OpenGraph
   alias HiveWeb.PageHTML
@@ -93,6 +95,16 @@ defmodule HiveWeb.OpenGraphController do
     |> case do
       nil -> :error
       source -> {:ok, ForageLive.Placeholder.open_graph(source)}
+    end
+  end
+
+  defp page(_conn, "drops"), do: {:ok, DropsLive.Index.open_graph()}
+  defp page(_conn, "drops-subscribe"), do: {:ok, DropsLive.Subscribe.open_graph()}
+
+  defp page(conn, "drop-" <> id) do
+    case Drops.fetch_visible_drop(id, current_user(conn)) do
+      {:ok, drop} -> {:ok, DropsLive.Show.open_graph(drop)}
+      {:error, :not_found} -> :error
     end
   end
 

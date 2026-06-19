@@ -327,7 +327,7 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(meadow.github_repositories)
+      repository = hd(meadow.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Add dark mode", body: "Please."}
@@ -410,7 +410,7 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(meadow.github_repositories)
+      repository = hd(meadow.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 7, title: "Dark mode", body: "Please."}

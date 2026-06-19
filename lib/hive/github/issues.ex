@@ -57,6 +57,40 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  @doc """
+  Fetches a single issue or pull request by number. GitHub's REST
+  `/repos/:owner/:repo/issues/:number` endpoint returns both issues and
+  PRs; PRs include a `pull_request` key in the payload.
+  """
+  def get_issue(repository, issue_number, opts \\ []) do
+    with {:ok, config} <- Client.config(opts),
+         {:ok, token} <- Client.installation_token(config, opts) do
+      fetch_one(config, token, repository, issue_number, opts)
+    end
+  end
+
+  defp fetch_one(config, token, %{owner: owner, name: name}, number, opts) do
+    url = "#{config.api_url}/repos/#{owner}/#{name}/issues/#{number}"
+
+    Client.request(
+      [method: :get, url: url, headers: Client.headers(token)],
+      opts
+    )
+    |> case do
+      {:ok, %{status: 200, body: body}} when is_map(body) ->
+        {:ok, issue_from_api(body)}
+
+      {:ok, %{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:unexpected_status, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp fetch(config, token, %{owner: owner, name: name}, opts) do
     fetch(config, token, owner, name, opts, 1, [])
   end

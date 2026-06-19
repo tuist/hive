@@ -1,6 +1,14 @@
 defmodule Hive.Meadows do
   @moduledoc """
-  Configures the meadows managed by this Hive instance.
+  Configures the meadows managed by this Hive instance. Meadows are
+  sub-domains *within* a project; repositories belong to the project,
+  not directly to a meadow.
+
+  For backward compatibility with the single-form UX, `create_meadow/1`
+  and `update_meadow/2` still accept the virtual `github_repository_*`
+  fields and `name`/`visibility`; when no `project_id` is supplied,
+  they bootstrap a project named after the meadow and attach the repo
+  there.
   """
 
   import Ecto.Query
@@ -10,8 +18,8 @@ defmodule Hive.Meadows do
   alias Hive.Forage.Grafana
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
-  alias Hive.Meadows.MeadowRepository
   alias Hive.Meadows.Webhook
+  alias Hive.Projects.Project
   alias Hive.Repo
 
   defdelegate evolve_from_work_items(opts \\ []), to: Hive.Meadows.Evolution
@@ -27,20 +35,19 @@ defmodule Hive.Meadows do
   def list_meadows do
     Meadow
     |> order_by([meadow], asc: meadow.name)
-    |> preload(:github_repositories)
+    |> preload(project: :github_repositories)
     |> Repo.all()
   end
 
   @doc """
   Lists meadows the `user` is allowed to see. Members see every meadow;
-  anyone else sees only those marked `:public`. Anonymous viewers (a `nil`
-  user) get the same public-only view.
+  anyone else sees only those marked `:public`.
   """
   def list_visible_meadows(user) do
     query =
       Meadow
       |> order_by([meadow], asc: meadow.name)
-      |> preload(:github_repositories)
+      |> preload(project: :github_repositories)
 
     if Auth.member?(user) do
       Repo.all(query)
@@ -53,15 +60,10 @@ defmodule Hive.Meadows do
 
   def get_meadow!(id) do
     Meadow
-    |> preload(:github_repositories)
+    |> preload(project: :github_repositories)
     |> Repo.get!(id)
   end
 
-  @doc """
-  Returns `{:ok, meadow}` when `user` is allowed to see the meadow with
-  `id`, or `{:error, :not_found}` for a missing record, a malformed id,
-  or a private meadow viewed by a non-member.
-  """
   def fetch_visible_meadow(id, user) do
     case Repo.get(Meadow, id) do
       nil ->
@@ -69,11 +71,11 @@ defmodule Hive.Meadows do
 
       %Meadow{visibility: :private} = meadow ->
         if Auth.member?(user),
-          do: {:ok, Repo.preload(meadow, :github_repositories)},
+          do: {:ok, preload_full(meadow)},
           else: {:error, :not_found}
 
       %Meadow{} = meadow ->
-        {:ok, Repo.preload(meadow, :github_repositories)}
+        {:ok, preload_full(meadow)}
     end
   rescue
     Ecto.Query.CastError -> {:error, :not_found}
@@ -85,19 +87,21 @@ defmodule Hive.Meadows do
 
   def create_meadow(attrs) do
     changeset = change_meadow(%Meadow{}, attrs)
+    repository_attrs = Meadow.repository_attrs(changeset)
 
     if changeset.valid? do
-      changeset
-      |> create_meadow_multi(Meadow.repository_attrs(changeset))
+      Multi.new()
+      |> ensure_project_multi(changeset)
+      |> Multi.insert(:meadow, fn %{project: project} ->
+        Ecto.Changeset.put_change(changeset, :project_id, project.id)
+      end)
+      |> upsert_repository_multi(repository_attrs)
       |> Repo.transaction()
       |> case do
         {:ok, %{meadow: meadow}} ->
-          {:ok, Repo.preload(meadow, :github_repositories)}
+          {:ok, preload_full(meadow)}
 
-        {:error, :meadow, changeset, _changes} ->
-          {:error, changeset}
-
-        {:error, _step, changeset, _changes} ->
+        {:error, _step, %Ecto.Changeset{} = changeset, _changes} ->
           {:error, changeset}
       end
     else
@@ -108,23 +112,21 @@ defmodule Hive.Meadows do
   def delete_meadow(%Meadow{} = meadow), do: Repo.delete(meadow)
 
   def update_meadow(%Meadow{} = meadow, attrs) do
-    meadow = Repo.preload(meadow, :github_repositories)
+    meadow = preload_full(meadow)
     changeset = change_meadow(meadow, attrs)
     repository_fields_present? = repository_fields_present?(attrs)
     repository_attrs = Meadow.repository_attrs(changeset)
 
     if changeset.valid? do
-      changeset
-      |> update_meadow_multi(meadow, repository_attrs, repository_fields_present?)
+      Multi.new()
+      |> Multi.update(:meadow, changeset)
+      |> maybe_replace_repository(meadow, repository_attrs, repository_fields_present?)
       |> Repo.transaction()
       |> case do
         {:ok, %{meadow: meadow}} ->
-          {:ok, Repo.preload(meadow, :github_repositories, force: true)}
+          {:ok, preload_full(meadow)}
 
-        {:error, :meadow, changeset, _changes} ->
-          {:error, changeset}
-
-        {:error, _step, changeset, _changes} ->
+        {:error, _step, %Ecto.Changeset{} = changeset, _changes} ->
           {:error, changeset}
       end
     else
@@ -132,52 +134,56 @@ defmodule Hive.Meadows do
     end
   end
 
-  defp create_meadow_multi(meadow_changeset, nil) do
-    Multi.insert(Multi.new(), :meadow, meadow_changeset)
+  defp ensure_project_multi(multi, changeset) do
+    case Ecto.Changeset.get_field(changeset, :project_id) do
+      nil ->
+        attrs = bootstrap_project_attrs(changeset)
+        Multi.run(multi, :project, fn repo, _changes -> bootstrap_project(repo, attrs) end)
+
+      project_id when is_binary(project_id) ->
+        Multi.run(multi, :project, fn repo, _changes -> fetch_project(repo, project_id) end)
+    end
   end
 
-  defp create_meadow_multi(meadow_changeset, repository_attrs) do
-    Multi.new()
-    |> Multi.insert(:meadow, meadow_changeset)
-    |> Multi.run(:github_repository, fn repo, _changes ->
-      get_or_create_github_repository(repo, repository_attrs)
+  defp bootstrap_project_attrs(changeset) do
+    %{
+      name: Ecto.Changeset.get_field(changeset, :name),
+      description: Ecto.Changeset.get_field(changeset, :description),
+      visibility: Ecto.Changeset.get_field(changeset, :visibility) || :public
+    }
+  end
+
+  defp bootstrap_project(repo, %{name: name} = attrs) do
+    case repo.get_by(Project, name: name) do
+      %Project{} = project -> {:ok, project}
+      nil -> %Project{} |> Project.changeset(attrs) |> repo.insert()
+    end
+  end
+
+  defp fetch_project(repo, project_id) do
+    case repo.get(Project, project_id) do
+      %Project{} = project -> {:ok, project}
+      nil -> {:error, :project_not_found}
+    end
+  end
+
+  defp upsert_repository_multi(multi, nil), do: multi
+
+  defp upsert_repository_multi(multi, repository_attrs) do
+    Multi.run(multi, :github_repository, fn repo, %{project: project} ->
+      attrs = Map.put(repository_attrs, :project_id, project.id)
+      get_or_create_github_repository(repo, attrs)
     end)
-    |> Multi.insert(:meadow_repository, fn %{meadow: meadow, github_repository: repository} ->
-      MeadowRepository.changeset(%MeadowRepository{}, %{
-        meadow_id: meadow.id,
-        github_repository_id: repository.id
-      })
-    end)
   end
 
-  defp update_meadow_multi(
-         meadow_changeset,
-         meadow,
-         repository_attrs,
-         repository_fields_present?
-       ) do
-    Multi.new()
-    |> Multi.update(:meadow, meadow_changeset)
-    |> maybe_replace_meadow_repository(meadow, repository_attrs, repository_fields_present?)
-  end
+  defp maybe_replace_repository(multi, _meadow, _repository_attrs, false), do: multi
 
-  defp maybe_replace_meadow_repository(multi, _meadow, _repository_attrs, false), do: multi
+  defp maybe_replace_repository(multi, _meadow, nil, true), do: multi
 
-  defp maybe_replace_meadow_repository(multi, meadow, nil, true) do
-    Multi.delete_all(multi, :meadow_repositories, meadow_repositories_query(meadow.id))
-  end
-
-  defp maybe_replace_meadow_repository(multi, meadow, repository_attrs, true) do
-    multi
-    |> Multi.run(:github_repository, fn repo, _changes ->
-      get_or_create_github_repository(repo, repository_attrs)
-    end)
-    |> Multi.delete_all(:meadow_repositories, meadow_repositories_query(meadow.id))
-    |> Multi.insert(:meadow_repository, fn %{meadow: meadow, github_repository: repository} ->
-      MeadowRepository.changeset(%MeadowRepository{}, %{
-        meadow_id: meadow.id,
-        github_repository_id: repository.id
-      })
+  defp maybe_replace_repository(multi, meadow, repository_attrs, true) do
+    Multi.run(multi, :github_repository, fn repo, _changes ->
+      attrs = Map.put(repository_attrs, :project_id, meadow.project_id)
+      get_or_create_github_repository(repo, attrs)
     end)
   end
 
@@ -195,12 +201,6 @@ defmodule Hive.Meadows do
     end
   end
 
-  defp meadow_repositories_query(meadow_id) do
-    from(meadow_repository in MeadowRepository,
-      where: meadow_repository.meadow_id == ^meadow_id
-    )
-  end
-
   defp repository_fields_present?(attrs) when is_map(attrs) do
     Map.has_key?(attrs, "github_repository_owner") or
       Map.has_key?(attrs, :github_repository_owner) or
@@ -209,4 +209,7 @@ defmodule Hive.Meadows do
   end
 
   defp repository_fields_present?(_attrs), do: false
+
+  defp preload_full(meadow),
+    do: Repo.preload(meadow, [project: :github_repositories], force: true)
 end

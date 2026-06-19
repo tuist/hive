@@ -12,6 +12,7 @@ alias Hive.Meadows.GitHubRepository
 alias Hive.Meadows.Meadow
 alias Hive.Meadows.Webhook
 alias Hive.Meadows.Webhooks
+alias Hive.Projects
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
@@ -119,44 +120,212 @@ Enum.each(forage_items, fn seed ->
   end
 end)
 
-meadows = [
+# Projects are the top-level grouping. Each project owns its
+# repositories and the meadows (sub-domains) it slices by.
+projects_fixtures = [
   %{
-    "name" => "Hive",
-    "description" => "Agentic meadow orchestration for one organization.",
-    "visibility" => "public",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "hive"
+    name: "Hive",
+    description: "Agentic meadow orchestration for one organization.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "hive", visibility: "public"}],
+    meadows: [
+      %{name: "Hive", description: "All Hive updates.", visibility: "public"}
+    ]
   },
   %{
-    "name" => "Tuist",
-    "description" =>
-      "Developer tools for generating, maintaining, and optimizing Xcode projects.",
-    "visibility" => "public",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "tuist"
+    name: "Tuist",
+    description: "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "tuist", visibility: "public"}],
+    # Demonstrates how a single project can carry several sub-domain
+    # meadows the classifier routes drops into. The "Tuist" meadow is
+    # the catch-all; "Cache" and "Generated projects" are sub-domains.
+    meadows: [
+      %{
+        name: "Tuist",
+        description: "Anything Tuist-wide that doesn't fit a sub-domain.",
+        visibility: "public"
+      },
+      %{
+        name: "Cache",
+        description: "Binary caching and selective testing.",
+        visibility: "public"
+      },
+      %{
+        name: "Generated projects",
+        description: "Project generation, manifests, and graph.",
+        visibility: "public"
+      }
+    ]
   },
   %{
-    "name" => "Noora",
-    "description" => "Design system components shared across Tuist meadows.",
-    "visibility" => "public",
-    "github_repository_owner" => "tuist",
-    "github_repository_name" => "tuist"
+    name: "Noora",
+    description: "Design system components shared across Tuist products.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "noora", visibility: "public"}],
+    meadows: [
+      %{name: "Noora", description: "All Noora component updates.", visibility: "public"}
+    ]
   },
   %{
-    "name" => "Atlas",
-    "description" => "A meadow boundary without a GitHub repository connected yet.",
-    "visibility" => "private"
+    # A Kura-style instance: a project that does not care about
+    # sub-domains. No meadows means drops surface as the project itself.
+    name: "Atlas",
+    description: "Internal Atlas planning. No sub-domains yet.",
+    visibility: "private",
+    repositories: [],
+    meadows: []
   }
 ]
 
-Enum.each(meadows, fn attrs ->
-  exists? =
-    Meadow
-    |> where([meadow], meadow.name == ^attrs["name"])
-    |> Repo.exists?()
+Enum.each(projects_fixtures, fn fixture ->
+  project =
+    case Projects.list_projects() |> Enum.find(&(&1.name == fixture.name)) do
+      nil ->
+        {:ok, project} =
+          Projects.create_project(%{
+            name: fixture.name,
+            description: fixture.description,
+            visibility: fixture.visibility
+          })
 
-  unless exists? do
-    {:ok, _meadow} = Meadows.create_meadow(attrs)
+        project
+
+      project ->
+        project
+    end
+
+  Enum.each(fixture.repositories, fn repo_attrs ->
+    case Repo.get_by(GitHubRepository, owner: repo_attrs.owner, name: repo_attrs.name) do
+      nil ->
+        %GitHubRepository{}
+        |> GitHubRepository.changeset(Map.put(repo_attrs, :project_id, project.id))
+        |> Repo.insert!()
+
+      existing ->
+        existing
+        |> GitHubRepository.changeset(%{project_id: project.id})
+        |> Repo.update!()
+    end
+  end)
+
+  Enum.each(fixture.meadows, fn meadow_attrs ->
+    unless Repo.exists?(from m in Meadow, where: m.name == ^meadow_attrs.name) do
+      {:ok, _meadow} = Meadows.create_meadow(Map.put(meadow_attrs, :project_id, project.id))
+    end
+  end)
+end)
+
+drop_fixtures = [
+  %{
+    meadow_name: "Hive",
+    source_type: :github_release,
+    external_id: "tuist/hive@v0.25.0#slack-ops",
+    version: "v0.25.0",
+    title: "Slack workspace management moved to Ops",
+    body:
+      "Admins now manage connected Slack workspaces from the Ops surface at `/ops/slack` instead of the account page. The dashboard sidebar shows an Ops entry so workspace installs are one click away.",
+    url: "https://github.com/tuist/hive/releases/tag/v0.25.0",
+    published_at: ~U[2026-06-18 09:30:00Z]
+  },
+  %{
+    meadow_name: "Hive",
+    source_type: :github_release,
+    external_id: "tuist/hive@v0.24.0#slack-unfurl",
+    version: "v0.24.0",
+    title: "Hive links unfurl in Slack threads",
+    body:
+      "Any spec, forage item, meadow, or drop URL pasted into a connected Slack workspace now expands into a rich preview with the title and a short excerpt, so threads stay context-rich without anyone clicking through.",
+    url: "https://github.com/tuist/hive/releases/tag/v0.24.0",
+    published_at: ~U[2026-06-17 14:00:00Z]
+  },
+  %{
+    meadow_name: "Cache",
+    source_type: :rss,
+    external_id: "https://tuist.dev/changelog/2026-06-15-cache-improvements",
+    version: nil,
+    title: "Cache hit ratios improved for medium and large workspaces",
+    body:
+      "Selective testing and binary caching now use a stricter content-addressed hash so unrelated module rebuilds no longer invalidate downstream targets. Expect noticeably fewer rebuilds in workspaces with deep module graphs.",
+    url: "https://tuist.dev/changelog/2026-06-15-cache-improvements",
+    published_at: ~U[2026-06-15 12:00:00Z]
+  },
+  %{
+    meadow_name: "Generated projects",
+    source_type: :rss,
+    external_id: "https://tuist.dev/changelog/2026-06-10-xcode-26",
+    version: "4.7.0",
+    title: "Xcode 26 support",
+    body:
+      "Project generation, caching, and the test runner now recognise Xcode 26's new module map format. Existing manifests don't need any changes; the new format is detected automatically.",
+    url: "https://tuist.dev/changelog/2026-06-10-xcode-26",
+    published_at: ~U[2026-06-10 10:00:00Z]
+  },
+  %{
+    meadow_name: "Noora",
+    source_type: :github_release,
+    external_id: "tuist/noora@v0.82.0#filter-dropdown",
+    version: "v0.82.0",
+    title: "New filter dropdown component",
+    body:
+      "A dedicated filter dropdown lands alongside refreshed empty states. Use it on any list-style page to combine option filters with a free-text search; the existing components remain source-compatible.",
+    url: "https://github.com/tuist/noora/releases/tag/v0.82.0",
+    published_at: ~U[2026-06-12 18:00:00Z]
+  },
+  %{
+    meadow_name: "Noora",
+    source_type: :github_release,
+    external_id: "tuist/noora@v0.82.0#feeds-dropdown",
+    version: "v0.82.0",
+    title: "`feeds_dropdown` helper for Atom + RSS subscription links",
+    body:
+      "A small helper renders an Atom and RSS dropdown next to any page title so visitors can grab the subscription URL straight from the page they're looking at, without having to know the feed naming convention.",
+    url: "https://github.com/tuist/noora/releases/tag/v0.82.0",
+    published_at: ~U[2026-06-12 18:00:00Z]
+  }
+]
+
+Enum.each(drop_fixtures, fn fixture ->
+  meadow =
+    Meadow
+    |> where([m], m.name == ^fixture.meadow_name)
+    |> Repo.one()
+
+  if meadow do
+    body = fixture.body
+    raw_body = if fixture.source_type == :github_release, do: body, else: nil
+
+    rewritten_at =
+      if fixture.source_type == :github_release,
+        do: DateTime.utc_now() |> DateTime.truncate(:second),
+        else: nil
+
+    attrs = %{
+      source_type: fixture.source_type,
+      external_id: fixture.external_id,
+      title: fixture.title,
+      body: body,
+      raw_body: raw_body,
+      rewritten_at: rewritten_at,
+      url: fixture.url,
+      version: fixture.version,
+      published_at: fixture.published_at
+    }
+
+    {:ok, drop} =
+      Hive.Drops.Drop
+      |> Repo.get_by(
+        source_type: fixture.source_type,
+        external_id: fixture.external_id
+      )
+      |> case do
+        nil -> %Hive.Drops.Drop{}
+        existing -> existing
+      end
+      |> Hive.Drops.Drop.changeset(attrs)
+      |> Repo.insert_or_update()
+
+    Hive.Drops.replace_drop_meadows(drop, [meadow.id])
   end
 end)
 
@@ -479,7 +648,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    meadow_names: ["Hive", "Tuist"],
+    meadow_names: ["Hive", "Cache"],
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
       "summary" =>
