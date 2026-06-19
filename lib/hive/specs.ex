@@ -15,6 +15,7 @@ defmodule Hive.Specs do
   alias Hive.Specs.Revision
   alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
+  alias Hive.Specs.View
 
   @spec_number_lock_namespace 0x48695645
   @spec_number_lock_key 0x53504353
@@ -43,12 +44,115 @@ defmodule Hive.Specs do
     status = Keyword.get(opts, :status)
     user = Keyword.get(opts, :user)
 
-    Spec
-    |> maybe_filter_by_status(status)
-    |> maybe_filter_by_visibility(user)
-    |> order_by([spec], desc: spec.updated_at)
-    |> preload([:source_feature_request, :created_by_user, :updated_by_user, :meadows])
+    specs =
+      Spec
+      |> maybe_filter_by_status(status)
+      |> maybe_filter_by_visibility(user)
+      |> order_by([spec], desc: spec.updated_at)
+      |> preload([:source_feature_request, :created_by_user, :updated_by_user, :meadows])
+      |> Repo.all()
+
+    decorate_with_activity(specs, user)
+  end
+
+  def mark_viewed(%Spec{id: spec_id}, %User{id: user_id})
+      when is_binary(spec_id) and is_binary(user_id) do
+    now = DateTime.utc_now()
+
+    %View{}
+    |> Ecto.Changeset.cast(
+      %{spec_id: spec_id, user_id: user_id, last_viewed_at: now},
+      [:spec_id, :user_id, :last_viewed_at]
+    )
+    |> Repo.insert(
+      on_conflict: [set: [last_viewed_at: now, updated_at: DateTime.truncate(now, :second)]],
+      conflict_target: [:user_id, :spec_id]
+    )
+
+    :ok
+  end
+
+  def mark_viewed(_spec, _user), do: :ok
+
+  def last_viewed_at(%Spec{id: spec_id}, %User{id: user_id})
+      when is_binary(spec_id) and is_binary(user_id) do
+    Repo.one(
+      from(view in View,
+        where: view.user_id == ^user_id and view.spec_id == ^spec_id,
+        select: view.last_viewed_at
+      )
+    )
+  end
+
+  def last_viewed_at(_spec, _user), do: nil
+
+  def has_new_activity_for_user?(%User{id: user_id}) when is_binary(user_id) do
+    from(view in View,
+      as: :view,
+      join: spec in Spec,
+      on: spec.id == view.spec_id,
+      where: view.user_id == ^user_id,
+      where:
+        spec.updated_at > view.last_viewed_at or
+          exists(
+            from(comment in Comment,
+              where:
+                comment.spec_id == parent_as(:view).spec_id and
+                  comment.inserted_at > parent_as(:view).last_viewed_at
+            )
+          )
+    )
+    |> Repo.exists?()
+  end
+
+  def has_new_activity_for_user?(_user), do: false
+
+  defp decorate_with_activity(specs, _user) when specs == [], do: []
+
+  defp decorate_with_activity(specs, user) do
+    spec_ids = Enum.map(specs, & &1.id)
+    last_comment_at = last_comment_inserted_at(spec_ids)
+    last_viewed_at = last_viewed_at_by_user(spec_ids, user)
+
+    Enum.map(specs, fn spec ->
+      last_activity_at = latest_datetime(spec.updated_at, Map.get(last_comment_at, spec.id))
+      viewed_at = Map.get(last_viewed_at, spec.id)
+
+      has_new_activity =
+        not is_nil(viewed_at) and
+          DateTime.compare(last_activity_at, viewed_at) == :gt
+
+      %{spec | last_activity_at: last_activity_at, has_new_activity: has_new_activity}
+    end)
+  end
+
+  defp last_comment_inserted_at(spec_ids) do
+    from(comment in Comment,
+      where: comment.spec_id in ^spec_ids,
+      group_by: comment.spec_id,
+      select: {comment.spec_id, max(comment.inserted_at)}
+    )
     |> Repo.all()
+    |> Map.new()
+  end
+
+  defp last_viewed_at_by_user(spec_ids, %User{id: user_id}) when is_binary(user_id) do
+    from(view in View,
+      where: view.user_id == ^user_id and view.spec_id in ^spec_ids,
+      select: {view.spec_id, view.last_viewed_at}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp last_viewed_at_by_user(_spec_ids, _user), do: %{}
+
+  defp latest_datetime(nil, nil), do: nil
+  defp latest_datetime(a, nil), do: a
+  defp latest_datetime(nil, b), do: b
+
+  defp latest_datetime(a, b) do
+    if DateTime.compare(a, b) == :lt, do: b, else: a
   end
 
   defp maybe_filter_by_status(query, nil), do: query

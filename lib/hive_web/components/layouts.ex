@@ -127,6 +127,7 @@ defmodule HiveWeb.Layouts do
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
+  attr :specs_have_new_activity?, :boolean, default: false
   slot :inner_block, required: true
 
   def dashboard(assigns) do
@@ -158,8 +159,9 @@ defmodule HiveWeb.Layouts do
           <.sidebar_item
             label="Specs"
             icon="file_text"
-            href={~p"/specs?filter_status_op===&filter_status_val=draft"}
+            href={~p"/specs"}
             selected={String.starts_with?(@current_path, "/specs")}
+            data-new-activity={if @specs_have_new_activity?, do: "true"}
           />
           <.sidebar_item
             :if={@admin?}

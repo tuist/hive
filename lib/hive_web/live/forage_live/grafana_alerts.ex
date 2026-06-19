@@ -59,6 +59,7 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
+      specs_have_new_activity?={@specs_have_new_activity?}
     >
       <ForageComponents.grafana_alerts source={@source} alerts={@alerts} />
     </Layouts.dashboard>

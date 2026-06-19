@@ -31,6 +31,9 @@ defmodule HiveWeb.SpecLive.Show do
     spec = Specs.get_spec_by_number!(number)
 
     if Specs.can_view?(spec, socket.assigns.current_user) do
+      viewer_last_viewed_at = Specs.last_viewed_at(spec, socket.assigns.current_user)
+      if connected?(socket), do: Specs.mark_viewed(spec, socket.assigns.current_user)
+
       {:ok,
        socket
        |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
@@ -42,6 +45,7 @@ defmodule HiveWeb.SpecLive.Show do
        })
        |> assign_spec(spec)
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
+       |> assign(:viewer_last_viewed_at, viewer_last_viewed_at)
        |> assign(:expanded_revision_rows, [])
        |> assign(:editing_comment_id, nil)
        |> assign_comment_form(Specs.change_comment())
@@ -327,6 +331,7 @@ defmodule HiveWeb.SpecLive.Show do
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
+      specs_have_new_activity?={@specs_have_new_activity?}
     >
       <SpecComponents.show
         spec={@spec}
@@ -338,6 +343,7 @@ defmodule HiveWeb.SpecLive.Show do
         editing_comment_id={@editing_comment_id}
         signed_in?={@signed_in?}
         expanded_revision_rows={@expanded_revision_rows}
+        viewer_last_viewed_at={@viewer_last_viewed_at}
       />
     </Layouts.dashboard>
     """

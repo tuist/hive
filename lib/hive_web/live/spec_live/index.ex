@@ -118,6 +118,7 @@ defmodule HiveWeb.SpecLive.Index do
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
+      specs_have_new_activity?={@specs_have_new_activity?}
     >
       <SpecComponents.index
         specs={@specs}
