@@ -16,6 +16,7 @@ defmodule Hive.Specs do
   alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
   alias Hive.Specs.View
+  alias Hive.Slack.Workers.SendNotification
 
   @pubsub Hive.PubSub
   @topic_prefix "specs"
@@ -298,6 +299,7 @@ defmodule Hive.Specs do
       |> case do
         {:ok, spec} ->
           record_spec_event("spec.created", spec, user)
+          SendNotification.enqueue("spec.created", %{"spec_id" => spec.id})
           Hive.Meadows.schedule_evolution()
           {:ok, spec}
 
@@ -395,6 +397,14 @@ defmodule Hive.Specs do
       |> Changeset.put_change(:spec_id, spec.id)
       |> Changeset.put_change(:user_id, user.id)
       |> Repo.insert()
+      |> case do
+        {:ok, comment} ->
+          SendNotification.enqueue("spec.comment.created", %{"comment_id" => comment.id})
+          {:ok, comment}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       {:error, :unauthorized}
     end

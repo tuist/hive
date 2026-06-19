@@ -3,6 +3,7 @@ defmodule HiveWeb.OpsLive.SlackTest do
   use Mimic
 
   alias Hive.Accounts
+  alias Hive.Repo
   alias Hive.Slack.Installation
 
   test "redirects anonymous visitors to login", %{conn: conn} do
@@ -53,6 +54,41 @@ defmodule HiveWeb.OpsLive.SlackTest do
     assert html =~ "Installed by admin-slack@example.com"
     assert html =~ "Installed on 2026-06-17"
     assert html =~ "Disconnect"
+    assert html =~ "Notification channel ID"
+    assert html =~ "New specs"
+    assert html =~ "New spec comments"
     assert html =~ "noora-button"
+  end
+
+  test "updates Slack notification settings from the workspace row", %{conn: conn} do
+    {conn, user} = sign_in(conn, "admin-slack-notifications@example.com")
+    {:ok, user} = Accounts.update_user_role(user, :admin)
+
+    {:ok, installation} =
+      %Installation{}
+      |> Installation.changeset(%{
+        team_id: "T-notify",
+        team_name: "Tuist Company",
+        installed_at: ~U[2026-06-17 12:00:00Z],
+        installed_by_user_id: user.id,
+        bot_token: "xoxb-token"
+      })
+      |> Repo.insert()
+
+    stub(Hive.Slack, :enabled?, fn -> true end)
+
+    assert {:ok, view, _html} = live(conn, ~p"/ops/slack")
+
+    render_submit(view, "save_notifications", %{
+      "id" => installation.id,
+      "installation" => %{
+        "notification_channel_id" => "C123",
+        "notification_events" => ["spec.created"]
+      }
+    })
+
+    installation = Repo.get!(Installation, installation.id)
+    assert installation.notification_channel_id == "C123"
+    assert installation.notification_events == ["spec.created"]
   end
 end

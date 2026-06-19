@@ -170,13 +170,6 @@ defmodule HiveWeb.Layouts do
             href={~p"/audit"}
             selected={String.starts_with?(@current_path, ~p"/audit")}
           />
-          <.sidebar_item
-            :if={@admin?}
-            label="Ops"
-            icon="brand_slack"
-            href={~p"/ops/slack"}
-            selected={String.starts_with?(@current_path, "/ops")}
-          />
         </.sidebar>
         <section data-part="content">
           {render_slot(@inner_block)}

@@ -192,13 +192,13 @@ defmodule HiveWeb.LayoutsTest do
       refute html =~ ~s(<span data-part="label">Identities</span>)
     end
 
-    test "shows ops navigation only to admins" do
+    test "does not show ops navigation in the dashboard sidebar" do
       member_html = render_dashboard(assigns(%{admin?: false}))
       admin_html = render_dashboard(assigns(%{admin?: true, current_path: "/ops/slack"}))
 
       refute member_html =~ ~s(href="/ops/slack")
-      assert admin_html =~ "Ops"
-      assert admin_html =~ ~s(href="/ops/slack")
+      refute admin_html =~ "Ops"
+      refute admin_html =~ ~s(href="/ops/slack")
     end
   end
 
