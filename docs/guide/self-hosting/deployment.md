@@ -1,11 +1,32 @@
 ## Deployment
 
-The Helm chart in `infra/helm/hive` is generic, so any team can deploy
-their own Hive instance with it. The defaults assume no External
-Secrets Operator, no image pull secret, and no S3 backup; you bring
-your own Kubernetes Secret for `SECRET_KEY_BASE` (and any OAuth
-credentials) and point at it via `secrets.existingSecret`, then run
-`helm upgrade --install`.
+The Helm chart published at
+[`oci://ghcr.io/tuist/charts/hive`](https://github.com/tuist/hive/pkgs/container/charts%2Fhive)
+is generic, so any team can deploy their own Hive instance with it.
+The defaults assume no External Secrets Operator, no image pull secret,
+and no S3 backup; you bring your own Kubernetes Secret for
+`SECRET_KEY_BASE` (and any OAuth credentials) and point at it via
+`secrets.existingSecret`, then run `helm upgrade --install`.
+
+## What you need
+
+- A Kubernetes cluster (or any environment that can run the container
+  image) with PostgreSQL reachable from the app.
+- A `SECRET_KEY_BASE` generated with `mix phx.gen.secret` (or any
+  64-byte random value).
+- At least one OIDC provider configured if you plan to run with
+  `HIVE_VISIBILITY=private`. See [Authentication](./authentication).
+
+## Visibility
+
+`HIVE_VISIBILITY` controls who can reach the dashboard:
+
+- `public` (default): anyone can use the instance without logging in.
+- `private`: routes are gated behind login; only authenticated users
+  (passing any configured provider's domain allowlist) can access them.
+
+The login page is always available so administrators can sign in even
+on public instances.
 
 ## Minimum bring-your-own setup
 

@@ -95,6 +95,7 @@ defmodule HiveWeb.OpenGraphController do
   end
 
   defp page(_conn, "drops"), do: {:ok, DropsLive.Index.open_graph()}
+  defp page(_conn, "drops-subscribe"), do: {:ok, DropsLive.Subscribe.open_graph()}
 
   defp page(conn, "drop-" <> id) do
     case Drops.fetch_visible_drop(id, current_user(conn)) do

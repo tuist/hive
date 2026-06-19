@@ -137,6 +137,7 @@ defmodule HiveWeb.Router do
       live "/specs/:number", SpecLive.Show
       live "/specs/:number/edit", SpecLive.Edit
       live "/drops", DropsLive.Index
+      live "/drops/subscribe", DropsLive.Subscribe
       live "/drops/:id", DropsLive.Show
     end
 
@@ -145,6 +146,13 @@ defmodule HiveWeb.Router do
       root_layout: {HiveWeb.Layouts, :root} do
       live "/meadows", MeadowLive.Index
       live "/meadows/:id", MeadowLive.Show
+    end
+
+    live_session :projects,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/projects", ProjectLive.Index
+      live "/projects/:id", ProjectLive.Show
     end
 
     live_session :account,

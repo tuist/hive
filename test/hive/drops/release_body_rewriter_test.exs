@@ -18,7 +18,7 @@ defmodule Hive.Drops.ReleaseBodyRewriterTest do
         github_repository_name: "hive"
       })
 
-    [repository | _] = meadow.github_repositories
+    [repository | _] = meadow.project.github_repositories
 
     raw_body = """
     Highlights for the v0.25.0 release.

@@ -1,5 +1,10 @@
 defmodule Hive.Meadows.GitHubRepository do
-  @moduledoc false
+  @moduledoc """
+  A GitHub repository connected to a project. Hive ingests GitHub
+  Releases from repositories and uses them to populate the project's
+  drops; meadows within the project are the optional sub-domain tags
+  applied to each drop by the classifier.
+  """
 
   use Ecto.Schema
 
@@ -14,9 +19,7 @@ defmodule Hive.Meadows.GitHubRepository do
     field :name, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
 
-    many_to_many :meadows, Hive.Meadows.Meadow,
-      join_through: Hive.Meadows.MeadowRepository,
-      join_keys: [github_repository_id: :id, meadow_id: :id]
+    belongs_to :project, Hive.Projects.Project
 
     timestamps(type: :utc_datetime)
   end
@@ -25,7 +28,7 @@ defmodule Hive.Meadows.GitHubRepository do
 
   def changeset(repository, attrs) do
     repository
-    |> cast(attrs, [:owner, :name, :visibility])
+    |> cast(attrs, [:owner, :name, :visibility, :project_id])
     |> normalize_string(:owner)
     |> normalize_string(:name)
     |> validate_required([:owner, :name, :visibility])
@@ -39,6 +42,7 @@ defmodule Hive.Meadows.GitHubRepository do
     )
     |> validate_inclusion(:visibility, @visibilities)
     |> unique_constraint([:owner, :name])
+    |> foreign_key_constraint(:project_id)
   end
 
   def full_name(repository), do: "#{repository.owner}/#{repository.name}"

@@ -14,8 +14,8 @@ defmodule Hive.Drops.MeadowClassification do
   alias Hive.Drops
   alias Hive.Drops.Agents.MeadowClassifierAgent
   alias Hive.Drops.Drop
+  alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
-  alias Hive.Meadows.MeadowRepository
   alias Hive.Repo
 
   @business_context """
@@ -98,15 +98,35 @@ defmodule Hive.Drops.MeadowClassification do
          github_repository_id: repository_id
        })
        when is_binary(repository_id) do
-    Meadow
-    |> join(:inner, [meadow], link in MeadowRepository, on: link.meadow_id == meadow.id)
-    |> where([_meadow, link], link.github_repository_id == ^repository_id)
-    |> order_by([meadow, _link], asc: meadow.name)
-    |> Repo.all()
+    case Repo.get(GitHubRepository, repository_id) do
+      %GitHubRepository{project_id: project_id} when is_binary(project_id) ->
+        meadows_for_project(project_id)
+
+      _ ->
+        []
+    end
+  end
+
+  defp candidate_meadows(%Drop{source_type: :rss, drop_source_id: source_id})
+       when is_binary(source_id) do
+    case Repo.get(Hive.Drops.DropSource, source_id) do
+      %{project_id: project_id} when is_binary(project_id) ->
+        meadows_for_project(project_id)
+
+      _ ->
+        []
+    end
   end
 
   defp candidate_meadows(_drop) do
     Meadow
+    |> order_by([meadow], asc: meadow.name)
+    |> Repo.all()
+  end
+
+  defp meadows_for_project(project_id) do
+    Meadow
+    |> where([meadow], meadow.project_id == ^project_id)
     |> order_by([meadow], asc: meadow.name)
     |> Repo.all()
   end

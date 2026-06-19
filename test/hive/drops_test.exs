@@ -87,23 +87,33 @@ defmodule Hive.DropsTest do
   end
 
   describe "drop_sources" do
-    test "creates a source and enforces unique url" do
+    setup do
+      {:ok, project} = Hive.Projects.create_project(%{name: "Hive"})
+      %{project: project}
+    end
+
+    test "creates a source and enforces unique url", %{project: project} do
       assert {:ok, %DropSource{}} =
                Drops.create_drop_source(%{
+                 "project_id" => project.id,
                  "url" => "https://example.com/feed.atom",
                  "label" => "Example"
                })
 
       result =
-        Drops.create_drop_source(%{"url" => "https://example.com/feed.atom"})
+        Drops.create_drop_source(%{
+          "project_id" => project.id,
+          "url" => "https://example.com/feed.atom"
+        })
 
       assert {:error, %Ecto.Changeset{} = changeset} = result
       refute changeset.valid?
       assert changeset.errors |> Keyword.has_key?(:url)
     end
 
-    test "record_source_poll updates timestamps and error state" do
-      {:ok, source} = Drops.create_drop_source(%{url: "https://x.test/feed"})
+    test "record_source_poll updates timestamps and error state", %{project: project} do
+      {:ok, source} =
+        Drops.create_drop_source(%{project_id: project.id, url: "https://x.test/feed"})
 
       assert {:ok, polled_ok} = Drops.record_source_poll(source, :ok)
       assert polled_ok.last_polled_at

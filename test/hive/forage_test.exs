@@ -134,8 +134,8 @@ defmodule Hive.ForageTest do
                Forage.accessible_meadows_with_repositories(user_with_email("forage-pairs"))
 
       assert name == meadow.name
-      assert owner == hd(meadow.github_repositories).owner
-      assert repo_name == hd(meadow.github_repositories).name
+      assert owner == hd(meadow.project.github_repositories).owner
+      assert repo_name == hd(meadow.project.github_repositories).name
     end
 
     test "skips meadows without a connected repository" do
@@ -271,7 +271,7 @@ defmodule Hive.ForageTest do
   describe "forage item comments" do
     test "fetches GitHub issue comments on demand without syncing them" do
       meadow = meadow_with_repo!([])
-      repository = hd(meadow.github_repositories)
+      repository = hd(meadow.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Crash on launch", body: "Detail"}

@@ -9,6 +9,7 @@ defmodule HiveWeb.OpsLive.Drops do
   alias Hive.Drops.DropSource
   alias Hive.Drops.RssSyncer
   alias Hive.Ops.Policy
+  alias Hive.Projects
   alias HiveWeb.Components.EmptyCardSection
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -50,6 +51,7 @@ defmodule HiveWeb.OpsLive.Drops do
          |> assign(:page_title, "Drops · #{socket.assigns.product_name}")
          |> assign(OpenGraph.assigns(open_graph()))
          |> assign(:sources, Drops.list_drop_sources())
+         |> assign(:projects, Projects.list_projects())
          |> assign_source_form(Drops.change_drop_source(%DropSource{}, %{}))}
     end
   end
@@ -162,7 +164,7 @@ defmodule HiveWeb.OpsLive.Drops do
 
         <.card icon="rss" title="RSS sources" data-part="sources-card">
           <:actions>
-            <.new_drop_source_modal source_form={@source_form} />
+            <.new_drop_source_modal source_form={@source_form} projects={@projects} />
           </:actions>
 
           <.empty_card_section :if={@sources == []} title="No RSS sources registered">
@@ -240,6 +242,7 @@ defmodule HiveWeb.OpsLive.Drops do
   end
 
   attr :source_form, :map, required: true
+  attr :projects, :list, required: true
 
   defp new_drop_source_modal(assigns) do
     ~H"""
@@ -267,6 +270,22 @@ defmodule HiveWeb.OpsLive.Drops do
         phx-submit="create"
         data-part="form"
       >
+        <div :if={@projects == []} data-part="empty-projects">
+          <p>Create a project first; sources are routed into a project's meadows.</p>
+        </div>
+
+        <div :if={@projects != []} data-part="select-field">
+          <span>Project</span>
+          <.select
+            id="new-drop-source-project"
+            name={@source_form[:project_id].name}
+            value={Phoenix.HTML.Form.normalize_value("select", @source_form[:project_id].value)}
+            label="Choose project"
+          >
+            <:item :for={project <- @projects} value={project.id} label={project.name} />
+          </.select>
+        </div>
+
         <.text_input
           id="new-drop-source-url"
           field={@source_form[:url]}

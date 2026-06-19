@@ -18,7 +18,7 @@ defmodule Hive.Forage.GitHubIssueClassification do
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GitHubIssueMeadow
   alias Hive.Meadows.Meadow
-  alias Hive.Meadows.MeadowRepository
+  alias Hive.Meadows.GitHubRepository
   alias Hive.Repo
 
   @business_context """
@@ -134,11 +134,16 @@ defmodule Hive.Forage.GitHubIssueClassification do
   end
 
   defp candidate_meadows(repository_id) do
-    Meadow
-    |> join(:inner, [meadow], link in MeadowRepository, on: link.meadow_id == meadow.id)
-    |> where([_meadow, link], link.github_repository_id == ^repository_id)
-    |> order_by([meadow, _link], asc: meadow.name)
-    |> Repo.all()
+    case Repo.get(GitHubRepository, repository_id) do
+      %GitHubRepository{project_id: project_id} when is_binary(project_id) ->
+        Meadow
+        |> where([meadow], meadow.project_id == ^project_id)
+        |> order_by([meadow], asc: meadow.name)
+        |> Repo.all()
+
+      _ ->
+        []
+    end
   end
 
   defp build_input(%GitHubIssue{} = issue, candidate_meadows) do

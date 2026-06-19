@@ -38,6 +38,22 @@ or receive bot replies in Slack threads.
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 
+## Projects and meadows
+
+Hive separates *what* the instance tracks from *how* you slice it.
+
+A **project** is the top-level grouping: a product, codebase, or
+service the instance tracks (for example Tuist, Hive, Noora). Projects
+own their connected GitHub repositories and the RSS sources that feed
+their drops. The list of projects lives at `/projects`.
+
+A **meadow** is an optional sub-domain *inside* a project, so a team
+can split an instance into smaller buckets the classifier routes
+issues and drops into. The Tuist project, for instance, may carry
+meadows like `Cache` or `Generated projects`; a single-product Hive
+(the Kura case) can keep zero meadows and surface everything at the
+project level. Meadows still appear at `/meadows`.
+
 ## Forage
 
 Forage is a single queue for feature requests, bug reports, feedback,
