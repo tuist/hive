@@ -176,6 +176,13 @@ defmodule HiveWeb.Router do
       post "/installations/:id/disconnect", SlackInstallController, :disconnect
     end
 
+    scope "/account/slack" do
+      pipe_through HiveWeb.Plugs.RequireAuthenticated
+
+      get "/new", SlackProfileController, :new
+      get "/callback", SlackProfileController, :callback
+    end
+
     live_session :audit,
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do

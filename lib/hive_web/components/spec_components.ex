@@ -72,7 +72,15 @@ defmodule HiveWeb.SpecComponents do
               <div data-part="spec-table-cell">
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
-                  <strong>{spec_number(spec)} {spec.title}</strong>
+                  <div data-part="spec-title-row">
+                    <strong>{spec_number(spec)} {spec.title}</strong>
+                    <.badge
+                      :if={spec.has_new_activity}
+                      label="New activity"
+                      color="information"
+                      style="light-fill"
+                    />
+                  </div>
                   <p>{visibility_label(Specs.effective_visibility(spec))} · {Markdown.preview(spec.body)}</p>
                 </div>
               </div>
@@ -120,13 +128,25 @@ defmodule HiveWeb.SpecComponents do
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
   attr :expanded_revision_rows, :list, required: true
+  attr :viewer_last_viewed_at, :any, default: nil
+  attr :revision_summaries_enabled?, :boolean, default: false
 
   def show(assigns) do
+    assigns = assign(assigns, :new_activity_since_visit?, new_activity_since_visit?(assigns))
+
     ~H"""
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
+          <div data-part="title-badges">
+            <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
+            <.badge
+              :if={@new_activity_since_visit?}
+              label="New activity"
+              color="information"
+              style="light-fill"
+            />
+          </div>
           <h1>{@spec.title}</h1>
           <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
           <div :if={spec_meadows(@spec) != []} data-part="meadow-list">
@@ -207,7 +227,11 @@ defmodule HiveWeb.SpecComponents do
                     size="large"
                     title={revision_summary_title(revision)}
                   >
-                    <p>{revision_summary(revision, @spec.revisions)}</p>
+                    <p>{revision_summary(
+                      revision,
+                      @spec.revisions,
+                      @revision_summaries_enabled?
+                    )}</p>
                   </.alert>
                 </div>
               </:expanded_content>
@@ -240,6 +264,12 @@ defmodule HiveWeb.SpecComponents do
                     <div data-part="comment-author">
                       <strong>{comment_author(comment)}</strong>
                       <span>{Calendar.strftime(comment.inserted_at, "%b %-d, %Y")}</span>
+                      <.badge
+                        :if={comment_new?(comment, @viewer_last_viewed_at)}
+                        label="New"
+                        color="information"
+                        style="light-fill"
+                      />
                     </div>
                     <div data-part="comment-actions">
                       <button
@@ -420,6 +450,26 @@ defmodule HiveWeb.SpecComponents do
   defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
   defp source_label(_spec), do: "Created directly"
 
+  defp new_activity_since_visit?(%{viewer_last_viewed_at: nil}), do: false
+
+  defp new_activity_since_visit?(%{viewer_last_viewed_at: viewed_at, spec: spec}) do
+    DateTime.compare(spec.updated_at, viewed_at) == :gt or
+      Enum.any?(comments(spec), &comment_new?(&1, viewed_at))
+  end
+
+  defp comments(%{comments: %Ecto.Association.NotLoaded{}}), do: []
+  defp comments(%{comments: comments}) when is_list(comments), do: comments
+  defp comments(_spec), do: []
+
+  defp comment_new?(_comment, nil), do: false
+
+  defp comment_new?(%{inserted_at: inserted_at}, viewed_at)
+       when not is_nil(inserted_at) do
+    DateTime.compare(inserted_at, viewed_at) == :gt
+  end
+
+  defp comment_new?(_comment, _viewed_at), do: false
+
   attr :spec, :map, required: true
 
   defp status_menu(assigns) do
@@ -541,15 +591,19 @@ defmodule HiveWeb.SpecComponents do
   defp revision_summary_title(%{revision: 1}), do: "Initial draft"
   defp revision_summary_title(revision), do: "Revision #{revision.revision} summary"
 
-  defp revision_summary(%{summary: summary}, _revisions)
+  defp revision_summary(%{summary: summary}, _revisions, _summaries_enabled?)
        when is_binary(summary) and summary != "",
        do: summary
 
-  defp revision_summary(%{revision: 1, status: status}, _revisions) do
+  defp revision_summary(%{revision: 1, status: status}, _revisions, _summaries_enabled?) do
     "Created the initial #{String.downcase(status_label(status))} proposal."
   end
 
-  defp revision_summary(revision, revisions) do
+  defp revision_summary(_revision, _revisions, true) do
+    "The agent-written summary is not available yet."
+  end
+
+  defp revision_summary(revision, revisions, false) do
     previous = Enum.find(revisions, &(&1.revision == revision.revision - 1))
 
     revision

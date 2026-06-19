@@ -15,6 +15,8 @@ defmodule HiveWeb.OpenGraphController do
   alias HiveWeb.SpecLive
 
   def show(conn, %{"page_id" => page_id, "hash" => hash}) do
+    hash = normalize_hash(hash)
+
     with {:ok, data} <- page(conn, page_id),
          true <- OpenGraph.valid_hash?(data, hash) do
       OpenGraph.serve(conn, data)
@@ -25,6 +27,8 @@ defmodule HiveWeb.OpenGraphController do
         |> send_resp(:not_found, "Not found")
     end
   end
+
+  defp normalize_hash(hash), do: String.replace_suffix(hash, ".jpg", "")
 
   defp page(_conn, "login"), do: {:ok, PageHTML.open_graph()}
   defp page(_conn, "account-identities"), do: {:ok, AccountLive.Identities.open_graph()}

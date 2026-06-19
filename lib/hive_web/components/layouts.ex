@@ -81,7 +81,7 @@ defmodule HiveWeb.Layouts do
 
   def feeds_dropdown(assigns) do
     ~H"""
-    <.dropdown id={@id} size="medium" icon_only={true}>
+    <.dropdown id={@id} class="feeds-dropdown" size="medium" icon_only={true}>
       <:icon><.icon name="rss" /></:icon>
       <.dropdown_item value="atom" label="Atom" href={@atom_href}>
         <:left_icon><.icon name="rss" /></:left_icon>
@@ -127,6 +127,7 @@ defmodule HiveWeb.Layouts do
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
+  attr :specs_have_new_activity?, :boolean, default: false
   slot :inner_block, required: true
 
   def dashboard(assigns) do
@@ -164,8 +165,9 @@ defmodule HiveWeb.Layouts do
           <.sidebar_item
             label="Specs"
             icon="file_text"
-            href={~p"/specs?filter_status_op===&filter_status_val=draft"}
+            href={~p"/specs"}
             selected={String.starts_with?(@current_path, "/specs")}
+            data-new-activity={if @specs_have_new_activity?, do: "true"}
           />
           <.sidebar_item
             label="Drops"
@@ -179,13 +181,6 @@ defmodule HiveWeb.Layouts do
             icon="history"
             href={~p"/audit"}
             selected={String.starts_with?(@current_path, ~p"/audit")}
-          />
-          <.sidebar_item
-            :if={@admin?}
-            label="Ops"
-            icon="brand_slack"
-            href={~p"/ops/slack"}
-            selected={String.starts_with?(@current_path, "/ops")}
           />
         </.sidebar>
         <section data-part="content">

@@ -153,4 +153,58 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     assert html =~ "Public meadow proposal"
   end
+
+  test "renders the New activity badge when a spec changed since the user last viewed it",
+       %{conn: conn} do
+    {conn, reader} = sign_in(conn, "reader@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Visible spec", "body" => "Initial proposal."}, reader)
+
+    {:ok, _view, html} = live(conn, ~p"/specs")
+    refute html =~ "New activity"
+
+    :ok = Specs.mark_viewed(spec, reader)
+    require Ecto.Query
+
+    {1, _} =
+      Hive.Repo.update_all(
+        Ecto.Query.from(view in Specs.View,
+          where: view.user_id == ^reader.id and view.spec_id == ^spec.id
+        ),
+        set: [last_viewed_at: ~U[2020-01-01 00:00:00.000000Z]]
+      )
+
+    {:ok, _comment} = Specs.add_comment(spec, %{"body" => "New note."}, reader)
+
+    {:ok, _view, html} = live(conn, ~p"/specs")
+    assert html =~ "New activity"
+  end
+
+  test "shows the sidebar new-activity dot when the user has unviewed updates",
+       %{conn: conn} do
+    {conn, reader} = sign_in(conn, "reader@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Sidebar dot spec", "body" => "Initial proposal."}, reader)
+
+    {:ok, _view, html} = live(conn, ~p"/specs")
+    refute html =~ ~s|data-new-activity="true"|
+
+    :ok = Specs.mark_viewed(spec, reader)
+    require Ecto.Query
+
+    {1, _} =
+      Hive.Repo.update_all(
+        Ecto.Query.from(view in Specs.View,
+          where: view.user_id == ^reader.id and view.spec_id == ^spec.id
+        ),
+        set: [last_viewed_at: ~U[2020-01-01 00:00:00.000000Z]]
+      )
+
+    {:ok, _spec} = Specs.update_spec(spec, %{"title" => "Edited"}, reader)
+
+    {:ok, _view, html} = live(conn, ~p"/specs")
+    assert html =~ ~s|data-new-activity="true"|
+  end
 end

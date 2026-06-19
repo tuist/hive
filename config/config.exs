@@ -49,13 +49,14 @@ config :boruta, Boruta.Oauth,
 
 config :hive, Oban,
   repo: Hive.Repo,
-  queues: [agents: 2],
+  queues: [default: 5, agents: 2],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
        {"*/30 * * * *", Hive.Meadows.EvolutionWorker},
        {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper},
-       {"*/15 * * * *", Hive.Drops.MeadowClassificationSweeper}
+       {"*/15 * * * *", Hive.Drops.MeadowClassificationSweeper},
+       {"*/15 * * * *", Hive.Specs.RevisionSummarySweeper}
      ]}
   ]
 

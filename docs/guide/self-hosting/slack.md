@@ -17,6 +17,11 @@ Once a workspace is installed, Hive can:
   preview of the resource. Only resources that an anonymous visitor
   could see on the dashboard are previewed; private specs and
   organization-only forage items stay opaque.
+- Notify a configured channel when product activity happens, starting
+  with new specs and new spec comments.
+- Let signed-in Hive users connect their Slack profile so Hive can
+  target user-specific notifications even when Slack and Hive emails do
+  not match.
 - Record Slack installs, disconnects, app mentions, and captured feature
   requests in the audit trail.
 
@@ -31,7 +36,6 @@ Set these on the Hive deployment:
 - `HIVE_SLACK_BOT_SCOPES`: optional, comma-separated list of bot OAuth
   scopes to request at install time. Defaults to:
   `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,links:read,links:write,mpim:history,mpim:read,users:read,users:read.email`.
-
 When any of the three required variables is missing, the integration
 stays dormant: the `/slack/install` link is hidden and `/ops/slack`
 shows an inert state.
@@ -66,7 +70,8 @@ paste:
   },
   "oauth_config": {
     "redirect_urls": [
-      "https://<your-host>/slack/install/callback"
+      "https://<your-host>/slack/install/callback",
+      "https://<your-host>/account/slack/callback"
     ],
     "scopes": {
       "bot": [
@@ -86,6 +91,11 @@ paste:
         "mpim:read",
         "users:read",
         "users:read.email"
+      ],
+      "user": [
+        "openid",
+        "profile",
+        "email"
       ]
     }
   },
@@ -123,7 +133,10 @@ To configure it manually instead:
    Signing Secret into the environment variables above.
 3. In **OAuth & Permissions**:
    - Add the bot scopes listed under `HIVE_SLACK_BOT_SCOPES`.
-   - Add the redirect URL: `https://<your-host>/slack/install/callback`.
+   - Add the redirect URLs: `https://<your-host>/slack/install/callback`
+     and `https://<your-host>/account/slack/callback`.
+   - Add the user scopes `openid`, `profile`, and `email` for Slack
+     profile linking.
 4. In **Event Subscriptions**:
    - Enable events.
    - Request URL: `https://<your-host>/api/slack/events`. Slack verifies
@@ -152,6 +165,17 @@ Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
 3. The workspace appears in the list. Click **Disconnect** to revoke
    Hive's access to that workspace (Hive keeps the row so the install
    history stays in the audit trail).
+4. To post product activity into Slack, enter a notification channel ID
+   on the workspace row and choose which events Hive should post.
+
+## Linking a Slack profile
+
+After an admin connects the workspace, signed-in users can open
+`/account/identities` and click **Connect Slack profile**. Hive sends
+the user through Slack's OpenID Connect flow and stores the returned
+Slack workspace and user IDs on the matching workspace install. This
+explicit link is used even when the user's Slack email differs from
+their Hive email.
 
 ## What gets captured
 
@@ -179,3 +203,15 @@ the preview back via `chat.unfurl`. Supported surfaces:
 
 Only public resources are unfurled. Anything that requires a session
 to view on the dashboard stays opaque, and Slack shows the bare link.
+
+## Notifications
+
+Hive can post product activity to one Slack channel per connected
+workspace. The first supported events are:
+
+- `spec.created`: a new spec was created from the dashboard or MCP.
+- `spec.comment.created`: a new comment was added to a spec.
+
+The channel must be reachable by Hive's installed bot. Use the Slack
+channel ID, not the display name. Instance admins configure the channel
+from `/ops/slack`; no redeploy is required.

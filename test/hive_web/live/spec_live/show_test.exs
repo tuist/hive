@@ -6,6 +6,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Auth
   alias Hive.Meadows
   alias Hive.Specs
+  alias Hive.Specs.RevisionSummaries
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
@@ -31,12 +32,48 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Revision 1"
 
     conn = get(conn, ~p"/specs/#{spec.number}")
-    assert html_response(conn, 200) =~ ~s|property="og:image"|
+    response = html_response(conn, 200)
+
+    assert response =~ ~s|>GitHub sign-in · Hive</title>|
+    assert response =~ ~s(property="og:title" content="GitHub sign-in | Hive")
+    assert response =~ ~s(/specs/#{spec.number}")
+    assert response =~ ~s|property="og:image"|
+    assert response =~ ~s|.jpg"|
 
     spec = Specs.get_spec!(spec.id)
     open_graph = HiveWeb.SpecLive.Show.open_graph(spec)
     assert open_graph.eyebrow == "Spec ##{spec.number}"
     assert open_graph.author == %{handle: "@alice", initials: "a"}
+  end
+
+  test "renders public spec head metadata for anonymous visitors", %{conn: conn} do
+    {_conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "Move object storage into the cluster",
+          "body" => "Use Rook and Ceph to provide object storage from the Kubernetes cluster.",
+          "summary" => "Move object storage to Kubernetes with Rook and Ceph.",
+          "visibility" => "public"
+        },
+        user
+      )
+
+    conn = Phoenix.ConnTest.build_conn() |> get(~p"/specs/#{spec.number}")
+    response = html_response(conn, 200)
+
+    assert response =~ ~s|>Move object storage into the cluster · Hive</title>|
+
+    assert response =~
+             ~s(property="og:title" content="Move object storage into the cluster | Hive")
+
+    assert response =~
+             ~s(property="og:description" content="Move object storage to Kubernetes with Rook and Ceph.")
+
+    assert response =~ ~s(property="og:image")
+    assert response =~ ~s(/open-graph/spec-#{spec.number}/)
+    assert response =~ ~s|.jpg"|
   end
 
   test "requires authentication to comment", %{conn: conn} do
@@ -360,5 +397,116 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     assert html =~ "Added a discussion import step."
     refute html =~ "This revision updated the proposal body"
+  end
+
+  test "records a view for the signed-in user", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    assert Hive.Repo.all(Specs.View) == []
+
+    {:ok, _view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    [view] = Hive.Repo.all(Specs.View)
+    assert view.spec_id == spec.id
+    assert view.user_id == user.id
+  end
+
+  test "does not record a view for anonymous visitors" do
+    {_, user} = sign_in(Phoenix.ConnTest.build_conn(), "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    {:ok, _view, _html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs/#{spec.number}")
+
+    assert Hive.Repo.all(Specs.View) == []
+  end
+
+  test "does not show a new-activity indicator on a first visit", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+    {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
+    refute html =~ ~s|>New activity<|
+    refute html =~ ~s|>New<|
+  end
+
+  test "shows the new-activity header badge and per-comment tag after activity since last visit",
+       %{conn: conn} do
+    {author_conn, author} = sign_in(conn, "author@example.com")
+    {reader_conn, reader} = sign_in(conn, "reader@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Visible", "body" => "Initial proposal."}, author)
+
+    {:ok, old_comment} =
+      Specs.add_comment(spec, %{"body" => "Previously seen note."}, author)
+
+    {:ok, _view, _html} = live(reader_conn, ~p"/specs/#{spec.number}")
+    require Ecto.Query
+
+    {1, _} =
+      Hive.Repo.update_all(
+        Ecto.Query.from(view in Specs.View,
+          where: view.user_id == ^reader.id and view.spec_id == ^spec.id
+        ),
+        set: [last_viewed_at: ~U[2020-01-01 00:00:00.000000Z]]
+      )
+
+    {:ok, fresh_comment} =
+      Specs.add_comment(spec, %{"body" => "Fresh note for the reader."}, author)
+
+    {:ok, _view, html} = live(reader_conn, ~p"/specs/#{spec.number}")
+    assert html =~ ~s|>New activity<|
+    assert html =~ "comment-#{fresh_comment.id}"
+    refute html =~ ~s|id="comment-#{old_comment.id}"[^>]*>\\s*<.*>New<|
+
+    {:ok, _view, html2} = live(author_conn, ~p"/specs/#{spec.number}")
+    refute html2 =~ ~s|>New activity<|
+  end
+
+  test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "GitHub sign-in", "body" => "Keep source URL visible."},
+        user
+      )
+
+    {:ok, spec} =
+      Specs.update_spec(
+        Specs.get_spec!(spec.id),
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Keep source URL visible.\nImport discussion comments.",
+          "lock_version" => spec.lock_version
+        },
+        user
+      )
+
+    spec = Specs.get_spec!(spec.id)
+    revision = Enum.find(spec.revisions, &(&1.revision == 2))
+
+    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
+
+    html = render_click(view, "toggle-expand", %{"row-key" => "revision-#{revision.id}"})
+    assert html =~ "This revision expanded the proposal body with 1 addition."
+
+    runner = fn _input ->
+      {:ok, %{summary: "Added discussion comment importing to the proposal."}}
+    end
+
+    assert {:ok, _updated} = RevisionSummaries.summarize(revision.id, runner: runner)
+    :sys.get_state(view.pid)
+
+    html = render(view)
+    assert html =~ "Added discussion comment importing to the proposal."
+    refute html =~ "This revision expanded the proposal body with 1 addition."
   end
 end
