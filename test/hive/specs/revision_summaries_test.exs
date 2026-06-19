@@ -66,6 +66,32 @@ defmodule Hive.Specs.RevisionSummariesTest do
     assert updated.summary == "Reworded the proposal."
   end
 
+  test "summarize/2 falls back to a freeform run when structured output is missing" do
+    {revision, _spec} = two_revisions()
+    runner = fn _input -> {:error, :no_result_submitted} end
+    fallback_runner = fn _input -> {:ok, "Added discussion import and deduplication details."} end
+
+    assert {:ok, updated} =
+             RevisionSummaries.summarize(revision.id,
+               runner: runner,
+               fallback_runner: fallback_runner
+             )
+
+    assert updated.summary == "Added discussion import and deduplication details."
+  end
+
+  test "summarize/2 returns a fallback error when both agent paths fail" do
+    {revision, _spec} = two_revisions()
+    runner = fn _input -> {:error, :no_result_submitted} end
+    fallback_runner = fn _input -> {:error, :provider_rejected_request} end
+
+    assert {:error, {:fallback_failed, :no_result_submitted, :provider_rejected_request}} =
+             RevisionSummaries.summarize(revision.id,
+               runner: runner,
+               fallback_runner: fallback_runner
+             )
+  end
+
   test "summarize/2 broadcasts after storing the summary" do
     {revision, _spec} = two_revisions()
     runner = fn _input -> {:ok, %{summary: "Clarified the discussion import behavior."}} end
