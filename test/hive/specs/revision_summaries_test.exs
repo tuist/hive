@@ -66,6 +66,18 @@ defmodule Hive.Specs.RevisionSummariesTest do
     assert updated.summary == "Reworded the proposal."
   end
 
+  test "summarize/2 broadcasts after storing the summary" do
+    {revision, _spec} = two_revisions()
+    runner = fn _input -> {:ok, %{summary: "Clarified the discussion import behavior."}} end
+
+    :ok = Specs.subscribe_to_spec(revision.spec_id)
+
+    assert {:ok, updated} = RevisionSummaries.summarize(revision.id, runner: runner)
+    assert updated.summary == "Clarified the discussion import behavior."
+    assert_receive {:revision_summary_updated, revision_id}
+    assert revision_id == revision.id
+  end
+
   test "summarize/2 skips when the LLM is unconfigured" do
     {revision, _spec} = two_revisions()
     runner = fn _input -> {:error, :llm_not_configured} end

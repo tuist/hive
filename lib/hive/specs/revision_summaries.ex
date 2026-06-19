@@ -8,6 +8,7 @@ defmodule Hive.Specs.RevisionSummaries do
 
   alias Hive.Agents.Sessions
   alias Hive.Repo
+  alias Hive.Specs
   alias Hive.Specs.Agents.RevisionSummaryAgent
   alias Hive.Specs.Revision
 
@@ -87,6 +88,14 @@ defmodule Hive.Specs.RevisionSummaries do
     revision
     |> Revision.summary_changeset(String.trim(summary))
     |> Repo.update()
+    |> case do
+      {:ok, revision} ->
+        Specs.broadcast_revision_summary_updated(revision)
+        {:ok, revision}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   defp truncate(value) when is_binary(value) do
