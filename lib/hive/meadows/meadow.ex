@@ -1,5 +1,12 @@
 defmodule Hive.Meadows.Meadow do
-  @moduledoc false
+  @moduledoc """
+  A meadow is a sub-domain *within* a project. Projects own the
+  repositories and the RSS sources; meadows are the granular tags an
+  operator wants to slice that project by (for example "Cache" or
+  "Generated projects" inside the Tuist project). A drop is linked to
+  one or more meadows; its project is derived from the meadow's
+  `project_id`.
+  """
 
   use Ecto.Schema
 
@@ -13,13 +20,15 @@ defmodule Hive.Meadows.Meadow do
     field :name, :string
     field :description, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
+
+    # Virtual fields kept so the existing single-form UX (create a
+    # meadow with its repo in one step) still works. The context
+    # promotes these into the parent project.
     field :github_repository_owner, :string, virtual: true
     field :github_repository_name, :string, virtual: true
     field :github_repository_visibility, Ecto.Enum, values: [:public, :private], virtual: true
 
-    many_to_many :github_repositories, Hive.Meadows.GitHubRepository,
-      join_through: Hive.Meadows.MeadowRepository,
-      join_keys: [meadow_id: :id, github_repository_id: :id]
+    belongs_to :project, Hive.Projects.Project
 
     many_to_many :specs, Hive.Specs.Spec,
       join_through: "meadows_specs",
@@ -36,6 +45,7 @@ defmodule Hive.Meadows.Meadow do
       :name,
       :description,
       :visibility,
+      :project_id,
       :github_repository_owner,
       :github_repository_name,
       :github_repository_visibility
@@ -50,6 +60,7 @@ defmodule Hive.Meadows.Meadow do
     |> validate_inclusion(:visibility, @visibilities)
     |> validate_repository_fields()
     |> unique_constraint(:name)
+    |> foreign_key_constraint(:project_id)
   end
 
   def repository_attrs(%Ecto.Changeset{} = changeset) do
@@ -86,6 +97,8 @@ defmodule Hive.Meadows.Meadow do
     end
   end
 
+  defp present?(value), do: is_binary(value) and value != ""
+
   defp normalize_string(changeset, field, transform \\ &Function.identity/1) do
     update_change(changeset, field, fn
       value when is_binary(value) ->
@@ -104,6 +117,4 @@ defmodule Hive.Meadows.Meadow do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
-
-  defp present?(value), do: is_binary(value) and value != ""
 end

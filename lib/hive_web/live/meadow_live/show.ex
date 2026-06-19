@@ -217,7 +217,13 @@ defmodule HiveWeb.MeadowLive.Show do
   end
 
   defp selected_repository(meadow) do
-    meadow.github_repositories
+    repositories =
+      case meadow.project do
+        %{github_repositories: repos} when is_list(repos) -> repos
+        _ -> []
+      end
+
+    repositories
     |> List.first()
     |> case do
       nil ->

@@ -52,7 +52,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "upserts new issues and deletes issues that disappeared upstream" do
     meadow = setup_meadow!()
-    repository = hd(meadow.github_repositories)
+    repository = hd(meadow.project.github_repositories)
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
 
@@ -84,7 +84,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "list_github_issues_for_user/1 returns issues with their meadow/repo context" do
     meadow = setup_meadow!()
-    repository = hd(meadow.github_repositories)
+    repository = hd(meadow.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{number: 1, title: "Hello", body: "World"}

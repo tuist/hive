@@ -14,7 +14,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   end
 
   defp seed_issue!(meadow, opts) do
-    repository = hd(meadow.github_repositories)
+    repository = hd(meadow.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{
@@ -202,7 +202,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     seed_issue!(meadow_a, number: 1, title: "Issue for A")
     seed_issue!(meadow_b, number: 2, title: "Issue for B")
 
-    repository_b = hd(meadow_b.github_repositories)
+    repository_b = hd(meadow_b.project.github_repositories)
 
     {:ok, _view, html} =
       live(

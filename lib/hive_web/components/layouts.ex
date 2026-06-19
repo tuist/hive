@@ -144,6 +144,12 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
+            label="Projects"
+            icon="apps"
+            href={~p"/projects"}
+            selected={String.starts_with?(@current_path, ~p"/projects")}
+          />
+          <.sidebar_item
             label="Meadows"
             icon="treemap"
             href={~p"/meadows"}

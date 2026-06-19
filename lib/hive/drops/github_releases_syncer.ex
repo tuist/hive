@@ -19,7 +19,6 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.GitHub.Client
   alias Hive.GitHub.Releases
   alias Hive.Meadows.GitHubRepository
-  alias Hive.Meadows.Meadow
   alias Hive.Repo
 
   @default_interval_ms :timer.minutes(15)
@@ -64,8 +63,8 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
       {:ok, _config} ->
         Audit.put_context(%{interface: "worker"})
 
-        list_meadow_repositories()
-        |> Enum.each(&sync_meadow_repository/1)
+        list_project_repositories()
+        |> Enum.each(&sync_project_repository/1)
 
         :ok
 
@@ -75,24 +74,23 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp list_meadow_repositories do
+  defp list_project_repositories do
     query =
       from(repository in GitHubRepository,
-        join: meadow in assoc(repository, :meadows),
-        preload: [meadows: meadow]
+        where: not is_nil(repository.project_id),
+        preload: [project: :meadows]
       )
 
     Repo.all(query)
-    |> Enum.flat_map(fn repository ->
-      Enum.map(repository.meadows, fn meadow -> {meadow, repository} end)
-    end)
   end
 
-  defp sync_meadow_repository({%Meadow{} = meadow, %GitHubRepository{} = repository}) do
+  defp sync_project_repository(%GitHubRepository{project: project} = repository) do
+    meadows = project.meadows
+
     case Releases.list_releases(repository) do
       {:ok, releases} ->
         Enum.each(releases, fn release ->
-          upsert_release_drop(meadow, repository, release)
+          upsert_release_drop(meadows, repository, release)
         end)
 
       {:error, reason} ->
@@ -103,7 +101,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp upsert_release_drop(meadow, repository, %Releases{} = release) do
+  defp upsert_release_drop(meadows, repository, %Releases{} = release) do
     external_id = "#{repository.owner}/#{repository.name}@#{release.tag_name || ""}"
 
     attrs = %{
@@ -121,8 +119,8 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
     case Drops.upsert_release_drop(attrs) do
       {:ok, drop} ->
-        Drops.replace_drop_meadows(drop, [meadow.id])
-        record_audit(drop, meadow, repository)
+        Drops.replace_drop_meadows(drop, Enum.map(meadows, & &1.id))
+        record_audit(drop, meadows, repository)
         Hive.Drops.GitHubReleaseRewriteWorker.enqueue(drop)
         :ok
 
@@ -134,7 +132,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp record_audit(drop, meadow, repository) do
+  defp record_audit(drop, meadows, repository) do
     if drop.inserted_at == drop.updated_at do
       Audit.record(:"drop.ingested", %{
         target_type: "drop",
@@ -143,7 +141,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
         metadata: %{
           source_type: "github_release",
           repository: "#{repository.owner}/#{repository.name}",
-          meadow: meadow.name,
+          meadows: Enum.map_join(meadows, ", ", & &1.name),
           path: "/drops"
         }
       })

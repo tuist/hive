@@ -29,18 +29,17 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   defp attach_meadow!(name_prefix, repository) do
     suffix = unique()
+    repository = Repo.preload(repository, :project)
 
     create_meadow!(%{
       name: "#{name_prefix}-#{suffix}",
       visibility: "public",
-      github_repository_owner: repository.owner,
-      github_repository_name: repository.name,
-      github_repository_visibility: "public"
+      project_id: repository.project_id
     })
   end
 
   defp seed_issue!(meadow) do
-    repo = hd(meadow.github_repositories)
+    repo = hd(meadow.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repo, [
       %{number: 1, title: "An issue", body: "Some body"}
@@ -51,7 +50,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "links every candidate meadow when the LLM is unavailable" do
     meadow_a = create_meadow_with_new_repo!("alpha")
-    repo = hd(meadow_a.github_repositories)
+    repo = hd(meadow_a.project.github_repositories)
     meadow_b = attach_meadow!("beta", repo)
 
     {_repo, issue} = seed_issue!(meadow_a)
@@ -71,7 +70,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "keeps only the meadow ids the agent picked from the candidate set" do
     meadow_a = create_meadow_with_new_repo!("alpha")
-    repo = hd(meadow_a.github_repositories)
+    repo = hd(meadow_a.project.github_repositories)
     meadow_b = attach_meadow!("beta", repo)
     unrelated = create_meadow_with_new_repo!("unrelated")
 
@@ -144,7 +143,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "leaves classified_at nil when the repository has no meadow attached" do
     meadow = create_meadow_with_new_repo!("orphan")
-    repo = hd(meadow.github_repositories)
+    repo = hd(meadow.project.github_repositories)
 
     issue =
       Repo.insert!(

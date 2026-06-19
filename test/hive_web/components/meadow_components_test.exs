@@ -8,7 +8,15 @@ defmodule HiveWeb.MeadowComponentsTest do
   alias Hive.Meadows
   alias Hive.Meadows.GitHubRepository
   alias Hive.Meadows.Meadow
+  alias Hive.Projects.Project
   alias HiveWeb.MeadowComponents
+
+  defp project_with(repos),
+    do: %Project{
+      id: "00000000-0000-0000-0000-000000000001",
+      name: "Hive",
+      github_repositories: repos
+    }
 
   describe "meadows/1" do
     defp assigns(overrides \\ %{}) do
@@ -50,7 +58,7 @@ defmodule HiveWeb.MeadowComponentsTest do
       meadow = %Meadow{
         id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
         name: "Hive",
-        github_repositories: []
+        project: project_with([])
       }
 
       assigns = assigns(%{meadows: [meadow]})
@@ -118,7 +126,7 @@ defmodule HiveWeb.MeadowComponentsTest do
         id: "017b7c7d-6f1b-4c71-b0e2-cdf6f65fd3d6",
         name: "Hive",
         description: "Meadow orchestration",
-        github_repositories: [%GitHubRepository{owner: "tuist", name: "hive"}]
+        project: project_with([%GitHubRepository{owner: "tuist", name: "hive"}])
       }
 
       assigns = assigns(%{meadows: [meadow]})
@@ -150,7 +158,7 @@ defmodule HiveWeb.MeadowComponentsTest do
         name: "Atlas",
         description: "Internal planning.",
         visibility: :private,
-        github_repositories: []
+        project: project_with([])
       }
 
       assigns =
@@ -194,7 +202,7 @@ defmodule HiveWeb.MeadowComponentsTest do
         name: "Atlas",
         description: "Public planning.",
         visibility: :public,
-        github_repositories: []
+        project: project_with([])
       }
 
       assigns =

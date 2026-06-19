@@ -227,10 +227,11 @@ defmodule Hive.Forage do
   """
   def accessible_meadows_with_repositories(user) do
     Meadow
-    |> preload(:github_repositories)
+    |> preload(project: :github_repositories)
     |> Repo.all()
     |> Enum.flat_map(fn meadow ->
-      Enum.map(meadow.github_repositories, &{meadow, &1})
+      repositories = (meadow.project && meadow.project.github_repositories) || []
+      Enum.map(repositories, &{meadow, &1})
     end)
     |> Enum.filter(fn {meadow, repository} -> accessible_pair?(meadow, repository, user) end)
   end
@@ -836,10 +837,11 @@ defmodule Hive.Forage do
 
   def list_repositories_with_meadows do
     Meadow
-    |> preload(:github_repositories)
+    |> preload(project: :github_repositories)
     |> Repo.all()
     |> Enum.flat_map(fn meadow ->
-      Enum.map(meadow.github_repositories, &{meadow, &1})
+      repositories = (meadow.project && meadow.project.github_repositories) || []
+      Enum.map(repositories, &{meadow, &1})
     end)
   end
 end

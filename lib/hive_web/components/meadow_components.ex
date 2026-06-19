@@ -72,14 +72,14 @@ defmodule HiveWeb.MeadowComponents do
                 <div data-part="cell" data-type="badge">
                   <div data-part="repository-cell">
                     <.badge
-                      :if={meadow.github_repositories == []}
+                      :if={meadow.project.github_repositories == []}
                       label="No repository"
                       color="neutral"
                       style="light-fill"
                       size="large"
                     />
                     <.badge
-                      :for={repository <- meadow.github_repositories}
+                      :for={repository <- meadow.project.github_repositories}
                       label={GitHubRepository.full_name(repository)}
                       color="neutral"
                       style="light-fill"
@@ -366,14 +366,14 @@ defmodule HiveWeb.MeadowComponents do
         <dd>
           <div data-part="repository-cell">
             <.badge
-              :if={@meadow.github_repositories == []}
+              :if={@meadow.project.github_repositories == []}
               label="No repository"
               color="neutral"
               style="light-fill"
               size="large"
             />
             <.badge
-              :for={repository <- @meadow.github_repositories}
+              :for={repository <- @meadow.project.github_repositories}
               label={GitHubRepository.full_name(repository)}
               color="neutral"
               style="light-fill"
