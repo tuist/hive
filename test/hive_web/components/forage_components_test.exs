@@ -8,8 +8,8 @@ defmodule HiveWeb.ForageComponentsTest do
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
-  alias Hive.Meadows.GitHubRepository
-  alias Hive.Meadows.Meadow
+  alias Hive.Domains.GitHubRepository
+  alias Hive.Domains.Domain
   alias HiveWeb.ForageComponents
 
   describe "feature_requests/1" do
@@ -76,7 +76,7 @@ defmodule HiveWeb.ForageComponentsTest do
 
   describe "github_issues/1" do
     test "renders inline code spans in titles and skips heading-only excerpts" do
-      meadow = %Meadow{name: "hive"}
+      domain = %Domain{name: "hive"}
       repository = %GitHubRepository{owner: "tuist", name: "tuist"}
 
       issue = %GitHubIssue{
@@ -87,8 +87,8 @@ defmodule HiveWeb.ForageComponentsTest do
 
       assigns = %{
         source: Forage.get_source!(:github_issues),
-        entries: [{repository, issue, [meadow]}],
-        stats: %{state_label: "open", total: 1, repositories: 1, meadows: 1},
+        entries: [{repository, issue, [domain]}],
+        stats: %{state_label: "open", total: 1, repositories: 1, domains: 1},
         available_filters: [],
         active_filters: []
       }

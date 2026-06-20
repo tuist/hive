@@ -1,13 +1,13 @@
 defmodule Hive.Forage.GitHubIssueClassification do
   @moduledoc """
-  Resolves which meadows a single GitHub issue belongs to and persists the
+  Resolves which domains a single GitHub issue belongs to and persists the
   resulting links.
 
   Classification calls the configured LLM through
   `Hive.Forage.Agents.GitHubIssueClassifierAgent`. The candidate set is
-  the meadows attached to the issue's repository, so the answer is always
+  the domains attached to the issue's repository, so the answer is always
   a subset of that list. When the LLM is not configured, every candidate
-  meadow is linked so the dashboard still has something to show.
+  domain is linked so the dashboard still has something to show.
   """
 
   import Ecto.Query
@@ -16,9 +16,9 @@ defmodule Hive.Forage.GitHubIssueClassification do
   alias Hive.Agents.Sessions
   alias Hive.Forage.Agents.GitHubIssueClassifierAgent
   alias Hive.Forage.GitHubIssue
-  alias Hive.Forage.GitHubIssueMeadow
-  alias Hive.Meadows.Meadow
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Forage.GitHubIssueDomain
+  alias Hive.Domains.Domain
+  alias Hive.Domains.GitHubRepository
   alias Hive.Repo
 
   @business_context """
@@ -33,10 +33,10 @@ defmodule Hive.Forage.GitHubIssueClassification do
   @max_body_length 1_200
 
   @doc """
-  Classifies the issue with `issue_id` and writes the resulting meadow
+  Classifies the issue with `issue_id` and writes the resulting domain
   links.
 
-  Returns `{:ok, [meadow_id]}` on success, `{:error, :not_found}` for an
+  Returns `{:ok, [domain_id]}` on success, `{:error, :not_found}` for an
   unknown id, and `{:error, reason}` for an LLM error that should be
   retried by the caller (typically the worker).
   """
@@ -48,52 +48,52 @@ defmodule Hive.Forage.GitHubIssueClassification do
   end
 
   def classify_issue(%GitHubIssue{} = issue, opts \\ []) do
-    candidate_meadows = candidate_meadows(issue.github_repository_id)
+    candidate_domains = candidate_domains(issue.github_repository_id)
 
     cond do
-      candidate_meadows == [] ->
+      candidate_domains == [] ->
         # Leave classified_at nil so the sweeper retries once the
-        # repository is attached to its first meadow.
+        # repository is attached to its first domain.
         {:ok, []}
 
       not agents_enabled?(opts) ->
-        meadow_ids = Enum.map(candidate_meadows, & &1.id)
-        persist!(issue, meadow_ids)
-        {:ok, meadow_ids}
+        domain_ids = Enum.map(candidate_domains, & &1.id)
+        persist!(issue, domain_ids)
+        {:ok, domain_ids}
 
       true ->
-        run_agent(issue, candidate_meadows, opts)
+        run_agent(issue, candidate_domains, opts)
     end
   end
 
-  defp run_agent(issue, candidate_meadows, opts) do
+  defp run_agent(issue, candidate_domains, opts) do
     runner = Keyword.get(opts, :runner, &run_classifier(&1, opts))
 
-    case runner.(build_input(issue, candidate_meadows)) do
-      {:ok, %{meadow_ids: meadow_ids}} ->
-        persist_classification(issue, candidate_meadows, meadow_ids)
+    case runner.(build_input(issue, candidate_domains)) do
+      {:ok, %{domain_ids: domain_ids}} ->
+        persist_classification(issue, candidate_domains, domain_ids)
 
-      {:ok, %{"meadow_ids" => meadow_ids}} ->
-        persist_classification(issue, candidate_meadows, meadow_ids)
+      {:ok, %{"domain_ids" => domain_ids}} ->
+        persist_classification(issue, candidate_domains, domain_ids)
 
       {:ok, _other} ->
         {:error, :invalid_agent_response}
 
       {:error, :llm_not_configured} ->
-        meadow_ids = Enum.map(candidate_meadows, & &1.id)
-        persist!(issue, meadow_ids)
-        {:ok, meadow_ids}
+        domain_ids = Enum.map(candidate_domains, & &1.id)
+        persist!(issue, domain_ids)
+        {:ok, domain_ids}
 
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  defp persist_classification(issue, candidate_meadows, meadow_ids) when is_list(meadow_ids) do
-    allowed = MapSet.new(candidate_meadows, & &1.id)
+  defp persist_classification(issue, candidate_domains, domain_ids) when is_list(domain_ids) do
+    allowed = MapSet.new(candidate_domains, & &1.id)
 
     selected =
-      meadow_ids
+      domain_ids
       |> Enum.filter(&is_binary/1)
       |> Enum.uniq()
       |> Enum.filter(&MapSet.member?(allowed, &1))
@@ -102,28 +102,28 @@ defmodule Hive.Forage.GitHubIssueClassification do
     {:ok, selected}
   end
 
-  defp persist_classification(_issue, _candidate_meadows, _other),
+  defp persist_classification(_issue, _candidate_domains, _other),
     do: {:error, :invalid_agent_response}
 
-  defp persist!(%GitHubIssue{id: issue_id}, meadow_ids) do
+  defp persist!(%GitHubIssue{id: issue_id}, domain_ids) do
     classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
     inserted_at = classified_at
 
     rows =
-      Enum.map(meadow_ids, fn meadow_id ->
+      Enum.map(domain_ids, fn domain_id ->
         %{
           forage_github_issue_id: issue_id,
-          meadow_id: meadow_id,
+          domain_id: domain_id,
           inserted_at: inserted_at,
           updated_at: inserted_at
         }
       end)
 
     Repo.transaction(fn ->
-      from(link in GitHubIssueMeadow, where: link.forage_github_issue_id == ^issue_id)
+      from(link in GitHubIssueDomain, where: link.forage_github_issue_id == ^issue_id)
       |> Repo.delete_all()
 
-      if rows != [], do: Repo.insert_all(GitHubIssueMeadow, rows)
+      if rows != [], do: Repo.insert_all(GitHubIssueDomain, rows)
 
       GitHubIssue
       |> where([issue], issue.id == ^issue_id)
@@ -133,12 +133,12 @@ defmodule Hive.Forage.GitHubIssueClassification do
     :ok
   end
 
-  defp candidate_meadows(repository_id) do
+  defp candidate_domains(repository_id) do
     case Repo.get(GitHubRepository, repository_id) do
       %GitHubRepository{project_id: project_id} when is_binary(project_id) ->
-        Meadow
-        |> where([meadow], meadow.project_id == ^project_id)
-        |> order_by([meadow], asc: meadow.name)
+        Domain
+        |> where([domain], domain.project_id == ^project_id)
+        |> order_by([domain], asc: domain.name)
         |> Repo.all()
 
       _ ->
@@ -146,17 +146,17 @@ defmodule Hive.Forage.GitHubIssueClassification do
     end
   end
 
-  defp build_input(%GitHubIssue{} = issue, candidate_meadows) do
+  defp build_input(%GitHubIssue{} = issue, candidate_domains) do
     repository = issue.github_repository
 
     %{
       business_context: @business_context,
-      candidate_meadows:
-        Enum.map(candidate_meadows, fn meadow ->
+      candidate_domains:
+        Enum.map(candidate_domains, fn domain ->
           %{
-            id: meadow.id,
-            name: meadow.name,
-            description: meadow.description || ""
+            id: domain.id,
+            name: domain.name,
+            description: domain.description || ""
           }
         end),
       issue: %{

@@ -6,13 +6,13 @@ defmodule Hive.MCP.Components.Tools.Drops do
   alias Hive.Drops
 
   def drop_json(drop) do
-    meadows = drop.meadows || []
+    domains = drop.domains || []
 
     %{
       id: drop.id,
-      meadows:
-        Enum.map(meadows, fn meadow ->
-          %{id: meadow.id, name: meadow.name}
+      domains:
+        Enum.map(domains, fn domain ->
+          %{id: domain.id, name: domain.name}
         end),
       classified_at: iso8601(drop.classified_at),
       source_type: Atom.to_string(drop.source_type),

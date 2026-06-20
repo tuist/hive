@@ -2,7 +2,7 @@ defmodule HiveWeb.SpecLive.NewTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Forage
-  alias Hive.Meadows
+  alias Hive.Domains
 
   test "redirects guests away from the new spec form", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/specs"}}} = live(conn, ~p"/specs/new")
@@ -10,7 +10,7 @@ defmodule HiveWeb.SpecLive.NewTest do
 
   test "creates a direct spec", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive app"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive app"})
 
     {:ok, view, html} = live(conn, ~p"/specs/new")
 
@@ -28,7 +28,7 @@ defmodule HiveWeb.SpecLive.NewTest do
           title: "GitHub sign-in",
           body: "Add GitHub sign-in for requesters.",
           status: "proposed",
-          meadow_ids: [meadow.id]
+          domain_ids: [domain.id]
         }
       )
       |> render_submit()

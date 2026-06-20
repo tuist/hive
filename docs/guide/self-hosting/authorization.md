@@ -7,10 +7,10 @@ strongest:
 - `collaborator`: signed in, but not part of the org. The default for
   anyone whose email domain is not in `HIVE_ORG_DOMAINS`. Collaborators
   can sign in, comment on forage items they submitted, and see public
-  meadows and projects.
+  domains and projects.
 - `member`: part of the org. The default for users whose email domain
   matches `HIVE_ORG_DOMAINS` at signup, and for every signed-in user
-  when no org domains are configured. Members can see private meadows
+  when no org domains are configured. Members can see private domains
   and projects, create specs, and act on the dashboard the way the
   team does.
 - `admin`: explicitly promoted. Admins additionally see the audit
@@ -26,9 +26,9 @@ reclassify existing users; promote and demote with
 
 | Surface | Anonymous | `collaborator` | `member` | `admin` |
 |---|---|---|---|---|
-| Public meadows, projects, specs, drops | yes | yes | yes | yes |
+| Public domains, projects, specs, drops | yes | yes | yes | yes |
 | Sign-in, create forage items | no | yes | yes | yes |
-| Private meadows, projects, specs, drops | no | no | yes | yes |
+| Private domains, projects, specs, drops | no | no | yes | yes |
 | Spec editing | no | own only | yes | yes |
 | Audit trail (`/audit`) | no | no | no | yes |
 | Ops surfaces (`/ops/*`): Slack and drop sources | no | no | no | yes |

@@ -3,8 +3,8 @@ defmodule Hive.Drops.Drop do
   A shipped-update entry. Sourced from either a user-facing item
   generated from a connected repository's GitHub release, or from an
   operator-registered RSS/Atom feed. Each drop is associated to zero or
-  more meadows through
-  `Hive.Drops.DropMeadow`; the classifier populates that association.
+  more domains through
+  `Hive.Drops.DropDomain`; the classifier populates that association.
   """
 
   use Ecto.Schema
@@ -26,11 +26,11 @@ defmodule Hive.Drops.Drop do
     field :classified_at, :utc_datetime
 
     belongs_to :drop_source, Hive.Drops.DropSource
-    belongs_to :github_repository, Hive.Meadows.GitHubRepository
+    belongs_to :github_repository, Hive.Domains.GitHubRepository
 
-    many_to_many :meadows, Hive.Meadows.Meadow,
-      join_through: Hive.Drops.DropMeadow,
-      join_keys: [drop_id: :id, meadow_id: :id]
+    many_to_many :domains, Hive.Domains.Domain,
+      join_through: Hive.Drops.DropDomain,
+      join_keys: [drop_id: :id, domain_id: :id]
 
     timestamps(type: :utc_datetime)
   end

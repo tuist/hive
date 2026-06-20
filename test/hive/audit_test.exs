@@ -33,19 +33,19 @@ defmodule Hive.AuditTest do
 
     test "normalizes string-keyed attrs" do
       assert {:ok, activity} =
-               Audit.log("meadow.created", %{
+               Audit.log("domain.created", %{
                  "interface" => "mcp",
-                 "target_type" => "meadow",
-                 "target_id" => "meadow-id",
-                 "target_label" => "Meadow",
+                 "target_type" => "domain",
+                 "target_id" => "domain-id",
+                 "target_label" => "Domain",
                  "metadata" => %{"source" => "test"}
                })
 
       assert activity.interface == "mcp"
       assert activity.metadata["source"] == "test"
-      assert activity.metadata["path"] == "/meadows/meadow-id"
+      assert activity.metadata["path"] == "/domains/domain-id"
 
-      assert Audit.serialize(activity).target.path == "/meadows/meadow-id"
+      assert Audit.serialize(activity).target.path == "/domains/domain-id"
     end
 
     test "validates interface against the allowed set" do
@@ -129,11 +129,11 @@ defmodule Hive.AuditTest do
         })
 
       {:ok, _b} =
-        Audit.log("meadow.created", %{
+        Audit.log("domain.created", %{
           interface: "mcp",
           actor_email: "bob@example.com",
-          target_type: "meadow",
-          target_id: "meadow-a"
+          target_type: "domain",
+          target_id: "domain-a"
         })
 
       :ok
@@ -142,7 +142,7 @@ defmodule Hive.AuditTest do
     test "filters by interface, search query, and paginates" do
       {activities, meta} = Audit.list_activities(interface: "mcp", query: "bob", page_size: 1)
 
-      assert Enum.map(activities, & &1.action) == ["meadow.created"]
+      assert Enum.map(activities, & &1.action) == ["domain.created"]
       assert meta.current_page == 1
       assert meta.page_size == 1
       assert meta.total_count == 1
@@ -152,7 +152,7 @@ defmodule Hive.AuditTest do
     test "supports exclude filters" do
       {activities, _meta} = Audit.list_activities(exclude_interface: "dashboard")
 
-      assert Enum.map(activities, & &1.action) == ["meadow.created"]
+      assert Enum.map(activities, & &1.action) == ["domain.created"]
     end
   end
 

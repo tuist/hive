@@ -2,7 +2,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   @moduledoc """
   Periodically reconciles the `drops` table with user-facing drop items
   generated from the latest releases from every GitHub repository
-  connected to a project.
+  connected to a domain.
 
   The syncer ticks on startup and then every `:interval_ms` (default 15
   minutes). When the GitHub App is not configured it keeps running but
@@ -20,7 +20,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.Drops.ReleaseDropItems
   alias Hive.GitHub.Client
   alias Hive.GitHub.Releases
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
   alias Hive.Repo
 
   @default_interval_ms :timer.minutes(15)
@@ -87,19 +87,19 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     query =
       from(repository in GitHubRepository,
         where: not is_nil(repository.project_id),
-        preload: [project: :meadows]
+        preload: [project: :domains]
       )
 
     Repo.all(query)
   end
 
   defp sync_project_repository(%GitHubRepository{project: project} = repository, state) do
-    meadows = project.meadows
+    domains = project.domains
 
     case Releases.list_releases(repository) do
       {:ok, releases} ->
         Enum.each(releases, fn release ->
-          upsert_release_items(meadows, repository, release, state)
+          upsert_release_items(domains, repository, release, state)
         end)
 
       {:error, reason} ->
@@ -110,11 +110,11 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp upsert_release_items(meadows, repository, %Releases{} = release, state) do
+  defp upsert_release_items(domains, repository, %Releases{} = release, state) do
     case state.item_generator.(repository, release, state.generator_opts) do
       {:ok, items} ->
         Enum.each(items, fn item ->
-          upsert_release_item_drop(meadows, repository, release, item)
+          upsert_release_item_drop(domains, repository, release, item)
         end)
 
       :skipped ->
@@ -130,7 +130,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp upsert_release_item_drop(meadows, repository, release, item) do
+  defp upsert_release_item_drop(domains, repository, release, item) do
     attrs = %{
       github_repository_id: repository.id,
       source_type: :github_release,
@@ -144,10 +144,10 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
     case Drops.upsert_drop(attrs) do
       {:ok, drop} ->
-        record_audit(drop, meadows, repository, release, item)
+        record_audit(drop, domains, repository, release, item)
 
         if is_nil(drop.classified_at) do
-          Hive.Drops.MeadowClassificationWorker.enqueue(drop.id)
+          Hive.Drops.DomainClassificationWorker.enqueue(drop.id)
         end
 
         :ok
@@ -160,7 +160,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp record_audit(drop, meadows, repository, release, item) do
+  defp record_audit(drop, domains, repository, release, item) do
     if drop.inserted_at == drop.updated_at do
       Audit.record(:"drop.ingested", %{
         target_type: "drop",
@@ -171,7 +171,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           repository: "#{repository.owner}/#{repository.name}",
           release: release.tag_name,
           references: item.source_urls,
-          meadows: Enum.map_join(meadows, ", ", & &1.name),
+          domains: Enum.map_join(domains, ", ", & &1.name),
           path: "/drops"
         }
       })

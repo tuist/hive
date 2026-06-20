@@ -3,7 +3,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
   use Mimic
 
   alias Hive.Auth
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Specs
 
   test "renders the empty state and OpenGraph metadata", %{conn: conn} do
@@ -18,14 +18,14 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   test "lists specs and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
           "title" => "GitHub sign-in",
           "body" => "Initial proposal.",
-          "meadow_ids" => [meadow.id]
+          "domain_ids" => [domain.id]
         },
         user
       )
@@ -128,18 +128,18 @@ defmodule HiveWeb.SpecLive.IndexTest do
     assert html =~ "Tuist.Namespace.create_instance_with_ssh_connection/1"
   end
 
-  test "shows public specs attached to private meadows to contributors", %{conn: conn} do
+  test "shows public specs attached to private domains to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, private_meadow} = Meadows.create_meadow(%{name: "Atlas", visibility: "private"})
+    {:ok, private_domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
-          "title" => "Public meadow proposal",
+          "title" => "Public domain proposal",
           "body" => "Initial proposal.",
           "visibility" => "public",
-          "meadow_ids" => [private_meadow.id]
+          "domain_ids" => [private_domain.id]
         },
         member
       )
@@ -151,7 +151,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     {:ok, _view, html} = live(contributor_conn, ~p"/specs")
 
-    assert html =~ "Public meadow proposal"
+    assert html =~ "Public domain proposal"
   end
 
   test "renders the New activity badge when a spec changed since the user last viewed it",

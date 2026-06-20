@@ -1,6 +1,6 @@
 defmodule HiveWeb.ForageLive.GitHubIssues do
   @moduledoc """
-  Lists open GitHub issues across every repository connected to a meadow
+  Lists open GitHub issues across every repository connected to a domain
   the current user is allowed to see. Issues are served from the cache
   populated by `Hive.Forage.GitHubIssueSyncer`; filters live in the URL.
   """
@@ -9,7 +9,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
 
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -22,7 +22,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       highlights: [
         "#{stats.total} #{stats.state_label}",
         "#{stats.repositories} #{pluralize(stats.repositories, "repository", "repositories")}",
-        "#{stats.meadows} #{pluralize(stats.meadows, "meadow", "meadows")}"
+        "#{stats.domains} #{pluralize(stats.domains, "domain", "domains")}"
       ],
       id: "forage-github-issues",
       path: source.path,
@@ -35,7 +35,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
     source = Forage.get_source!(:github_issues)
 
     if Forage.can_access?(source, socket.assigns.current_user) do
-      pairs = Forage.accessible_meadows_with_repositories(socket.assigns.current_user)
+      pairs = Forage.accessible_domains_with_repositories(socket.assigns.current_user)
       available_filters = available_filters(pairs)
 
       {:ok,
@@ -47,7 +47,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
        |> assign(:active_filters, [])
        |> assign(:uri, URI.parse(source.path))
        |> assign(:entries, [])
-       |> assign(:stats, %{total: 0, repositories: 0, meadows: 0, state_label: "open issues"})
+       |> assign(:stats, %{total: 0, repositories: 0, domains: 0, state_label: "open issues"})
        |> assign(:atom_feed, %{
          title: "Hive · GitHub issues",
          atom_href: "/forage/github-issues/atom.xml",
@@ -78,7 +78,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       Forage.list_github_issues_for_user(
         socket.assigns.current_user,
         state: filter_value(active_filters, "state"),
-        meadow_id: filter_value(active_filters, "meadow"),
+        domain_id: filter_value(active_filters, "domain"),
         repository_id: filter_value(active_filters, "repository")
       )
 
@@ -134,15 +134,15 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
   end
 
   defp available_filters(pairs) do
-    meadows =
+    domains =
       pairs
-      |> Enum.map(fn {meadow, _repo} -> meadow end)
+      |> Enum.map(fn {domain, _repo} -> domain end)
       |> Enum.uniq_by(& &1.id)
       |> Enum.sort_by(& &1.name)
 
     repositories =
       pairs
-      |> Enum.map(fn {_meadow, repo} -> repo end)
+      |> Enum.map(fn {_domain, repo} -> repo end)
       |> Enum.uniq_by(& &1.id)
       |> Enum.sort_by(&GitHubRepository.full_name/1)
 
@@ -158,12 +158,12 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
         value: :open
       },
       %Noora.Filter.Filter{
-        id: "meadow",
-        field: :meadow_id,
-        display_name: "Meadow",
+        id: "domain",
+        field: :domain_id,
+        display_name: "Domain",
         type: :option,
-        options: Enum.map(meadows, & &1.id),
-        options_display_names: Map.new(meadows, &{&1.id, &1.name}),
+        options: Enum.map(domains, & &1.id),
+        options_display_names: Map.new(domains, &{&1.id, &1.name}),
         operator: :==,
         value: nil
       },
@@ -203,16 +203,16 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       total: length(entries),
       repositories:
         entries |> Enum.map(fn {repo, _i, _ms} -> repo.id end) |> Enum.uniq() |> length(),
-      meadows:
+      domains:
         entries
-        |> Enum.flat_map(fn {_repo, _issue, meadows} -> Enum.map(meadows, & &1.id) end)
+        |> Enum.flat_map(fn {_repo, _issue, domains} -> Enum.map(domains, & &1.id) end)
         |> Enum.uniq()
         |> length(),
       state_label: state_label_plural(state)
     }
   end
 
-  defp blank_stats, do: %{total: 0, repositories: 0, meadows: 0, state_label: "open issues"}
+  defp blank_stats, do: %{total: 0, repositories: 0, domains: 0, state_label: "open issues"}
 
   defp state_label(:open), do: "Open"
   defp state_label(:closed), do: "Closed"

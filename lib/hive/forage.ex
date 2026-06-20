@@ -16,8 +16,8 @@ defmodule Hive.Forage do
   alias Hive.Forage.Item
   alias Hive.Forage.Policy
   alias Hive.GitHub.Issues
-  alias Hive.Meadows.GitHubRepository
-  alias Hive.Meadows.Meadow
+  alias Hive.Domains.GitHubRepository
+  alias Hive.Domains.Domain
   alias Hive.Repo
 
   @default_item_page_size 20
@@ -26,7 +26,7 @@ defmodule Hive.Forage do
     %{
       id: :feature_requests,
       label: "Feature requests",
-      description: "Public meadow ideas submitted by authenticated users.",
+      description: "Public domain ideas submitted by authenticated users.",
       icon: "bulb",
       path: "/forage/feature-requests",
       visibility: :public,
@@ -44,7 +44,7 @@ defmodule Hive.Forage do
     %{
       id: :feedback,
       label: "Feedback",
-      description: "Public feedback that helps shape the meadow direction.",
+      description: "Public feedback that helps shape the domain direction.",
       icon: "message_circle",
       path: "/forage/feedback",
       visibility: :public,
@@ -53,10 +53,10 @@ defmodule Hive.Forage do
     %{
       id: :github_issues,
       label: "GitHub issues",
-      description: "Open issues from the GitHub repositories connected to your meadows.",
+      description: "Open issues from the GitHub repositories connected to your domains.",
       icon: "brand_github",
       path: "/forage/github-issues",
-      visibility: :per_meadow,
+      visibility: :per_domain,
       creatable?: false
     },
     %{
@@ -80,8 +80,8 @@ defmodule Hive.Forage do
     Enum.find(@sources, &(&1.id == id)) || raise ArgumentError, "unknown forage source: #{id}"
   end
 
-  def can_access?(%{visibility: :per_meadow}, user) do
-    Auth.member?(user) or accessible_meadows_with_repositories(user) != []
+  def can_access?(%{visibility: :per_domain}, user) do
+    Auth.member?(user) or accessible_domains_with_repositories(user) != []
   end
 
   def can_access?(source, user) do
@@ -139,23 +139,23 @@ defmodule Hive.Forage do
   def item_status_color(_status), do: "neutral"
 
   def forage_item_filter_options(user) do
-    pairs = accessible_meadows_with_repositories(user)
+    pairs = accessible_domains_with_repositories(user)
 
     repositories =
       pairs
-      |> Enum.map(fn {_meadow, repository} -> repository end)
+      |> Enum.map(fn {_domain, repository} -> repository end)
       |> Enum.uniq_by(& &1.id)
       |> Enum.sort_by(&GitHubRepository.full_name/1)
 
-    meadows =
-      (Enum.map(pairs, fn {meadow, _repository} -> meadow end) ++ grafana_filter_meadows(user))
+    domains =
+      (Enum.map(pairs, fn {domain, _repository} -> domain end) ++ grafana_filter_domains(user))
       |> Enum.uniq_by(& &1.id)
       |> Enum.sort_by(& &1.name)
 
     %{
       item_types: item_types(),
       statuses: item_statuses(),
-      meadows: meadows,
+      domains: domains,
       repositories: repositories
     }
   end
@@ -192,13 +192,13 @@ defmodule Hive.Forage do
   def get_item_for_user("github_issue:" <> id, user, opts) do
     user
     |> list_github_issues_for_user(state: nil)
-    |> Enum.find(fn {_repository, issue, _meadows} -> issue.id == id end)
+    |> Enum.find(fn {_repository, issue, _domains} -> issue.id == id end)
     |> case do
       nil ->
         {:error, :not_found}
 
-      {repository, issue, meadows} ->
-        {:ok, github_issue_item_entry(repository, issue, meadows, opts)}
+      {repository, issue, domains} ->
+        {:ok, github_issue_item_entry(repository, issue, domains, opts)}
     end
   end
 
@@ -220,32 +220,32 @@ defmodule Hive.Forage do
   def get_item_for_user(_item_id, _user, _opts), do: {:error, :not_found}
 
   @doc """
-  Returns `{meadow, repository}` tuples that the user is allowed to see.
+  Returns `{domain, repository}` tuples that the user is allowed to see.
   Effective visibility is the most restrictive of the two: a private
   repository hides the pair from anyone outside the organization, even if
-  the meadow itself is public.
+  the domain itself is public.
   """
-  def accessible_meadows_with_repositories(user) do
-    Meadow
+  def accessible_domains_with_repositories(user) do
+    Domain
     |> preload(project: :github_repositories)
     |> Repo.all()
-    |> Enum.flat_map(fn meadow ->
-      repositories = (meadow.project && meadow.project.github_repositories) || []
-      Enum.map(repositories, &{meadow, &1})
+    |> Enum.flat_map(fn domain ->
+      repositories = (domain.project && domain.project.github_repositories) || []
+      Enum.map(repositories, &{domain, &1})
     end)
-    |> Enum.filter(fn {meadow, repository} -> accessible_pair?(meadow, repository, user) end)
+    |> Enum.filter(fn {domain, repository} -> accessible_pair?(domain, repository, user) end)
   end
 
-  defp accessible_pair?(meadow, repository, user) do
-    case effective_visibility(meadow, repository) do
+  defp accessible_pair?(domain, repository, user) do
+    case effective_visibility(domain, repository) do
       :public -> true
       :private -> Auth.member?(user)
     end
   end
 
   defp effective_visibility(%{visibility: :private}, _repository), do: :private
-  defp effective_visibility(_meadow, %{visibility: :private}), do: :private
-  defp effective_visibility(_meadow, _repository), do: :public
+  defp effective_visibility(_domain, %{visibility: :private}), do: :private
+  defp effective_visibility(_domain, _repository), do: :public
 
   def list_feature_requests do
     list_manual_items(type: :feature_request)
@@ -301,7 +301,7 @@ defmodule Hive.Forage do
     |> Repo.insert()
     |> case do
       {:ok, feature_request} ->
-        Hive.Meadows.schedule_evolution()
+        Hive.Domains.schedule_evolution()
         {:ok, feature_request}
 
       {:error, changeset} ->
@@ -316,7 +316,7 @@ defmodule Hive.Forage do
       |> Repo.update()
       |> case do
         {:ok, item} ->
-          Hive.Meadows.schedule_evolution()
+          Hive.Domains.schedule_evolution()
           {:ok, item}
 
         {:error, changeset} ->
@@ -394,19 +394,19 @@ defmodule Hive.Forage do
       updated_at: request.updated_at || request.inserted_at,
       comments: loaded_comments(request),
       comments_status: :loaded,
-      meadows: []
+      domains: []
     }
   end
 
   defp github_issue_item_entries(user) do
     user
     |> list_github_issues_for_user(state: nil)
-    |> Enum.map(fn {repository, issue, meadows} ->
-      github_issue_item_entry(repository, issue, meadows)
+    |> Enum.map(fn {repository, issue, domains} ->
+      github_issue_item_entry(repository, issue, domains)
     end)
   end
 
-  defp github_issue_item_entry(repository, issue, meadows, opts \\ []) do
+  defp github_issue_item_entry(repository, issue, domains, opts \\ []) do
     {comments_status, comments, comments_error} =
       if Keyword.get(opts, :fetch_github_comments?, false) do
         github_issue_comments(repository, issue, opts)
@@ -433,7 +433,7 @@ defmodule Hive.Forage do
       comments: comments,
       comments_status: comments_status,
       comments_error: comments_error,
-      meadows: meadows
+      domains: domains
     }
   end
 
@@ -458,7 +458,7 @@ defmodule Hive.Forage do
   end
 
   defp grafana_alert_item_entry(alert) do
-    meadow = alert.meadow
+    domain = alert.domain
 
     %Item{
       id: "grafana_alert:#{alert.id}",
@@ -471,13 +471,13 @@ defmodule Hive.Forage do
       status: alert.status,
       visibility: :organization,
       source_label: "Grafana",
-      external_label: meadow && meadow.name,
+      external_label: domain && domain.name,
       external_url: alert.generator_url,
       occurred_at: alert.starts_at || alert.inserted_at,
       updated_at: alert.last_received_at || alert.updated_at,
       comments: [],
       comments_status: :not_available,
-      meadows: if(meadow, do: [meadow], else: [])
+      domains: if(domain, do: [domain], else: [])
     }
   end
 
@@ -494,12 +494,12 @@ defmodule Hive.Forage do
   defp loaded_comments(%{comments: comments}) when is_list(comments), do: comments
   defp loaded_comments(_item), do: []
 
-  defp grafana_filter_meadows(user) do
+  defp grafana_filter_domains(user) do
     source = get_source!(:grafana_alerts)
 
     if can_access?(source, user) do
       list_grafana_alerts()
-      |> Enum.map(& &1.meadow)
+      |> Enum.map(& &1.domain)
       |> Enum.reject(&is_nil/1)
     else
       []
@@ -510,7 +510,7 @@ defmodule Hive.Forage do
     %{
       type: normalize_choice(Keyword.get(opts, :type), item_types()),
       status: normalize_choice(Keyword.get(opts, :status), item_statuses()),
-      meadow_id: present_string(Keyword.get(opts, :meadow_id)),
+      domain_id: present_string(Keyword.get(opts, :domain_id)),
       repository_id: present_string(Keyword.get(opts, :repository_id)),
       query: present_string(Keyword.get(opts, :query)),
       page: parse_page(Keyword.get(opts, :page)),
@@ -560,7 +560,7 @@ defmodule Hive.Forage do
     items
     |> filter_item_type(opts.type)
     |> filter_item_status(opts.status)
-    |> filter_item_meadow(opts.meadow_id)
+    |> filter_item_domain(opts.domain_id)
     |> filter_item_repository(opts.repository_id)
     |> filter_item_search(opts.query)
   end
@@ -571,10 +571,10 @@ defmodule Hive.Forage do
   defp filter_item_status(items, nil), do: items
   defp filter_item_status(items, status), do: Enum.filter(items, &(&1.status == status))
 
-  defp filter_item_meadow(items, nil), do: items
+  defp filter_item_domain(items, nil), do: items
 
-  defp filter_item_meadow(items, meadow_id) do
-    Enum.filter(items, fn item -> Enum.any?(item.meadows, &(&1.id == meadow_id)) end)
+  defp filter_item_domain(items, domain_id) do
+    Enum.filter(items, fn item -> Enum.any?(item.domains, &(&1.id == domain_id)) end)
   end
 
   defp filter_item_repository(items, nil), do: items
@@ -605,7 +605,7 @@ defmodule Hive.Forage do
       item.source_label,
       item.external_label,
       item.requester_label,
-      Enum.map(item.meadows, & &1.name)
+      Enum.map(item.domains, & &1.name)
     ]
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
@@ -656,53 +656,53 @@ defmodule Hive.Forage do
   defp labels_summary(_labels), do: nil
 
   @doc """
-  Returns `{repository, issue, meadows}` triples for every cached GitHub
-  issue the user is allowed to see. The `meadows` element holds the
-  meadows the classifier assigned to the issue, filtered to the ones the
+  Returns `{repository, issue, domains}` triples for every cached GitHub
+  issue the user is allowed to see. The `domains` element holds the
+  domains the classifier assigned to the issue, filtered to the ones the
   user can access. Visibility is enforced through
-  `accessible_meadows_with_repositories/1`, so private repos stay hidden
+  `accessible_domains_with_repositories/1`, so private repos stay hidden
   from anyone outside the organization.
 
   Options:
   - `:state` (default `:open`) — filter by issue state
-  - `:meadow_id` — restrict to issues classified into one meadow
+  - `:domain_id` — restrict to issues classified into one domain
   - `:repository_id` — restrict to one repository
   """
   def list_github_issues_for_user(user, opts \\ []) do
     state = Keyword.get(opts, :state, :open)
-    meadow_id = Keyword.get(opts, :meadow_id)
+    domain_id = Keyword.get(opts, :domain_id)
     repository_id = Keyword.get(opts, :repository_id)
 
-    pairs = accessible_meadows_with_repositories(user)
-    accessible_meadow_ids = pairs |> Enum.map(fn {meadow, _repo} -> meadow.id end) |> Enum.uniq()
+    pairs = accessible_domains_with_repositories(user)
+    accessible_domain_ids = pairs |> Enum.map(fn {domain, _repo} -> domain.id end) |> Enum.uniq()
 
     accessible_repository_ids =
-      pairs |> Enum.map(fn {_meadow, repo} -> repo.id end) |> Enum.uniq()
+      pairs |> Enum.map(fn {_domain, repo} -> repo.id end) |> Enum.uniq()
 
     repositories_by_id =
       pairs
-      |> Enum.map(fn {_meadow, repo} -> {repo.id, repo} end)
+      |> Enum.map(fn {_domain, repo} -> {repo.id, repo} end)
       |> Map.new()
 
     repository_ids = scope_repository_ids(accessible_repository_ids, repository_id)
-    meadow_scope = scope_meadow_id(accessible_meadow_ids, meadow_id)
+    domain_scope = scope_domain_id(accessible_domain_ids, domain_id)
 
     GitHubIssue
     |> where([issue], issue.github_repository_id in ^repository_ids)
     |> maybe_filter_by_state(state)
-    |> maybe_filter_by_meadow(meadow_scope)
+    |> maybe_filter_by_domain(domain_scope)
     |> order_by([issue], desc: issue.updated_at)
-    |> preload(:meadows)
+    |> preload(:domains)
     |> Repo.all()
     |> Enum.flat_map(fn issue ->
       case Map.fetch(repositories_by_id, issue.github_repository_id) do
         {:ok, repository} ->
-          visible_meadows =
-            issue.meadows
-            |> Enum.filter(&(&1.id in accessible_meadow_ids))
+          visible_domains =
+            issue.domains
+            |> Enum.filter(&(&1.id in accessible_domain_ids))
             |> Enum.sort_by(& &1.name)
 
-          [{repository, issue, visible_meadows}]
+          [{repository, issue, visible_domains}]
 
         :error ->
           []
@@ -716,20 +716,20 @@ defmodule Hive.Forage do
     if repository_id in accessible_repository_ids, do: [repository_id], else: []
   end
 
-  defp scope_meadow_id(_accessible_meadow_ids, nil), do: nil
+  defp scope_domain_id(_accessible_domain_ids, nil), do: nil
 
-  defp scope_meadow_id(accessible_meadow_ids, meadow_id) do
-    if meadow_id in accessible_meadow_ids, do: meadow_id, else: :none
+  defp scope_domain_id(accessible_domain_ids, domain_id) do
+    if domain_id in accessible_domain_ids, do: domain_id, else: :none
   end
 
-  defp maybe_filter_by_meadow(query, nil), do: query
-  defp maybe_filter_by_meadow(query, :none), do: where(query, [_issue], false)
+  defp maybe_filter_by_domain(query, nil), do: query
+  defp maybe_filter_by_domain(query, :none), do: where(query, [_issue], false)
 
-  defp maybe_filter_by_meadow(query, meadow_id) when is_binary(meadow_id) do
+  defp maybe_filter_by_domain(query, domain_id) when is_binary(domain_id) do
     from issue in query,
-      join: link in Hive.Forage.GitHubIssueMeadow,
+      join: link in Hive.Forage.GitHubIssueDomain,
       on: link.forage_github_issue_id == issue.id,
-      where: link.meadow_id == ^meadow_id,
+      where: link.domain_id == ^domain_id,
       distinct: issue.id
   end
 
@@ -741,8 +741,8 @@ defmodule Hive.Forage do
   Each entry is a map with `:number`, `:title`, and `:body`. Issues that
   exist in the cache but are absent from `entries` are removed so the
   cache reflects only currently-open issues. Issues that are new or whose
-  title or body changed are re-classified into meadows so the dashboard
-  groups them by the substance of the issue, not by the meadows attached
+  title or body changed are re-classified into domains so the dashboard
+  groups them by the substance of the issue, not by the domains attached
   to the repository.
   """
   def reconcile_repository_github_issues(%GitHubRepository{id: repository_id}, entries) do
@@ -769,7 +769,7 @@ defmodule Hive.Forage do
     |> Enum.uniq()
     |> Enum.each(&classify_issue/1)
 
-    Hive.Meadows.schedule_evolution()
+    Hive.Domains.schedule_evolution()
 
     :ok
   end
@@ -835,13 +835,13 @@ defmodule Hive.Forage do
     |> Repo.delete_all()
   end
 
-  def list_repositories_with_meadows do
-    Meadow
+  def list_repositories_with_domains do
+    Domain
     |> preload(project: :github_repositories)
     |> Repo.all()
-    |> Enum.flat_map(fn meadow ->
-      repositories = (meadow.project && meadow.project.github_repositories) || []
-      Enum.map(repositories, &{meadow, &1})
+    |> Enum.flat_map(fn domain ->
+      repositories = (domain.project && domain.project.github_repositories) || []
+      Enum.map(repositories, &{domain, &1})
     end)
   end
 end

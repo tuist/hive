@@ -40,7 +40,7 @@ defmodule Hive.GitHub.Issues do
 
   @doc """
   Lists open issues for a repository identified by `owner` and `name`. The
-  repository can be a `Hive.Meadows.GitHubRepository` or any struct/map
+  repository can be a `Hive.Domains.GitHubRepository` or any struct/map
   exposing `:owner` and `:name` keys.
   """
   def list_open_issues(repository, opts \\ []) do

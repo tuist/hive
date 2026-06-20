@@ -27,7 +27,7 @@ LLMs and agentic workflows, and Hive is our take on it. It's built to run
 inside our own team and equally to be opened up to the people who use
 your products.
 
-When an LLM is configured, Hive can continuously evolve its meadows from
+When an LLM is configured, Hive can continuously evolve its domains from
 new forage items and specs, keeping the taxonomy aligned with durable
 Tuist business domains instead of one-off tickets or vague buckets.
 
@@ -38,7 +38,7 @@ or receive bot replies in Slack threads.
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 
-## Projects and meadows
+## Projects and domains
 
 Hive separates *what* the instance tracks from *how* you slice it.
 
@@ -47,12 +47,12 @@ service the instance tracks (for example Tuist, Atlas, Hive, Once). Projects
 own their connected GitHub repositories and the RSS sources that feed
 their drops. The list of projects lives at `/projects`.
 
-A **meadow** is an optional sub-domain *inside* a project, so a team
+A **domain** is an optional sub-domain *inside* a project, so a team
 can split an instance into smaller buckets the classifier routes
 issues and drops into. The Tuist project, for instance, may carry
-meadows like `Cache` or `Generated projects`; a single-product Hive
-(the Kura case) can keep zero meadows and surface everything at the
-project level. Meadows still appear at `/meadows`.
+domains like `Cache` or `Generated projects`; a single-product Hive
+(the Kura case) can keep zero domains and surface everything at the
+project level. Domains still appear at `/domains`.
 
 ## Forage
 
@@ -64,23 +64,23 @@ reviewers can read the latest thread without Hive storing a second copy.
 
 ## Drops
 
-Drops aggregate shipped updates so people can follow what each meadow
+Drops aggregate shipped updates so people can follow what each domain
 has actually released. Two sources feed it:
 
 - **GitHub Releases** are ingested automatically from every repository
-  connected to a project. Hive asks an agent to traverse the release
+  connected to a domain. Hive asks an agent to traverse the release
   body's referenced URLs, fetch the linked context, and turn the
   user-facing improvements it can support into drops. The release itself
   is not shown as a drop.
-- **RSS / Atom changelog feeds** can be registered per meadow from
+- **RSS / Atom changelog feeds** can be registered per domain from
   `/ops/drops` (admin only). Hive polls every enabled feed every 15
   minutes and merges its entries into the drops timeline.
 
-Drops are visible everywhere meadows are: drops from public meadows are
-visible to anyone, drops from private meadows are visible to
-organization members. The `/drops` index supports filtering by meadow
-and source type. Each meadow's drops also surface through the existing
-per-meadow merged feed at `/meadows/:id/atom.xml`.
+Drops are visible everywhere domains are: drops from public domains are
+visible to anyone, drops from private domains are visible to
+organization members. The `/drops` index supports filtering by domain
+and source type. Each domain's drops also surface through the existing
+per-domain merged feed at `/domains/:id/atom.xml`.
 
 ## Our instance
 
@@ -106,12 +106,12 @@ version):
 - `/forage/atom.xml` — feature requests, bug reports, feedback, GitHub
   issues, and Grafana alerts visible to the subscriber.
 - `/specs/atom.xml`
-- `/drops/atom.xml` — shipped updates across every meadow. Add
-  `?meadow_ids=<id>,<id>` to subscribe only to drops from a subset of
-  meadows.
-- `/meadows/:id/atom.xml` — the GitHub issues, Grafana alerts, and
-  drops that belong to one meadow, merged into a single timeline.
-- `/meadows/:id/drops/atom.xml` — only the drops for a single meadow.
+- `/drops/atom.xml` — shipped updates across every domain. Add
+  `?domain_ids=<id>,<id>` to subscribe only to drops from a subset of
+  domains.
+- `/domains/:id/atom.xml` — the GitHub issues, Grafana alerts, and
+  drops that belong to one domain, merged into a single timeline.
+- `/domains/:id/drops/atom.xml` — only the drops for a single domain.
 
 ## Slack
 

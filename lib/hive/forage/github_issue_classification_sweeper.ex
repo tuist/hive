@@ -3,7 +3,7 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeper do
   Periodic Oban job that enqueues classification for every GitHub issue
   whose `classified_at` is `nil`. Catches rows that existed before the
   classifier shipped, rows whose classification job hit max attempts, and
-  rows whose repository was attached to its first meadow after the issue
+  rows whose repository was attached to its first domain after the issue
   was already cached.
 
   Runs on the `:agents` queue, which only boots when an LLM is

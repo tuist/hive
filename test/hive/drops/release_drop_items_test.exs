@@ -5,7 +5,7 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.Drops.ReleaseDropItems
   alias Hive.GitHub.Releases
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
 
   test "release drop item agent can fetch URL content" do
     assert ReleaseDropItemAgent.tools() == [FetchUrlContent]

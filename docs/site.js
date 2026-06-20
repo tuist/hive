@@ -1,6 +1,6 @@
 export const site = {
   description:
-    "Hive is Tuist's agentic meadow orchestration platform: spec-driven planning, forage ingestion, and self-hostable deployment.",
+    "Hive is Tuist's agentic domain orchestration platform: spec-driven planning, forage ingestion, and self-hostable deployment.",
   nav: [
     { text: "Docs", link: "/" },
     {

@@ -7,15 +7,15 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
   alias Hive.Forage.GitHubIssueSyncer
   alias Hive.GitHub.Client
   alias Hive.GitHub.Issues
-  alias Hive.Meadows
+  alias Hive.Domains
 
   defp unique, do: System.unique_integer([:positive])
 
-  defp setup_meadow! do
+  defp setup_domain! do
     suffix = unique()
 
-    {:ok, meadow} =
-      Meadows.create_meadow(%{
+    {:ok, domain} =
+      Domains.create_domain(%{
         name: "hive-syncer-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -23,7 +23,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
         github_repository_visibility: "public"
       })
 
-    meadow
+    domain
   end
 
   defp start_syncer! do
@@ -42,7 +42,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "skips the sync when the GitHub App is not configured" do
     stub(Client, :config, fn -> {:error, {:not_configured, [:app_id]}} end)
-    setup_meadow!()
+    setup_domain!()
 
     {_pid, name} = start_syncer!()
 
@@ -51,8 +51,8 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
   end
 
   test "upserts new issues and deletes issues that disappeared upstream" do
-    meadow = setup_meadow!()
-    repository = hd(meadow.project.github_repositories)
+    domain = setup_domain!()
+    repository = hd(domain.project.github_repositories)
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
 
@@ -82,17 +82,17 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
     assert remaining.title == "Updated title"
   end
 
-  test "list_github_issues_for_user/1 returns issues with their meadow/repo context" do
-    meadow = setup_meadow!()
-    repository = hd(meadow.project.github_repositories)
+  test "list_github_issues_for_user/1 returns issues with their domain/repo context" do
+    domain = setup_domain!()
+    repository = hd(domain.project.github_repositories)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{number: 1, title: "Hello", body: "World"}
     ])
 
-    assert [{returned_repo, issue, returned_meadows}] = Forage.list_github_issues_for_user(nil)
+    assert [{returned_repo, issue, returned_domains}] = Forage.list_github_issues_for_user(nil)
     assert returned_repo.id == repository.id
     assert issue.title == "Hello"
-    assert Enum.map(returned_meadows, & &1.id) == [meadow.id]
+    assert Enum.map(returned_domains, & &1.id) == [domain.id]
   end
 end

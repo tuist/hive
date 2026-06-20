@@ -7,7 +7,7 @@ defmodule Hive.ForageTest do
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
   alias Hive.GitHub.Issues
-  alias Hive.Meadows
+  alias Hive.Domains
 
   defp user(attrs \\ %{}) do
     {:ok, user} =
@@ -26,13 +26,13 @@ defmodule Hive.ForageTest do
     user(%{email: "#{prefix}-#{suffix}@example.com", provider_uid: "#{prefix}-#{suffix}"})
   end
 
-  defp meadow_with_repo!(opts) do
+  defp domain_with_repo!(opts) do
     suffix = unique()
     visibility = Keyword.get(opts, :visibility, "public")
     repo_visibility = Keyword.get(opts, :repo_visibility, "public")
 
-    {:ok, meadow} =
-      Meadows.create_meadow(%{
+    {:ok, domain} =
+      Domains.create_domain(%{
         name: "forage-#{suffix}",
         visibility: visibility,
         github_repository_owner: "owner#{suffix}",
@@ -40,7 +40,7 @@ defmodule Hive.ForageTest do
         github_repository_visibility: repo_visibility
       })
 
-    meadow
+    domain
   end
 
   defp unique, do: System.unique_integer([:positive])
@@ -91,24 +91,24 @@ defmodule Hive.ForageTest do
     end
 
     test "github_issues is hidden from guests when no public/public pair exists" do
-      meadow_with_repo!(visibility: "private", repo_visibility: "public")
+      domain_with_repo!(visibility: "private", repo_visibility: "public")
 
       refute Forage.can_access?(Forage.get_source!(:github_issues), nil)
     end
 
     test "github_issues is visible to guests when at least one public/public pair exists" do
-      meadow_with_repo!(visibility: "public", repo_visibility: "public")
+      domain_with_repo!(visibility: "public", repo_visibility: "public")
 
       assert Forage.can_access?(Forage.get_source!(:github_issues), nil)
     end
 
-    test "github_issues is hidden from guests when the repo is private even if the meadow is public" do
-      meadow_with_repo!(visibility: "public", repo_visibility: "private")
+    test "github_issues is hidden from guests when the repo is private even if the domain is public" do
+      domain_with_repo!(visibility: "public", repo_visibility: "private")
 
       refute Forage.can_access?(Forage.get_source!(:github_issues), nil)
     end
 
-    test "github_issues is visible to members even when no meadows are connected" do
+    test "github_issues is visible to members even when no domains are connected" do
       stub(Auth, :member?, fn _user -> true end)
 
       assert Forage.can_access?(
@@ -118,30 +118,30 @@ defmodule Hive.ForageTest do
     end
   end
 
-  describe "accessible_meadows_with_repositories/1" do
+  describe "accessible_domains_with_repositories/1" do
     test "returns no pairs for a guest when every pair is gated by a private side" do
-      meadow_with_repo!(visibility: "public", repo_visibility: "private")
+      domain_with_repo!(visibility: "public", repo_visibility: "private")
 
-      assert Forage.accessible_meadows_with_repositories(nil) == []
+      assert Forage.accessible_domains_with_repositories(nil) == []
     end
 
     test "returns every pair to a member regardless of visibility" do
       stub(Auth, :member?, fn _user -> true end)
 
-      meadow = meadow_with_repo!(visibility: "private", repo_visibility: "private")
+      domain = domain_with_repo!(visibility: "private", repo_visibility: "private")
 
       assert [{%{name: name}, %{owner: owner, name: repo_name}}] =
-               Forage.accessible_meadows_with_repositories(user_with_email("forage-pairs"))
+               Forage.accessible_domains_with_repositories(user_with_email("forage-pairs"))
 
-      assert name == meadow.name
-      assert owner == hd(meadow.project.github_repositories).owner
-      assert repo_name == hd(meadow.project.github_repositories).name
+      assert name == domain.name
+      assert owner == hd(domain.project.github_repositories).owner
+      assert repo_name == hd(domain.project.github_repositories).name
     end
 
-    test "skips meadows without a connected repository" do
-      {:ok, _} = Meadows.create_meadow(%{name: "forage-no-repo-#{unique()}"})
+    test "skips domains without a connected repository" do
+      {:ok, _} = Domains.create_domain(%{name: "forage-no-repo-#{unique()}"})
 
-      assert Forage.accessible_meadows_with_repositories(nil) == []
+      assert Forage.accessible_domains_with_repositories(nil) == []
     end
   end
 
@@ -270,8 +270,8 @@ defmodule Hive.ForageTest do
 
   describe "forage item comments" do
     test "fetches GitHub issue comments on demand without syncing them" do
-      meadow = meadow_with_repo!([])
-      repository = hd(meadow.project.github_repositories)
+      domain = domain_with_repo!([])
+      repository = hd(domain.project.github_repositories)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Crash on launch", body: "Detail"}

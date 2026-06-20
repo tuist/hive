@@ -15,7 +15,7 @@ defmodule HiveWeb.FeedController do
   alias Hive.Drops
   alias Hive.Forage
   alias Hive.Forage.Grafana
-  alias Hive.Meadows
+  alias Hive.Domains
   alias Hive.Specs
   alias HiveWeb.Atom, as: AtomFeed
   alias HiveWeb.Endpoint
@@ -41,11 +41,11 @@ defmodule HiveWeb.FeedController do
   def drops_atom(conn, params), do: send_feed(conn, :atom, drops_feed(conn, params))
   def drops_rss(conn, params), do: send_feed(conn, :rss, drops_feed(conn, params))
 
-  def meadow_atom(conn, %{"id" => id}), do: serve_meadow(conn, id, :atom)
-  def meadow_rss(conn, %{"id" => id}), do: serve_meadow(conn, id, :rss)
+  def domain_atom(conn, %{"id" => id}), do: serve_domain(conn, id, :atom)
+  def domain_rss(conn, %{"id" => id}), do: serve_domain(conn, id, :rss)
 
-  def meadow_drops_atom(conn, %{"id" => id}), do: serve_meadow_drops(conn, id, :atom)
-  def meadow_drops_rss(conn, %{"id" => id}), do: serve_meadow_drops(conn, id, :rss)
+  def domain_drops_atom(conn, %{"id" => id}), do: serve_domain_drops(conn, id, :atom)
+  def domain_drops_rss(conn, %{"id" => id}), do: serve_domain_drops(conn, id, :rss)
 
   defp forage_feed(conn) do
     user = Auth.current_user(conn)
@@ -69,7 +69,7 @@ defmodule HiveWeb.FeedController do
     %{
       id: feed_id(conn),
       title: "Hive · Feature requests",
-      subtitle: "Public meadow ideas submitted by authenticated users.",
+      subtitle: "Public domain ideas submitted by authenticated users.",
       updated: latest_updated(feature_requests, fn fr -> fr.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/feature-requests"),
@@ -84,8 +84,8 @@ defmodule HiveWeb.FeedController do
     %{
       id: feed_id(conn),
       title: "Hive · GitHub issues",
-      subtitle: "Open issues from GitHub repositories connected to meadows.",
-      updated: latest_updated(triples, fn {_repo, issue, _meadows} -> issue.updated_at end),
+      subtitle: "Open issues from GitHub repositories connected to domains.",
+      updated: latest_updated(triples, fn {_repo, issue, _domains} -> issue.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/github-issues"),
       entries: Enum.map(triples, &github_issue_entry/1)
@@ -117,24 +117,24 @@ defmodule HiveWeb.FeedController do
     }
   end
 
-  defp serve_meadow(conn, id, format) do
+  defp serve_domain(conn, id, format) do
     user = Auth.current_user(conn)
 
-    case Meadows.fetch_visible_meadow(id, user) do
-      {:ok, meadow} -> send_feed(conn, format, meadow_feed(conn, meadow, user))
+    case Domains.fetch_visible_domain(id, user) do
+      {:ok, domain} -> send_feed(conn, format, domain_feed(conn, domain, user))
       {:error, :not_found} -> not_found(conn, format)
     end
   end
 
-  defp meadow_feed(conn, meadow, user) do
-    issues = Forage.list_github_issues_for_user(user, meadow_id: meadow.id, state: nil)
+  defp domain_feed(conn, domain, user) do
+    issues = Forage.list_github_issues_for_user(user, domain_id: domain.id, state: nil)
 
     alerts =
       if Auth.member?(user),
-        do: Grafana.list_alerts_for_meadow(meadow.id),
+        do: Grafana.list_alerts_for_domain(domain.id),
         else: []
 
-    drops = Drops.list_drops_for_meadow(meadow)
+    drops = Drops.list_drops_for_domain(domain)
 
     entries =
       (Enum.map(issues, &github_issue_entry/1) ++
@@ -144,26 +144,26 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · #{meadow.name}",
-      subtitle: meadow.description || "Updates belonging to the #{meadow.name} meadow.",
+      title: "Hive · #{domain.name}",
+      subtitle: domain.description || "Updates belonging to the #{domain.name} domain.",
       updated: latest_entry_updated(entries),
       self_url: feed_url(conn),
-      alternate_url: page_url(conn, "/meadows/#{meadow.id}"),
+      alternate_url: page_url(conn, "/domains/#{domain.id}"),
       entries: entries
     }
   end
 
   defp drops_feed(conn, params) do
     user = Auth.current_user(conn)
-    meadow_ids = parse_meadow_ids(params["meadow_ids"])
+    domain_ids = parse_domain_ids(params["domain_ids"])
 
     {drops, _meta} =
-      Drops.list_drops(user: user, meadow_ids: meadow_ids, page_size: :all)
+      Drops.list_drops(user: user, domain_ids: domain_ids, page_size: :all)
 
     %{
       id: feed_id(conn),
       title: "Hive · Drops",
-      subtitle: "Shipped updates from GitHub releases and changelog feeds across every meadow.",
+      subtitle: "Shipped updates from GitHub releases and changelog feeds across every domain.",
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/drops"),
@@ -171,27 +171,27 @@ defmodule HiveWeb.FeedController do
     }
   end
 
-  defp serve_meadow_drops(conn, id, format) do
+  defp serve_domain_drops(conn, id, format) do
     user = Auth.current_user(conn)
 
-    case Meadows.fetch_visible_meadow(id, user) do
-      {:ok, meadow} -> send_feed(conn, format, meadow_drops_feed(conn, meadow))
+    case Domains.fetch_visible_domain(id, user) do
+      {:ok, domain} -> send_feed(conn, format, domain_drops_feed(conn, domain))
       {:error, :not_found} -> not_found(conn, format)
     end
   end
 
-  defp meadow_drops_feed(conn, meadow) do
-    drops = Drops.list_drops_for_meadow(meadow)
+  defp domain_drops_feed(conn, domain) do
+    drops = Drops.list_drops_for_domain(domain)
 
     %{
       id: feed_id(conn),
-      title: "Hive · #{meadow.name} drops",
+      title: "Hive · #{domain.name} drops",
       subtitle:
-        meadow.description ||
-          "Shipped updates from the #{meadow.name} meadow.",
+        domain.description ||
+          "Shipped updates from the #{domain.name} domain.",
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
-      alternate_url: page_url(conn, "/drops?meadow_ids=#{meadow.id}"),
+      alternate_url: page_url(conn, "/drops?domain_ids=#{domain.id}"),
       entries: Enum.map(drops, &drop_entry/1)
     }
   end
@@ -212,9 +212,9 @@ defmodule HiveWeb.FeedController do
     }
   end
 
-  defp parse_meadow_ids(nil), do: []
+  defp parse_domain_ids(nil), do: []
 
-  defp parse_meadow_ids(value) when is_binary(value) do
+  defp parse_domain_ids(value) when is_binary(value) do
     value
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
@@ -222,7 +222,7 @@ defmodule HiveWeb.FeedController do
     |> Enum.uniq()
   end
 
-  defp parse_meadow_ids(_value), do: []
+  defp parse_domain_ids(_value), do: []
 
   defp latest_entry_updated([]), do: DateTime.utc_now() |> DateTime.truncate(:second)
   defp latest_entry_updated([first | _rest]), do: first.updated
@@ -268,7 +268,7 @@ defmodule HiveWeb.FeedController do
     }
   end
 
-  defp github_issue_entry({repository, issue, _meadows}) do
+  defp github_issue_entry({repository, issue, _domains}) do
     url = "https://github.com/#{repository.owner}/#{repository.name}/issues/#{issue.number}"
 
     %{

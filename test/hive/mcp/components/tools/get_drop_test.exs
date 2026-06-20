@@ -3,20 +3,20 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
 
   alias Hive.Drops
   alias Hive.MCP.Components.Tools.GetDrop
-  alias Hive.Meadows
+  alias Hive.Domains
 
-  defp insert_drop!(meadow, attrs) do
+  defp insert_drop!(domain, attrs) do
     {:ok, drop} = Drops.upsert_drop(attrs)
-    Drops.replace_drop_meadows(drop, [meadow.id])
+    Drops.replace_drop_domains(drop, [domain.id])
     drop
   end
 
   test "returns the drop when visible to the user" do
     user = mcp_user()
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
     drop =
-      insert_drop!(meadow, %{
+      insert_drop!(domain, %{
         source_type: :rss,
         external_id: "ext-1",
         title: "Changelog v1",
@@ -30,14 +30,14 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
     assert response["drop"]["title"] == "Changelog v1"
   end
 
-  test "returns not_found when the drop is linked only to a private meadow the user cannot see" do
+  test "returns not_found when the drop is linked only to a private domain the user cannot see" do
     user = mcp_user("outsider@external.example")
     {:ok, user} = user |> Ecto.Changeset.change(role: :collaborator) |> Hive.Repo.update()
 
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "private"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "private"})
 
     drop =
-      insert_drop!(meadow, %{
+      insert_drop!(domain, %{
         source_type: :rss,
         external_id: "ext-1",
         title: "Hidden",

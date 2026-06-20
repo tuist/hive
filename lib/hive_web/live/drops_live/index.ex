@@ -7,7 +7,7 @@ defmodule HiveWeb.DropsLive.Index do
   import Noora.Filter
 
   alias Hive.Drops
-  alias Hive.Meadows
+  alias Hive.Domains
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
   alias HiveWeb.OpenGraph
@@ -19,9 +19,9 @@ defmodule HiveWeb.DropsLive.Index do
   def open_graph do
     %{
       description:
-        "Shipped updates from GitHub releases and changelog feeds across every meadow.",
+        "Shipped updates from GitHub releases and changelog feeds across every domain.",
       eyebrow: "Drops",
-      highlights: ["GitHub releases", "RSS / Atom changelogs", "Subscribe per meadow"],
+      highlights: ["GitHub releases", "RSS / Atom changelogs", "Subscribe per domain"],
       id: "drops",
       path: "/drops",
       title: "Drops"
@@ -42,7 +42,7 @@ defmodule HiveWeb.DropsLive.Index do
        total_entries: 0,
        total_pages: 1
      })
-     |> assign(:meadows, [])
+     |> assign(:domains, [])
      |> assign(:query, "")
      |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
      |> assign(:uri, URI.parse("/drops"))
@@ -57,8 +57,8 @@ defmodule HiveWeb.DropsLive.Index do
   @impl true
   def handle_params(params, uri, socket) do
     user = socket.assigns[:current_user]
-    meadows = Meadows.list_visible_meadows(user)
-    available_filters = define_filters(meadows)
+    domains = Domains.list_visible_domains(user)
+    available_filters = define_filters(domains)
     query_params = Query.query_params(uri)
 
     page = Query.parse_page(params["page"])
@@ -71,7 +71,7 @@ defmodule HiveWeb.DropsLive.Index do
     socket =
       socket
       |> assign(:uri, uri_from_query_params(query_params))
-      |> assign(:meadows, meadows)
+      |> assign(:domains, domains)
       |> assign(:drops, drops)
       |> assign(:drops_meta, meta)
       |> assign(:available_filters, available_filters)
@@ -140,7 +140,7 @@ defmodule HiveWeb.DropsLive.Index do
           <div data-part="title-group">
             <.badge label="Drops" color="information" style="light-fill" />
             <h1>Drops</h1>
-            <p>Shipped updates from GitHub releases and changelog feeds across every meadow.</p>
+            <p>Shipped updates from GitHub releases and changelog feeds across every domain.</p>
           </div>
           <div data-part="header-actions">
             <.link navigate={~p"/drops/subscribe"}>
@@ -204,10 +204,10 @@ defmodule HiveWeb.DropsLive.Index do
                 <.text_cell :if={is_nil(drop.version)} label="—" />
               </:col>
               <:col :let={drop} label="Project">
-                <.text_cell label={project_chips(drop.meadows)} />
+                <.text_cell label={project_chips(drop.domains)} />
               </:col>
-              <:col :let={drop} label="Meadows">
-                <.text_cell label={meadow_chips(drop.meadows)} />
+              <:col :let={drop} label="Domains">
+                <.text_cell label={domain_chips(drop.domains)} />
               </:col>
               <:col :let={drop} label="Source">
                 <.badge_cell
@@ -256,8 +256,8 @@ defmodule HiveWeb.DropsLive.Index do
   end
 
   defp atom_feed(params) do
-    meadow_ids = parse_meadow_ids(params["meadow_ids"])
-    query = if meadow_ids == [], do: "", else: "?meadow_ids=" <> Enum.join(meadow_ids, ",")
+    domain_ids = parse_domain_ids(params["domain_ids"])
+    query = if domain_ids == [], do: "", else: "?domain_ids=" <> Enum.join(domain_ids, ",")
 
     %{
       title: "Hive · Drops",
@@ -266,16 +266,16 @@ defmodule HiveWeb.DropsLive.Index do
     }
   end
 
-  defp parse_meadow_ids(nil), do: []
+  defp parse_domain_ids(nil), do: []
 
-  defp parse_meadow_ids(value) when is_binary(value) do
+  defp parse_domain_ids(value) when is_binary(value) do
     value
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
 
-  defp parse_meadow_ids(_value), do: []
+  defp parse_domain_ids(_value), do: []
 
   defp page_link(uri, page) do
     "?" <> Query.put(uri.query, "page", Integer.to_string(page))
@@ -289,14 +289,14 @@ defmodule HiveWeb.DropsLive.Index do
 
   defp list_opts(user, query, active_filters, page) do
     [user: user, page: page, page_size: @page_size, query: Query.present_string(query)]
-    |> put_meadow_filter(active_filters)
+    |> put_domain_filter(active_filters)
     |> put_source_type_filter(active_filters)
   end
 
-  defp put_meadow_filter(opts, active_filters) do
-    case Enum.find(active_filters, &(&1.id == "meadow")) do
+  defp put_domain_filter(opts, active_filters) do
+    case Enum.find(active_filters, &(&1.id == "domain")) do
       %{operator: :==, value: value} when is_binary(value) and value != "" ->
-        Keyword.put(opts, :meadow_ids, [value])
+        Keyword.put(opts, :domain_ids, [value])
 
       _other ->
         opts
@@ -330,22 +330,22 @@ defmodule HiveWeb.DropsLive.Index do
     end
   end
 
-  defp define_filters(meadows) do
-    meadow_options =
-      meadows
+  defp define_filters(domains) do
+    domain_options =
+      domains
       |> Enum.map(& &1.id)
       |> Enum.uniq()
 
-    meadow_display_names =
-      Map.new(meadows, fn meadow -> {meadow.id, meadow.name} end)
+    domain_display_names =
+      Map.new(domains, fn domain -> {domain.id, domain.name} end)
 
     [
       %Filter.Filter{
-        id: "meadow",
-        display_name: "Meadow",
+        id: "domain",
+        display_name: "Domain",
         type: :option,
-        options: meadow_options,
-        options_display_names: meadow_display_names,
+        options: domain_options,
+        options_display_names: domain_display_names,
         operator: :==,
         searchable: true,
         value: nil
@@ -380,16 +380,16 @@ defmodule HiveWeb.DropsLive.Index do
   defp truncate(nil), do: nil
   defp truncate(body) when is_binary(body), do: Markdown.preview(body, 140)
 
-  defp meadow_chips([]), do: "Unclassified"
-  defp meadow_chips(nil), do: "Unclassified"
-  defp meadow_chips(meadows), do: Enum.map_join(meadows, ", ", & &1.name)
+  defp domain_chips([]), do: "Unclassified"
+  defp domain_chips(nil), do: "Unclassified"
+  defp domain_chips(domains), do: Enum.map_join(domains, ", ", & &1.name)
 
   defp project_chips([]), do: "—"
   defp project_chips(nil), do: "—"
 
-  defp project_chips(meadows) do
-    meadows
-    |> Enum.map(fn meadow -> meadow.project && meadow.project.name end)
+  defp project_chips(domains) do
+    domains
+    |> Enum.map(fn domain -> domain.project && domain.project.name end)
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> case do

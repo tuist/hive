@@ -3,19 +3,19 @@ defmodule Hive.MCP.Components.Tools.ListDropsTest do
 
   alias Hive.Drops
   alias Hive.MCP.Components.Tools.ListDrops
-  alias Hive.Meadows
+  alias Hive.Domains
 
-  defp insert_drop!(meadow, attrs) do
+  defp insert_drop!(domain, attrs) do
     {:ok, drop} = Drops.upsert_drop(attrs)
-    Drops.replace_drop_meadows(drop, [meadow.id])
+    Drops.replace_drop_domains(drop, [domain.id])
     drop
   end
 
   test "lists drops the user can read, projected as JSON" do
     user = mcp_user()
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
-    insert_drop!(meadow, %{
+    insert_drop!(domain, %{
       source_type: :rss,
       external_id: "ext-1",
       title: "Changelog v1",
@@ -28,23 +28,23 @@ defmodule Hive.MCP.Components.Tools.ListDropsTest do
 
     assert [drop_json] = response["drops"]
     assert drop_json["title"] == "Changelog v1"
-    assert [%{"name" => "Hive"}] = drop_json["meadows"]
+    assert [%{"name" => "Hive"}] = drop_json["domains"]
     assert drop_json["source_type"] == "rss"
     assert response["meta"]["total_entries"] == 1
   end
 
   test "filters by source_type" do
     user = mcp_user()
-    {:ok, meadow} = Meadows.create_meadow(%{name: "Hive", visibility: "public"})
+    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
 
-    insert_drop!(meadow, %{
+    insert_drop!(domain, %{
       source_type: :rss,
       external_id: "rss-1",
       title: "RSS drop",
       url: "https://example.com/rss/1"
     })
 
-    insert_drop!(meadow, %{
+    insert_drop!(domain, %{
       source_type: :github_release,
       external_id: "gh-1",
       title: "GH release",

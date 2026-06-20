@@ -17,7 +17,7 @@ defmodule Hive.MCP.Components.Tools.GetDrop do
   alias Hive.MCP.Tool
 
   @impl EMCP.Tool
-  def description, do: "Fetch one drop with its full body, link, and meadow context."
+  def description, do: "Fetch one drop with its full body, link, and domain context."
 
   @impl EMCP.Tool
   def call(conn, %{"id" => id}) do

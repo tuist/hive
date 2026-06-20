@@ -7,11 +7,11 @@ alias Hive.Audit.Activity
 alias Hive.Forage
 alias Hive.Forage.FeatureRequest
 alias Hive.Forage.Grafana
-alias Hive.Meadows
-alias Hive.Meadows.GitHubRepository
-alias Hive.Meadows.Meadow
-alias Hive.Meadows.Webhook
-alias Hive.Meadows.Webhooks
+alias Hive.Domains
+alias Hive.Domains.GitHubRepository
+alias Hive.Domains.Domain
+alias Hive.Domains.Webhook
+alias Hive.Domains.Webhooks
 alias Hive.Projects
 alias Hive.Repo
 alias Hive.Specs
@@ -121,14 +121,14 @@ Enum.each(forage_items, fn seed ->
 end)
 
 # Projects are the top-level grouping. Each project owns its
-# repositories and the meadows (sub-domains) it slices by.
+# repositories and the domains (sub-domains) it slices by.
 projects_fixtures = [
   %{
     name: "Tuist",
     description: "Developer tooling for Xcode projects, CI, caching, and app delivery.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "tuist", visibility: "public"}],
-    meadows: [
+    domains: [
       %{
         name: "Tuist",
         description: "Anything Tuist-wide that does not fit a narrower domain.",
@@ -168,7 +168,7 @@ projects_fixtures = [
     description: "Tuist's agentic operations platform.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "atlas", visibility: "public"}],
-    meadows: [
+    domains: [
       %{
         name: "Atlas",
         description: "Agentic operations workflows for Tuist.",
@@ -181,7 +181,7 @@ projects_fixtures = [
     description: "Agentic product development including planning, forage, specs, and drops.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "hive", visibility: "public"}],
-    meadows: [
+    domains: [
       %{name: "Hive", description: "All Hive updates.", visibility: "public"}
     ]
   },
@@ -190,7 +190,7 @@ projects_fixtures = [
     description: "Installable Tuist products that people can run in their own infrastructure.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "once", visibility: "public"}],
-    meadows: [
+    domains: [
       %{
         name: "Once",
         description: "Self-hosted distribution and operations.",
@@ -238,16 +238,16 @@ Enum.each(projects_fixtures, fn fixture ->
     end
   end)
 
-  Enum.each(fixture.meadows, fn meadow_attrs ->
-    attrs = Map.put(meadow_attrs, :project_id, project.id)
+  Enum.each(fixture.domains, fn domain_attrs ->
+    attrs = Map.put(domain_attrs, :project_id, project.id)
 
-    case Repo.get_by(Meadow, name: meadow_attrs.name) do
+    case Repo.get_by(Domain, name: domain_attrs.name) do
       nil ->
-        {:ok, _meadow} = Meadows.create_meadow(attrs)
+        {:ok, _domain} = Domains.create_domain(attrs)
 
-      meadow ->
-        meadow
-        |> Meadow.changeset(attrs)
+      domain ->
+        domain
+        |> Domain.changeset(attrs)
         |> Repo.update!()
     end
   end)
@@ -255,7 +255,7 @@ end)
 
 drop_fixtures = [
   %{
-    meadow_name: "Hive",
+    domain_name: "Hive",
     source_type: :github_release,
     external_id: "tuist/hive@v0.25.0#slack-ops",
     version: "v0.25.0",
@@ -266,18 +266,18 @@ drop_fixtures = [
     published_at: ~U[2026-06-18 09:30:00Z]
   },
   %{
-    meadow_name: "Hive",
+    domain_name: "Hive",
     source_type: :github_release,
     external_id: "tuist/hive@v0.24.0#slack-unfurl",
     version: "v0.24.0",
     title: "Hive links unfurl in Slack threads",
     body:
-      "Any spec, forage item, meadow, or drop URL pasted into a connected Slack workspace now expands into a rich preview with the title and a short excerpt, so threads stay context-rich without anyone clicking through.",
+      "Any spec, forage item, domain, or drop URL pasted into a connected Slack workspace now expands into a rich preview with the title and a short excerpt, so threads stay context-rich without anyone clicking through.",
     url: "https://github.com/tuist/hive/releases/tag/v0.24.0",
     published_at: ~U[2026-06-17 14:00:00Z]
   },
   %{
-    meadow_name: "Cache",
+    domain_name: "Cache",
     source_type: :rss,
     external_id: "https://tuist.dev/changelog/2026-06-15-cache-improvements",
     version: nil,
@@ -288,7 +288,7 @@ drop_fixtures = [
     published_at: ~U[2026-06-15 12:00:00Z]
   },
   %{
-    meadow_name: "Generated projects",
+    domain_name: "Generated projects",
     source_type: :rss,
     external_id: "https://tuist.dev/changelog/2026-06-10-xcode-26",
     version: "4.7.0",
@@ -301,12 +301,12 @@ drop_fixtures = [
 ]
 
 Enum.each(drop_fixtures, fn fixture ->
-  meadow =
-    Meadow
-    |> where([m], m.name == ^fixture.meadow_name)
+  domain =
+    Domain
+    |> where([m], m.name == ^fixture.domain_name)
     |> Repo.one()
 
-  if meadow do
+  if domain do
     body = fixture.body
 
     attrs = %{
@@ -332,7 +332,7 @@ Enum.each(drop_fixtures, fn fixture ->
       |> Hive.Drops.Drop.changeset(attrs)
       |> Repo.insert_or_update()
 
-    Hive.Drops.replace_drop_meadows(drop, [meadow.id])
+    Hive.Drops.replace_drop_domains(drop, [domain.id])
   end
 end)
 
@@ -433,13 +433,13 @@ specs = [
   %{
     author: "maya@example.com",
     source_title: "Import feature requests from GitHub Discussions",
-    meadow_names: ["Hive"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "GitHub Discussions forage import",
       "summary" =>
         "Import public GitHub Discussions into Forage while preserving source metadata for reviewers.",
       "body" => """
-      Connect a GitHub Discussions category as a forage source so public meadow ideas flow into Hive without manual copying.
+      Connect a GitHub Discussions category as a forage source so public domain ideas flow into Hive without manual copying.
 
       The importer should preserve the original title, body, author signal, and source URL. Imported items should appear alongside manually submitted feature requests and keep enough metadata for reviewers to trace the idea back to GitHub.
 
@@ -465,19 +465,19 @@ specs = [
     author: "jon@example.com",
     source_title: "Filter forage by type, source, and status",
     legacy_titles: ["Forage source and priority grouping"],
-    meadow_names: ["Hive"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Forage type, source, and status filters",
       "summary" =>
-        "Filter incoming forage by type, source, status, meadow, and repository from one queue.",
+        "Filter incoming forage by type, source, status, domain, and repository from one queue.",
       "visibility" => "private",
       "body" => """
-      Add lightweight filtering to the unified Forage queue so reviewers can scan incoming work by type, source, status, meadow, and repository without jumping between pages.
+      Add lightweight filtering to the unified Forage queue so reviewers can scan incoming work by type, source, status, domain, and repository without jumping between pages.
 
       The first version should keep the sidebar simple and make the item type, source, and status visible in each row. Alerts remain operational forage that only organization members can see.
 
       Acceptance criteria:
-      - Forage rows show their type, source, status, and meadow context.
+      - Forage rows show their type, source, status, and domain context.
       - Filter chips, search, and pagination work from `/forage`.
       - Legacy source URLs land on the matching filtered Forage view.
       - Grafana alerts remain hidden from anonymous visitors.
@@ -486,13 +486,13 @@ specs = [
     },
     comments: [
       {"priya@example.com",
-       "The alert exception is important. Not every signal should become meadow planning."}
+       "The alert exception is important. Not every signal should become domain planning."}
     ]
   },
   %{
     author: "priya@example.com",
     source_title: "Let users subscribe to feature request updates",
-    meadow_names: ["Hive"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Feature request subscriptions",
       "summary" =>
@@ -516,7 +516,7 @@ specs = [
   },
   %{
     author: "maya@example.com",
-    meadow_names: ["Hive"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Spec activity feed",
       "summary" =>
@@ -613,7 +613,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    meadow_names: ["Hive"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Auto-generate specs from forage with an LLM",
       "summary" =>
@@ -621,7 +621,7 @@ specs = [
       "body" => """
       # Proposal
 
-      When a manual forage item is marked `planned`, trigger an LLM to draft a spec body from the item title and description, plus relevant context from the linked meadow. The draft is saved as a `draft` spec for a human to refine.
+      When a manual forage item is marked `planned`, trigger an LLM to draft a spec body from the item title and description, plus relevant context from the linked domain. The draft is saved as a `draft` spec for a human to refine.
 
       ## Sketch
 
@@ -655,7 +655,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    meadow_names: ["Hive", "Cache"],
+    domain_names: ["Hive", "Cache"],
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
       "summary" =>
@@ -679,15 +679,15 @@ specs = [
 ]
 
 spec_needs_update? = fn spec, attrs ->
-  spec = Repo.preload(spec, :meadows)
-  meadow_ids = Map.get(attrs, "meadow_ids", [])
+  spec = Repo.preload(spec, :domains)
+  domain_ids = Map.get(attrs, "domain_ids", [])
 
   spec.title != attrs["title"] or
     spec.body != attrs["body"] or
     spec.summary != attrs["summary"] or
     Atom.to_string(spec.status) != attrs["status"] or
     Atom.to_string(spec.visibility) != Map.get(attrs, "visibility", "public") or
-    Enum.sort(Enum.map(spec.meadows, & &1.id)) != Enum.sort(meadow_ids)
+    Enum.sort(Enum.map(spec.domains, & &1.id)) != Enum.sort(domain_ids)
 end
 
 Enum.each(specs, fn seed ->
@@ -715,10 +715,10 @@ Enum.each(specs, fn seed ->
     end
     |> Map.put_new("visibility", "public")
     |> Map.put(
-      "meadow_ids",
+      "domain_ids",
       seed
-      |> Map.get(:meadow_names, [])
-      |> Enum.map(fn name -> Repo.get_by!(Meadow, name: name).id end)
+      |> Map.get(:domain_names, [])
+      |> Enum.map(fn name -> Repo.get_by!(Domain, name: name).id end)
     )
 
   spec_titles = [seed.attrs["title"] | Map.get(seed, :legacy_titles, [])]
@@ -827,39 +827,39 @@ Enum.each(spec_view_seeds, fn seed ->
   end
 end)
 
-meadow_webhooks = [
-  %{meadow_name: "Hive", name: "Seed Grafana", source: :grafana},
-  %{meadow_name: "Tuist", name: "Seed Grafana", source: :grafana}
+domain_webhooks = [
+  %{domain_name: "Hive", name: "Seed Grafana", source: :grafana},
+  %{domain_name: "Tuist", name: "Seed Grafana", source: :grafana}
 ]
 
-Enum.each(meadow_webhooks, fn seed ->
-  meadow = Repo.get_by!(Meadow, name: seed.meadow_name)
+Enum.each(domain_webhooks, fn seed ->
+  domain = Repo.get_by!(Domain, name: seed.domain_name)
 
   exists? =
     Webhook
     |> where(
       [webhook],
-      webhook.meadow_id == ^meadow.id and webhook.name == ^seed.name and
+      webhook.domain_id == ^domain.id and webhook.name == ^seed.name and
         webhook.source == ^seed.source
     )
     |> Repo.exists?()
 
   unless exists? do
     {:ok, {_webhook, token}} =
-      Webhooks.create(meadow, %{
+      Webhooks.create(domain, %{
         "name" => seed.name,
         "source" => Atom.to_string(seed.source)
       })
 
     IO.puts(
-      "Seeded webhook for #{seed.meadow_name} (#{seed.source}). Token (shown once): #{token}"
+      "Seeded webhook for #{seed.domain_name} (#{seed.source}). Token (shown once): #{token}"
     )
   end
 end)
 
 grafana_alert_seeds = [
   %{
-    meadow_name: "Hive",
+    domain_name: "Hive",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -883,7 +883,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    meadow_name: "Hive",
+    domain_name: "Hive",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -906,7 +906,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    meadow_name: "Tuist",
+    domain_name: "Tuist",
     payload: %{
       "status" => "resolved",
       "alerts" => [
@@ -931,7 +931,7 @@ grafana_alert_seeds = [
     }
   },
   %{
-    meadow_name: "Tuist",
+    domain_name: "Tuist",
     payload: %{
       "status" => "firing",
       "alerts" => [
@@ -957,16 +957,16 @@ grafana_alert_seeds = [
 ]
 
 Enum.each(grafana_alert_seeds, fn seed ->
-  meadow = Repo.get_by!(Meadow, name: seed.meadow_name)
+  domain = Repo.get_by!(Domain, name: seed.domain_name)
 
   webhook =
     Repo.one!(
       from webhook in Webhook,
-        where: webhook.meadow_id == ^meadow.id and webhook.source == ^:grafana,
+        where: webhook.domain_id == ^domain.id and webhook.source == ^:grafana,
         limit: 1
     )
 
-  {:ok, _alerts} = Grafana.ingest(meadow, webhook, seed.payload)
+  {:ok, _alerts} = Grafana.ingest(domain, webhook, seed.payload)
 end)
 
 # Demo audit activities. Idempotent: each entry is keyed by a stable
@@ -1010,8 +1010,8 @@ demo_spec =
   ])
 
 demo_other_spec = Repo.get_by(Spec, title: "GitHub Discussions forage import")
-demo_meadow = Repo.get_by(Meadow, name: "Hive")
-demo_tuist_meadow = Repo.get_by(Meadow, name: "Tuist")
+demo_domain = Repo.get_by(Domain, name: "Hive")
+demo_tuist_domain = Repo.get_by(Domain, name: "Tuist")
 
 demo_feature_request =
   get_by_title.(FeatureRequest, [
@@ -1074,12 +1074,12 @@ audit_seed_entries = [
   },
   %{
     key: "audit-seed-5",
-    action: "meadow.created",
+    action: "domain.created",
     interface: "dashboard",
     actor: "test@hive.dev",
-    target_type: "meadow",
-    target_id: demo_meadow && demo_meadow.id,
-    target_label: demo_meadow && demo_meadow.name,
+    target_type: "domain",
+    target_id: demo_domain && demo_domain.id,
+    target_label: demo_domain && demo_domain.name,
     occurred_at: minutes_ago.(55)
   },
   %{
@@ -1129,11 +1129,11 @@ audit_seed_entries = [
   },
   %{
     key: "audit-seed-10",
-    action: "meadow.webhook_received",
+    action: "domain.webhook_received",
     interface: "webhook",
-    target_type: "meadow",
-    target_id: demo_tuist_meadow && demo_tuist_meadow.id,
-    target_label: demo_tuist_meadow && demo_tuist_meadow.name,
+    target_type: "domain",
+    target_id: demo_tuist_domain && demo_tuist_domain.id,
+    target_label: demo_tuist_domain && demo_tuist_domain.name,
     metadata: %{"source" => "grafana", "alerts" => 1},
     occurred_at: minutes_ago.(420)
   },

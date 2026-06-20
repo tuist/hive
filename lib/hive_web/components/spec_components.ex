@@ -88,17 +88,17 @@ defmodule HiveWeb.SpecComponents do
             <:col :let={spec} label="Source">
               <span data-part="spec-table-source">{source_label(spec)}</span>
             </:col>
-            <:col :let={spec} label="Meadows">
-              <div data-part="spec-table-meadows">
+            <:col :let={spec} label="Domains">
+              <div data-part="spec-table-domains">
                 <.badge
-                  :for={meadow <- spec_meadows(spec)}
-                  label={meadow.name}
+                  :for={domain <- spec_domains(spec)}
+                  label={domain.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
                 />
-                <span :if={spec_meadows(spec) == []} data-part="empty-meadows">
-                  No meadows
+                <span :if={spec_domains(spec) == []} data-part="empty-domains">
+                  No domains
                 </span>
               </div>
             </:col>
@@ -149,10 +149,10 @@ defmodule HiveWeb.SpecComponents do
           </div>
           <h1>{@spec.title}</h1>
           <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
-          <div :if={spec_meadows(@spec) != []} data-part="meadow-list">
+          <div :if={spec_domains(@spec) != []} data-part="domain-list">
             <.badge
-              :for={meadow <- spec_meadows(@spec)}
-              label={meadow.name}
+              :for={domain <- spec_domains(@spec)}
+              label={domain.name}
               color="neutral"
               style="light-fill"
             />
@@ -373,7 +373,7 @@ defmodule HiveWeb.SpecComponents do
   attr :form, :any, required: true
   attr :title, :string, required: true
   attr :action_label, :string, required: true
-  attr :meadows, :list, required: true
+  attr :domains, :list, required: true
   attr :source, :map, default: nil
 
   def spec_form(assigns) do
@@ -412,18 +412,18 @@ defmodule HiveWeb.SpecComponents do
             <.status_select form={@form} id="spec-status" />
             <.visibility_select form={@form} id="spec-visibility" />
             <fieldset data-part="checkbox-group">
-              <legend>Meadows</legend>
-              <input type="hidden" name="spec[meadow_ids][]" value="" />
-              <label :for={meadow <- @meadows} data-part="checkbox-option">
+              <legend>Domains</legend>
+              <input type="hidden" name="spec[domain_ids][]" value="" />
+              <label :for={domain <- @domains} data-part="checkbox-option">
                 <input
                   type="checkbox"
-                  name="spec[meadow_ids][]"
-                  value={meadow.id}
-                  checked={meadow_selected?(@form, meadow.id)}
+                  name="spec[domain_ids][]"
+                  value={domain.id}
+                  checked={domain_selected?(@form, domain.id)}
                 />
-                <span>{meadow.name}</span>
+                <span>{domain.name}</span>
               </label>
-              <p :if={@meadows == []}>Create meadows in Settings before linking them to specs.</p>
+              <p :if={@domains == []}>Create domains in Settings before linking them to specs.</p>
             </fieldset>
             <input
               :if={@form[:source_feature_request_id].value}
@@ -553,15 +553,15 @@ defmodule HiveWeb.SpecComponents do
   defp visibility_icon(:private), do: "lock"
   defp visibility_icon(_visibility), do: "world"
 
-  defp spec_meadows(%{meadows: %Ecto.Association.NotLoaded{}}), do: []
-  defp spec_meadows(%{meadows: meadows}) when is_list(meadows), do: meadows
-  defp spec_meadows(_spec), do: []
+  defp spec_domains(%{domains: %Ecto.Association.NotLoaded{}}), do: []
+  defp spec_domains(%{domains: domains}) when is_list(domains), do: domains
+  defp spec_domains(_spec), do: []
 
-  defp meadow_selected?(form, meadow_id) do
-    form[:meadow_ids].value
+  defp domain_selected?(form, domain_id) do
+    form[:domain_ids].value
     |> List.wrap()
     |> Enum.map(&to_string/1)
-    |> Enum.member?(meadow_id)
+    |> Enum.member?(domain_id)
   end
 
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"

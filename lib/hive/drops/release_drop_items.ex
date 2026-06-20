@@ -9,7 +9,7 @@ defmodule Hive.Drops.ReleaseDropItems do
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.GitHub.IssueRefs
   alias Hive.GitHub.Releases
-  alias Hive.Meadows.GitHubRepository
+  alias Hive.Domains.GitHubRepository
   alias Hive.URL
 
   @max_release_body_length 20_000

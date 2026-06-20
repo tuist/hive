@@ -311,7 +311,7 @@
     font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
   }
 
-  & [data-part="item-table-meadows"],
+  & [data-part="item-table-domains"],
   & [data-part="item-table-source"],
   & [data-part="item-actions"] {
     display: flex;
@@ -320,13 +320,13 @@
     min-width: 0;
   }
 
-  & [data-part="item-table-meadows"],
+  & [data-part="item-table-domains"],
   & [data-part="item-actions"] {
     align-items: center;
     flex-wrap: wrap;
   }
 
-  & [data-part="item-table-meadows"] .noora-badge {
+  & [data-part="item-table-domains"] .noora-badge {
     flex-shrink: 0;
     white-space: nowrap;
   }
@@ -352,7 +352,7 @@
     justify-content: center;
   }
 
-  & [data-part="empty-meadows"] {
+  & [data-part="empty-domains"] {
     color: var(--noora-surface-label-tertiary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }

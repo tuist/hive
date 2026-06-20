@@ -2,8 +2,8 @@ defmodule Hive.Drops.DropSource do
   @moduledoc """
   Operator-registered changelog source. Currently only RSS/Atom URLs
   are supported. Sources belong to a project; each ingested entry is
-  classified into one or more of that project's meadows by
-  `Hive.Drops.MeadowClassification`.
+  classified into one or more of that project's domains by
+  `Hive.Drops.DomainClassification`.
   """
 
   use Ecto.Schema

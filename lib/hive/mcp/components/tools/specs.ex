@@ -15,12 +15,12 @@ defmodule Hive.MCP.Components.Tools.Specs do
       visibility: Atom.to_string(spec.visibility),
       effective_visibility: Atom.to_string(SpecContext.effective_visibility(spec)),
       revision: spec.lock_version,
-      meadows:
-        Enum.map((Ecto.assoc_loaded?(spec.meadows) && spec.meadows) || [], fn meadow ->
+      domains:
+        Enum.map((Ecto.assoc_loaded?(spec.domains) && spec.domains) || [], fn domain ->
           %{
-            id: meadow.id,
-            name: meadow.name,
-            visibility: Atom.to_string(meadow.visibility)
+            id: domain.id,
+            name: domain.name,
+            visibility: Atom.to_string(domain.visibility)
           }
         end),
       source_forage_item:

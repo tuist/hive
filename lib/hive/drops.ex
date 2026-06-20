@@ -3,11 +3,11 @@ defmodule Hive.Drops do
   Shipped-update entries from GitHub release drop items and RSS/Atom
   changelogs. Drops are read-only from the dashboard's perspective;
   their data is reconciled by the `Hive.Drops.GitHubReleasesSyncer` and
-  `Hive.Drops.RssSyncer`, and routed to meadows by
-  `Hive.Drops.MeadowClassification`.
+  `Hive.Drops.RssSyncer`, and routed to domains by
+  `Hive.Drops.DomainClassification`.
 
-  A drop has a many-to-many relationship with meadows. A drop is
-  visible to anonymous viewers when any of its meadows is public, and
+  A drop has a many-to-many relationship with domains. A drop is
+  visible to anonymous viewers when any of its domains is public, and
   to organization members across the board.
 
   Source management (the RSS/Atom URLs operators register) is
@@ -19,26 +19,26 @@ defmodule Hive.Drops do
 
   alias Hive.Auth
   alias Hive.Drops.Drop
-  alias Hive.Drops.DropMeadow
+  alias Hive.Drops.DropDomain
   alias Hive.Drops.DropSource
-  alias Hive.Meadows.Meadow
+  alias Hive.Domains.Domain
   alias Hive.Repo
 
   @default_page_size 20
 
-  @doc "Lists drops the `user` can see, paginated and optionally filtered by meadows."
+  @doc "Lists drops the `user` can see, paginated and optionally filtered by domains."
   def list_drops(opts \\ []) do
     user = Keyword.get(opts, :user)
     page = Keyword.get(opts, :page, 1) |> max(1)
     page_size = Keyword.get(opts, :page_size, @default_page_size) |> normalize_page_size()
-    meadow_ids = Keyword.get(opts, :meadow_ids, []) |> normalize_meadow_ids()
+    domain_ids = Keyword.get(opts, :domain_ids, []) |> normalize_domain_ids()
     query_text = Keyword.get(opts, :query)
     source_type = Keyword.get(opts, :source_type)
 
     base =
       Drop
       |> apply_visibility(user)
-      |> filter_meadow_ids(meadow_ids)
+      |> filter_domain_ids(domain_ids)
       |> filter_source_type(source_type)
       |> filter_search(query_text)
       |> distinct(true)
@@ -52,7 +52,7 @@ defmodule Hive.Drops do
       |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
       |> limit(^page_size)
       |> offset(^((page - 1) * page_size))
-      |> preload(meadows: :project, github_repository: [], drop_source: [])
+      |> preload(domains: :project, github_repository: [], drop_source: [])
       |> Repo.all()
 
     {entries,
@@ -64,17 +64,17 @@ defmodule Hive.Drops do
      }}
   end
 
-  @doc "Lists drops for a single meadow ordered by `published_at` descending."
-  def list_drops_for_meadow(%Meadow{} = meadow, opts \\ []) do
+  @doc "Lists drops for a single domain ordered by `published_at` descending."
+  def list_drops_for_domain(%Domain{} = domain, opts \\ []) do
     limit = Keyword.get(opts, :limit, 100)
 
     Drop
-    |> join(:inner, [drop], dm in DropMeadow,
-      on: dm.drop_id == drop.id and dm.meadow_id == ^meadow.id
+    |> join(:inner, [drop], dm in DropDomain,
+      on: dm.drop_id == drop.id and dm.domain_id == ^domain.id
     )
     |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
     |> limit(^limit)
-    |> preload(meadows: :project, github_repository: [], drop_source: [])
+    |> preload(domains: :project, github_repository: [], drop_source: [])
     |> Repo.all()
   end
 
@@ -85,7 +85,7 @@ defmodule Hive.Drops do
         {:error, :not_found}
 
       %Drop{} = drop ->
-        drop = Repo.preload(drop, [:meadows, :github_repository, :drop_source])
+        drop = Repo.preload(drop, [:domains, :github_repository, :drop_source])
 
         if visible?(drop, user),
           do: {:ok, drop},
@@ -109,42 +109,42 @@ defmodule Hive.Drops do
   def get_drop(id) when is_binary(id) do
     case Repo.get(Drop, id) do
       nil -> nil
-      %Drop{} = drop -> Repo.preload(drop, [:meadows, :github_repository, :drop_source])
+      %Drop{} = drop -> Repo.preload(drop, [:domains, :github_repository, :drop_source])
     end
   rescue
     Ecto.Query.CastError -> nil
   end
 
   @doc """
-  Replaces the meadow links for `drop` with the given `meadow_ids` and
+  Replaces the domain links for `drop` with the given `domain_ids` and
   stamps `classified_at` so the sweeper does not pick the row up again.
-  Passes through the list of meadow ids that were actually linked.
+  Passes through the list of domain ids that were actually linked.
   """
-  def replace_drop_meadows(%Drop{} = drop, meadow_ids) when is_list(meadow_ids) do
+  def replace_drop_domains(%Drop{} = drop, domain_ids) when is_list(domain_ids) do
     classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
     selected =
-      meadow_ids
+      domain_ids
       |> Enum.filter(&is_binary/1)
       |> Enum.uniq()
 
     inserted_at = classified_at
 
     rows =
-      Enum.map(selected, fn meadow_id ->
+      Enum.map(selected, fn domain_id ->
         %{
           drop_id: drop.id,
-          meadow_id: meadow_id,
+          domain_id: domain_id,
           inserted_at: inserted_at,
           updated_at: inserted_at
         }
       end)
 
     Repo.transaction(fn ->
-      from(link in DropMeadow, where: link.drop_id == ^drop.id)
+      from(link in DropDomain, where: link.drop_id == ^drop.id)
       |> Repo.delete_all()
 
-      if rows != [], do: Repo.insert_all(DropMeadow, rows)
+      if rows != [], do: Repo.insert_all(DropDomain, rows)
 
       Drop
       |> where([drop], drop.id == ^drop.id)
@@ -225,11 +225,11 @@ defmodule Hive.Drops do
 
   @doc "Returns true when `drop` is visible to `user`."
   def visible?(%Drop{} = drop, user) do
-    meadows = drop.meadows || Repo.preload(drop, :meadows).meadows
+    domains = drop.domains || Repo.preload(drop, :domains).domains
 
     cond do
       Auth.member?(user) -> true
-      Enum.any?(meadows, &(&1.visibility == :public)) -> true
+      Enum.any?(domains, &(&1.visibility == :public)) -> true
       true -> false
     end
   end
@@ -242,21 +242,21 @@ defmodule Hive.Drops do
   defp apply_visibility(query, user) do
     if Auth.member?(user) do
       query
-      |> join(:left, [drop], dm in DropMeadow, on: dm.drop_id == drop.id, as: :meadow_link)
+      |> join(:left, [drop], dm in DropDomain, on: dm.drop_id == drop.id, as: :domain_link)
     else
       query
-      |> join(:inner, [drop], dm in DropMeadow, on: dm.drop_id == drop.id, as: :meadow_link)
-      |> join(:inner, [meadow_link: dm], meadow in Meadow,
-        on: meadow.id == dm.meadow_id and meadow.visibility == :public,
-        as: :public_meadow
+      |> join(:inner, [drop], dm in DropDomain, on: dm.drop_id == drop.id, as: :domain_link)
+      |> join(:inner, [domain_link: dm], domain in Domain,
+        on: domain.id == dm.domain_id and domain.visibility == :public,
+        as: :public_domain
       )
     end
   end
 
-  defp filter_meadow_ids(query, []), do: query
+  defp filter_domain_ids(query, []), do: query
 
-  defp filter_meadow_ids(query, ids) when is_list(ids) do
-    where(query, [meadow_link: dm], dm.meadow_id in ^ids)
+  defp filter_domain_ids(query, ids) when is_list(ids) do
+    where(query, [domain_link: dm], dm.domain_id in ^ids)
   end
 
   defp filter_source_type(query, nil), do: query
@@ -284,9 +284,9 @@ defmodule Hive.Drops do
   defp normalize_page_size(:all), do: 10_000
   defp normalize_page_size(_size), do: @default_page_size
 
-  defp normalize_meadow_ids(nil), do: []
-  defp normalize_meadow_ids(ids) when is_list(ids), do: Enum.uniq(ids)
-  defp normalize_meadow_ids(_other), do: []
+  defp normalize_domain_ids(nil), do: []
+  defp normalize_domain_ids(ids) when is_list(ids), do: Enum.uniq(ids)
+  defp normalize_domain_ids(_other), do: []
 
   defp escape_like(value) do
     value

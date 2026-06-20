@@ -7,18 +7,18 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
   alias Hive.Drops.Drop
   alias Hive.Drops.GitHubReleasesSyncer
-  alias Hive.Drops.MeadowClassificationWorker
+  alias Hive.Domains
+  alias Hive.Drops.DomainClassificationWorker
   alias Hive.GitHub.Client
   alias Hive.GitHub.Releases
-  alias Hive.Meadows
 
   defp unique, do: System.unique_integer([:positive])
 
   defp setup_repository! do
     suffix = unique()
 
-    {:ok, meadow} =
-      Meadows.create_meadow(%{
+    {:ok, domain} =
+      Domains.create_domain(%{
         name: "release-syncer-#{suffix}",
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
@@ -26,7 +26,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
         github_repository_visibility: "public"
       })
 
-    hd(meadow.project.github_repositories)
+    hd(domain.project.github_repositories)
   end
 
   defp start_syncer!(item_generator \\ fn _repository, _release, _opts -> {:ok, []} end) do
@@ -124,7 +124,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     drop_ids = Enum.map(drops, & &1.id) |> Enum.sort()
 
     enqueued_ids =
-      all_enqueued(worker: MeadowClassificationWorker)
+      all_enqueued(worker: DomainClassificationWorker)
       |> Enum.map(& &1.args["drop_id"])
       |> Enum.sort()
 
@@ -153,7 +153,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     assert :ok = GitHubReleasesSyncer.sync_now(syncer_name)
 
     assert Repo.aggregate(Drop, :count) == 0
-    assert [] = all_enqueued(worker: MeadowClassificationWorker)
+    assert [] = all_enqueued(worker: DomainClassificationWorker)
   end
 
   test "does not create a drop when release item generation is skipped" do
@@ -178,6 +178,6 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     assert :ok = GitHubReleasesSyncer.sync_now(syncer_name)
 
     assert Repo.aggregate(Drop, :count) == 0
-    assert [] = all_enqueued(worker: MeadowClassificationWorker)
+    assert [] = all_enqueued(worker: DomainClassificationWorker)
   end
 end

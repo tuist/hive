@@ -109,7 +109,7 @@ defmodule Hive.Drops.RssSyncer do
         record_audit(drop, source)
 
         if is_nil(drop.classified_at) do
-          Hive.Drops.MeadowClassificationWorker.enqueue(drop.id)
+          Hive.Drops.DomainClassificationWorker.enqueue(drop.id)
         end
 
       {:error, reason} ->
