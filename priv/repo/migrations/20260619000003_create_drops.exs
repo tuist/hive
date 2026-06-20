@@ -24,8 +24,6 @@ defmodule Hive.Repo.Migrations.CreateDrops do
       add :external_id, :string, null: false
       add :title, :string, null: false
       add :body, :text
-      add :raw_body, :text
-      add :rewritten_at, :utc_datetime
       add :url, :text, null: false
       add :version, :string
       add :published_at, :utc_datetime

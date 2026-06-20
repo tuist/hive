@@ -124,8 +124,61 @@ end)
 # repositories and the domains (sub-domains) it slices by.
 projects_fixtures = [
   %{
+    name: "Tuist",
+    description: "Developer tooling for Xcode projects, CI, caching, and app delivery.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "tuist", visibility: "public"}],
+    domains: [
+      %{
+        name: "Tuist",
+        description: "Anything Tuist-wide that does not fit a narrower domain.",
+        visibility: "public"
+      },
+      %{
+        name: "CLI",
+        description: "Command line interface to interact with the Tuist platform.",
+        visibility: "public"
+      },
+      %{
+        name: "Cache",
+        description: "Tuist's caching functionality.",
+        visibility: "public"
+      },
+      %{
+        name: "Compute",
+        description:
+          "Tuist's runner compute infrastructure including Linux and macOS Kubernetes pools, gateway proxies, sandbox APIs, kubectl access gateways, and account-scoped execution environments for development.",
+        visibility: "public"
+      },
+      %{
+        name: "Distribution",
+        description:
+          "Artifact publication, release workflows, dependency management, and distribution channels that make Tuist available to users.",
+        visibility: "public"
+      },
+      %{
+        name: "Generated projects",
+        description: "Tuist's client-side technology for Xcode projects.",
+        visibility: "public"
+      }
+    ]
+  },
+  %{
+    name: "Atlas",
+    description: "Tuist's agentic operations platform.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "atlas", visibility: "public"}],
+    domains: [
+      %{
+        name: "Atlas",
+        description: "Agentic operations workflows for Tuist.",
+        visibility: "public"
+      }
+    ]
+  },
+  %{
     name: "Hive",
-    description: "Agentic domain orchestration for one organization.",
+    description: "Agentic product development including planning, forage, specs, and drops.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "hive", visibility: "public"}],
     domains: [
@@ -133,48 +186,17 @@ projects_fixtures = [
     ]
   },
   %{
-    name: "Tuist",
-    description: "Developer tools for generating, maintaining, and optimizing Xcode projects.",
+    name: "Once",
+    description: "Installable Tuist products that people can run in their own infrastructure.",
     visibility: "public",
-    repositories: [%{owner: "tuist", name: "tuist", visibility: "public"}],
-    # Demonstrates how a single project can carry several sub-domain
-    # domains the classifier routes drops into. The "Tuist" domain is
-    # the catch-all; "Cache" and "Generated projects" are sub-domains.
+    repositories: [%{owner: "tuist", name: "once", visibility: "public"}],
     domains: [
       %{
-        name: "Tuist",
-        description: "Anything Tuist-wide that doesn't fit a sub-domain.",
-        visibility: "public"
-      },
-      %{
-        name: "Cache",
-        description: "Binary caching and selective testing.",
-        visibility: "public"
-      },
-      %{
-        name: "Generated projects",
-        description: "Project generation, manifests, and graph.",
+        name: "Once",
+        description: "Self-hosted distribution and operations.",
         visibility: "public"
       }
     ]
-  },
-  %{
-    name: "Noora",
-    description: "Design system components shared across Tuist products.",
-    visibility: "public",
-    repositories: [%{owner: "tuist", name: "noora", visibility: "public"}],
-    domains: [
-      %{name: "Noora", description: "All Noora component updates.", visibility: "public"}
-    ]
-  },
-  %{
-    # A Kura-style instance: a project that does not care about
-    # sub-domains. No domains means drops surface as the project itself.
-    name: "Atlas",
-    description: "Internal Atlas planning. No sub-domains yet.",
-    visibility: "private",
-    repositories: [],
-    domains: []
   }
 ]
 
@@ -192,6 +214,13 @@ Enum.each(projects_fixtures, fn fixture ->
         project
 
       project ->
+        {:ok, project} =
+          Projects.update_project(project, %{
+            name: fixture.name,
+            description: fixture.description,
+            visibility: fixture.visibility
+          })
+
         project
     end
 
@@ -204,14 +233,22 @@ Enum.each(projects_fixtures, fn fixture ->
 
       existing ->
         existing
-        |> GitHubRepository.changeset(%{project_id: project.id})
+        |> GitHubRepository.changeset(Map.put(repo_attrs, :project_id, project.id))
         |> Repo.update!()
     end
   end)
 
   Enum.each(fixture.domains, fn domain_attrs ->
-    unless Repo.exists?(from m in Domain, where: m.name == ^domain_attrs.name) do
-      {:ok, _domain} = Domains.create_domain(Map.put(domain_attrs, :project_id, project.id))
+    attrs = Map.put(domain_attrs, :project_id, project.id)
+
+    case Repo.get_by(Domain, name: domain_attrs.name) do
+      nil ->
+        {:ok, _domain} = Domains.create_domain(attrs)
+
+      domain ->
+        domain
+        |> Domain.changeset(attrs)
+        |> Repo.update!()
     end
   end)
 end)
@@ -260,28 +297,6 @@ drop_fixtures = [
       "Project generation, caching, and the test runner now recognise Xcode 26's new module map format. Existing manifests don't need any changes; the new format is detected automatically.",
     url: "https://tuist.dev/changelog/2026-06-10-xcode-26",
     published_at: ~U[2026-06-10 10:00:00Z]
-  },
-  %{
-    domain_name: "Noora",
-    source_type: :github_release,
-    external_id: "tuist/noora@v0.82.0#filter-dropdown",
-    version: "v0.82.0",
-    title: "New filter dropdown component",
-    body:
-      "A dedicated filter dropdown lands alongside refreshed empty states. Use it on any list-style page to combine option filters with a free-text search; the existing components remain source-compatible.",
-    url: "https://github.com/tuist/noora/releases/tag/v0.82.0",
-    published_at: ~U[2026-06-12 18:00:00Z]
-  },
-  %{
-    domain_name: "Noora",
-    source_type: :github_release,
-    external_id: "tuist/noora@v0.82.0#feeds-dropdown",
-    version: "v0.82.0",
-    title: "`feeds_dropdown` helper for Atom + RSS subscription links",
-    body:
-      "A small helper renders an Atom and RSS dropdown next to any page title so visitors can grab the subscription URL straight from the page they're looking at, without having to know the feed naming convention.",
-    url: "https://github.com/tuist/noora/releases/tag/v0.82.0",
-    published_at: ~U[2026-06-12 18:00:00Z]
   }
 ]
 
@@ -293,20 +308,12 @@ Enum.each(drop_fixtures, fn fixture ->
 
   if domain do
     body = fixture.body
-    raw_body = if fixture.source_type == :github_release, do: body, else: nil
-
-    rewritten_at =
-      if fixture.source_type == :github_release,
-        do: DateTime.utc_now() |> DateTime.truncate(:second),
-        else: nil
 
     attrs = %{
       source_type: fixture.source_type,
       external_id: fixture.external_id,
       title: fixture.title,
       body: body,
-      raw_body: raw_body,
-      rewritten_at: rewritten_at,
       url: fixture.url,
       version: fixture.version,
       published_at: fixture.published_at
@@ -458,7 +465,7 @@ specs = [
     author: "jon@example.com",
     source_title: "Filter forage by type, source, and status",
     legacy_titles: ["Forage source and priority grouping"],
-    domain_names: ["Hive", "Noora"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Forage type, source, and status filters",
       "summary" =>

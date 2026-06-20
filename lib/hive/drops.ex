@@ -1,8 +1,8 @@
 defmodule Hive.Drops do
   @moduledoc """
-  Shipped-update entries (GitHub releases + RSS/Atom changelogs).
-  Drops are read-only from the dashboard's perspective; their data is
-  reconciled by the `Hive.Drops.GitHubReleasesSyncer` and
+  Shipped-update entries from GitHub release drop items and RSS/Atom
+  changelogs. Drops are read-only from the dashboard's perspective;
+  their data is reconciled by the `Hive.Drops.GitHubReleasesSyncer` and
   `Hive.Drops.RssSyncer`, and routed to domains by
   `Hive.Drops.DomainClassification`.
 
@@ -104,62 +104,6 @@ defmodule Hive.Drops do
       conflict_target: [:source_type, :external_id],
       returning: true
     )
-  end
-
-  @doc """
-  Upserts a GitHub-release-sourced drop while preserving the
-  agent-rewritten body. New drops store the raw release body in both
-  `body` and `raw_body`; existing drops keep `body` (which may be the
-  agent's rewrite) intact unless the upstream `raw_body` actually
-  changed, in which case `rewritten_at` is cleared so the rewriter
-  worker re-runs.
-  """
-  def upsert_release_drop(attrs) when is_map(attrs) do
-    attrs = atomize_keys(attrs)
-    raw_body = Map.get(attrs, :body)
-
-    lookup = [source_type: :github_release, external_id: Map.fetch!(attrs, :external_id)]
-
-    case Repo.get_by(Drop, lookup) do
-      nil ->
-        attrs
-        |> Map.merge(%{raw_body: raw_body, body: raw_body, rewritten_at: nil})
-        |> then(&Drop.changeset(%Drop{}, &1))
-        |> Repo.insert()
-
-      %Drop{} = existing ->
-        update_attrs = %{
-          title: Map.get(attrs, :title) || existing.title,
-          url: Map.get(attrs, :url) || existing.url,
-          published_at: Map.get(attrs, :published_at) || existing.published_at,
-          github_repository_id:
-            Map.get(attrs, :github_repository_id) || existing.github_repository_id
-        }
-
-        update_attrs =
-          if existing.raw_body == raw_body do
-            update_attrs
-          else
-            Map.merge(update_attrs, %{
-              raw_body: raw_body,
-              body: raw_body,
-              rewritten_at: nil
-            })
-          end
-
-        existing
-        |> Drop.changeset(update_attrs)
-        |> Repo.update()
-    end
-  end
-
-  @doc "Persists the agent-rewritten body and stamps `rewritten_at`."
-  def mark_rewritten(%Drop{} = drop, rewritten_body) when is_binary(rewritten_body) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    drop
-    |> Drop.changeset(%{body: rewritten_body, rewritten_at: now})
-    |> Repo.update()
   end
 
   def get_drop(id) when is_binary(id) do
@@ -353,11 +297,4 @@ defmodule Hive.Drops do
 
   defp format_error(reason) when is_binary(reason), do: String.slice(reason, 0, 500)
   defp format_error(reason), do: inspect(reason) |> String.slice(0, 500)
-
-  defp atomize_keys(map) when is_map(map) do
-    Map.new(map, fn
-      {k, v} when is_atom(k) -> {k, v}
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-    end)
-  end
 end

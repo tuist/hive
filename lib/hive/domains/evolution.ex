@@ -12,6 +12,7 @@ defmodule Hive.Domains.Evolution do
   alias Hive.Domains
   alias Hive.Domains.Agents.EvolutionAgent
   alias Hive.Domains.Domain
+  alias Hive.Projects.Project
   alias Hive.Repo
   alias Hive.Specs.Spec
 
@@ -22,9 +23,9 @@ defmodule Hive.Domains.Evolution do
   Tuist builds infrastructure for productive software development, including
   caching, compute environments, and support for build systems such as Xcode,
   Gradle, and Bazel. Important domains include build automation, remote caching,
-  testing, CI, release workflows, developer experience, documentation, Hive
-  product planning, forage, specs, MCP, identity, operations, and Noora's design
-  system.
+  testing, CI, release workflows, developer experience, documentation, Atlas
+  operations, Hive product planning, forage, specs, MCP, identity, and Once
+  distribution.
   """
 
   @generic_names MapSet.new(
@@ -34,7 +35,7 @@ defmodule Hive.Domains.Evolution do
   @business_terms ~w(
     account alert alerts app apple apps auth authentication authorization automation bazel build builds cache caching ci cli
     command commands compute developer developers development design docs documentation environment environments forage github gradle grafana hive identity
-    interface ios macos mcp noora onboarding operations organization organizations package packages project projects
+    interface ios macos mcp once onboarding operations organization organizations package packages project projects
     release releases repository repositories spec specs swift system test testing tests tuist workflow workflows xcode
   )
 
@@ -244,10 +245,31 @@ defmodule Hive.Domains.Evolution do
         {:skipped, :duplicate_domain_name}
 
       nil ->
-        case Domains.create_domain(%{name: name, description: description}) do
+        case Domains.create_domain(%{
+               name: name,
+               description: description,
+               project_id: evolution_project_id()
+             }) do
           {:ok, domain} -> {:created, domain}
           {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
         end
+    end
+  end
+
+  defp evolution_project_id do
+    case Repo.get_by(Project, name: "Tuist") do
+      %Project{id: id} ->
+        id
+
+      nil ->
+        %Project{}
+        |> Project.changeset(%{
+          name: "Tuist",
+          description: "Developer tooling for Xcode projects, CI, caching, and app delivery.",
+          visibility: :public
+        })
+        |> Repo.insert!()
+        |> Map.fetch!(:id)
     end
   end
 

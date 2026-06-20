@@ -85,8 +85,9 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     - Compute environments that make development and automation faster.
     - Build system support across Xcode, Gradle, Bazel, and related ecosystems.
     - Developer experience, documentation, onboarding, and CLI workflows.
+    - Atlas operations workflows and infrastructure.
     - Hive's own product planning, forage, specs, MCP, identity, and operations.
-    - Noora's design system and product interface foundations.
+    - Once distribution and self-hosted product operations.
 
     Taxonomy rules:
     - Prefer stable domains over individual features, bugs, alerts, or GitHub issues.
