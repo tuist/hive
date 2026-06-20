@@ -77,7 +77,8 @@ defmodule HiveWeb.OAuth.RegistrationController do
   defp normalize_public_client_auth(%{token_endpoint_auth_method: "none"} = params) do
     metadata =
       params
-      |> Map.get(:metadata, %{})
+      |> Map.get(:metadata)
+      |> normalize_metadata()
       |> Map.put("token_endpoint_auth_method", "none")
 
     params
@@ -89,6 +90,9 @@ defmodule HiveWeb.OAuth.RegistrationController do
   end
 
   defp normalize_public_client_auth(params), do: params
+
+  defp normalize_metadata(metadata) when is_map(metadata), do: metadata
+  defp normalize_metadata(_metadata), do: %{}
 
   defp token_endpoint_auth_method(%Client{metadata: %{"token_endpoint_auth_method" => method}})
        when is_binary(method),

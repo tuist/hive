@@ -25,6 +25,21 @@ defmodule Hive.Drops do
   alias Hive.Repo
 
   @default_page_size 20
+  @drop_attr_keys [
+    :source_type,
+    :external_id,
+    :title,
+    :body,
+    :raw_body,
+    :rewritten_at,
+    :url,
+    :version,
+    :published_at,
+    :classified_at,
+    :drop_source_id,
+    :github_repository_id
+  ]
+  @drop_attr_key_map Map.new(@drop_attr_keys, &{Atom.to_string(&1), &1})
 
   @doc "Lists drops the `user` can see, paginated and optionally filtered by domains."
   def list_drops(opts \\ []) do
@@ -355,9 +370,18 @@ defmodule Hive.Drops do
   defp format_error(reason), do: inspect(reason) |> String.slice(0, 500)
 
   defp atomize_keys(map) when is_map(map) do
-    Map.new(map, fn
-      {k, v} when is_atom(k) -> {k, v}
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-    end)
+    Enum.reduce(map, %{}, &put_known_drop_attr/2)
   end
+
+  defp put_known_drop_attr({key, value}, acc) when key in @drop_attr_keys,
+    do: Map.put(acc, key, value)
+
+  defp put_known_drop_attr({key, value}, acc) when is_binary(key) do
+    case Map.fetch(@drop_attr_key_map, key) do
+      {:ok, attr} -> Map.put(acc, attr, value)
+      :error -> acc
+    end
+  end
+
+  defp put_known_drop_attr(_entry, acc), do: acc
 end

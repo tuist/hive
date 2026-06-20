@@ -28,6 +28,26 @@ defmodule Hive.DropsTest do
     end
   end
 
+  describe "upsert_release_drop/1" do
+    test "accepts string-keyed release attrs and ignores unknown keys" do
+      assert {:ok, %Drop{} = drop} =
+               Drops.upsert_release_drop(%{
+                 "source_type" => "github_release",
+                 "external_id" => "release-1",
+                 "title" => "v1.0.0",
+                 "body" => "Release notes",
+                 "url" => "https://github.com/tuist/hive/releases/tag/1.0.0",
+                 "published_at" => ~U[2026-06-20 12:00:00Z],
+                 "unexpected_attribute" => "ignored"
+               })
+
+      assert drop.source_type == :github_release
+      assert drop.external_id == "release-1"
+      assert drop.body == "Release notes"
+      assert drop.raw_body == "Release notes"
+    end
+  end
+
   describe "list_drops/1" do
     test "anonymous viewers only see drops from public domains" do
       public = create_domain!(%{name: "Public domain", visibility: :public})
