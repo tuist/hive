@@ -25,9 +25,9 @@ defmodule Hive.Forage.GitHubIssueClassification do
   Tuist builds infrastructure for productive software development, including
   caching, compute environments, and support for build systems such as Xcode,
   Gradle, and Bazel. Important domains include build automation, remote caching,
-  testing, CI, release workflows, developer experience, documentation, Hive
-  product planning, forage, specs, MCP, identity, operations, and Noora's
-  design system.
+  testing, CI, release workflows, developer experience, documentation, Atlas
+  operations, Hive product planning, forage, specs, MCP, identity, and Once
+  distribution.
   """
 
   @max_body_length 1_200

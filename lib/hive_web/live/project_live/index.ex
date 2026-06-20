@@ -25,7 +25,12 @@ defmodule HiveWeb.ProjectLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Projects · #{socket.assigns.product_name}")
-     |> assign(:projects, Projects.list_visible_projects(socket.assigns[:current_user]))
+     |> assign(
+       :projects,
+       socket.assigns[:current_user]
+       |> Projects.list_visible_projects()
+       |> order_projects()
+     )
      |> assign(OpenGraph.assigns(open_graph()))}
   end
 
@@ -58,30 +63,30 @@ defmodule HiveWeb.ProjectLive.Index do
 
         <.card title="All projects" icon="apps">
           <.card_section>
-            <.table id="projects-table" rows={@projects}>
-              <:col :let={project} label="Name">
-                <.link navigate={~p"/projects/#{project.id}"} data-part="project-link">
-                  <.text_and_description_cell
-                    label={project.name}
-                    description={project.description || "—"}
+            <div :if={@projects == []} data-part="empty">
+              <p>No projects yet. Create one to start tracking releases and changelog updates.</p>
+            </div>
+
+            <div :if={@projects != []} data-part="project-list">
+              <.link
+                :for={project <- @projects}
+                navigate={~p"/projects/#{project.id}"}
+                data-part="project-row"
+              >
+                <div data-part="project-copy">
+                  <h2>{project.name}</h2>
+                  <p>{project.description || "No description yet."}</p>
+                </div>
+                <div data-part="project-meta">
+                  <.badge
+                    label={visibility_label(project.visibility)}
+                    color={visibility_color(project.visibility)}
+                    style="light-fill"
                   />
-                </.link>
-              </:col>
-              <:col :let={project} label="Visibility">
-                <.badge_cell
-                  label={visibility_label(project.visibility)}
-                  color={visibility_color(project.visibility)}
-                  style="light-fill"
-                />
-              </:col>
-              <:empty_state>
-                <.table_empty_state
-                  icon="apps"
-                  title="No projects yet"
-                  subtitle="Create one to start tracking releases and changelog updates."
-                />
-              </:empty_state>
-            </.table>
+                  <.chevron_right />
+                </div>
+              </.link>
+            </div>
           </.card_section>
         </.card>
       </section>
@@ -96,4 +101,12 @@ defmodule HiveWeb.ProjectLive.Index do
   defp visibility_color(:public), do: "success"
   defp visibility_color(:private), do: "attention"
   defp visibility_color(_), do: "neutral"
+
+  defp order_projects(projects), do: Enum.sort_by(projects, &project_order/1)
+
+  defp project_order(%{name: "Tuist"}), do: {0, "Tuist"}
+  defp project_order(%{name: "Atlas"}), do: {1, "Atlas"}
+  defp project_order(%{name: "Hive"}), do: {2, "Hive"}
+  defp project_order(%{name: "Once"}), do: {3, "Once"}
+  defp project_order(project), do: {4, String.downcase(project.name)}
 end
