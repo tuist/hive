@@ -43,7 +43,7 @@ managed service, but you can try our own instance, or self-host your own.
 Hive separates *what* the instance tracks from *how* you slice it.
 
 A **project** is the top-level grouping: a product, codebase, or
-service the instance tracks (for example Tuist, Hive, Noora). Projects
+service the instance tracks (for example Tuist, Atlas, Hive, Once). Projects
 own their connected GitHub repositories and the RSS sources that feed
 their drops. The list of projects lives at `/projects`.
 
@@ -68,8 +68,10 @@ Drops aggregate shipped updates so people can follow what each meadow
 has actually released. Two sources feed it:
 
 - **GitHub Releases** are ingested automatically from every repository
-  connected to a meadow. No configuration needed beyond connecting the
-  repository.
+  connected to a project. Hive asks an agent to traverse the release
+  body's referenced URLs, fetch the linked context, and turn the
+  user-facing improvements it can support into drops. The release itself
+  is not shown as a drop.
 - **RSS / Atom changelog feeds** can be registered per meadow from
   `/ops/drops` (admin only). Hive polls every enabled feed every 15
   minutes and merges its entries into the drops timeline.

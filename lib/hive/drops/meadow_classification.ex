@@ -153,7 +153,7 @@ defmodule Hive.Drops.MeadowClassification do
         repository: repository_label,
         version: drop.version || "",
         title: drop.title || "",
-        body: truncate(drop.body || drop.raw_body)
+        body: truncate(drop.body)
       }
     }
   end
