@@ -75,6 +75,7 @@ defmodule Hive.Domains.EvolutionTest do
 
     assert created.name == "Build Cache"
     assert updated.name == "Tuist Developer Tools"
+    assert Repo.preload(created, :project).project.name == "Tuist"
 
     assert_receive {:evolution_input, input}
     assert Enum.any?(input.current_domains, &(&1.name == "Tuist"))

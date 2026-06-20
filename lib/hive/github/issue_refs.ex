@@ -1,7 +1,7 @@
 defmodule Hive.GitHub.IssueRefs do
   @moduledoc """
   Extracts issue and pull-request references from free-form release
-  bodies so the rewriter can fetch and inline their context.
+  bodies so release sync can fetch each referenced item as a drop.
 
   Three styles are recognised, in order of specificity:
 
