@@ -110,6 +110,13 @@ require a signed-in session. Login remains available in both modes.
   relying on `ueberauth_oidcc` issuer discovery. **Severity: medium.**
 - Google auth changes that remove the server-side domain check and rely
   only on the `hd` authorize hint. **Severity: high.**
+- Dynamic OAuth registration or another public unauthenticated endpoint
+  that trusts nested metadata to be the expected shape and can crash on
+  malformed user input instead of returning a controlled error or
+  normalizing to a safe default. **Severity: medium.**
+- Dynamic OAuth registration changes that allow server-side URL fetching
+  from user-controlled metadata such as `jwks_uri`, unless the diff also
+  adds explicit SSRF-safe validation and tests. **Severity: high.**
 
 ### Do not flag
 
@@ -261,6 +268,18 @@ cannot do.
   evidence (trace through the context function) that the association was
   preloaded. The render-time crash on `%Ecto.Association.NotLoaded{}` is
   silent at compile time. **Severity: medium.**
+- New code that normalizes user-controlled params, JSON payloads, form
+  attrs, webhook attrs, or external API payloads by converting arbitrary
+  string keys to atoms, including `String.to_existing_atom/1`. Use an
+  explicit key whitelist and ignore or reject unknown keys instead.
+  **Severity: high.**
+- New in-memory request-facing counters, rate limiters, nonce stores, or
+  ETS tables that grow by client, token, IP, route, or time bucket
+  without a bounded retention or pruning path. **Severity: medium.**
+- New or changed XML/HTML feed/rendering helpers that duplicate escaping
+  logic across formats instead of sharing one escaping helper, or that
+  interpolate user-controlled text into XML/HTML without escaping.
+  **Severity: high.**
 
 ### Do not flag
 
@@ -268,6 +287,11 @@ cannot do.
   by an existing test, formatting-only churn, reordering pipe steps).
 - Diffs that exercise the changeset indirectly through a higher-level
   context test that still passes.
+- Closed-world atom conversion for trusted internal identifiers, such as
+  a route provider key that is immediately checked against configured
+  providers.
+- Long-lived ETS tables whose key space is fixed and small, or stores
+  with an existing external TTL/cleanup owner.
 
 ---
 
@@ -336,7 +360,10 @@ For each finding, confirm:
 - Missing `@spec` / `@type` — this codebase intentionally avoids
   typespecs. Never suggest adding them.
 - Missing `@doc` / `@moduledoc` on internal helper modules.
-- `String.to_atom/1` on user input → credo's `UnsafeToAtom`.
+- Obvious `String.to_atom/1` on user input → credo's `UnsafeToAtom`.
+  Keep review-time findings for semantic cases such as
+  `String.to_existing_atom/1` hidden inside external payload
+  normalization, where a whitelist is expected.
 
 ---
 
