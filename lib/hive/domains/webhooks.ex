@@ -14,6 +14,11 @@ defmodule Hive.Domains.Webhooks do
 
   @token_bytes 32
   @token_prefix "hwh_"
+  @attr_key_map %{
+    "name" => :name,
+    "source" => :source
+  }
+  @attr_keys Map.values(@attr_key_map)
 
   def list_for_domain(%Domain{id: domain_id}), do: list_for_domain(domain_id)
 
@@ -88,12 +93,20 @@ defmodule Hive.Domains.Webhooks do
   end
 
   defp normalize_attrs(attrs) when is_map(attrs) do
-    Map.new(attrs, fn
-      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
-      {key, value} -> {key, value}
-    end)
+    attrs
+    |> Enum.reduce(%{}, &put_known_attr/2)
     |> Map.update(:source, nil, &cast_source/1)
   end
+
+  defp put_known_attr({key, value}, acc) when is_binary(key) do
+    case Map.fetch(@attr_key_map, key) do
+      {:ok, attr} -> Map.put(acc, attr, value)
+      :error -> acc
+    end
+  end
+
+  defp put_known_attr({key, value}, acc) when key in @attr_keys, do: Map.put(acc, key, value)
+  defp put_known_attr(_entry, acc), do: acc
 
   defp cast_source(value) when is_atom(value), do: value
 

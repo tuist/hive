@@ -26,21 +26,23 @@ defmodule HiveWeb.Atom do
       }
   """
 
+  alias HiveWeb.FeedXML
+
   @doc "Renders the feed as an Atom 1.0 XML binary."
   def render(feed) when is_map(feed) do
     [
       ~s(<?xml version="1.0" encoding="UTF-8"?>\n),
       ~s(<feed xmlns="http://www.w3.org/2005/Atom">\n),
-      tag("title", feed.title),
-      maybe_tag("subtitle", feed[:subtitle]),
+      FeedXML.tag("title", feed.title),
+      FeedXML.maybe_tag("subtitle", feed[:subtitle]),
       ~s(<link rel="self" type="application/atom+xml" href="),
-      escape(feed.self_url),
+      FeedXML.escape(feed.self_url),
       ~s("/>\n),
       ~s(<link rel="alternate" type="text/html" href="),
-      escape(feed.alternate_url),
+      FeedXML.escape(feed.alternate_url),
       ~s("/>\n),
-      tag("id", feed.id),
-      tag("updated", iso8601(feed.updated)),
+      FeedXML.tag("id", feed.id),
+      FeedXML.tag("updated", iso8601(feed.updated)),
       Enum.map(feed.entries, &entry/1),
       ~s(</feed>\n)
     ]
@@ -50,14 +52,14 @@ defmodule HiveWeb.Atom do
   defp entry(entry) do
     [
       "<entry>\n",
-      tag("id", entry.id),
-      tag("title", entry.title),
-      tag("updated", iso8601(entry.updated)),
+      FeedXML.tag("id", entry.id),
+      FeedXML.tag("title", entry.title),
+      FeedXML.tag("updated", iso8601(entry.updated)),
       ~s(<link rel="alternate" type="text/html" href="),
-      escape(entry.url),
+      FeedXML.escape(entry.url),
       ~s("/>\n),
       author(entry),
-      maybe_tag("summary", entry[:summary]),
+      FeedXML.maybe_tag("summary", entry[:summary]),
       "</entry>\n"
     ]
   end
@@ -65,36 +67,16 @@ defmodule HiveWeb.Atom do
   defp author(%{author_name: name} = entry) when is_binary(name) and name != "" do
     [
       "<author>\n",
-      tag("name", name),
-      maybe_tag("email", entry[:author_email]),
+      FeedXML.tag("name", name),
+      FeedXML.maybe_tag("email", entry[:author_email]),
       "</author>\n"
     ]
   end
 
   defp author(_entry), do: []
 
-  defp tag(name, value) when is_binary(value),
-    do: ["<", name, ">", escape(value), "</", name, ">\n"]
-
-  defp tag(name, value), do: tag(name, to_string(value))
-
-  defp maybe_tag(_name, nil), do: []
-  defp maybe_tag(_name, ""), do: []
-  defp maybe_tag(name, value), do: tag(name, value)
-
   defp iso8601(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
 
   defp iso8601(%NaiveDateTime{} = ndt),
     do: ndt |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
-
-  defp escape(text) when is_binary(text) do
-    text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&apos;")
-  end
-
-  defp escape(text), do: text |> to_string() |> escape()
 end

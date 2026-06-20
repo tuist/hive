@@ -25,6 +25,19 @@ defmodule Hive.Drops do
   alias Hive.Repo
 
   @default_page_size 20
+  @drop_attr_keys [
+    :source_type,
+    :external_id,
+    :title,
+    :body,
+    :url,
+    :version,
+    :published_at,
+    :classified_at,
+    :drop_source_id,
+    :github_repository_id
+  ]
+  @drop_attr_key_map Map.new(@drop_attr_keys, &{Atom.to_string(&1), &1})
 
   @doc "Lists drops the `user` can see, paginated and optionally filtered by domains."
   def list_drops(opts \\ []) do
@@ -97,6 +110,8 @@ defmodule Hive.Drops do
 
   @doc "Idempotently inserts or updates a drop based on the unique (source_type, external_id)."
   def upsert_drop(attrs) when is_map(attrs) do
+    attrs = normalize_drop_attrs(attrs)
+
     %Drop{}
     |> Drop.changeset(attrs)
     |> Repo.insert(
@@ -297,4 +312,20 @@ defmodule Hive.Drops do
 
   defp format_error(reason) when is_binary(reason), do: String.slice(reason, 0, 500)
   defp format_error(reason), do: inspect(reason) |> String.slice(0, 500)
+
+  defp normalize_drop_attrs(map) when is_map(map) do
+    Enum.reduce(map, %{}, &put_known_drop_attr/2)
+  end
+
+  defp put_known_drop_attr({key, value}, acc) when key in @drop_attr_keys,
+    do: Map.put(acc, key, value)
+
+  defp put_known_drop_attr({key, value}, acc) when is_binary(key) do
+    case Map.fetch(@drop_attr_key_map, key) do
+      {:ok, attr} -> Map.put(acc, attr, value)
+      :error -> acc
+    end
+  end
+
+  defp put_known_drop_attr(_entry, acc), do: acc
 end

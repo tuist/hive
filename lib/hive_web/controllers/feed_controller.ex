@@ -20,6 +20,7 @@ defmodule HiveWeb.FeedController do
   alias HiveWeb.Atom, as: AtomFeed
   alias HiveWeb.Endpoint
   alias HiveWeb.Rss
+  alias HiveWeb.Utilities.Query
 
   def forage_atom(conn, _params), do: send_feed(conn, :atom, forage_feed(conn))
   def forage_rss(conn, _params), do: send_feed(conn, :rss, forage_feed(conn))
@@ -213,16 +214,7 @@ defmodule HiveWeb.FeedController do
   end
 
   defp parse_domain_ids(nil), do: []
-
-  defp parse_domain_ids(value) when is_binary(value) do
-    value
-    |> String.split(",", trim: true)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.uniq()
-  end
-
-  defp parse_domain_ids(_value), do: []
+  defp parse_domain_ids(value), do: Query.csv_list(value)
 
   defp latest_entry_updated([]), do: DateTime.utc_now() |> DateTime.truncate(:second)
   defp latest_entry_updated([first | _rest]), do: first.updated

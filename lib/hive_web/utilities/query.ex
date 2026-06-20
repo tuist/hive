@@ -107,4 +107,20 @@ defmodule HiveWeb.Utilities.Query do
   end
 
   def present_string(_value), do: nil
+
+  @doc """
+  Parses a comma-separated query parameter into a de-duplicated list of
+  trimmed values.
+  """
+  def csv_list(nil), do: []
+
+  def csv_list(value) when is_binary(value) do
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def csv_list(_value), do: []
 end

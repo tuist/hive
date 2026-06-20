@@ -36,5 +36,19 @@ defmodule HiveWeb.OAuth.RegistrationControllerTest do
                "error_description" => "jwks_uri is not supported. Provide inline jwks instead."
              }
     end
+
+    test "ignores malformed metadata for public clients instead of crashing", %{conn: conn} do
+      conn =
+        post(conn, ~p"/oauth2/register", %{
+          "client_name" => "hive-mcp-client",
+          "redirect_uris" => ["http://localhost:1234/callback"],
+          "grant_types" => ["authorization_code", "refresh_token"],
+          "response_types" => ["code"],
+          "token_endpoint_auth_method" => "none",
+          "metadata" => "not-a-map"
+        })
+
+      assert %{"token_endpoint_auth_method" => "none"} = json_response(conn, 201)
+    end
   end
 end

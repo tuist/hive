@@ -20,6 +20,17 @@ defmodule Hive.Domains.WebhooksTest do
     assert webhook.token_hash == :crypto.hash(:sha256, token) |> Base.encode16(case: :lower)
   end
 
+  test "create/2 ignores unknown string keys without converting them to atoms", %{domain: domain} do
+    assert {:ok, {webhook, _token}} =
+             Webhooks.create(domain, %{
+               "name" => "Grafana prod",
+               "source" => "grafana",
+               "unexpected_attribute" => "ignored"
+             })
+
+    assert %Webhook{name: "Grafana prod", source: :grafana} = webhook
+  end
+
   test "find_by_token/3 returns the webhook for the right domain+source+token", %{
     domain: domain
   } do

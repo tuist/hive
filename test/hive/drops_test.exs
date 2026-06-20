@@ -26,6 +26,23 @@ defmodule Hive.DropsTest do
       assert updated.id == drop.id
       assert Repo.aggregate(Drop, :count, :id) == 1
     end
+
+    test "accepts string-keyed attrs and ignores unknown keys" do
+      assert {:ok, %Drop{} = drop} =
+               Drops.upsert_drop(%{
+                 "source_type" => "github_release",
+                 "external_id" => "release-1",
+                 "title" => "v1.0.0",
+                 "body" => "Release notes",
+                 "url" => "https://github.com/tuist/hive/releases/tag/1.0.0",
+                 "published_at" => ~U[2026-06-20 12:00:00Z],
+                 "unexpected_attribute" => "ignored"
+               })
+
+      assert drop.source_type == :github_release
+      assert drop.external_id == "release-1"
+      assert drop.body == "Release notes"
+    end
   end
 
   describe "list_drops/1" do

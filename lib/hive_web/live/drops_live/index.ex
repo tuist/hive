@@ -256,7 +256,7 @@ defmodule HiveWeb.DropsLive.Index do
   end
 
   defp atom_feed(params) do
-    domain_ids = parse_domain_ids(params["domain_ids"])
+    domain_ids = Query.csv_list(params["domain_ids"])
     query = if domain_ids == [], do: "", else: "?domain_ids=" <> Enum.join(domain_ids, ",")
 
     %{
@@ -265,17 +265,6 @@ defmodule HiveWeb.DropsLive.Index do
       rss_href: "/drops/rss.xml" <> query
     }
   end
-
-  defp parse_domain_ids(nil), do: []
-
-  defp parse_domain_ids(value) when is_binary(value) do
-    value
-    |> String.split(",", trim: true)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-  end
-
-  defp parse_domain_ids(_value), do: []
 
   defp page_link(uri, page) do
     "?" <> Query.put(uri.query, "page", Integer.to_string(page))
