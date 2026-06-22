@@ -6,11 +6,9 @@ defmodule HiveWeb.OpenGraphController do
   alias HiveWeb.OpenGraph
 
   def show(conn, %{"token" => token}) do
-    with {:ok, data} <- OpenGraph.verify_token(conn, token) do
-      OpenGraph.serve(conn, data)
-    else
-      _other ->
-        not_found(conn)
+    case OpenGraph.verify_token(conn, token) do
+      {:ok, data} -> OpenGraph.serve(conn, data)
+      {:error, _reason} -> not_found(conn)
     end
   end
 
