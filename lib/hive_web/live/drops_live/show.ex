@@ -12,7 +12,7 @@ defmodule HiveWeb.DropsLive.Show do
   def open_graph(drop) do
     %{
       description: description(drop),
-      eyebrow: eyebrow(drop),
+      section_label: section_label(drop),
       highlights: highlights(drop),
       id: "drop-#{drop.id}",
       path: "/drops/#{drop.id}",
@@ -63,7 +63,7 @@ defmodule HiveWeb.DropsLive.Show do
       <section id="drop-show">
         <div data-part="header">
           <div data-part="title-group">
-            <div data-part="eyebrow">
+            <div data-part="section-label">
               <.badge label="Drop" color="information" style="light-fill" />
               <.badge
                 label={Drops.source_type_label(@drop.source_type)}
@@ -124,7 +124,7 @@ defmodule HiveWeb.DropsLive.Show do
     end
   end
 
-  defp eyebrow(drop) do
+  defp section_label(drop) do
     parts =
       [
         Drops.source_type_label(drop.source_type),

@@ -13,7 +13,7 @@ defmodule HiveWeb.ProjectLive.Show do
       description:
         project.description ||
           "Repositories, domains, and drop sources tracked under the #{project.name} project.",
-      eyebrow: "Project",
+      section_label: "Project",
       highlights: [
         project.name,
         "#{length(project.domains)} domains",

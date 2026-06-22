@@ -18,7 +18,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
   def open_graph(source, stats) do
     %{
       description: source.description,
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: [
         "#{stats.total} #{stats.state_label}",
         "#{stats.repositories} #{pluralize(stats.repositories, "repository", "repositories")}",

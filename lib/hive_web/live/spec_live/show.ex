@@ -13,7 +13,7 @@ defmodule HiveWeb.SpecLive.Show do
     %{
       author: author_data(spec),
       description: spec_summary(spec),
-      eyebrow: "Spec #{spec_number(spec)}",
+      section_label: "Spec #{spec_number(spec)}",
       highlights: [
         spec_number(spec),
         "#{length(spec.comments)} comments",

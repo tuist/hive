@@ -12,7 +12,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   def open_graph do
     %{
       description: "Capture a public feature request, bug report, or feedback item.",
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: ["Public items", "Actionable context", "Contributor signal"],
       id: "forage-new",
       path: "/forage/new",

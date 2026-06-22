@@ -13,7 +13,7 @@ defmodule HiveWeb.AccountLive.Identities do
   def open_graph do
     %{
       description: "Manage the sign-in providers connected to your Hive user.",
-      eyebrow: "Account",
+      section_label: "Account",
       highlights: ["Connected providers", "Google sign-in", "GitHub sign-in"],
       id: "account-identities",
       path: "/account/identities",

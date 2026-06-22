@@ -13,6 +13,7 @@ defmodule HiveWeb.OpenGraph do
   @content_type "image/jpeg"
   @height 1080
   @quality 95
+  @token_salt "open-graph-card-v1"
   @version "v4"
   @width 1920
 
@@ -25,6 +26,8 @@ defmodule HiveWeb.OpenGraph do
   end
 
   def assigns(data) do
+    data = card_data(data)
+
     [
       open_graph: %{
         description: data.description,
@@ -38,11 +41,30 @@ defmodule HiveWeb.OpenGraph do
     ]
   end
 
-  def path(data), do: "/open-graph/#{data.id}/#{hash(data)}.jpg"
+  def path(data) do
+    "/open-graph/card.jpg?#{URI.encode_query(token: token(data))}"
+  end
 
-  def object_key(data), do: "open-graph/#{data.id}/#{hash(data)}.jpg"
+  def object_key(data), do: "open-graph/cards/#{hash(data)}.jpg"
+
+  def token(data) do
+    Phoenix.Token.sign(Endpoint, @token_salt, card_data(data),
+      max_age: :infinity,
+      signed_at: 0
+    )
+  end
+
+  def verify_token(context, token) do
+    with {:ok, data} <- Phoenix.Token.verify(context, @token_salt, token, max_age: :infinity) do
+      {:ok, card_data(data)}
+    end
+  rescue
+    _error -> {:error, :invalid}
+  end
 
   def hash(data) do
+    data = card_data(data)
+
     :sha256
     |> :crypto.hash(
       :erlang.term_to_binary([
@@ -58,9 +80,8 @@ defmodule HiveWeb.OpenGraph do
     |> Base.url_encode64(padding: false)
   end
 
-  def valid_hash?(data, hash), do: hash(data) == hash
-
   def serve(conn, data, opts \\ []) do
+    data = card_data(data)
     storage = Keyword.get(opts, :storage, ObjectStorage)
 
     if storage_enabled?(storage) do
@@ -71,7 +92,7 @@ defmodule HiveWeb.OpenGraph do
   end
 
   def generate(data) do
-    html = render_html(data)
+    html = data |> card_data() |> render_html()
 
     case render_with_browser(html) do
       {:ok, binary} -> binary
@@ -80,6 +101,8 @@ defmodule HiveWeb.OpenGraph do
   end
 
   def render_html(data) do
+    data = card_data(data)
+
     highlights =
       data.highlights
       |> Enum.take(3)
@@ -174,7 +197,7 @@ defmodule HiveWeb.OpenGraph do
             max-width: 1380px;
           }
 
-          .eyebrow {
+          .section-label {
             margin: 0 0 28px;
             color: #5a6274;
             font-size: 38px;
@@ -295,7 +318,7 @@ defmodule HiveWeb.OpenGraph do
             </header>
 
             <section class="main">
-              <p class="eyebrow">#{escape(data.eyebrow)}</p>
+              <p class="section-label">#{escape(data.section_label)}</p>
               <h1>#{escape(data.title)}</h1>
               <p class="description">#{escape(data.description)}</p>
               #{author_markup(data)}
@@ -413,6 +436,78 @@ defmodule HiveWeb.OpenGraph do
   defp absolute_url(path), do: Endpoint.url() <> path
 
   defp meta_title(%{title: title}), do: "#{title} | #{Auth.product_name()}"
+
+  defp card_data(data) do
+    highlights =
+      data
+      |> fetch(:highlights)
+      |> List.wrap()
+      |> Enum.take(3)
+      |> Enum.map(&required_string(&1, 80))
+
+    %{
+      description: required_string(fetch(data, :description), 300),
+      highlights: required_highlights(highlights),
+      id: required_string(fetch(data, :id), 120),
+      path: internal_path(fetch(data, :path)),
+      section_label: required_string(fetch(data, :section_label), 80),
+      title: required_string(fetch(data, :title), 160),
+      version: @version
+    }
+    |> maybe_put_author(fetch(data, :author, nil))
+  end
+
+  defp fetch(%{} = data, key), do: Map.get(data, key, Map.get(data, to_string(key), ""))
+
+  defp fetch(%{} = data, key, default),
+    do: Map.get(data, key, Map.get(data, to_string(key), default))
+
+  defp bounded_string(value, max_length) do
+    value
+    |> to_string()
+    |> String.slice(0, max_length)
+  end
+
+  defp required_string(value, max_length) do
+    value = bounded_string(value, max_length)
+
+    if value == "" do
+      raise ArgumentError, "OpenGraph card data cannot contain empty required fields"
+    end
+
+    value
+  end
+
+  defp required_highlights([]) do
+    raise ArgumentError, "OpenGraph card data cannot contain empty highlights"
+  end
+
+  defp required_highlights(highlights), do: highlights
+
+  defp internal_path(path) do
+    path = required_string(path, 512)
+
+    if String.starts_with?(path, "/") and not String.starts_with?(path, "//") do
+      path
+    else
+      "/"
+    end
+  end
+
+  defp maybe_put_author(data, nil), do: data
+
+  defp maybe_put_author(data, %{handle: handle, initials: initials}) do
+    Map.put(data, :author, %{
+      handle: bounded_string(handle, 80),
+      initials: bounded_string(initials, 8)
+    })
+  end
+
+  defp maybe_put_author(data, %{"handle" => handle, "initials" => initials}) do
+    maybe_put_author(data, %{handle: handle, initials: initials})
+  end
+
+  defp maybe_put_author(data, _author), do: data
 
   defp logo_markup do
     case logo_data_uri() do

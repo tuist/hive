@@ -21,7 +21,7 @@ defmodule HiveWeb.OpenGraphTest do
   defp open_graph_data do
     %{
       description: "Description",
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: ["One", "Two", "Three"],
       id: "sample-page",
       path: "/sample",
@@ -29,12 +29,18 @@ defmodule HiveWeb.OpenGraphTest do
     }
   end
 
-  test "hash changes when rendered data changes" do
+  test "path includes a stable signed card token" do
     data = open_graph_data()
+    path = OpenGraph.path(data)
+    token = token_from_path(path)
 
     assert OpenGraph.hash(data) != OpenGraph.hash(%{data | description: "Different copy"})
-    assert OpenGraph.path(data) == "/open-graph/#{data.id}/#{OpenGraph.hash(data)}.jpg"
-    assert OpenGraph.object_key(data) == "open-graph/#{data.id}/#{OpenGraph.hash(data)}.jpg"
+    assert path == OpenGraph.path(data)
+    assert path =~ "/open-graph/card.jpg?token="
+    assert OpenGraph.object_key(data) == "open-graph/cards/#{OpenGraph.hash(data)}.jpg"
+
+    assert {:ok, %{id: "sample-page", path: "/sample", section_label: "Forage"}} =
+             OpenGraph.verify_token(HiveWeb.Endpoint, token)
   end
 
   test "assigns include absolute social metadata" do
@@ -53,8 +59,18 @@ defmodule HiveWeb.OpenGraphTest do
            ] = OpenGraph.assigns(data)
 
     assert description == data.description
-    assert image =~ OpenGraph.path(data)
+    assert image =~ "/open-graph/card.jpg?token="
     assert url =~ data.path
+  end
+
+  test "verify_token rejects tampered card tokens" do
+    token =
+      open_graph_data()
+      |> OpenGraph.path()
+      |> token_from_path()
+      |> Kernel.<>("tampered")
+
+    assert {:error, :invalid} = OpenGraph.verify_token(HiveWeb.Endpoint, token)
   end
 
   test "page OpenGraph data is compatible with the renderer contract" do
@@ -88,7 +104,7 @@ defmodule HiveWeb.OpenGraphTest do
           send(parent, {:head, key})
           {:error, {:unexpected_status, 404, ""}}
         end,
-        generator: fn ^data -> "generated-jpeg" end,
+        generator: fn %{id: "sample-page", version: "v4"} -> "generated-jpeg" end,
         put_object: fn key, body, opts ->
           send(parent, {:put, key, body, opts})
           {:ok, %{status: 200}}
@@ -142,7 +158,7 @@ defmodule HiveWeb.OpenGraphTest do
       OpenGraph.render_html(%{
         author: %{handle: "@unsafe", initials: "<u>"},
         description: ~s|Description with <script>alert("x")</script>|,
-        eyebrow: "Forage",
+        section_label: "Forage",
         highlights: ["<unsafe>", "Public source"],
         id: "forage-unsafe",
         path: "/forage/unsafe",
@@ -160,7 +176,7 @@ defmodule HiveWeb.OpenGraphTest do
   defp assert_open_graph_contract(data) do
     assert %{
              description: description,
-             eyebrow: eyebrow,
+             section_label: section_label,
              highlights: highlights,
              id: id,
              path: path,
@@ -168,7 +184,7 @@ defmodule HiveWeb.OpenGraphTest do
            } = data
 
     assert is_binary(description) and description != ""
-    assert is_binary(eyebrow) and eyebrow != ""
+    assert is_binary(section_label) and section_label != ""
     assert is_list(highlights) and highlights != []
     assert Enum.all?(highlights, &is_binary/1)
     assert is_binary(id) and id != ""
@@ -176,8 +192,8 @@ defmodule HiveWeb.OpenGraphTest do
     assert is_binary(title) and title != ""
 
     assert is_binary(OpenGraph.hash(data))
-    assert OpenGraph.path(data) =~ "/open-graph/#{id}/"
-    assert OpenGraph.object_key(data) =~ "open-graph/#{id}/"
+    assert OpenGraph.path(data) =~ "/open-graph/card.jpg?token="
+    assert OpenGraph.object_key(data) =~ "open-graph/cards/"
     assert OpenGraph.render_html(data) =~ title
 
     assert [
@@ -192,8 +208,16 @@ defmodule HiveWeb.OpenGraphTest do
              }
            ] = OpenGraph.assigns(data)
 
-    assert image =~ OpenGraph.path(data)
+    assert image =~ "/open-graph/card.jpg?token="
     assert meta_title =~ title
     assert url =~ path
+  end
+
+  defp token_from_path(path) do
+    path
+    |> URI.parse()
+    |> Map.fetch!(:query)
+    |> URI.decode_query()
+    |> Map.fetch!("token")
   end
 end
