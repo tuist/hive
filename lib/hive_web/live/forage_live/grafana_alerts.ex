@@ -14,7 +14,7 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
   def open_graph do
     %{
       description: "Operational signals visible only to organization members.",
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: ["Organization visible", "Read-only signals", "Forage source"],
       id: "forage-grafana-alerts",
       path: "/forage/grafana-alerts",

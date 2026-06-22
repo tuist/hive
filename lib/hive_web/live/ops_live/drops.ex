@@ -20,7 +20,7 @@ defmodule HiveWeb.OpsLive.Drops do
     %{
       description:
         "Register RSS/Atom changelog sources for each domain. GitHub Releases is implicit.",
-      eyebrow: "Ops",
+      section_label: "Ops",
       highlights: ["RSS / Atom sources", "Per-domain registration", "Polled every 15 minutes"],
       id: "ops-drops",
       path: "/ops/drops",

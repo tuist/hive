@@ -20,8 +20,8 @@ defmodule HiveWeb.AuditLive do
     %{
       description:
         "Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths.",
-      eyebrow: "Audit",
-      highlights: [],
+      section_label: "Audit",
+      highlights: ["Dashboard", "Webhooks", "Workers"],
       id: "audit",
       path: "/audit",
       title: "Audit"

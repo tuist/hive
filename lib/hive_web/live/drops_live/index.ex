@@ -20,7 +20,7 @@ defmodule HiveWeb.DropsLive.Index do
     %{
       description:
         "Shipped updates from GitHub releases and changelog feeds across every domain.",
-      eyebrow: "Drops",
+      section_label: "Drops",
       highlights: ["GitHub releases", "RSS / Atom changelogs", "Subscribe per domain"],
       id: "drops",
       path: "/drops",

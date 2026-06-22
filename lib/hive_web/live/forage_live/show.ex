@@ -26,7 +26,7 @@ defmodule HiveWeb.ForageLive.Show do
   def open_graph(item) do
     %{
       description: item_description(item),
-      eyebrow: Forage.item_type_label(item.type),
+      section_label: Forage.item_type_label(item.type),
       highlights:
         [
           Forage.item_status_label(item.status),

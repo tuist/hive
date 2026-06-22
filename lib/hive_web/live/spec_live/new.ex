@@ -14,7 +14,7 @@ defmodule HiveWeb.SpecLive.New do
   def open_graph do
     %{
       description: "Draft an editable proposal for buildable work.",
-      eyebrow: "Spec",
+      section_label: "Spec",
       highlights: ["Editable proposal", "Forage source", "Bee-ready work"],
       id: "specs-new",
       path: "/specs/new",

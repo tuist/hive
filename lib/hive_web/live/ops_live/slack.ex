@@ -11,7 +11,7 @@ defmodule HiveWeb.OpsLive.Slack do
   def open_graph do
     %{
       description: "Connect Slack workspaces to Hive.",
-      eyebrow: "Ops",
+      section_label: "Ops",
       highlights: ["Slack OAuth", "Workspace installs", "Message shortcuts"],
       id: "ops-slack",
       path: "/ops/slack",

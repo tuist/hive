@@ -38,11 +38,11 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert response =~ ~s(property="og:title" content="GitHub sign-in | Hive")
     assert response =~ ~s(/specs/#{spec.number}")
     assert response =~ ~s|property="og:image"|
-    assert response =~ ~s|.jpg"|
+    assert response =~ ~s(/open-graph/card.jpg?token=)
 
     spec = Specs.get_spec!(spec.id)
     open_graph = HiveWeb.SpecLive.Show.open_graph(spec)
-    assert open_graph.eyebrow == "Spec ##{spec.number}"
+    assert open_graph.section_label == "Spec ##{spec.number}"
     assert open_graph.author == %{handle: "@alice", initials: "a"}
   end
 
@@ -72,8 +72,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
              ~s(property="og:description" content="Move object storage to Kubernetes with Rook and Ceph.")
 
     assert response =~ ~s(property="og:image")
-    assert response =~ ~s(/open-graph/spec-#{spec.number}/)
-    assert response =~ ~s|.jpg"|
+    assert response =~ ~s(/open-graph/card.jpg?token=)
   end
 
   test "requires authentication to comment", %{conn: conn} do

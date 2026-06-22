@@ -16,7 +16,7 @@ defmodule HiveWeb.ForageLive.Placeholder do
   def open_graph(source) do
     %{
       description: source.description,
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: source_highlights(source),
       id: "forage-#{open_graph_slug(source)}",
       path: source.path,
