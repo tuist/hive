@@ -28,13 +28,10 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
   }
 
-  & [data-part="providers-card"] {
-    width: 100%;
-    overflow-x: hidden;
-  }
-
+  & [data-part="providers-card"],
   & [data-part="slack-card"] {
     width: 100%;
+    overflow-x: hidden;
   }
 
   & [data-part="providers-section"] {
@@ -49,58 +46,39 @@
     gap: var(--noora-spacing-5);
   }
 
-  & [data-part="slack-copy"] p,
-  & [data-part="slack-profile-main"] p {
+  & [data-part="slack-copy"] p {
     margin: 0;
     color: var(--noora-surface-label-secondary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }
 
-  & [data-part="slack-profiles"] {
-    display: flex;
-    flex-direction: column;
-    gap: var(--noora-spacing-3);
-  }
-
-  & [data-part="slack-profile-row"] {
-    display: flex;
-    align-items: center;
-    gap: var(--noora-spacing-4);
-  }
-
-  & [data-part="slack-profile-row"] > svg {
-    flex: 0 0 auto;
-    color: var(--noora-icon-neutral-label);
-  }
-
-  & [data-part="slack-profile-main"] {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: var(--noora-spacing-1);
-    min-width: 0;
-  }
-
-  & [data-part="slack-profile-main"] h2 {
-    margin: 0;
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
-    overflow-wrap: anywhere;
-  }
-
-  & [data-part="slack-actions"] {
-    display: flex;
+  & [data-part="providers-table"] .noora-table,
+  & [data-part="slack-profiles-table"] .noora-table {
+    width: 100%;
   }
 
   & [data-part="providers-table"] .noora-table {
-    width: 100%;
-
     & th:nth-child(1),
     & td:nth-child(1) {
       width: 50%;
     }
 
     /* Right-align the trailing status/action column. */
+    & th:last-child {
+      text-align: right;
+    }
+
+    & td:last-child [data-part="cell"] {
+      justify-content: flex-end;
+    }
+  }
+
+  & [data-part="slack-profiles-table"] .noora-table {
+    & th:nth-child(1),
+    & td:nth-child(1) {
+      width: 70%;
+    }
+
     & th:last-child {
       text-align: right;
     }

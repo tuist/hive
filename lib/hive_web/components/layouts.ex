@@ -61,7 +61,13 @@ defmodule HiveWeb.Layouts do
     assigns = assign(assigns, :messages, flash_messages(assigns.flash))
 
     ~H"""
-    <div :if={@messages != []} class="flash-stack" role="status" aria-live="polite">
+    <div
+      :if={@messages != []}
+      class="flash-region"
+      role="status"
+      aria-live="polite"
+      aria-label="Status messages"
+    >
       <.alert
         :for={message <- @messages}
         id={message.id}
@@ -128,6 +134,7 @@ defmodule HiveWeb.Layouts do
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
   attr :specs_have_new_activity?, :boolean, default: false
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def dashboard(assigns) do
@@ -185,6 +192,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>
@@ -199,6 +207,7 @@ defmodule HiveWeb.Layouts do
   attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def account(assigns) do
@@ -224,6 +233,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>
@@ -238,6 +248,7 @@ defmodule HiveWeb.Layouts do
   attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def ops(assigns) do
@@ -269,6 +280,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>
@@ -294,39 +306,50 @@ defmodule HiveWeb.Layouts do
         </div>
       </a>
       <div data-part="right-section">
-        <div :if={@signed_in?} class="account-dropdown">
+        <div
+          :if={@signed_in?}
+          id="account-dropdown"
+          class="account-dropdown"
+          phx-hook="NooraDropdown"
+          data-loop-focus
+          data-close-on-select
+          data-typeahead
+          data-positioning-offset-main-axis={6}
+        >
           <button data-part="trigger" type="button">
             <.avatar id="current-user-avatar" name={@user_name} color={@avatar_color} size="small" />
             <span data-part="account-name">{@user_name}</span>
             <.chevron_down />
           </button>
-          <div data-part="content">
-            <div data-part="header">
-              <.avatar
-                id="current-user-menu-avatar"
-                name={@user_name}
-                color={@avatar_color}
-                size="medium"
-              />
-              <div data-part="identity">
-                <span data-part="name">{@user_name}</span>
-                <span :if={@user_email} data-part="email">{@user_email}</span>
+          <div data-part="positioner">
+            <div data-part="content">
+              <div data-part="header">
+                <.avatar
+                  id="current-user-menu-avatar"
+                  name={@user_name}
+                  color={@avatar_color}
+                  size="medium"
+                />
+                <div data-part="identity">
+                  <span data-part="name">{@user_name}</span>
+                  <span :if={@user_email} data-part="email">{@user_email}</span>
+                </div>
               </div>
+              <div data-part="actions">
+                <a href={~p"/account/identities"}>
+                  <.user />
+                  <span>Account</span>
+                </a>
+              </div>
+              <form method="post" action="/logout" data-part="actions">
+                <input type="hidden" name="_csrf_token" value={@csrf_token} />
+                <input type="hidden" name="return_to" value={@current_path} />
+                <button type="submit">
+                  <.logout />
+                  <span>Log out</span>
+                </button>
+              </form>
             </div>
-            <div data-part="actions">
-              <a href={~p"/account/identities"}>
-                <.user />
-                <span>Account</span>
-              </a>
-            </div>
-            <form method="post" action="/logout" data-part="actions">
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
-              <input type="hidden" name="return_to" value={@current_path} />
-              <button type="submit">
-                <.logout />
-                <span>Log out</span>
-              </button>
-            </form>
           </div>
         </div>
         <.button

@@ -78,6 +78,23 @@ defmodule HiveWeb.AccountComponents do
       </.card>
 
       <.card icon="brand_slack" title="Slack profile" data-part="slack-card">
+        <:actions>
+          <.button
+            :if={@slack_enabled?}
+            label="Connect Slack profile"
+            href={~p"/account/slack/new"}
+            variant="secondary"
+            size="medium"
+          >
+            <:icon_left><.icon name="link_icon" /></:icon_left>
+          </.button>
+          <.badge
+            :if={not @slack_enabled?}
+            label="Slack not configured"
+            color="neutral"
+            style="light-fill"
+          />
+        </:actions>
         <.card_section data-part="slack-section">
           <div data-part="slack-copy">
             <p>
@@ -85,33 +102,30 @@ defmodule HiveWeb.AccountComponents do
             </p>
           </div>
 
-          <div :if={@slack_profiles != []} data-part="slack-profiles">
-            <article :for={profile <- @slack_profiles} data-part="slack-profile-row">
-              <.icon name="brand_slack" />
-              <div data-part="slack-profile-main">
-                <h2>{profile.installation.team_name || profile.installation.team_id}</h2>
-                <p>{slack_profile_label(profile)}</p>
-              </div>
-              <.badge label="Connected" color="success" style="light-fill" />
-            </article>
-          </div>
-
-          <div data-part="slack-actions">
-            <.button
-              :if={@slack_enabled?}
-              label="Connect Slack profile"
-              href={~p"/account/slack/new"}
-              variant="secondary"
-              size="medium"
+          <div data-part="slack-profiles-table">
+            <.table
+              id="slack-profiles-table"
+              rows={@slack_profiles}
+              row_key={fn profile -> "slack-profile-#{profile.id}" end}
             >
-              <:icon_left><.icon name="link_icon" /></:icon_left>
-            </.button>
-            <.badge
-              :if={not @slack_enabled?}
-              label="Slack not configured"
-              color="neutral"
-              style="light-fill"
-            />
+              <:col :let={profile} label="Workspace">
+                <.text_and_description_cell
+                  icon="brand_slack"
+                  label={profile.installation.team_name || profile.installation.team_id}
+                  description={slack_profile_label(profile)}
+                />
+              </:col>
+              <:col :let={_profile} label="Status">
+                <.badge_cell label="Connected" color="success" style="light-fill" />
+              </:col>
+              <:empty_state>
+                <.table_empty_state
+                  icon="brand_slack"
+                  title="No Slack profile connected"
+                  subtitle={slack_empty_subtitle(@slack_enabled?)}
+                />
+              </:empty_state>
+            </.table>
           </div>
         </.card_section>
       </.card>
@@ -131,6 +145,12 @@ defmodule HiveWeb.AccountComponents do
         profile.slack_user_id
     end
   end
+
+  defp slack_empty_subtitle(true),
+    do: "Connect your Slack profile to receive targeted notifications."
+
+  defp slack_empty_subtitle(false),
+    do: "Slack profile linking is not enabled for this Hive instance."
 
   defp provider_options(providers, identities) do
     uids = Map.new(identities, &{&1.provider, &1.provider_uid})
