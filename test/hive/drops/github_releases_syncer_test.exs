@@ -89,7 +89,10 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
          %{
            title: "Project cache warmups finish faster",
            body: "Warmups now reuse existing cache metadata before planning work.",
-           source_urls: ["https://github.com/#{owner}/#{name}/issues/41"]
+           source_urls: [
+             "https://github.com/#{owner}/#{name}/releases/tag/v1.2.0",
+             "https://github.com/#{owner}/#{name}/issues/41"
+           ]
          },
          %{
            title: "Generated project paths stay stable",

@@ -137,7 +137,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
       external_id: release_item_external_id(repository, release, item),
       title: item.title,
       body: item.body,
-      url: List.first(item.source_urls) || release.html_url,
+      url: item_url(item, release),
       published_at: parse_timestamp(release.published_at || release.created_at),
       version: release.tag_name
     }
@@ -208,6 +208,35 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     release_key = release.tag_name || release.html_url || release.published_at || "untagged"
     "#{repository.owner}/#{repository.name}@#{release_key}"
   end
+
+  defp item_url(item, release) do
+    Enum.find(item.source_urls, &github_issue_or_pull_url?/1) ||
+      List.first(item.source_urls) ||
+      release.html_url
+  end
+
+  defp github_issue_or_pull_url?(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host, path: path}
+      when scheme in ["http", "https"] and is_binary(host) and is_binary(path) ->
+        host = String.downcase(host)
+        path_parts = path |> String.trim_leading("/") |> String.split("/")
+
+        host in ["github.com", "www.github.com"] and github_issue_or_pull_path?(path_parts)
+
+      _other ->
+        false
+    end
+  end
+
+  defp github_issue_or_pull_url?(_url), do: false
+
+  defp github_issue_or_pull_path?([_owner, _name, type, number | _rest])
+       when type in ["issues", "pull"] do
+    match?({_number, ""}, Integer.parse(number))
+  end
+
+  defp github_issue_or_pull_path?(_path_parts), do: false
 
   defp hash_key(value) do
     :sha256
