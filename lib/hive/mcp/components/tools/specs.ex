@@ -31,8 +31,7 @@ defmodule Hive.MCP.Components.Tools.Specs do
             title: spec.source_feature_request.title
           }
         end,
-      comments:
-        Enum.map((Ecto.assoc_loaded?(spec.comments) && spec.comments) || [], &comment_json/1),
+      comments: comments_json(spec),
       revisions:
         Enum.map(
           (Ecto.assoc_loaded?(spec.revisions) && spec.revisions) || [],
@@ -41,6 +40,10 @@ defmodule Hive.MCP.Components.Tools.Specs do
       inserted_at: spec.inserted_at,
       updated_at: spec.updated_at
     }
+  end
+
+  def comments_json(%Spec{} = spec) do
+    Enum.map((Ecto.assoc_loaded?(spec.comments) && spec.comments) || [], &comment_json/1)
   end
 
   defp comment_json(comment) do

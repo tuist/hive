@@ -16,7 +16,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
     %{
       description:
         "Subscribe to Hive drops via Atom or RSS. Pick the projects and domains you want updates from and copy the matching feed URL.",
-      eyebrow: "Drops",
+      section_label: "Drops",
       highlights: ["Atom 1.0", "RSS 2.0", "Project and domain filtering"],
       id: "drops-subscribe",
       path: "/drops/subscribe",

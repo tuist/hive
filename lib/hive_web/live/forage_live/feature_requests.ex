@@ -14,7 +14,7 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
 
     %{
       description: "Public domain ideas submitted by authenticated users.",
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: [
         "#{stats.total} total requests",
         "#{stats.open} open",

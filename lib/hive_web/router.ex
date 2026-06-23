@@ -55,7 +55,7 @@ defmodule HiveWeb.Router do
     scope "/" do
       pipe_through :session
 
-      get "/open-graph/:page_id/:hash", OpenGraphController, :show
+      get "/open-graph/card.jpg", OpenGraphController, :show
     end
 
     scope "/.well-known" do

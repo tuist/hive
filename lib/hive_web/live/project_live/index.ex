@@ -14,7 +14,7 @@ defmodule HiveWeb.ProjectLive.Index do
     %{
       description:
         "Projects are the products, codebases, and services this Hive tracks. Each project owns repositories and sources, and links to reusable domains.",
-      eyebrow: "Projects",
+      section_label: "Projects",
       highlights: ["Top-level grouping", "Owns repositories", "Reusable domains"],
       id: "projects",
       path: "/projects",

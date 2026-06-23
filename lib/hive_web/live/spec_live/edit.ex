@@ -12,7 +12,7 @@ defmodule HiveWeb.SpecLive.Edit do
   def open_graph(spec) do
     %{
       description: "Edit an existing domain proposal.",
-      eyebrow: "Spec",
+      section_label: "Spec",
       highlights: ["Editable proposal", "Optimistic locking", "Member only"],
       id: "specs-edit-#{spec.number}",
       path: "/specs/#{spec.number}/edit",

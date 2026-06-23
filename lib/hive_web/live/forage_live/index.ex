@@ -21,7 +21,7 @@ defmodule HiveWeb.ForageLive.Index do
     %{
       description:
         "A unified queue for feature requests, bug reports, feedback, GitHub issues, and Grafana alerts.",
-      eyebrow: "Forage",
+      section_label: "Forage",
       highlights: [
         "#{stats.total} items",
         "#{stats.open} open signals",

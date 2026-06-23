@@ -13,7 +13,7 @@ defmodule HiveWeb.SpecLive.Index do
   def open_graph(specs) do
     %{
       description: "Editable proposals that shape forage into buildable work.",
-      eyebrow: "Specs",
+      section_label: "Specs",
       highlights: [
         "#{length(specs)} specs",
         "#{Enum.count(specs, &(&1.status == :draft))} drafts",
