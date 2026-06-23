@@ -26,12 +26,10 @@ defmodule Hive.MCP.Components.Tools.DeleteDomain do
   def call(conn, %{"id" => id}) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Auth.member?(user) ->
-        Tool.json_response(%{error: "unauthorized"})
-
-      true ->
-        delete_domain(user, id)
+    if Auth.member?(user) do
+      delete_domain(user, id)
+    else
+      Tool.json_response(%{error: "unauthorized"})
     end
   end
 

@@ -32,12 +32,10 @@ defmodule Hive.MCP.Components.Tools.UpdateDomain do
   def call(conn, %{"id" => id} = args) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Auth.member?(user) ->
-        Tool.json_response(%{error: "unauthorized"})
-
-      true ->
-        update_domain(user, id, args)
+    if Auth.member?(user) do
+      update_domain(user, id, args)
+    else
+      Tool.json_response(%{error: "unauthorized"})
     end
   end
 

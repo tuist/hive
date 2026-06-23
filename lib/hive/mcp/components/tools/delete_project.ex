@@ -26,12 +26,10 @@ defmodule Hive.MCP.Components.Tools.DeleteProject do
   def call(conn, %{"id" => id}) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Auth.member?(user) ->
-        Tool.json_response(%{error: "unauthorized"})
-
-      true ->
-        delete_project(user, id)
+    if Auth.member?(user) do
+      delete_project(user, id)
+    else
+      Tool.json_response(%{error: "unauthorized"})
     end
   end
 

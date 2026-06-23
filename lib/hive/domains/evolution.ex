@@ -245,18 +245,21 @@ defmodule Hive.Domains.Evolution do
         {:skipped, :duplicate_domain_name}
 
       nil ->
-        with {:ok, project_id} <- evolution_project_id() do
-          case Domains.create_domain(%{
-                 name: name,
-                 description: description,
-                 project_id: project_id
-               }) do
-            {:ok, domain} -> {:created, domain}
-            {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
-          end
-        else
+        case evolution_project_id() do
+          {:ok, project_id} -> create_domain(name, description, project_id)
           {:error, reason} -> {:skipped, reason}
         end
+    end
+  end
+
+  defp create_domain(name, description, project_id) do
+    case Domains.create_domain(%{
+           name: name,
+           description: description,
+           project_id: project_id
+         }) do
+      {:ok, domain} -> {:created, domain}
+      {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
     end
   end
 

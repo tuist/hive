@@ -1,9 +1,12 @@
 defmodule HiveWeb.FeedControllerTest do
   use HiveWeb.ConnCase, async: true
 
+  import Ecto.Query
+
   alias Hive.Accounts
   alias Hive.Forage
   alias Hive.Forage.Grafana
+  alias Hive.Forage.GrafanaAlert
   alias Hive.Domains
   alias Hive.Projects
   alias Hive.Projects.Webhooks
@@ -383,11 +386,7 @@ defmodule HiveWeb.FeedControllerTest do
           ]
         })
 
-      Enum.each(alerts, fn alert ->
-        alert
-        |> Ecto.Changeset.change(domain_id: domain.id)
-        |> Repo.update!()
-      end)
+      assign_alerts_to_domain(alerts, domain)
 
       body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
@@ -416,16 +415,21 @@ defmodule HiveWeb.FeedControllerTest do
           ]
         })
 
-      Enum.each(alerts, fn alert ->
-        alert
-        |> Ecto.Changeset.change(domain_id: domain.id)
-        |> Repo.update!()
-      end)
+      assign_alerts_to_domain(alerts, domain)
 
       body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
       refute body =~ "Latency spiking"
     end
+  end
+
+  defp assign_alerts_to_domain(alerts, domain) do
+    alert_ids = Enum.map(alerts, & &1.id)
+
+    Repo.update_all(
+      from(alert in GrafanaAlert, where: alert.id in ^alert_ids),
+      set: [domain_id: domain.id]
+    )
   end
 
   describe "GET /domains/:id/rss.xml" do
