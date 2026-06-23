@@ -741,6 +741,25 @@ defmodule Hive.Forage do
   defp maybe_filter_by_state(query, state), do: where(query, [issue], issue.state == ^state)
 
   @doc """
+  Upserts one GitHub issue or pull request into the forage cache without
+  deleting anything else from the repository cache.
+  """
+  def upsert_repository_github_issue(%GitHubRepository{id: repository_id}, entry) do
+    case upsert_entry(repository_id, entry) do
+      {:ok, %GitHubIssue{} = issue, true} ->
+        classify_issue(issue.id)
+        Hive.Domains.schedule_evolution()
+        {:ok, issue}
+
+      {:ok, %GitHubIssue{} = issue, false} ->
+        {:ok, issue}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
   Replaces the cached open issues for a single repository with `entries`.
   Each entry is a map with `:number`, `:title`, and `:body`. Issues that
   exist in the cache but are absent from `entries` are removed so the
@@ -756,7 +775,13 @@ defmodule Hive.Forage do
       Repo.transaction(fn ->
         dirty_ids =
           entries
-          |> Enum.map(&upsert_entry(repository_id, &1))
+          |> Enum.map(fn entry ->
+            case upsert_entry(repository_id, entry) do
+              {:ok, %GitHubIssue{id: id}, true} -> id
+              {:ok, %GitHubIssue{}, false} -> nil
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+          end)
           |> Enum.reject(&is_nil/1)
 
         delete_missing(repository_id, incoming_numbers)
@@ -805,12 +830,14 @@ defmodule Hive.Forage do
         do: Map.put(attrs, :classified_at, nil),
         else: attrs
 
-    issue =
+    changeset =
       (existing || %GitHubIssue{})
       |> GitHubIssue.changeset(attrs)
-      |> Repo.insert_or_update!()
 
-    if content_changed?, do: issue.id
+    case Repo.insert_or_update(changeset) do
+      {:ok, issue} -> {:ok, issue, content_changed?}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   defp content_changed?(nil, _entry), do: true
@@ -829,12 +856,14 @@ defmodule Hive.Forage do
   defp delete_missing(repository_id, []) do
     GitHubIssue
     |> where([issue], issue.github_repository_id == ^repository_id)
+    |> where([issue], issue.state == :open)
     |> Repo.delete_all()
   end
 
   defp delete_missing(repository_id, numbers) do
     GitHubIssue
     |> where([issue], issue.github_repository_id == ^repository_id)
+    |> where([issue], issue.state == :open)
     |> where([issue], issue.number not in ^numbers)
     |> Repo.delete_all()
   end

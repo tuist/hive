@@ -52,6 +52,11 @@ change later, the rewrite is invalidated and re-runs on the next sync.
 When no LLM is configured, drops keep showing the raw release notes
 unchanged, so deploying without an LLM is fine.
 
+Each generated release drop is also linked to any GitHub issue or pull
+request that grounded it when that repository is connected to Hive. The
+linked GitHub record is kept as a forage item even after it closes, so
+Hive can answer which release addressed a given forage item.
+
 ## Subscribing
 
 Every list-style surface in Hive ships an Atom 1.0 feed at
