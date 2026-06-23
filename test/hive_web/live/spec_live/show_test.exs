@@ -6,6 +6,8 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Auth
   alias Hive.Domains
   alias Hive.Projects
+  alias Hive.Repo
+  alias Hive.Slack.Installation
   alias Hive.Specs
   alias Hive.Specs.RevisionSummaries
 
@@ -16,6 +18,22 @@ defmodule HiveWeb.SpecLive.ShowTest do
     attrs = Map.put_new(attrs, :project_id, project.id)
     {:ok, domain} = Domains.create_domain(attrs)
     domain
+  end
+
+  defp slack_review_notifications! do
+    suffix = System.unique_integer([:positive])
+
+    {:ok, _installation} =
+      %Installation{}
+      |> Installation.changeset(%{
+        team_id: "T#{suffix}",
+        team_name: "Workspace #{suffix}",
+        bot_token: "xoxb-#{suffix}",
+        installed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        notification_channel_id: "C#{suffix}",
+        notification_events: ["spec.review.requested"]
+      })
+      |> Repo.insert()
   end
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
@@ -347,6 +365,22 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refreshed = Specs.get_spec!(spec.id)
     assert refreshed.status == :approved
     assert Enum.any?(refreshed.revisions, &(&1.status == :approved))
+  end
+
+  test "lets members request review from the show header", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+    slack_review_notifications!()
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Memory subsystem", "body" => "Initial proposal."}, user)
+
+    {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ "Ask for review"
+
+    html = render_click(view, "request_review")
+
+    assert html =~ "Review request posted to Slack."
   end
 
   test "rejects status changes from non-members", %{conn: conn} do

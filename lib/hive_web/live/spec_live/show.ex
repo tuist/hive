@@ -46,6 +46,10 @@ defmodule HiveWeb.SpecLive.Show do
        })
        |> assign_spec(spec)
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
+       |> assign(
+         :can_request_review?,
+         Specs.can_request_review?(spec, socket.assigns.current_user)
+       )
        |> assign(:viewer_last_viewed_at, viewer_last_viewed_at)
        |> assign(:revision_summaries_enabled?, Hive.Agents.enabled?())
        |> assign(:expanded_revision_rows, [])
@@ -68,6 +72,28 @@ defmodule HiveWeb.SpecLive.Show do
      socket
      |> assign_spec(spec)
      |> assign(OpenGraph.assigns(open_graph(spec)))}
+  end
+
+  @impl true
+  def handle_event("request_review", _params, socket) do
+    case Specs.request_review(socket.assigns.spec, socket.assigns.current_user) do
+      {:ok, _spec} ->
+        {:noreply, put_flash(socket, :info, "Review request posted to Slack.")}
+
+      {:error, :slack_notifications_not_configured} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Configure a Slack notification channel with spec review requests enabled first."
+         )}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "Only organization members can request review.")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Couldn't request review for this spec.")}
+    end
   end
 
   @impl true
@@ -389,6 +415,7 @@ defmodule HiveWeb.SpecLive.Show do
         edit_comment_form={@edit_comment_form}
         mention_suggestions={@comment_mention_suggestions}
         can_edit?={@can_edit?}
+        can_request_review?={@can_request_review?}
         current_user={@current_user}
         editing_comment_id={@editing_comment_id}
         signed_in?={@signed_in?}

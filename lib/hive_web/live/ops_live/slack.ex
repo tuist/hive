@@ -42,27 +42,28 @@ defmodule HiveWeb.OpsLive.Slack do
          |> assign(:page_title, "Slack · #{socket.assigns.product_name}")
          |> assign(OpenGraph.assigns(open_graph()))
          |> assign(:slack_enabled?, Slack.enabled?())
-         |> assign(:notification_events, Slack.notification_events())
+         |> assign(:notification_routes, Slack.notification_routes())
          |> assign(:installations, Slack.list_installations())}
     end
   end
 
   @impl true
-  def handle_event("save_notifications", %{"id" => id, "installation" => params}, socket) do
+  def handle_event("save_notification_routes", %{"id" => id, "installation" => params}, socket) do
     case Enum.find(socket.assigns.installations, &(&1.id == id)) do
       nil ->
         {:noreply, put_flash(socket, :error, "Slack workspace not found.")}
 
       installation ->
-        case Slack.update_notification_settings(installation, params) do
+        case Slack.update_notification_routes(installation, params) do
           {:ok, _installation} ->
             {:noreply,
              socket
-             |> put_flash(:info, "Slack notifications updated.")
+             |> put_flash(:info, "Slack notification routes updated.")
              |> assign(:installations, Slack.list_installations())}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Slack notifications could not be updated.")}
+            {:noreply,
+             put_flash(socket, :error, "Slack notification routes could not be updated.")}
         end
     end
   end
@@ -162,35 +163,44 @@ defmodule HiveWeb.OpsLive.Slack do
                     </span>
                   </div>
 
-                  <% notification_form = notification_form(installation) %>
                   <.form
                     :if={is_nil(installation.disconnected_at)}
-                    for={notification_form}
-                    phx-submit="save_notifications"
+                    for={%{}}
+                    as={:installation}
+                    phx-submit="save_notification_routes"
                     phx-value-id={installation.id}
-                    data-part="notifications-form"
+                    data-part="notification-routes-form"
                   >
-                    <.text_input
-                      field={notification_form[:notification_channel_id]}
-                      label="Notification channel ID"
-                      placeholder="C0123456789"
-                      show_suffix={false}
-                    />
-                    <fieldset data-part="notifications-events">
-                      <legend>Events</legend>
-                      <input type="hidden" name="installation[notification_events][]" value="" />
-                      <label :for={event <- @notification_events} data-part="notification-event">
-                        <input
-                          type="checkbox"
-                          name="installation[notification_events][]"
-                          value={event}
-                          checked={event in Slack.notification_events_for(installation)}
-                        />
-                        <span>{Slack.notification_event_label(event)}</span>
-                      </label>
-                    </fieldset>
-                    <div data-part="notifications-actions">
-                      <.button label="Save notifications" variant="secondary" size="small" />
+                    <table data-part="notification-routes-table">
+                      <thead>
+                        <tr>
+                          <th>Object type</th>
+                          <th>Slack channel</th>
+                          <th>Notifications</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr :for={route <- @notification_routes} data-part="notification-route-row">
+                          <td>
+                            <strong>{route.label}</strong>
+                            <span>{route.description}</span>
+                          </td>
+                          <td>
+                            <.text_input
+                              id={"notification-route-#{installation.id}-#{route.object_type}"}
+                              name={"installation[notification_routes][#{route.object_type}][slack_channel_id]"}
+                              value={notification_channel_value(installation, route)}
+                              label="Slack channel"
+                              placeholder="C0123456789"
+                              show_suffix={false}
+                            />
+                          </td>
+                          <td>{notification_event_labels(route)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div data-part="notification-routes-actions">
+                      <.button label="Save routes" variant="secondary" size="small" />
                     </div>
                   </.form>
                 </div>
@@ -213,9 +223,15 @@ defmodule HiveWeb.OpsLive.Slack do
     """
   end
 
-  defp notification_form(installation) do
+  defp notification_channel_value(installation, route) do
     installation
-    |> Slack.change_notification_settings()
-    |> to_form(as: :installation)
+    |> Slack.notification_route_for(route.object_type)
+    |> Map.get(:slack_channel_id, "")
+  end
+
+  defp notification_event_labels(route) do
+    route.events
+    |> Enum.map(&Slack.notification_event_label/1)
+    |> Enum.join(", ")
   end
 end

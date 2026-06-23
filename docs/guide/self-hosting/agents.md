@@ -28,6 +28,11 @@ Hive currently uses agents for:
   also backfills revisions whose summary is still missing, spawning one
   worker job per revision so failures retry independently. When no LLM
   is configured, the history falls back to a counts-based heuristic.
+- Spec review requests: when a spec author or editor asks for another
+  review, Hive asks an agent to turn the current spec and latest
+  revision into a concise Slack message with focused review prompts.
+  The Slack notification still posts with a deterministic fallback when
+  no large language model is configured.
 - Slack thread replies: when Hive's Slack bot is `@`-mentioned, Hive
   queues a job that reads the thread context and asks the agent to
   draft a short reply, posted back in the same thread. When no LLM is

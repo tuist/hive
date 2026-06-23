@@ -315,6 +315,32 @@ defmodule Hive.SpecsTest do
     end
   end
 
+  describe "request_review/2" do
+    test "enqueues a Slack review request notification when configured" do
+      user = user()
+      slack_notifications!("spec.review.requested")
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      assert {:ok, _spec} = Specs.request_review(spec, user)
+
+      assert_enqueued(
+        worker: Hive.Slack.Workers.SendNotification,
+        args: %{
+          "event" => "spec.review.requested",
+          "spec_id" => spec.id,
+          "requester_id" => user.id
+        }
+      )
+    end
+
+    test "returns a configuration error when no Slack review target is enabled" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      assert Specs.request_review(spec, user) == {:error, :slack_notifications_not_configured}
+    end
+  end
+
   describe "comments" do
     test "requires authentication" do
       user = user()
