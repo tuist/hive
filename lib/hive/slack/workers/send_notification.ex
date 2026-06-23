@@ -205,10 +205,7 @@ defmodule Hive.Slack.Workers.SendNotification do
   defp maybe_review_focus_section([]), do: nil
 
   defp maybe_review_focus_section(review_focus) do
-    text =
-      review_focus
-      |> Enum.map(&"- #{escape(&1)}")
-      |> Enum.join("\n")
+    text = Enum.map_join(review_focus, "\n", &"- #{escape(&1)}")
 
     section("*Review focus:*\n#{text}")
   end

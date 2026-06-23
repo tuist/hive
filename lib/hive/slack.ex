@@ -112,18 +112,20 @@ defmodule Hive.Slack do
   def notification_event_label(event), do: event
 
   def notification_targets_for(event) when is_binary(event) do
-    with %{object_type: object_type} <- notification_route_for_event(event) do
-      Installation
-      |> where([installation], is_nil(installation.disconnected_at))
-      |> where(
-        [installation],
-        not is_nil(installation.bot_token) and installation.bot_token != ""
-      )
-      |> preload(:notification_routes)
-      |> Repo.all()
-      |> Enum.flat_map(&target_installation(&1, object_type, event))
-    else
-      _unknown_event -> []
+    case notification_route_for_event(event) do
+      %{object_type: object_type} ->
+        Installation
+        |> where([installation], is_nil(installation.disconnected_at))
+        |> where(
+          [installation],
+          not is_nil(installation.bot_token) and installation.bot_token != ""
+        )
+        |> preload(:notification_routes)
+        |> Repo.all()
+        |> Enum.flat_map(&target_installation(&1, object_type, event))
+
+      _unknown_event ->
+        []
     end
   end
 
@@ -233,19 +235,27 @@ defmodule Hive.Slack do
     routes_params = notification_routes_params(attrs)
 
     Repo.transaction(fn ->
-      Enum.each(notification_routes(), fn route ->
-        case save_notification_route(
-               installation,
-               route,
-               route_params(routes_params, route.object_type)
-             ) do
-          :ok -> :ok
-          {:ok, _route} -> :ok
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-      end)
+      case save_notification_routes(installation, routes_params) do
+        :ok -> get_installation(installation.id)
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
 
-      get_installation(installation.id)
+  defp save_notification_routes(%Installation{} = installation, routes_params) do
+    Enum.reduce_while(notification_routes(), :ok, fn route, :ok ->
+      result =
+        save_notification_route(
+          installation,
+          route,
+          route_params(routes_params, route.object_type)
+        )
+
+      case result do
+        :ok -> {:cont, :ok}
+        {:ok, _route} -> {:cont, :ok}
+        {:error, changeset} -> {:halt, {:error, changeset}}
+      end
     end)
   end
 

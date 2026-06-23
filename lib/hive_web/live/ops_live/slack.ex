@@ -230,8 +230,6 @@ defmodule HiveWeb.OpsLive.Slack do
   end
 
   defp notification_event_labels(route) do
-    route.events
-    |> Enum.map(&Slack.notification_event_label/1)
-    |> Enum.join(", ")
+    Enum.map_join(route.events, ", ", &Slack.notification_event_label/1)
   end
 end
