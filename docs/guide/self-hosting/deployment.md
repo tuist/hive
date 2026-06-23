@@ -67,6 +67,43 @@ provide:
 - `HIVE_S3_FORCE_PATH_STYLE` (optional, `true` or `1`; useful for
   S3-compatible providers)
 
+## Error reporting
+
+Hive can send application errors to Sentry when you provide
+`SENTRY_DSN`. The value is the Sentry
+[Data Source Name](https://docs.sentry.io/product/sentry-basics/dsn-explainer/)
+for the project that should receive events. When `SENTRY_DSN` is unset,
+Hive does not send events and the rest of the application behaves the
+same as a deployment without Sentry.
+
+Optional variables:
+
+- `SENTRY_ENVIRONMENT`: tags events with the deployment environment.
+  The Helm chart defaults this to `production`.
+- `SENTRY_RELEASE`: tags events with the deployed release. Tuist's
+  deployment workflow sets this to the deployed commit identifier; other
+  deployments can set it to an image tag, release version, or commit.
+
+For a manually managed Kubernetes Secret, add the Sentry value beside
+the rest of the app secrets:
+
+```bash
+kubectl -n hive create secret generic hive-app \
+  --from-literal=SECRET_KEY_BASE="$(mix phx.gen.secret)" \
+  --from-literal=SENTRY_DSN="https://examplePublicKey@o0.ingest.sentry.io/0"
+```
+
+When using the Helm chart with External Secrets, map `SENTRY_DSN` to the
+secret reference in your values overlay:
+
+```yaml
+externalSecrets:
+  enabled: true
+  items:
+    SENTRY_DSN:
+      remoteRef: "hive-sentry/dsn"
+```
+
 ## Vector database
 
 Hive can also point at an `opendata-vector` HTTP database for embedding

@@ -1,4 +1,5 @@
 defmodule HiveWeb.Endpoint do
+  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :hive
 
   @session_options [
@@ -23,6 +24,7 @@ defmodule HiveWeb.Endpoint do
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Sentry.PlugContext
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

@@ -9,6 +9,7 @@ defmodule Hive.Application do
 
   @impl true
   def start(_type, _args) do
+    attach_sentry_logger()
     ensure_mcp_session_store_started()
 
     children =
@@ -64,5 +65,13 @@ defmodule Hive.Application do
     end
 
     HiveWeb.Plugs.OAuthRegistrationRateLimit.init_table()
+  end
+
+  defp attach_sentry_logger do
+    if Application.get_env(:sentry, :dsn) do
+      :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
+        config: %{metadata: [:file, :line]}
+      })
+    end
   end
 end

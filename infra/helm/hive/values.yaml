@@ -59,6 +59,9 @@ env:
   # below, usually with credentials coming from `externalSecrets.items`.
   HIVE_OBJECT_STORAGE_PROVIDER: "none"
   HIVE_S3_FORCE_PATH_STYLE: "false"
+  # When the Sentry Data Source Name is present, events are tagged with
+  # this deployment environment. SENTRY_RELEASE is usually set per deploy.
+  SENTRY_ENVIRONMENT: "production"
 
 probes:
   readiness:
@@ -109,6 +112,8 @@ externalSecrets:
   #       remoteRef: "google-oauth/username"
   #     HIVE_GOOGLE_CLIENT_SECRET:
   #       remoteRef: "google-oauth/credential"
+  #     SENTRY_DSN:
+  #       remoteRef: "hive-sentry/dsn"
   items: {}
   pullSecret:
     enabled: false

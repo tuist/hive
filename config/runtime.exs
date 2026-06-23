@@ -111,6 +111,16 @@ if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
 end
 
+if sentry_dsn = System.get_env("SENTRY_DSN") do
+  config :sentry,
+    dsn: sentry_dsn,
+    environment_name: System.get_env("SENTRY_ENVIRONMENT", to_string(config_env())),
+    release: System.get_env("SENTRY_RELEASE") || to_string(Application.spec(:hive, :vsn)),
+    enable_source_code_context: true,
+    root_source_code_paths: [File.cwd!()],
+    before_send: {Hive.SentryEventFilter, :before_send}
+end
+
 # Condukt-backed agents read their LLM credentials from `:hive, :llm`.
 # When `HIVE_LLM_API_KEY` is unset the config stays empty and `Hive.Agents`
 # refuses to run, so the rest of the app keeps booting in environments
