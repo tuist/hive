@@ -144,6 +144,8 @@ defmodule HiveWeb.LayoutsTest do
       html = render_dashboard(assigns(%{signed_in?: true}))
 
       assert html =~ "account-dropdown"
+      assert html =~ ~s(phx-hook="NooraDropdown")
+      assert html =~ ~s(data-part="positioner")
       assert html =~ "alice@example.com"
       assert html =~ ~s(href="/account/identities")
       assert html =~ "Account"
