@@ -50,7 +50,7 @@ defmodule HiveWeb.OpenGraphTest do
              open_graph: %{
                description: description,
                image: image,
-               image_height: 1080,
+               image_height: 1008,
                image_width: 1920,
                title: "Sample | Hive",
                twitter_card: "summary_large_image",
@@ -104,7 +104,7 @@ defmodule HiveWeb.OpenGraphTest do
           send(parent, {:head, key})
           {:error, {:unexpected_status, 404, ""}}
         end,
-        generator: fn %{id: "sample-page", version: "v4"} -> "generated-jpeg" end,
+        generator: fn %{id: "sample-page", version: "v5"} -> "generated-jpeg" end,
         put_object: fn key, body, opts ->
           send(parent, {:put, key, body, opts})
           {:ok, %{status: 200}}
@@ -200,7 +200,7 @@ defmodule HiveWeb.OpenGraphTest do
              open_graph: %{
                description: ^description,
                image: image,
-               image_height: 1080,
+               image_height: 1008,
                image_width: 1920,
                title: meta_title,
                twitter_card: "summary_large_image",

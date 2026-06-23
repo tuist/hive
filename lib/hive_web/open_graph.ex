@@ -11,10 +11,10 @@ defmodule HiveWeb.OpenGraph do
 
   @browser_pool HiveWeb.OpenGraph.BrowserPool
   @content_type "image/jpeg"
-  @height 1080
+  @height 1008
   @quality 95
   @token_salt "open-graph-card-v1"
-  @version "v4"
+  @version "v5"
   @width 1920
 
   def content_type, do: @content_type
@@ -141,7 +141,7 @@ defmodule HiveWeb.OpenGraph do
             position: relative;
             width: #{@width}px;
             height: #{@height}px;
-            padding: 96px;
+            padding: 78px 96px 76px;
             background:
               linear-gradient(90deg, rgba(119, 90, 255, 0.16) 0, rgba(119, 90, 255, 0) 34%),
               linear-gradient(180deg, #ffffff 0, #f8fafc 100%);
@@ -176,16 +176,16 @@ defmodule HiveWeb.OpenGraph do
           .brand {
             display: flex;
             align-items: center;
-            gap: 28px;
-            min-height: 84px;
+            gap: 26px;
+            min-height: 76px;
             color: #333948;
             font-size: 34px;
             font-weight: 650;
           }
 
           .brand img {
-            width: 76px;
-            height: 76px;
+            width: 68px;
+            height: 68px;
             object-fit: contain;
           }
 
@@ -193,12 +193,12 @@ defmodule HiveWeb.OpenGraph do
             display: flex;
             flex-direction: column;
             min-height: 0;
-            margin-top: 72px;
+            margin-top: 52px;
             max-width: 1380px;
           }
 
           .section-label {
-            margin: 0 0 28px;
+            margin: 0 0 24px;
             color: #5a6274;
             font-size: 38px;
             font-weight: 700;
@@ -210,7 +210,7 @@ defmodule HiveWeb.OpenGraph do
             margin: 0;
             max-width: 1430px;
             color: #252a33;
-            font-size: 104px;
+            font-size: 96px;
             font-weight: 760;
             letter-spacing: 0;
             line-height: 1.04;
@@ -222,10 +222,10 @@ defmodule HiveWeb.OpenGraph do
 
           .description {
             display: -webkit-box;
-            margin: 32px 0 0;
+            margin: 28px 0 0;
             max-width: 1270px;
             color: #555f72;
-            font-size: 40px;
+            font-size: 38px;
             font-weight: 450;
             line-height: 1.28;
             overflow: hidden;
@@ -237,7 +237,7 @@ defmodule HiveWeb.OpenGraph do
             display: flex;
             align-items: center;
             gap: 20px;
-            margin-top: 32px;
+            margin-top: 28px;
             color: #333948;
             font-size: 32px;
             font-weight: 650;
@@ -279,7 +279,7 @@ defmodule HiveWeb.OpenGraph do
           li {
             display: flex;
             align-items: center;
-            min-height: 72px;
+            min-height: 68px;
             max-width: 420px;
             padding: 0 28px;
             border: 1px solid rgba(37, 42, 51, 0.1);
