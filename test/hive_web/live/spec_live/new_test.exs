@@ -3,6 +3,16 @@ defmodule HiveWeb.SpecLive.NewTest do
 
   alias Hive.Forage
   alias Hive.Domains
+  alias Hive.Projects
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
 
   test "redirects guests away from the new spec form", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/specs"}}} = live(conn, ~p"/specs/new")
@@ -10,7 +20,7 @@ defmodule HiveWeb.SpecLive.NewTest do
 
   test "creates a direct spec", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, domain} = Domains.create_domain(%{name: "Hive app"})
+    domain = create_domain!(%{name: "Hive app"})
 
     {:ok, view, html} = live(conn, ~p"/specs/new")
 

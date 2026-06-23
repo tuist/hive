@@ -12,6 +12,7 @@ defmodule HiveWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import Phoenix.LiveViewTest
+      import Hive.DataCase
       import HiveWeb.ConnCase
     end
   end

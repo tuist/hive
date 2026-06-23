@@ -15,17 +15,19 @@ Hive is a single web service that holds the shape of product work in
 one place:
 
 - **Projects** group everything by product, codebase, or service the
-  instance tracks. A project owns its connected GitHub repositories
-  and the RSS sources that feed it.
-- **Domains** are optional sub-domains *inside* a project, so a team
-  can split a project into smaller buckets the classifier routes
-  issues and drops into. A single-product instance can keep zero
-  domains; a multi-domain project can carry several.
+  instance tracks, such as Atlas, Hive, Tuist, Kura, Noora, or Once.
+  A project owns its linked GitHub repositories and the RSS sources that
+  feed it.
+- **Domains** are reusable classification tags that can be associated
+  with one or more projects. A single-product instance can keep zero
+  domains; a multi-domain project can carry several, and a shared
+  domain can belong to multiple projects.
 - **Specs** capture intent, decisions, and the surface area of a piece
   of work in a form both humans and agents can read.
 - **Forage** brings feature requests, bug reports, feedback, GitHub
-  issues, and Grafana alerts into one triage queue, scoped to the
-  domains each viewer can see.
+  issues, and Grafana alerts into one triage queue. GitHub issues are
+  classified into project domains; Grafana alerts arrive through
+  project webhooks.
 - **Drops** aggregate shipped updates (GitHub releases and changelog
   feeds) into a stream subscribers can follow per project or per
   domain.

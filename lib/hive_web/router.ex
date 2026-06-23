@@ -39,7 +39,7 @@ defmodule HiveWeb.Router do
     pipe_through :json_api
 
     post "/github", GitHubWebhookController, :create
-    post "/domains/:domain_id/:source/:token", DomainWebhookController, :create
+    post "/projects/:project_id/:source/:token", ProjectWebhookController, :create
   end
 
   scope "/api/slack", HiveWeb do
@@ -96,6 +96,8 @@ defmodule HiveWeb.Router do
       get "/domains/:id/rss.xml", FeedController, :domain_rss
       get "/domains/:id/drops/atom.xml", FeedController, :domain_drops_atom
       get "/domains/:id/drops/rss.xml", FeedController, :domain_drops_rss
+      get "/projects/:id/drops/atom.xml", FeedController, :project_drops_atom
+      get "/projects/:id/drops/rss.xml", FeedController, :project_drops_rss
     end
 
     scope "/oauth2", OAuth do

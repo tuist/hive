@@ -7,6 +7,7 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
   alias Hive.Forage.GitHubIssueClassificationSweeper
   alias Hive.Forage.GitHubIssueClassificationWorker
   alias Hive.Domains
+  alias Hive.Projects
 
   defp unique, do: System.unique_integer([:positive])
 
@@ -16,13 +17,19 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
     {:ok, domain} =
       Domains.create_domain(%{
         name: "sweeper-#{suffix}",
+        project_id: create_project!().id,
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo#{suffix}",
         github_repository_visibility: "public"
       })
 
-    hd(domain.project.github_repositories)
+    github_repository_for_domain!(domain)
+  end
+
+  defp create_project! do
+    {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+    project
   end
 
   defp insert_issue!(repository, number, attrs \\ %{}) do

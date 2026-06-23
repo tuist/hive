@@ -25,4 +25,20 @@ defmodule Hive.DataCase do
     pid = Sandbox.start_owner!(Hive.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
   end
+
+  def github_repository_for_domain!(domain) do
+    domain.projects
+    |> Enum.flat_map(&project_repositories/1)
+    |> List.first()
+  end
+
+  def github_repositories_for_domain(domain) do
+    domain.projects
+    |> Enum.flat_map(&project_repositories/1)
+  end
+
+  defp project_repositories(%{github_repositories: repositories}) when is_list(repositories),
+    do: repositories
+
+  defp project_repositories(_project), do: []
 end

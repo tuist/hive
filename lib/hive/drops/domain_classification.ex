@@ -16,6 +16,7 @@ defmodule Hive.Drops.DomainClassification do
   alias Hive.Drops.Drop
   alias Hive.Domains.GitHubRepository
   alias Hive.Domains.Domain
+  alias Hive.Projects.ProjectDomain
   alias Hive.Repo
 
   @business_context """
@@ -126,7 +127,9 @@ defmodule Hive.Drops.DomainClassification do
 
   defp domains_for_project(project_id) do
     Domain
-    |> where([domain], domain.project_id == ^project_id)
+    |> join(:inner, [domain], link in ProjectDomain,
+      on: link.domain_id == domain.id and link.project_id == ^project_id
+    )
     |> order_by([domain], asc: domain.name)
     |> Repo.all()
   end

@@ -4,6 +4,16 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
   alias Hive.Drops
   alias Hive.MCP.Components.Tools.GetDrop
   alias Hive.Domains
+  alias Hive.Projects
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
 
   defp insert_drop!(domain, attrs) do
     {:ok, drop} = Drops.upsert_drop(attrs)
@@ -13,7 +23,7 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
 
   test "returns the drop when visible to the user" do
     user = mcp_user()
-    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
+    domain = create_domain!(%{name: "Hive", visibility: "public"})
 
     drop =
       insert_drop!(domain, %{
@@ -34,7 +44,7 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
     user = mcp_user("outsider@external.example")
     {:ok, user} = user |> Ecto.Changeset.change(role: :collaborator) |> Hive.Repo.update()
 
-    {:ok, domain} = Domains.create_domain(%{name: "Hive", visibility: "private"})
+    domain = create_domain!(%{name: "Hive", visibility: "private"})
 
     drop =
       insert_drop!(domain, %{

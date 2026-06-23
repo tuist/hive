@@ -1,11 +1,9 @@
 defmodule Hive.Domains.Domain do
   @moduledoc """
-  A domain is a sub-domain *within* a project. Projects own the
-  repositories and the RSS sources; domains are the granular tags an
-  operator wants to slice that project by (for example "Cache" or
-  "Generated projects" inside the Tuist project). A drop is linked to
-  one or more domains; its project is derived from the domain's
-  `project_id`.
+  A domain is a reusable tag an operator wants to slice shipped updates
+  by, for example "Cache" or "Generated projects". A domain may be
+  associated with more than one project; repositories and RSS sources
+  still belong to a single project.
   """
 
   use Ecto.Schema
@@ -21,14 +19,16 @@ defmodule Hive.Domains.Domain do
     field :description, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
 
-    # Virtual fields kept so the existing single-form UX (create a
-    # domain with its repo in one step) still works. The context
-    # promotes these into the parent project.
+    # Kept for older callers that still pass project or repository data
+    # while creating domains.
     field :github_repository_owner, :string, virtual: true
     field :github_repository_name, :string, virtual: true
     field :github_repository_visibility, Ecto.Enum, values: [:public, :private], virtual: true
+    field :project_id, :binary_id, virtual: true
 
-    belongs_to :project, Hive.Projects.Project
+    many_to_many :projects, Hive.Projects.Project,
+      join_through: Hive.Projects.ProjectDomain,
+      join_keys: [domain_id: :id, project_id: :id]
 
     many_to_many :specs, Hive.Specs.Spec,
       join_through: "domains_specs",
@@ -60,7 +60,6 @@ defmodule Hive.Domains.Domain do
     |> validate_inclusion(:visibility, @visibilities)
     |> validate_repository_fields()
     |> unique_constraint(:name)
-    |> foreign_key_constraint(:project_id)
   end
 
   def repository_attrs(%Ecto.Changeset{} = changeset) do

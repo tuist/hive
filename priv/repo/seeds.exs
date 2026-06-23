@@ -10,9 +10,10 @@ alias Hive.Forage.Grafana
 alias Hive.Domains
 alias Hive.Domains.GitHubRepository
 alias Hive.Domains.Domain
-alias Hive.Domains.Webhook
-alias Hive.Domains.Webhooks
 alias Hive.Projects
+alias Hive.Projects.Project
+alias Hive.Projects.Webhook
+alias Hive.Projects.Webhooks
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
@@ -120,12 +121,13 @@ Enum.each(forage_items, fn seed ->
   end
 end)
 
-# Projects are the top-level grouping. Each project owns its
-# repositories and the domains (sub-domains) it slices by.
+# Projects are the top-level grouping. Each project owns repositories
+# and links to the reusable domains it slices by.
 projects_fixtures = [
   %{
     name: "Tuist",
-    description: "Developer tooling for Xcode projects, CI, caching, and app delivery.",
+    description:
+      "Developer tooling for Xcode projects, continuous integration, caching, and app delivery.",
     visibility: "public",
     repositories: [%{owner: "tuist", name: "tuist", visibility: "public"}],
     domains: [
@@ -186,6 +188,24 @@ projects_fixtures = [
     ]
   },
   %{
+    name: "Kura",
+    description: "Tuist's Kura product surface.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "kura", visibility: "public"}],
+    domains: [
+      %{name: "Kura", description: "All Kura updates.", visibility: "public"}
+    ]
+  },
+  %{
+    name: "Noora",
+    description: "Tuist's design system.",
+    visibility: "public",
+    repositories: [%{owner: "tuist", name: "noora", visibility: "public"}],
+    domains: [
+      %{name: "Noora", description: "All Noora updates.", visibility: "public"}
+    ]
+  },
+  %{
     name: "Once",
     description: "Installable Tuist products that people can run in their own infrastructure.",
     visibility: "public",
@@ -241,15 +261,18 @@ Enum.each(projects_fixtures, fn fixture ->
   Enum.each(fixture.domains, fn domain_attrs ->
     attrs = Map.put(domain_attrs, :project_id, project.id)
 
-    case Repo.get_by(Domain, name: domain_attrs.name) do
-      nil ->
-        {:ok, _domain} = Domains.create_domain(attrs)
+    domain =
+      case Repo.get_by(Domain, name: domain_attrs.name) do
+        nil ->
+          {:ok, domain} = Domains.create_domain(attrs)
+          domain
 
-      domain ->
-        domain
-        |> Domain.changeset(attrs)
-        |> Repo.update!()
-    end
+        domain ->
+          {:ok, domain} = Domains.update_domain(domain, attrs)
+          domain
+      end
+
+    Domains.link_domain_to_project(domain, project.id)
   end)
 end)
 
@@ -827,38 +850,39 @@ Enum.each(spec_view_seeds, fn seed ->
   end
 end)
 
-domain_webhooks = [
-  %{domain_name: "Hive", name: "Seed Grafana", source: :grafana},
-  %{domain_name: "Tuist", name: "Seed Grafana", source: :grafana}
+project_webhooks = [
+  %{project_name: "Hive", name: "Seed Grafana", source: :grafana},
+  %{project_name: "Tuist", name: "Seed Grafana", source: :grafana}
 ]
 
-Enum.each(domain_webhooks, fn seed ->
-  domain = Repo.get_by!(Domain, name: seed.domain_name)
+Enum.each(project_webhooks, fn seed ->
+  project = Repo.get_by!(Project, name: seed.project_name)
 
   exists? =
     Webhook
     |> where(
       [webhook],
-      webhook.domain_id == ^domain.id and webhook.name == ^seed.name and
+      webhook.project_id == ^project.id and webhook.name == ^seed.name and
         webhook.source == ^seed.source
     )
     |> Repo.exists?()
 
   unless exists? do
     {:ok, {_webhook, token}} =
-      Webhooks.create(domain, %{
+      Webhooks.create(project, %{
         "name" => seed.name,
         "source" => Atom.to_string(seed.source)
       })
 
     IO.puts(
-      "Seeded webhook for #{seed.domain_name} (#{seed.source}). Token (shown once): #{token}"
+      "Seeded webhook for #{seed.project_name} (#{seed.source}). Token (shown once): #{token}"
     )
   end
 end)
 
 grafana_alert_seeds = [
   %{
+    project_name: "Hive",
     domain_name: "Hive",
     payload: %{
       "status" => "firing",
@@ -883,6 +907,7 @@ grafana_alert_seeds = [
     }
   },
   %{
+    project_name: "Hive",
     domain_name: "Hive",
     payload: %{
       "status" => "firing",
@@ -906,6 +931,7 @@ grafana_alert_seeds = [
     }
   },
   %{
+    project_name: "Tuist",
     domain_name: "Tuist",
     payload: %{
       "status" => "resolved",
@@ -931,6 +957,7 @@ grafana_alert_seeds = [
     }
   },
   %{
+    project_name: "Tuist",
     domain_name: "Tuist",
     payload: %{
       "status" => "firing",
@@ -957,16 +984,25 @@ grafana_alert_seeds = [
 ]
 
 Enum.each(grafana_alert_seeds, fn seed ->
-  domain = Repo.get_by!(Domain, name: seed.domain_name)
+  project = Repo.get_by!(Project, name: seed.project_name)
+  domain = Repo.get_by(Domain, name: seed.domain_name)
 
   webhook =
     Repo.one!(
       from webhook in Webhook,
-        where: webhook.domain_id == ^domain.id and webhook.source == ^:grafana,
+        where: webhook.project_id == ^project.id and webhook.source == ^:grafana,
         limit: 1
     )
 
-  {:ok, _alerts} = Grafana.ingest(domain, webhook, seed.payload)
+  {:ok, alerts} = Grafana.ingest(project, webhook, seed.payload)
+
+  if domain do
+    Enum.each(alerts, fn alert ->
+      alert
+      |> Ecto.Changeset.change(domain_id: domain.id)
+      |> Repo.update!()
+    end)
+  end
 end)
 
 # Demo audit activities. Idempotent: each entry is keyed by a stable
@@ -1129,7 +1165,7 @@ audit_seed_entries = [
   },
   %{
     key: "audit-seed-10",
-    action: "domain.webhook_received",
+    action: "project.webhook_received",
     interface: "webhook",
     target_type: "domain",
     target_id: demo_tuist_domain && demo_tuist_domain.id,

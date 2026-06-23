@@ -127,6 +127,7 @@ defmodule HiveWeb.SpecComponents do
   attr :current_user, :map, default: nil
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
+  attr :current_path, :string, required: true
   attr :expanded_revision_rows, :list, required: true
   attr :viewer_last_viewed_at, :any, default: nil
   attr :revision_summaries_enabled?, :boolean, default: false
@@ -339,7 +340,12 @@ defmodule HiveWeb.SpecComponents do
             >
               <p>Comments are available to authenticated users.</p>
               <:action>
-                <.button label="Sign in" href={~p"/login"} size="medium" variant="secondary" />
+                <.button
+                  label="Sign in"
+                  href={~p"/login?#{[return_to: @current_path]}"}
+                  size="medium"
+                  variant="secondary"
+                />
               </:action>
             </.alert>
 

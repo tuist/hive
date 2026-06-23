@@ -6,6 +6,8 @@ defmodule Hive.DropsTest do
   alias Hive.Drops.Drop
   alias Hive.Drops.DropSource
   alias Hive.Domains
+  alias Hive.Domains.GitHubRepository
+  alias Hive.Projects
 
   describe "upsert_drop/1" do
     test "inserts a drop and upserts an existing one by (source_type, external_id)" do
@@ -84,6 +86,21 @@ defmodule Hive.DropsTest do
       assert Enum.map(drops, & &1.id) == [drop_a.id]
     end
 
+    test "filters by project_ids through linked domains" do
+      {:ok, project} = Projects.create_project(%{name: "Atlas", visibility: :public})
+      {:ok, other_project} = Projects.create_project(%{name: "Noora", visibility: :public})
+
+      project_domain = create_domain!(%{name: "Project domain", project_id: project.id})
+      other_domain = create_domain!(%{name: "Other domain", project_id: other_project.id})
+
+      {:ok, project_drop} = insert_drop(project_domain)
+      {:ok, _other_drop} = insert_drop(other_domain)
+
+      {drops, _meta} = Drops.list_drops(user: nil, project_ids: [project.id])
+
+      assert Enum.map(drops, & &1.id) == [project_drop.id]
+    end
+
     test "filters by source_type and search text" do
       domain = create_domain!()
       {:ok, gh_drop} = insert_drop(domain, %{source_type: :github_release, title: "v1.2.3"})
@@ -100,6 +117,34 @@ defmodule Hive.DropsTest do
 
       {drops, _meta} = Drops.list_drops(user: nil, query: "marketing")
       assert length(drops) == 1
+    end
+
+    test "keeps source project available when a drop has no domains yet" do
+      member = create_member!()
+      {:ok, project} = Projects.create_project(%{name: "Noora", visibility: :public})
+
+      repository =
+        %GitHubRepository{}
+        |> GitHubRepository.changeset(%{
+          owner: "tuist",
+          name: "noora",
+          project_id: project.id
+        })
+        |> Repo.insert!()
+
+      {:ok, _drop} =
+        Drops.upsert_drop(%{
+          source_type: :github_release,
+          external_id: "tuist/noora@0.82.6",
+          title: "Breadcrumb keyboard states",
+          url: "https://github.com/tuist/noora/releases/tag/0.82.6",
+          github_repository_id: repository.id
+        })
+
+      {[drop], _meta} = Drops.list_drops(user: member)
+
+      assert Enum.map(Drops.projects_for_drop(drop), & &1.name) == ["Noora"]
+      assert drop.domains == []
     end
   end
 
@@ -144,6 +189,11 @@ defmodule Hive.DropsTest do
 
   defp create_domain!(attrs \\ %{}) do
     attrs = Map.merge(%{name: "Domain #{System.unique_integer([:positive])}"}, attrs)
+
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
     {:ok, domain} = Domains.create_domain(attrs)
     domain
   end

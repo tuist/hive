@@ -6,17 +6,33 @@ defmodule Hive.MCP.ServerTest do
   test "returns a server with the Hive tools" do
     server = Server.server()
 
-    assert Map.keys(server.tools) == [
+    assert server.tools |> Map.keys() |> Enum.sort() == [
              "add_spec_comment",
+             "create_domain",
+             "create_project",
+             "create_project_webhook",
              "create_spec",
+             "delete_domain",
+             "delete_project",
+             "delete_project_webhook",
              "delete_spec_comment",
              "get_audit_activity",
+             "get_domain",
              "get_drop",
+             "get_project",
              "get_spec",
+             "link_project_domain",
+             "link_project_repository",
              "list_audit_activities",
+             "list_domains",
              "list_drops",
+             "list_projects",
              "list_spec_comments",
              "list_specs",
+             "unlink_project_domain",
+             "unlink_project_repository",
+             "update_domain",
+             "update_project",
              "update_spec",
              "update_spec_comment",
              "whoami"

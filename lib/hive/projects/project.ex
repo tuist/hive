@@ -1,9 +1,10 @@
 defmodule Hive.Projects.Project do
   @moduledoc """
   A project is the top-level grouping in Hive: a product, codebase, or
-  service the instance tracks. Projects own their domains (sub-domains),
-  their connected GitHub repositories, and the RSS sources whose entries
-  feed their domains.
+  service the instance tracks. Projects own their connected GitHub
+  repositories and the RSS sources whose entries feed their domains.
+  Domains are reusable tags that may be associated with multiple
+  projects.
   """
 
   use Ecto.Schema
@@ -19,9 +20,13 @@ defmodule Hive.Projects.Project do
     field :description, :string
     field :visibility, Ecto.Enum, values: @visibilities, default: :public
 
-    has_many :domains, Hive.Domains.Domain
+    many_to_many :domains, Hive.Domains.Domain,
+      join_through: Hive.Projects.ProjectDomain,
+      join_keys: [project_id: :id, domain_id: :id]
+
     has_many :github_repositories, Hive.Domains.GitHubRepository
     has_many :drop_sources, Hive.Drops.DropSource
+    has_many :webhooks, Hive.Projects.Webhook
 
     timestamps(type: :utc_datetime)
   end

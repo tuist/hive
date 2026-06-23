@@ -7,6 +7,7 @@ defmodule Hive.SpecsTest do
   alias Hive.Auth
   alias Hive.Forage
   alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Repo
   alias Hive.Slack.Installation
   alias Hive.Specs
@@ -45,6 +46,15 @@ defmodule Hive.SpecsTest do
         notification_events: [event]
       })
       |> Repo.insert()
+  end
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
   end
 
   describe "create_spec/2" do
@@ -95,7 +105,7 @@ defmodule Hive.SpecsTest do
 
     test "associates specs with domains" do
       user = user()
-      {:ok, domain} = Domains.create_domain(%{name: "Hive"})
+      domain = create_domain!(%{name: "Hive"})
 
       assert {:ok, spec} =
                Specs.create_spec(
@@ -187,8 +197,8 @@ defmodule Hive.SpecsTest do
     test "uses spec visibility before domain visibility" do
       member = user("member@tuist.dev")
       contributor = user("contributor@example.com")
-      {:ok, public_domain} = Domains.create_domain(%{name: "Hive", visibility: "public"})
-      {:ok, private_domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
+      public_domain = create_domain!(%{name: "Hive", visibility: "public"})
+      private_domain = create_domain!(%{name: "Atlas", visibility: "private"})
 
       {:ok, public_spec_on_private_domain} =
         Specs.create_spec(
@@ -276,8 +286,8 @@ defmodule Hive.SpecsTest do
 
     test "updates associated domains" do
       user = user()
-      {:ok, hive} = Domains.create_domain(%{name: "Hive"})
-      {:ok, noora} = Domains.create_domain(%{name: "Noora"})
+      hive = create_domain!(%{name: "Hive"})
+      noora = create_domain!(%{name: "Noora"})
 
       {:ok, spec} =
         Specs.create_spec(

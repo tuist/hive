@@ -1,41 +1,31 @@
 defmodule Hive.Domains do
   @moduledoc """
   Configures the domains managed by this Hive instance. Domains are
-  sub-domains *within* a project; repositories belong to the project,
-  not directly to a domain.
+  reusable tags that can be associated with one or more projects;
+  repositories belong to the project, not directly to a domain.
 
-  For backward compatibility with the single-form UX, `create_domain/1`
-  and `update_domain/2` still accept the virtual `github_repository_*`
-  fields and `name`/`visibility`; when no `project_id` is supplied,
-  they bootstrap a project named after the domain and attach the repo
-  there.
+  `create_domain/1` and `update_domain/2` still accept the virtual
+  `github_repository_*` and `project_id` fields for older callers, but
+  dashboard users now link repositories and domains from the project
+  detail page.
   """
 
   import Ecto.Query
 
   alias Ecto.Multi
   alias Hive.Auth
-  alias Hive.Forage.Grafana
   alias Hive.Domains.GitHubRepository
   alias Hive.Domains.Domain
-  alias Hive.Domains.Webhook
-  alias Hive.Projects.Project
+  alias Hive.Projects.ProjectDomain
   alias Hive.Repo
 
   defdelegate evolve_from_work_items(opts \\ []), to: Hive.Domains.Evolution
   defdelegate schedule_evolution, to: Hive.Domains.EvolutionWorker, as: :enqueue
 
-  def ingest_webhook(:grafana, %Domain{} = domain, %Webhook{} = webhook, payload) do
-    with {:ok, alerts} <- Grafana.ingest(domain, webhook, payload) do
-      schedule_evolution()
-      {:ok, alerts}
-    end
-  end
-
   def list_domains do
     Domain
     |> order_by([domain], asc: domain.name)
-    |> preload(project: :github_repositories)
+    |> preload(projects: :github_repositories)
     |> Repo.all()
   end
 
@@ -47,7 +37,7 @@ defmodule Hive.Domains do
     query =
       Domain
       |> order_by([domain], asc: domain.name)
-      |> preload(project: :github_repositories)
+      |> preload(projects: :github_repositories)
 
     if Auth.member?(user) do
       Repo.all(query)
@@ -60,7 +50,7 @@ defmodule Hive.Domains do
 
   def get_domain!(id) do
     Domain
-    |> preload(project: :github_repositories)
+    |> preload(projects: :github_repositories)
     |> Repo.get!(id)
   end
 
@@ -87,15 +77,14 @@ defmodule Hive.Domains do
 
   def create_domain(attrs) do
     changeset = change_domain(%Domain{}, attrs)
+    project_id = project_id_from_changeset(changeset)
     repository_attrs = Domain.repository_attrs(changeset)
 
     if changeset.valid? do
       Multi.new()
-      |> ensure_project_multi(changeset)
-      |> Multi.insert(:domain, fn %{project: project} ->
-        Ecto.Changeset.put_change(changeset, :project_id, project.id)
-      end)
-      |> upsert_repository_multi(repository_attrs)
+      |> Multi.insert(:domain, changeset)
+      |> link_project_multi(project_id)
+      |> upsert_repository_multi(repository_attrs, project_id)
       |> Repo.transaction()
       |> case do
         {:ok, %{domain: domain}} ->
@@ -114,13 +103,15 @@ defmodule Hive.Domains do
   def update_domain(%Domain{} = domain, attrs) do
     domain = preload_full(domain)
     changeset = change_domain(domain, attrs)
+    project_id = project_id_from_changeset(changeset) || first_project_id(domain)
     repository_fields_present? = repository_fields_present?(attrs)
     repository_attrs = Domain.repository_attrs(changeset)
 
     if changeset.valid? do
       Multi.new()
       |> Multi.update(:domain, changeset)
-      |> maybe_replace_repository(domain, repository_attrs, repository_fields_present?)
+      |> link_project_multi(project_id)
+      |> maybe_replace_repository(repository_attrs, repository_fields_present?, project_id)
       |> Repo.transaction()
       |> case do
         {:ok, %{domain: domain}} ->
@@ -134,55 +125,71 @@ defmodule Hive.Domains do
     end
   end
 
-  defp ensure_project_multi(multi, changeset) do
-    case Ecto.Changeset.get_field(changeset, :project_id) do
-      nil ->
-        attrs = bootstrap_project_attrs(changeset)
-        Multi.run(multi, :project, fn repo, _changes -> bootstrap_project(repo, attrs) end)
-
-      project_id when is_binary(project_id) ->
-        Multi.run(multi, :project, fn repo, _changes -> fetch_project(repo, project_id) end)
-    end
+  def link_domain_to_project(%Domain{id: domain_id}, project_id) when is_binary(project_id) do
+    link_domain_to_project(domain_id, project_id)
   end
 
-  defp bootstrap_project_attrs(changeset) do
-    %{
-      name: Ecto.Changeset.get_field(changeset, :name),
-      description: Ecto.Changeset.get_field(changeset, :description),
-      visibility: Ecto.Changeset.get_field(changeset, :visibility) || :public
-    }
+  def link_domain_to_project(domain_id, project_id)
+      when is_binary(domain_id) and is_binary(project_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Repo.insert_all(
+      ProjectDomain,
+      [
+        %{
+          domain_id: domain_id,
+          project_id: project_id,
+          inserted_at: now,
+          updated_at: now
+        }
+      ],
+      on_conflict: :nothing,
+      conflict_target: [:project_id, :domain_id]
+    )
+
+    :ok
   end
 
-  defp bootstrap_project(repo, %{name: name} = attrs) do
-    case repo.get_by(Project, name: name) do
-      %Project{} = project -> {:ok, project}
-      nil -> %Project{} |> Project.changeset(attrs) |> repo.insert()
-    end
+  def unlink_domain_from_project(%Domain{id: domain_id}, project_id) when is_binary(project_id) do
+    unlink_domain_from_project(domain_id, project_id)
   end
 
-  defp fetch_project(repo, project_id) do
-    case repo.get(Project, project_id) do
-      %Project{} = project -> {:ok, project}
-      nil -> {:error, :project_not_found}
-    end
+  def unlink_domain_from_project(domain_id, project_id)
+      when is_binary(domain_id) and is_binary(project_id) do
+    ProjectDomain
+    |> where([link], link.domain_id == ^domain_id and link.project_id == ^project_id)
+    |> Repo.delete_all()
+
+    :ok
   end
 
-  defp upsert_repository_multi(multi, nil), do: multi
+  defp link_project_multi(multi, nil), do: multi
 
-  defp upsert_repository_multi(multi, repository_attrs) do
-    Multi.run(multi, :github_repository, fn repo, %{project: project} ->
-      attrs = Map.put(repository_attrs, :project_id, project.id)
+  defp link_project_multi(multi, project_id) do
+    Multi.run(multi, :project_domain, fn _repo, %{domain: domain} ->
+      link_domain_to_project(domain, project_id)
+      {:ok, :linked}
+    end)
+  end
+
+  defp upsert_repository_multi(multi, nil, _project_id), do: multi
+  defp upsert_repository_multi(multi, _repository_attrs, nil), do: multi
+
+  defp upsert_repository_multi(multi, repository_attrs, project_id) do
+    Multi.run(multi, :github_repository, fn repo, %{domain: domain} ->
+      attrs = Map.put(repository_attrs, :project_id, project_id || domain.project_id)
       get_or_create_github_repository(repo, attrs)
     end)
   end
 
-  defp maybe_replace_repository(multi, _domain, _repository_attrs, false), do: multi
+  defp maybe_replace_repository(multi, _repository_attrs, false, _project_id), do: multi
 
-  defp maybe_replace_repository(multi, _domain, nil, true), do: multi
+  defp maybe_replace_repository(multi, nil, true, _project_id), do: multi
+  defp maybe_replace_repository(multi, _repository_attrs, true, nil), do: multi
 
-  defp maybe_replace_repository(multi, domain, repository_attrs, true) do
+  defp maybe_replace_repository(multi, repository_attrs, true, project_id) do
     Multi.run(multi, :github_repository, fn repo, _changes ->
-      attrs = Map.put(repository_attrs, :project_id, domain.project_id)
+      attrs = Map.put(repository_attrs, :project_id, project_id)
       get_or_create_github_repository(repo, attrs)
     end)
   end
@@ -210,6 +217,23 @@ defmodule Hive.Domains do
 
   defp repository_fields_present?(_attrs), do: false
 
+  defp project_id_from_changeset(changeset) do
+    changeset
+    |> Ecto.Changeset.get_field(:project_id)
+    |> case do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  defp first_project_id(%{projects: projects}) when is_list(projects) do
+    projects
+    |> Enum.map(& &1.id)
+    |> Enum.find(&is_binary/1)
+  end
+
+  defp first_project_id(_domain), do: nil
+
   defp preload_full(domain),
-    do: Repo.preload(domain, [project: :github_repositories], force: true)
+    do: Repo.preload(domain, [projects: :github_repositories], force: true)
 end

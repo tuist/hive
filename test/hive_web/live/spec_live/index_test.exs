@@ -4,7 +4,17 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   alias Hive.Auth
   alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Specs
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
 
   test "renders the empty state and OpenGraph metadata", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/specs")
@@ -18,7 +28,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
   test "lists specs and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
-    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
+    domain = create_domain!(%{name: "Hive"})
 
     {:ok, _spec} =
       Specs.create_spec(
@@ -131,7 +141,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
   test "shows public specs attached to private domains to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, private_domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
+    private_domain = create_domain!(%{name: "Atlas", visibility: "private"})
 
     {:ok, _spec} =
       Specs.create_spec(

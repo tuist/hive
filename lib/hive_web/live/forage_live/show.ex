@@ -369,6 +369,7 @@ defmodule HiveWeb.ForageLive.Show do
         edit_comment_form={@edit_comment_form}
         editing_comment_id={@editing_comment_id}
         signed_in?={@signed_in?}
+        current_path={@current_path}
         current_user={@current_user}
       />
     </Layouts.dashboard>

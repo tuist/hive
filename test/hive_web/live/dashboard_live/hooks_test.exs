@@ -47,5 +47,12 @@ defmodule HiveWeb.DashboardLive.HooksTest do
 
       assert socket.assigns.current_path == "/forage/bug-reports"
     end
+
+    test "tracks the path and query string from the uri" do
+      {:cont, socket} =
+        Hooks.put_current_path(%{}, "https://hive.test/drops?domain=tuist&page=2", socket())
+
+      assert socket.assigns.current_path == "/drops?domain=tuist&page=2"
+    end
   end
 end

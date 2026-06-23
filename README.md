@@ -43,16 +43,28 @@ managed service, but you can try our own instance, or self-host your own.
 Hive separates *what* the instance tracks from *how* you slice it.
 
 A **project** is the top-level grouping: a product, codebase, or
-service the instance tracks (for example Tuist, Atlas, Hive, Once). Projects
-own their connected GitHub repositories and the RSS sources that feed
-their drops. The list of projects lives at `/projects`.
+service the instance tracks (for example Atlas, Hive, Tuist, Kura,
+Noora, and Once). Projects own their linked GitHub repositories and the
+RSS sources that feed their drops. Members can link repositories and
+existing domains from a project's detail page. The list of projects lives
+at `/projects`.
 
-A **domain** is an optional sub-domain *inside* a project, so a team
-can split an instance into smaller buckets the classifier routes
-issues and drops into. The Tuist project, for instance, may carry
-domains like `Cache` or `Generated projects`; a single-product Hive
-(the Kura case) can keep zero domains and surface everything at the
-project level. Domains still appear at `/domains`.
+A **domain** is a reusable classification tag that can be associated
+with one or more projects. The Tuist project, for instance, may carry
+domains like `Cache` or `Generated projects`, while a shared domain
+such as `CLI` can belong to multiple projects when it describes a
+common surface. A single-product Hive can keep zero domains and surface
+everything at the project level. Domains still appear at `/domains`.
+
+## Model Context Protocol
+
+Hive exposes a [Model Context Protocol](https://modelcontextprotocol.io/)
+endpoint at `/mcp` so coding agents can work with the same resources as
+the dashboard. Organization members can create, update, and delete
+projects and domains, link domains and GitHub repositories to projects,
+and generate or remove project webhook URLs. Read tools list visible
+projects, domains, specs, drops, and audit entries according to the
+caller's role.
 
 ## Forage
 
@@ -61,26 +73,29 @@ GitHub issues, and Grafana alerts. Signed-in users can create forage
 items, edit the items they created, and comment on manual forage items
 from Hive. GitHub issue items show the issue discussion from GitHub so
 reviewers can read the latest thread without Hive storing a second copy.
+Project detail pages can generate Grafana webhook URLs so operational
+alerts arrive under the project that owns the service.
 
 ## Drops
 
-Drops aggregate shipped updates so people can follow what each domain
-has actually released. Two sources feed it:
+Drops aggregate shipped updates so people can follow what each project
+and domain has actually released. Two sources feed it:
 
 - **GitHub Releases** are ingested automatically from every repository
-  connected to a domain. Hive asks an agent to traverse the release
+  connected to a project. Hive asks an agent to traverse the release
   body's referenced URLs, fetch the linked context, and turn the
   user-facing improvements it can support into drops. The release itself
   is not shown as a drop.
-- **RSS / Atom changelog feeds** can be registered per domain from
+- **RSS / Atom changelog feeds** can be registered per project from
   `/ops/drops` (admin only). Hive polls every enabled feed every 15
-  minutes and merges its entries into the drops timeline.
+  minutes and routes its entries through the project's associated
+  domains.
 
 Drops are visible everywhere domains are: drops from public domains are
 visible to anyone, drops from private domains are visible to
-organization members. The `/drops` index supports filtering by domain
-and source type. Each domain's drops also surface through the existing
-per-domain merged feed at `/domains/:id/atom.xml`.
+organization members. The `/drops` index supports filtering by project,
+domain, and source type. Each domain's drops also surface through the
+existing per-domain merged feed at `/domains/:id/atom.xml`.
 
 ## Our instance
 
@@ -114,12 +129,14 @@ version):
 - `/forage/atom.xml` — feature requests, bug reports, feedback, GitHub
   issues, and Grafana alerts visible to the subscriber.
 - `/specs/atom.xml`
-- `/drops/atom.xml` — shipped updates across every domain. Add
-  `?domain_ids=<id>,<id>` to subscribe only to drops from a subset of
-  domains.
-- `/domains/:id/atom.xml` — the GitHub issues, Grafana alerts, and
-  drops that belong to one domain, merged into a single timeline.
+- `/drops/atom.xml` — shipped updates across every project and domain.
+  Add `?project_ids=<id>,<id>`, `?domain_ids=<id>,<id>`, or both to
+  subscribe to a subset. Project and domain filters are combined.
+- `/domains/:id/atom.xml` — the GitHub issues, Grafana alerts tagged
+  with that domain, and drops that belong to one domain, merged into a
+  single timeline.
 - `/domains/:id/drops/atom.xml` — only the drops for a single domain.
+- `/projects/:id/drops/atom.xml` — only the drops for a single project.
 
 ## Slack
 

@@ -8,6 +8,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
   alias Hive.GitHub.Client
   alias Hive.GitHub.Issues
   alias Hive.Domains
+  alias Hive.Projects
 
   defp unique, do: System.unique_integer([:positive])
 
@@ -17,6 +18,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
     {:ok, domain} =
       Domains.create_domain(%{
         name: "hive-syncer-#{suffix}",
+        project_id: create_project!().id,
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "hive#{suffix}",
@@ -24,6 +26,11 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
       })
 
     domain
+  end
+
+  defp create_project! do
+    {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+    project
   end
 
   defp start_syncer! do
@@ -52,7 +59,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "upserts new issues and deletes issues that disappeared upstream" do
     domain = setup_domain!()
-    repository = hd(domain.project.github_repositories)
+    repository = github_repository_for_domain!(domain)
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
 
@@ -84,7 +91,7 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
   test "list_github_issues_for_user/1 returns issues with their domain/repo context" do
     domain = setup_domain!()
-    repository = hd(domain.project.github_repositories)
+    repository = github_repository_for_domain!(domain)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{number: 1, title: "Hello", body: "World"}

@@ -1,11 +1,16 @@
 defmodule HiveWeb.FeedControllerTest do
   use HiveWeb.ConnCase, async: true
 
+  import Ecto.Query
+
   alias Hive.Accounts
   alias Hive.Forage
   alias Hive.Forage.Grafana
+  alias Hive.Forage.GrafanaAlert
   alias Hive.Domains
-  alias Hive.Domains.Webhooks
+  alias Hive.Projects
+  alias Hive.Projects.Webhooks
+  alias Hive.Repo
   alias Hive.Specs
 
   defp user(email) do
@@ -21,6 +26,23 @@ defmodule HiveWeb.FeedControllerTest do
 
     {:ok, member} = Accounts.update_user_role(member, :member)
     member
+  end
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = put_project_id(attrs, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
+
+  defp put_project_id(attrs, project_id) do
+    if Enum.any?(Map.keys(attrs), &is_binary/1) do
+      Map.put_new(attrs, "project_id", project_id)
+    else
+      Map.put_new(attrs, :project_id, project_id)
+    end
   end
 
   describe "GET /forage/atom.xml" do
@@ -308,7 +330,7 @@ defmodule HiveWeb.FeedControllerTest do
     end
 
     test "returns 404 to anonymous viewers for a private domain", %{conn: conn} do
-      {:ok, domain} = Domains.create_domain(%{"name" => "Private", "visibility" => "private"})
+      domain = create_domain!(%{"name" => "Private", "visibility" => "private"})
 
       conn = get(conn, ~p"/domains/#{domain.id}/atom.xml")
 
@@ -318,8 +340,8 @@ defmodule HiveWeb.FeedControllerTest do
     test "lists GitHub issues for a public domain with a public repository", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, domain} =
-        Domains.create_domain(%{
+      domain =
+        create_domain!(%{
           name: "atlas-#{suffix}",
           visibility: "public",
           github_repository_owner: "tuist",
@@ -327,7 +349,7 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(domain.project.github_repositories)
+      repository = github_repository_for_domain!(domain)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Add dark mode", body: "Please."}
@@ -346,14 +368,14 @@ defmodule HiveWeb.FeedControllerTest do
       {conn, _user} = sign_in(conn, "member@example.com")
       suffix = System.unique_integer([:positive])
 
-      {:ok, domain} =
-        Domains.create_domain(%{name: "ops-#{suffix}", visibility: "public"})
+      domain = create_domain!(%{name: "ops-#{suffix}", visibility: "public"})
+      project = List.first(domain.projects)
 
       {:ok, {webhook, _token}} =
-        Webhooks.create(domain, %{"source" => "grafana", "name" => "grafana-webhook"})
+        Webhooks.create(project, %{"source" => "grafana", "name" => "grafana-webhook"})
 
-      {:ok, _alerts} =
-        Grafana.ingest(domain, webhook, %{
+      {:ok, alerts} =
+        Grafana.ingest(project, webhook, %{
           "alerts" => [
             %{
               "status" => "firing",
@@ -363,6 +385,8 @@ defmodule HiveWeb.FeedControllerTest do
             }
           ]
         })
+
+      assign_alerts_to_domain(alerts, domain)
 
       body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
@@ -373,14 +397,14 @@ defmodule HiveWeb.FeedControllerTest do
     test "hides grafana alerts from anonymous viewers", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, domain} =
-        Domains.create_domain(%{name: "ops-#{suffix}", visibility: "public"})
+      domain = create_domain!(%{name: "ops-#{suffix}", visibility: "public"})
+      project = List.first(domain.projects)
 
       {:ok, {webhook, _token}} =
-        Webhooks.create(domain, %{"source" => "grafana", "name" => "grafana-webhook"})
+        Webhooks.create(project, %{"source" => "grafana", "name" => "grafana-webhook"})
 
-      {:ok, _alerts} =
-        Grafana.ingest(domain, webhook, %{
+      {:ok, alerts} =
+        Grafana.ingest(project, webhook, %{
           "alerts" => [
             %{
               "status" => "firing",
@@ -391,18 +415,29 @@ defmodule HiveWeb.FeedControllerTest do
           ]
         })
 
+      assign_alerts_to_domain(alerts, domain)
+
       body = conn |> get(~p"/domains/#{domain.id}/atom.xml") |> response(200)
 
       refute body =~ "Latency spiking"
     end
   end
 
+  defp assign_alerts_to_domain(alerts, domain) do
+    alert_ids = Enum.map(alerts, & &1.id)
+
+    Repo.update_all(
+      from(alert in GrafanaAlert, where: alert.id in ^alert_ids),
+      set: [domain_id: domain.id]
+    )
+  end
+
   describe "GET /domains/:id/rss.xml" do
     test "renders the same content as Atom in RSS 2.0 wrapping", %{conn: conn} do
       suffix = System.unique_integer([:positive])
 
-      {:ok, domain} =
-        Domains.create_domain(%{
+      domain =
+        create_domain!(%{
           name: "atlas-#{suffix}",
           visibility: "public",
           github_repository_owner: "tuist",
@@ -410,7 +445,7 @@ defmodule HiveWeb.FeedControllerTest do
           github_repository_visibility: "public"
         })
 
-      repository = hd(domain.project.github_repositories)
+      repository = github_repository_for_domain!(domain)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 7, title: "Dark mode", body: "Please."}
@@ -427,7 +462,7 @@ defmodule HiveWeb.FeedControllerTest do
 
   describe "domain feed discovery" do
     test "domain detail advertises feeds and renders the dropdown", %{conn: conn} do
-      {:ok, domain} = Domains.create_domain(%{"name" => "Hive", "visibility" => "public"})
+      domain = create_domain!(%{"name" => "Hive", "visibility" => "public"})
 
       body = conn |> get(~p"/domains/#{domain.id}") |> html_response(200)
 

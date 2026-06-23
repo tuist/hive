@@ -1,6 +1,6 @@
-defmodule Hive.Domains.Webhook do
+defmodule Hive.Projects.Webhook do
   @moduledoc """
-  Per-domain inbound webhook for an external source (Grafana, etc).
+  Per-project inbound webhook for an external source.
 
   The plaintext token is generated once when the webhook is created,
   shown to the user, and never stored. Only its SHA-256 hash lives in
@@ -17,13 +17,13 @@ defmodule Hive.Domains.Webhook do
 
   @sources [:grafana]
 
-  schema "domain_webhooks" do
+  schema "project_webhooks" do
     field :name, :string
     field :source, Ecto.Enum, values: @sources
     field :token_hash, :string
     field :last_used_at, :utc_datetime
 
-    belongs_to :domain, Hive.Domains.Domain
+    belongs_to :project, Hive.Projects.Project
 
     timestamps(type: :utc_datetime)
   end
@@ -35,8 +35,8 @@ defmodule Hive.Domains.Webhook do
   @doc false
   def changeset(webhook, attrs) do
     webhook
-    |> cast(attrs, [:name, :source, :token_hash, :domain_id])
-    |> validate_required([:name, :source, :token_hash, :domain_id])
+    |> cast(attrs, [:name, :source, :token_hash, :project_id])
+    |> validate_required([:name, :source, :token_hash, :project_id])
     |> validate_length(:name, max: 120)
     |> validate_inclusion(:source, @sources)
     |> unique_constraint(:token_hash)
