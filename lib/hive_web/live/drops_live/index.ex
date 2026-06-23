@@ -143,7 +143,6 @@ defmodule HiveWeb.DropsLive.Index do
       <section id="drops">
         <div data-part="header">
           <div data-part="title-group">
-            <.badge label="Drops" color="information" style="light-fill" />
             <h1>Drops</h1>
             <p>Shipped updates from GitHub releases and changelog feeds across every domain.</p>
           </div>

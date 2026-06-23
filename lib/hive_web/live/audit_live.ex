@@ -125,7 +125,6 @@ defmodule HiveWeb.AuditLive do
       <section id="audit">
         <div data-part="header">
           <div data-part="title-group">
-            <.badge label="Audit" color="information" style="light-fill" />
             <h1>Audit</h1>
             <p>Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths.</p>
           </div>

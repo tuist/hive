@@ -36,7 +36,6 @@ defmodule HiveWeb.ForageComponents do
     <section id="forage">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label="Forage" color="information" style="light-fill" />
           <h1>Forage</h1>
           <p>Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue.</p>
         </div>
