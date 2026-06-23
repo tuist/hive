@@ -395,6 +395,32 @@ defmodule Hive.SpecsTest do
       spec = Specs.get_spec!(spec.id)
       assert Enum.map(spec.comments, & &1.body) == ["Initial note."]
     end
+
+    test "deletes comments for their author" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+      {:ok, comment} = Specs.add_comment(spec, %{"body" => "Initial note."}, user)
+
+      assert {:ok, _comment} = Specs.delete_comment(comment, user)
+
+      spec = Specs.get_spec!(spec.id)
+      assert spec.comments == []
+    end
+
+    test "rejects comment deletes from other users" do
+      author = user("delete-author@example.com")
+      other_user = user("delete-other@example.com")
+
+      {:ok, spec} =
+        Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, author)
+
+      {:ok, comment} = Specs.add_comment(spec, %{"body" => "Initial note."}, author)
+
+      assert Specs.delete_comment(comment, other_user) == {:error, :unauthorized}
+
+      spec = Specs.get_spec!(spec.id)
+      assert Enum.map(spec.comments, & &1.body) == ["Initial note."]
+    end
   end
 
   describe "mark_viewed/2 and new-activity surfacing" do
