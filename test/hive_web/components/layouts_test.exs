@@ -149,14 +149,15 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Account"
       assert html =~ ~s(action="/logout")
       assert html =~ "csrf-token-123"
+      assert html =~ ~s(name="return_to" value="/forage")
       assert html =~ "Log out"
       refute html =~ ">Sign in<"
     end
 
     test "shows a sign-in button and no account menu for guests" do
-      html = render_dashboard(assigns(%{signed_in?: false}))
+      html = render_dashboard(assigns(%{signed_in?: false, current_path: "/domains?page=2"}))
 
-      assert html =~ ~s(href="/login")
+      assert html =~ ~s(href="/login?return_to=%2Fdomains%3Fpage%3D2")
       assert html =~ "Sign in"
       refute html =~ "account-dropdown"
       refute html =~ "Log out"
@@ -209,6 +210,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Account content"
       assert html =~ "Identities"
       assert html =~ "/account/identities"
+      assert html =~ ~s(name="return_to" value="/account/identities")
       refute html =~ "Slack"
       refute html =~ "/ops/slack"
       refute html =~ "Feature requests"
@@ -223,6 +225,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Ops content"
       assert html =~ "Slack"
       assert html =~ "/ops/slack"
+      assert html =~ ~s(name="return_to" value="/ops/slack")
       refute html =~ ~s(<span data-part="label">Identities</span>)
     end
   end

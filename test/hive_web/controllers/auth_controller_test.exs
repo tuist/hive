@@ -184,6 +184,22 @@ defmodule HiveWeb.AuthControllerTest do
     refute get_session(conn, :user_return_to)
   end
 
+  test "POST /logout redirects to the submitted local return path", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "logout-return@example.com")
+
+    conn = post(conn, ~p"/logout", %{"return_to" => "/projects?page=2"})
+
+    assert redirected_to(conn) == "/projects?page=2"
+  end
+
+  test "POST /logout ignores external return paths", %{conn: conn} do
+    {conn, _user} = sign_in(conn, "logout-external-return@example.com")
+
+    conn = post(conn, ~p"/logout", %{"return_to" => "https://example.com"})
+
+    assert redirected_to(conn) == ~p"/login"
+  end
+
   test "GET /auth/:provider falls back to starting a configured provider", %{conn: conn} do
     stub(Auth, :provider, fn :github ->
       %{display_name: "GitHub", allowed_domains: []}

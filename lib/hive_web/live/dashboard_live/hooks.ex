@@ -50,6 +50,14 @@ defmodule HiveWeb.DashboardLive.Hooks do
 
   @doc "handle_params hook that tracks the current path for the sidebar."
   def put_current_path(_params, uri, socket) do
-    {:cont, assign(socket, :current_path, URI.parse(uri).path)}
+    uri = URI.parse(uri)
+
+    current_path =
+      case uri.query do
+        nil -> uri.path || "/"
+        query -> "#{uri.path || "/"}?#{query}"
+      end
+
+    {:cont, assign(socket, :current_path, current_path)}
   end
 end

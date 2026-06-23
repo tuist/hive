@@ -140,6 +140,7 @@ defmodule HiveWeb.Layouts do
         avatar_color={@avatar_color}
         signed_in?={@signed_in?}
         csrf_token={@csrf_token}
+        current_path={@current_path}
       />
       <.line_divider />
       <section data-part="main">
@@ -210,6 +211,7 @@ defmodule HiveWeb.Layouts do
         avatar_color={@avatar_color}
         signed_in?={@signed_in?}
         csrf_token={@csrf_token}
+        current_path={@current_path}
       />
       <.line_divider />
       <section data-part="main">
@@ -248,6 +250,7 @@ defmodule HiveWeb.Layouts do
         avatar_color={@avatar_color}
         signed_in?={@signed_in?}
         csrf_token={@csrf_token}
+        current_path={@current_path}
       />
       <.line_divider />
       <section data-part="main">
@@ -279,6 +282,7 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
+  attr :current_path, :string, default: "/"
 
   defp headerbar(assigns) do
     ~H"""
@@ -317,6 +321,7 @@ defmodule HiveWeb.Layouts do
             </div>
             <form method="post" action="/logout" data-part="actions">
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
+              <input type="hidden" name="return_to" value={@current_path} />
               <button type="submit">
                 <.logout />
                 <span>Log out</span>
@@ -327,7 +332,7 @@ defmodule HiveWeb.Layouts do
         <.button
           :if={!@signed_in?}
           label="Sign in"
-          href={~p"/login"}
+          href={~p"/login?#{[return_to: @current_path]}"}
           variant="primary"
           size="medium"
         />

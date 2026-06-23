@@ -83,7 +83,9 @@ defmodule HiveWeb.AuthController do
     end
   end
 
-  def delete(conn, _params) do
+  def delete(conn, params) do
+    return_to = logout_return_to(params)
+
     case current_user(conn) do
       nil ->
         :ok
@@ -100,7 +102,7 @@ defmodule HiveWeb.AuthController do
 
     conn
     |> configure_session(drop: true)
-    |> redirect(to: ~p"/login")
+    |> redirect(to: return_to)
   end
 
   defp sign_in(conn, user) do
@@ -130,6 +132,12 @@ defmodule HiveWeb.AuthController do
   end
 
   defp maybe_store_return_to(conn, _params), do: conn
+
+  defp logout_return_to(%{"return_to" => return_to}) do
+    if local_return_to?(return_to), do: return_to, else: ~p"/login"
+  end
+
+  defp logout_return_to(_params), do: ~p"/login"
 
   defp local_return_to?(return_to) when is_binary(return_to) do
     uri = URI.parse(return_to)
