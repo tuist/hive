@@ -19,7 +19,6 @@ defmodule HiveWeb.SpecComponents do
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label="Specs" color="information" style="light-fill" />
           <h1>Specs</h1>
           <p>Editable proposals that shape forage into buildable work.</p>
         </div>
