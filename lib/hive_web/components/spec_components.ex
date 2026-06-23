@@ -138,17 +138,11 @@ defmodule HiveWeb.SpecComponents do
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <div data-part="title-badges">
-            <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
-            <.badge
-              :if={@new_activity_since_visit?}
-              label="New activity"
-              color="information"
-              style="light-fill"
-            />
-          </div>
           <h1>{@spec.title}</h1>
-          <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
+          <p>
+            {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
+            <span :if={@new_activity_since_visit?}> · New activity</span>
+          </p>
           <div :if={spec_domains(@spec) != []} data-part="domain-list">
             <.badge
               :for={domain <- spec_domains(@spec)}
@@ -432,7 +426,6 @@ defmodule HiveWeb.SpecComponents do
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label="Spec" color="information" style="light-fill" />
           <h1>{@title}</h1>
           <p>{if @source, do: "Source: #{@source.title}", else: "Write a proposal directly."}</p>
         </div>

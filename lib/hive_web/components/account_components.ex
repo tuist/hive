@@ -19,7 +19,6 @@ defmodule HiveWeb.AccountComponents do
     <section id="account-identities">
       <div data-part="page-header">
         <div data-part="title-group">
-          <.badge label="Account" color="information" style="light-fill" />
           <h1>Identities</h1>
           <p>
             Manage the sign-in providers connected to {@user.email}. Any connected provider can be used to access this account.

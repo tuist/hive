@@ -481,7 +481,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ ~s|>New<|
   end
 
-  test "shows the new-activity header badge and per-comment tag after activity since last visit",
+  test "shows the new-activity header text and per-comment tag after activity since last visit",
        %{conn: conn} do
     {author_conn, author} = sign_in(conn, "author@example.com")
     {reader_conn, reader} = sign_in(conn, "reader@example.com")
@@ -507,12 +507,12 @@ defmodule HiveWeb.SpecLive.ShowTest do
       Specs.add_comment(spec, %{"body" => "Fresh note for the reader."}, author)
 
     {:ok, _view, html} = live(reader_conn, ~p"/specs/#{spec.number}")
-    assert html =~ ~s|>New activity<|
+    assert html =~ "New activity"
     assert html =~ "comment-#{fresh_comment.id}"
     refute html =~ ~s|id="comment-#{old_comment.id}"[^>]*>\\s*<.*>New<|
 
     {:ok, _view, html2} = live(author_conn, ~p"/specs/#{spec.number}")
-    refute html2 =~ ~s|>New activity<|
+    refute html2 =~ "New activity"
   end
 
   test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do

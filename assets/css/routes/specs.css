@@ -27,13 +27,6 @@
     align-items: flex-start;
     gap: var(--noora-spacing-3);
     max-width: 780px;
-
-    & [data-part="title-badges"] {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--noora-spacing-3);
-    }
   }
 
   & [data-part="title-group"] h1 {

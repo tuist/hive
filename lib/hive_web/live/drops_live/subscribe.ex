@@ -119,7 +119,6 @@ defmodule HiveWeb.DropsLive.Subscribe do
       <section id="drops-subscribe">
         <div data-part="page-header">
           <div data-part="title-group">
-            <.badge label="Drops" color="information" style="light-fill" />
             <h1>Subscribe to drops</h1>
             <p>
               Pick projects, domains, or both and copy the matching Atom or RSS URL into your
