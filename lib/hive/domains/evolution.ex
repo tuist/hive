@@ -58,6 +58,7 @@ defmodule Hive.Domains.Evolution do
 
     %{
       business_context: @business_context,
+      current_projects: current_projects(),
       current_domains: current_domains(),
       work_items: work_items(limit)
     }
@@ -94,15 +95,24 @@ defmodule Hive.Domains.Evolution do
   defp current_domains do
     Domain
     |> order_by([domain], asc: domain.name)
+    |> preload(:projects)
     |> Repo.all()
     |> Enum.map(fn domain ->
       %{
         id: domain.id,
         name: domain.name,
         description: domain.description || "",
-        visibility: Atom.to_string(domain.visibility)
+        visibility: Atom.to_string(domain.visibility),
+        projects: project_refs(domain.projects)
       }
     end)
+  end
+
+  defp current_projects do
+    Project
+    |> order_by([project], asc: project.name)
+    |> Repo.all()
+    |> project_refs()
   end
 
   defp work_items(limit) do
@@ -131,6 +141,7 @@ defmodule Hive.Domains.Evolution do
         status: Atom.to_string(request.status),
         source: "forage_feature_requests",
         domains: [],
+        projects: [],
         occurred_at: iso8601(request.inserted_at),
         sort_at: request.inserted_at
       }
@@ -142,7 +153,7 @@ defmodule Hive.Domains.Evolution do
     |> where([issue], issue.state == :open)
     |> order_by([issue], desc: issue.updated_at)
     |> limit(^limit)
-    |> preload([:github_repository, :domains])
+    |> preload([:domains, github_repository: :project])
     |> Repo.all()
     |> Enum.map(fn issue ->
       repository = issue.github_repository
@@ -156,6 +167,7 @@ defmodule Hive.Domains.Evolution do
         status: Atom.to_string(issue.state),
         source: source,
         domains: Enum.map(issue.domains, & &1.name),
+        projects: project_refs([repository.project]),
         occurred_at: iso8601(issue.updated_at),
         sort_at: issue.updated_at
       }
@@ -166,7 +178,7 @@ defmodule Hive.Domains.Evolution do
     GrafanaAlert
     |> order_by([alert], desc: alert.last_received_at)
     |> limit(^limit)
-    |> preload(:domain)
+    |> preload([:domain, :project])
     |> Repo.all()
     |> Enum.map(fn alert ->
       %{
@@ -176,7 +188,8 @@ defmodule Hive.Domains.Evolution do
         body: truncate(alert.summary || labels_summary(alert.labels)),
         status: Atom.to_string(alert.status),
         source: "grafana",
-        domains: [alert.domain.name],
+        domains: domain_names([alert.domain]),
+        projects: project_refs([alert.project]),
         occurred_at: iso8601(alert.last_received_at),
         sort_at: alert.last_received_at || alert.updated_at
       }
@@ -188,7 +201,7 @@ defmodule Hive.Domains.Evolution do
     |> where([spec], spec.status not in [:archived, :rejected])
     |> order_by([spec], desc: spec.updated_at)
     |> limit(^limit)
-    |> preload(:domains)
+    |> preload(domains: :projects)
     |> Repo.all()
     |> Enum.map(fn spec ->
       %{
@@ -199,6 +212,7 @@ defmodule Hive.Domains.Evolution do
         status: Atom.to_string(spec.status),
         source: "specs",
         domains: Enum.map(spec.domains, & &1.name),
+        projects: spec.domains |> Enum.flat_map(& &1.projects) |> project_refs(),
         occurred_at: iso8601(spec.updated_at),
         sort_at: spec.updated_at
       }
@@ -211,10 +225,25 @@ defmodule Hive.Domains.Evolution do
 
   defp labels_summary(_labels), do: ""
 
+  defp project_refs(projects) do
+    projects
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(& &1.name)
+    |> Enum.map(fn project -> %{id: project.id, name: project.name} end)
+  end
+
+  defp domain_names(domains) do
+    domains
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(& &1.name)
+  end
+
   defp apply_change(change) do
     action = change |> value(:action) |> normalize_action()
     name = change |> value(:name) |> normalize_text()
     description = change |> value(:description) |> normalize_text()
+    project_ids = change |> value(:project_ids) |> normalize_project_ids()
 
     cond do
       action not in ["create", "update"] ->
@@ -230,7 +259,7 @@ defmodule Hive.Domains.Evolution do
         {:skipped, :outside_tuist_business_domain}
 
       action == "create" ->
-        create_domain(name, description)
+        create_domain(name, description, project_ids)
 
       action == "update" ->
         change
@@ -239,34 +268,87 @@ defmodule Hive.Domains.Evolution do
     end
   end
 
-  defp create_domain(name, description) do
+  defp create_domain(name, description, requested_project_ids) do
     case domain_by_normalized_name(name) do
       %Domain{} ->
         {:skipped, :duplicate_domain_name}
 
       nil ->
-        case evolution_project_id() do
-          {:ok, project_id} -> create_domain(name, description, project_id)
+        case target_project_ids(requested_project_ids) do
+          {:ok, project_ids} -> insert_domain(name, description, project_ids)
           {:error, reason} -> {:skipped, reason}
         end
     end
   end
 
-  defp create_domain(name, description, project_id) do
+  defp insert_domain(name, description, [project_id | remaining_project_ids]) do
     case Domains.create_domain(%{
            name: name,
            description: description,
            project_id: project_id
          }) do
-      {:ok, domain} -> {:created, domain}
-      {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
+      {:ok, domain} ->
+        Enum.each(remaining_project_ids, &Domains.link_domain_to_project(domain, &1))
+
+        {:created, Domains.get_domain!(domain.id)}
+
+      {:error, changeset} ->
+        {:skipped, {:invalid_domain, changeset_errors(changeset)}}
     end
   end
 
-  defp evolution_project_id do
+  defp target_project_ids([]), do: fallback_project_ids()
+
+  defp target_project_ids(requested_project_ids) do
+    with {:ok, project_ids} <- cast_project_ids(requested_project_ids),
+         :ok <- ensure_projects_exist(project_ids) do
+      {:ok, project_ids}
+    end
+  end
+
+  defp fallback_project_ids do
     case Repo.get_by(Project, name: "Tuist") do
-      %Project{id: id} -> {:ok, id}
-      nil -> {:error, :missing_tuist_project}
+      %Project{id: id} ->
+        {:ok, [id]}
+
+      nil ->
+        Project
+        |> order_by([project], asc: project.name)
+        |> select([project], project.id)
+        |> Repo.all()
+        |> case do
+          [id] -> {:ok, [id]}
+          [] -> {:error, :missing_project}
+          _ids -> {:error, :missing_project_ids}
+        end
+    end
+  end
+
+  defp cast_project_ids(project_ids) do
+    Enum.reduce_while(project_ids, {:ok, []}, fn project_id, {:ok, acc} ->
+      case Ecto.UUID.cast(project_id) do
+        {:ok, uuid} -> {:cont, {:ok, [uuid | acc]}}
+        :error -> {:halt, {:error, :invalid_project_id}}
+      end
+    end)
+    |> case do
+      {:ok, ids} -> {:ok, Enum.reverse(ids)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp ensure_projects_exist(project_ids) do
+    found_ids =
+      Project
+      |> where([project], project.id in ^project_ids)
+      |> select([project], project.id)
+      |> Repo.all()
+      |> MapSet.new()
+
+    if Enum.all?(project_ids, &MapSet.member?(found_ids, &1)) do
+      :ok
+    else
+      {:error, :unknown_project_id}
     end
   end
 
@@ -346,6 +428,16 @@ defmodule Hive.Domains.Evolution do
   defp normalize_text(_value), do: ""
 
   defp normalize_name(name), do: name |> normalize_text() |> String.downcase()
+
+  defp normalize_project_ids(project_ids) when is_list(project_ids) do
+    project_ids
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp normalize_project_ids(_project_ids), do: []
 
   defp truncate(value) when is_binary(value) do
     if String.length(value) > @max_body_length,

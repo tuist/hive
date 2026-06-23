@@ -67,6 +67,7 @@ defmodule Hive.Domains.EvolutionTest do
              name: "Build Cache",
              description:
                "Remote caching, cache diagnostics, and CI acceleration for development teams.",
+             project_ids: [project.id],
              rationale: "Several signals point to cache observability as a durable domain."
            }
          ]
@@ -82,9 +83,31 @@ defmodule Hive.Domains.EvolutionTest do
     assert project.name == "Tuist"
 
     assert_receive {:evolution_input, input}
+    assert Enum.any?(input.current_projects, &(&1.id == project.id))
     assert Enum.any?(input.current_domains, &(&1.name == "Tuist"))
     assert Enum.any?(input.work_items, &(&1.kind == "feature_request"))
     assert Enum.any?(input.work_items, &(&1.kind == "spec"))
+  end
+
+  test "apply_plan/1 links new domains to the requested project" do
+    {:ok, project} = Projects.create_project(%{name: "Atlas", visibility: "public"})
+
+    assert {:ok, %{created: [created], skipped: []}} =
+             Evolution.apply_plan(%{
+               changes: [
+                 %{
+                   action: "create",
+                   name: "Developer Workflows",
+                   description:
+                     "Developer onboarding, documentation, and CLI workflows for Tuist users.",
+                   project_ids: [project.id],
+                   rationale: "The signal belongs to Atlas."
+                 }
+               ]
+             })
+
+    assert [%{id: project_id}] = Repo.preload(created, :projects).projects
+    assert project_id == project.id
   end
 
   test "apply_plan/1 skips too generic and too specific domain suggestions" do
@@ -119,8 +142,8 @@ defmodule Hive.Domains.EvolutionTest do
     assert Enum.map(skipped, & &1.reason) == [:unfit_domain_name, :unfit_domain_name]
   end
 
-  test "apply_plan/1 skips domain creation when the Tuist project has not been created" do
-    assert {:ok, %{created: [], skipped: [%{reason: :missing_tuist_project}]}} =
+  test "apply_plan/1 skips domain creation when no project context is available" do
+    assert {:ok, %{created: [], skipped: [%{reason: :missing_project}]}} =
              Evolution.apply_plan(%{
                changes: [
                  %{

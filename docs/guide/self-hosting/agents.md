@@ -13,10 +13,12 @@ behavior.
 
 Hive currently uses agents for:
 
-- Domain evolution: when new forage items or specs arrive, Hive queues a
-  debounced evolution job. A periodic job runs as well. The agent
-  reviews recent work signals and current domains, then proposes only
-  create or update changes. Hive applies those changes through normal
+- Domain evolution: when new forage items, specs, GitHub issues, or
+  Grafana alerts arrive, Hive queues a debounced evolution job. A
+  periodic job runs as well. The agent reviews recent work signals,
+  current projects, and current domains, then proposes only create or
+  update changes. New domains are linked to the projects named by the
+  supporting work items. Hive applies those changes through normal
   validation and skips suggestions that are too generic, too specific,
   or outside Tuist's business domains.
 - Spec revision summaries: whenever a spec is edited after its first
@@ -32,8 +34,9 @@ Hive currently uses agents for:
   configured, the bot stays silent. See [Slack](./slack) for the
   workspace install flow.
 - GitHub issue domain classification: each time the syncer sees a new
-  issue or notices that an issue's title or body changed, Hive queues a
-  job that asks the agent which domains the issue actually belongs to.
+  issue in a connected project repository or notices that an issue's
+  title or body changed, Hive queues a job that asks the agent which
+  domains the issue actually belongs to.
   The candidates are the domains attached to the issue's repository, so
   the answer is always a subset of that set. The dashboard renders the
   domain badges from this classification, not from the repository's
