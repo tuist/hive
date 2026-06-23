@@ -212,6 +212,33 @@ defmodule HiveWeb.SpecLive.Show do
     {:noreply, clear_comment_edit(socket)}
   end
 
+  @impl true
+  def handle_event("close_delete_comment", %{"id" => comment_id}, socket) do
+    {:noreply, push_event(socket, "close-modal", %{id: delete_comment_modal_id(comment_id)})}
+  end
+
+  @impl true
+  def handle_event("delete_comment", %{"id" => comment_id}, socket) do
+    with {:ok, comment} <- find_comment(socket, comment_id),
+         {:ok, _comment} <- Specs.delete_comment(comment, socket.assigns.current_user) do
+      spec = Specs.get_spec!(socket.assigns.spec.id)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Comment deleted.")
+       |> push_event("close-modal", %{id: delete_comment_modal_id(comment_id)})
+       |> assign_spec(spec)
+       |> assign(OpenGraph.assigns(open_graph(spec)))
+       |> clear_comment_edit()}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "Only the comment author can delete this comment.")}
+
+      _error ->
+        {:noreply, put_flash(socket, :error, "Comment not found.")}
+    end
+  end
+
   defp assign_comment_form(socket, changeset) do
     assign(socket, :comment_form, to_form(interpolate_errors(changeset), as: :comment))
   end
@@ -249,6 +276,8 @@ defmodule HiveWeb.SpecLive.Show do
       comment -> {:ok, comment}
     end
   end
+
+  defp delete_comment_modal_id(comment_id), do: "delete-comment-modal-#{comment_id}"
 
   defp comment_mention_suggestions(spec, current_user) do
     [current_user, spec.created_by_user, spec.updated_by_user]

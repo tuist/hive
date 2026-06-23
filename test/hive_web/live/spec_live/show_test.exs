@@ -236,7 +236,33 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ "Rendered without line breaks."
   end
 
-  test "hides comment edit controls from other users", %{conn: conn} do
+  test "allows comment authors to delete their comments", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "GitHub sign-in", "body" => "Initial proposal."}, user)
+
+    {:ok, comment} = Specs.add_comment(spec, %{"body" => "Comment to remove."}, user)
+    {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ ~s|aria-label="Delete comment"|
+    assert html =~ ~s|id="delete-comment-modal-#{comment.id}"|
+    assert html =~ "Delete comment?"
+    assert html =~ "Deleting this comment will permanently remove it from the spec discussion"
+    refute html =~ ~s|data-confirm="Delete this comment?"|
+    assert html =~ "Comment to remove."
+
+    html = render_click(view, "delete_comment", %{"id" => comment.id})
+
+    assert html =~ "Comment deleted."
+    assert html =~ "No comments yet"
+    refute html =~ "Comment to remove."
+
+    spec = Specs.get_spec!(spec.id)
+    assert spec.comments == []
+  end
+
+  test "hides comment edit and delete controls from other users", %{conn: conn} do
     {_author_conn, author} = sign_in(conn, "alice@example.com")
     {conn, _other_user} = sign_in(conn, "bob@example.com")
 
@@ -247,10 +273,19 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
 
     refute html =~ ~s|aria-label="Edit comment"|
+    refute html =~ ~s|aria-label="Delete comment"|
+    refute html =~ "Delete comment?"
 
     html = render_click(view, "edit_comment", %{"id" => comment.id})
 
     refute html =~ "Save comment"
+
+    html = render_click(view, "delete_comment", %{"id" => comment.id})
+
+    assert html =~ "Only the comment author can delete this comment."
+
+    spec = Specs.get_spec!(spec.id)
+    assert Enum.map(spec.comments, & &1.body) == ["Author note."]
   end
 
   test "renders author avatars with GitHub and Gravatar sources", %{conn: conn} do

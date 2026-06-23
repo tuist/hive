@@ -284,6 +284,52 @@ defmodule HiveWeb.SpecComponents do
                       >
                         <.pencil />
                       </button>
+                      <.modal
+                        :if={Specs.can_edit_comment?(comment, @current_user)}
+                        id={delete_comment_modal_id(comment.id)}
+                        title="Delete comment?"
+                        description="This action cannot be undone."
+                        header_type="warning"
+                        header_size="large"
+                      >
+                        <:trigger :let={attrs}>
+                          <button type="button" aria-label="Delete comment" title="Delete comment" {attrs}>
+                            <.trash />
+                          </button>
+                        </:trigger>
+                        <.line_divider />
+                        <.alert
+                          status="warning"
+                          type="secondary"
+                          size="small"
+                          title="Deleting this comment will permanently remove it from the spec discussion"
+                        />
+                        <.line_divider />
+                        <:footer>
+                          <.modal_footer>
+                            <:action>
+                              <.button
+                                type="button"
+                                label="Cancel"
+                                variant="secondary"
+                                size="medium"
+                                phx-click="close_delete_comment"
+                                phx-value-id={comment.id}
+                              />
+                            </:action>
+                            <:action>
+                              <.button
+                                type="button"
+                                label="Delete"
+                                variant="destructive"
+                                size="medium"
+                                phx-click="delete_comment"
+                                phx-value-id={comment.id}
+                              />
+                            </:action>
+                          </.modal_footer>
+                        </:footer>
+                      </.modal>
                       <a
                         href={"#comment-#{comment.id}"}
                         data-part="comment-permalink"
@@ -588,6 +634,8 @@ defmodule HiveWeb.SpecComponents do
   defp comment_author(%{user: %{email: email}}) when is_binary(email), do: email
   defp comment_author(%{author_name: name}) when is_binary(name), do: name
   defp comment_author(_comment), do: "Anonymous"
+
+  defp delete_comment_modal_id(comment_id), do: "delete-comment-modal-#{comment_id}"
 
   defp revision_author(%{user: %{email: email}}) when is_binary(email), do: "Edited by #{email}"
   defp revision_author(_revision), do: "Edited by an unknown user"
