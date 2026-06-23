@@ -71,6 +71,7 @@ defmodule HiveWeb.OpsLive.Slack do
   def render(assigns) do
     ~H"""
     <Layouts.ops
+      flash={@flash}
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}

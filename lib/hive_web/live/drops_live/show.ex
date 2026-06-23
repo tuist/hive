@@ -49,6 +49,7 @@ defmodule HiveWeb.DropsLive.Show do
   def render(assigns) do
     ~H"""
     <Layouts.dashboard
+      flash={@flash}
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}

@@ -1,23 +1,11 @@
-.flash-stack {
+.flash-region {
   display: flex;
-  position: fixed;
-  top: var(--noora-spacing-6);
-  right: var(--noora-spacing-6);
-  z-index: var(--noora-z-index-5);
   flex-direction: column;
   gap: var(--noora-spacing-3);
-  width: min(440px, calc(100vw - 2 * var(--noora-spacing-6)));
-  pointer-events: none;
+  margin-bottom: var(--noora-spacing-7);
+  width: min(720px, 100%);
 
   & .noora-alert {
-    box-shadow: var(--noora-border-heavy);
-    pointer-events: auto;
-  }
-
-  @media (max-width: 768px) {
-    top: var(--noora-spacing-4);
-    right: var(--noora-spacing-4);
-    left: var(--noora-spacing-4);
-    width: auto;
+    width: 100%;
   }
 }

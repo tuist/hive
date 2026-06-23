@@ -34,6 +34,8 @@ defmodule HiveWeb.LayoutsTest do
 
       assert html =~ "Connected Slack."
       assert html =~ "Slack rejected the install."
+      assert html =~ "flash-region"
+      assert html =~ ~s(aria-label="Status messages")
       assert html =~ ~s(data-status="success")
       assert html =~ ~s(data-status="error")
     end
@@ -46,7 +48,7 @@ defmodule HiveWeb.LayoutsTest do
         <Layouts.flash_group flash={%{}} />
         """)
 
-      refute html =~ "flash-stack"
+      refute html =~ "flash-region"
     end
   end
 
@@ -54,6 +56,7 @@ defmodule HiveWeb.LayoutsTest do
     defp render_dashboard(assigns) do
       rendered_to_string(~H"""
       <Layouts.dashboard
+        flash={@flash}
         product_name={@product_name}
         user_name={@user_name}
         user_email={@user_email}
@@ -73,6 +76,7 @@ defmodule HiveWeb.LayoutsTest do
     defp render_account(assigns) do
       rendered_to_string(~H"""
       <Layouts.account
+        flash={@flash}
         product_name={@product_name}
         user_name={@user_name}
         user_email={@user_email}
@@ -89,6 +93,7 @@ defmodule HiveWeb.LayoutsTest do
     defp render_ops(assigns) do
       rendered_to_string(~H"""
       <Layouts.ops
+        flash={@flash}
         product_name={@product_name}
         user_name={@user_name}
         user_email={@user_email}
@@ -114,6 +119,7 @@ defmodule HiveWeb.LayoutsTest do
           admin?: false,
           csrf_token: "csrf-token-123",
           current_path: "/forage",
+          flash: %{},
           forage_sources: [
             %{
               id: :feature_requests,
@@ -137,6 +143,14 @@ defmodule HiveWeb.LayoutsTest do
       html = render_dashboard(assigns())
 
       assert html =~ "Hive"
+      assert html =~ "Main content"
+    end
+
+    test "renders flash messages above the page content" do
+      html = render_dashboard(assigns(%{flash: %{"info" => "Project created."}}))
+
+      assert html =~ "flash-region"
+      assert html =~ "Project created."
       assert html =~ "Main content"
     end
 
