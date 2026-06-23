@@ -61,7 +61,13 @@ defmodule HiveWeb.Layouts do
     assigns = assign(assigns, :messages, flash_messages(assigns.flash))
 
     ~H"""
-    <div :if={@messages != []} class="flash-stack" role="status" aria-live="polite">
+    <div
+      :if={@messages != []}
+      class="flash-region"
+      role="status"
+      aria-live="polite"
+      aria-label="Status messages"
+    >
       <.alert
         :for={message <- @messages}
         id={message.id}
@@ -128,6 +134,7 @@ defmodule HiveWeb.Layouts do
   attr :current_path, :string, default: "/"
   attr :forage_sources, :list, default: []
   attr :specs_have_new_activity?, :boolean, default: false
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def dashboard(assigns) do
@@ -185,6 +192,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>
@@ -199,6 +207,7 @@ defmodule HiveWeb.Layouts do
   attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def account(assigns) do
@@ -224,6 +233,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>
@@ -238,6 +248,7 @@ defmodule HiveWeb.Layouts do
   attr :signed_in?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
+  attr :flash, :map, default: %{}
   slot :inner_block, required: true
 
   def ops(assigns) do
@@ -269,6 +280,7 @@ defmodule HiveWeb.Layouts do
           />
         </.sidebar>
         <section data-part="content">
+          <.flash_group flash={@flash} />
           {render_slot(@inner_block)}
         </section>
       </section>

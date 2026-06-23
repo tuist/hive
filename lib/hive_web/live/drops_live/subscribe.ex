@@ -104,6 +104,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
 
     ~H"""
     <Layouts.dashboard
+      flash={@flash}
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}

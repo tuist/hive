@@ -47,6 +47,7 @@ defmodule HiveWeb.AccountLive.Identities do
   def render(assigns) do
     ~H"""
     <Layouts.account
+      flash={@flash}
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}
