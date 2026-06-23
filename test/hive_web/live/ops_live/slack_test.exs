@@ -5,6 +5,7 @@ defmodule HiveWeb.OpsLive.SlackTest do
   alias Hive.Accounts
   alias Hive.Repo
   alias Hive.Slack.Installation
+  alias Hive.Slack.NotificationRoute
 
   test "redirects anonymous visitors to login", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/login?return_to=/ops/slack"}}} =
@@ -54,13 +55,14 @@ defmodule HiveWeb.OpsLive.SlackTest do
     assert html =~ "Installed by admin-slack@example.com"
     assert html =~ "Installed on 2026-06-17"
     assert html =~ "Disconnect"
-    assert html =~ "Notification channel ID"
-    assert html =~ "New specs"
-    assert html =~ "New spec comments"
+    assert html =~ "Object type"
+    assert html =~ "Specs"
+    assert html =~ "Slack channel"
+    assert html =~ "Spec review requests"
     assert html =~ "noora-button"
   end
 
-  test "updates Slack notification settings from the workspace row", %{conn: conn} do
+  test "updates Slack notification routes from the workspace row", %{conn: conn} do
     {conn, user} = sign_in(conn, "admin-slack-notifications@example.com")
     {:ok, user} = Accounts.update_user_role(user, :admin)
 
@@ -79,16 +81,24 @@ defmodule HiveWeb.OpsLive.SlackTest do
 
     assert {:ok, view, _html} = live(conn, ~p"/ops/slack")
 
-    render_submit(view, "save_notifications", %{
+    render_submit(view, "save_notification_routes", %{
       "id" => installation.id,
       "installation" => %{
-        "notification_channel_id" => "C123",
-        "notification_events" => ["spec.created"]
+        "notification_routes" => %{
+          "specs" => %{"slack_channel_id" => "C123"}
+        }
       }
     })
 
-    installation = Repo.get!(Installation, installation.id)
-    assert installation.notification_channel_id == "C123"
-    assert installation.notification_events == ["spec.created"]
+    route =
+      Repo.get_by!(NotificationRoute, installation_id: installation.id, object_type: "specs")
+
+    assert route.slack_channel_id == "C123"
+
+    assert route.notification_events == [
+             "spec.created",
+             "spec.comment.created",
+             "spec.review.requested"
+           ]
   end
 end

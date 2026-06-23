@@ -123,6 +123,7 @@ defmodule HiveWeb.SpecComponents do
   attr :edit_comment_form, :any, required: true
   attr :mention_suggestions, :list, default: []
   attr :can_edit?, :boolean, required: true
+  attr :can_request_review?, :boolean, required: true
   attr :current_user, :map, default: nil
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
@@ -158,6 +159,15 @@ defmodule HiveWeb.SpecComponents do
             atom_href="/specs/atom.xml"
             rss_href="/specs/rss.xml"
           />
+          <.button
+            :if={@can_request_review?}
+            label="Ask for review"
+            size="medium"
+            variant="secondary"
+            phx-click="request_review"
+          >
+            <:icon_left><.bell /></:icon_left>
+          </.button>
           <.status_menu :if={@can_edit?} spec={@spec} />
           <.badge
             :if={!@can_edit?}

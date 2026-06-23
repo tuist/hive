@@ -151,37 +151,53 @@
     flex: 0 0 auto;
   }
 
-  & [data-part="notifications-form"] {
+  & [data-part="notification-routes-form"] {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) auto auto;
-    align-items: end;
     gap: var(--noora-spacing-4);
     max-width: 760px;
     padding-top: var(--noora-spacing-3);
   }
 
-  & [data-part="notifications-events"] {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--noora-spacing-3);
-    margin: 0;
-    border: 0;
-    padding: 0;
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  & [data-part="notification-routes-table"] {
+    width: 100%;
+    border-collapse: collapse;
   }
 
-  & [data-part="notifications-events"] legend {
-    width: 100%;
+  & [data-part="notification-routes-table"] th {
+    padding: 0 0 var(--noora-spacing-2);
+    text-align: left;
     color: var(--noora-surface-label-secondary);
     font: var(--noora-font-weight-medium) var(--noora-font-body-small);
   }
 
-  & [data-part="notification-event"] {
+  & [data-part="notification-routes-table"] td {
+    padding: var(--noora-spacing-3) var(--noora-spacing-4) var(--noora-spacing-3) 0;
+    vertical-align: middle;
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="notification-routes-table"] td:first-child {
+    min-width: 180px;
+    color: var(--noora-surface-label-primary);
+  }
+
+  & [data-part="notification-routes-table"] td:first-child strong,
+  & [data-part="notification-routes-table"] td:first-child span {
+    display: block;
+  }
+
+  & [data-part="notification-routes-table"] td:first-child span {
+    padding-top: var(--noora-spacing-1);
+    color: var(--noora-surface-label-secondary);
+  }
+
+  & [data-part="notification-routes-table"] .noora-text-input {
+    min-width: 220px;
+  }
+
+  & [data-part="notification-routes-actions"] {
     display: flex;
-    align-items: center;
-    gap: var(--noora-spacing-2);
-    white-space: nowrap;
   }
 
   @media (max-width: 960px) {
@@ -190,9 +206,26 @@
       align-items: stretch;
     }
 
-    & [data-part="notifications-form"] {
-      grid-template-columns: 1fr;
-      align-items: stretch;
+    & [data-part="notification-routes-table"],
+    & [data-part="notification-routes-table"] thead,
+    & [data-part="notification-routes-table"] tbody,
+    & [data-part="notification-routes-table"] tr,
+    & [data-part="notification-routes-table"] th,
+    & [data-part="notification-routes-table"] td {
+      display: block;
+      width: 100%;
+    }
+
+    & [data-part="notification-routes-table"] thead {
+      display: none;
+    }
+
+    & [data-part="notification-routes-table"] td {
+      padding-right: 0;
+    }
+
+    & [data-part="notification-routes-table"] .noora-text-input {
+      min-width: 0;
     }
   }
 

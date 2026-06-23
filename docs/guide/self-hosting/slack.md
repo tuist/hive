@@ -18,7 +18,7 @@ Once a workspace is installed, Hive can:
   could see on the dashboard are previewed; private specs and
   organization-only forage items stay opaque.
 - Notify a configured channel when product activity happens, starting
-  with new specs and new spec comments.
+  with new specs, new spec comments, and explicit spec review requests.
 - Let signed-in Hive users connect their Slack profile so Hive can
   target user-specific notifications even when Slack and Hive emails do
   not match.
@@ -172,8 +172,9 @@ Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
 3. The workspace appears in the list. Click **Disconnect** to revoke
    Hive's access to that workspace (Hive keeps the row so the install
    history stays in the audit trail).
-4. To post product activity into Slack, enter a notification channel ID
-   on the workspace row and choose which events Hive should post.
+4. To post product activity into Slack, use the notification routes
+   table on the workspace row. Each row maps a Hive object type to the
+   Slack channel that should receive its notifications.
 
 If `HIVE_SLACK_ALLOWED_TEAM_IDS` is set, Hive rejects installs from any
 workspace outside that list. With a single configured workspace, Slack
@@ -221,12 +222,19 @@ to view on the dashboard stays opaque, and Slack shows the bare link.
 
 ## Notifications
 
-Hive can post product activity to one Slack channel per connected
-workspace. The first supported events are:
+Hive can post product activity to one Slack channel per object type in
+each connected workspace. Instance admins configure notification routes
+from `/ops/slack`; no redeploy is required.
 
-- `spec.created`: a new spec was created from the dashboard or MCP.
+The first supported route is `Specs`, which sends these events:
+
+- `spec.created`: a new spec was created from the dashboard or
+  [Model Context Protocol](https://modelcontextprotocol.io/) tooling.
 - `spec.comment.created`: a new comment was added to a spec.
+- `spec.review.requested`: a spec author or editor asked for another
+  review of the latest revision. Hive posts a Block Kit message with
+  the spec state, a link back to the spec, focused review prompts, and
+  Slack mentions for prior commenters whose Slack profiles are linked.
 
 The channel must be reachable by Hive's installed bot. Use the Slack
-channel ID, not the display name. Instance admins configure the channel
-from `/ops/slack`; no redeploy is required.
+channel ID, not the display name.

@@ -14,7 +14,9 @@ defmodule Hive.Slack.Workers.SendNotification do
   alias Hive.Slack
   alias Hive.Slack.API
   alias Hive.Slack.Installation
+  alias Hive.Specs
   alias Hive.Specs.Comment
+  alias Hive.Specs.ReviewRequests
   alias Hive.Specs.Spec
 
   def enqueue(event, args) when is_binary(event) and is_map(args) do
@@ -29,6 +31,10 @@ defmodule Hive.Slack.Workers.SendNotification do
   end
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"event" => "spec.review.requested"} = args}) do
+    post_review_request(args)
+  end
+
   def perform(%Oban.Job{args: %{"event" => event} = args}) do
     case message_for(event, args) do
       {:ok, message} ->
@@ -46,6 +52,50 @@ defmodule Hive.Slack.Workers.SendNotification do
     event
     |> Slack.notification_targets_for()
     |> Enum.reduce_while(:ok, &post_to_target(&1, message, &2))
+  end
+
+  defp post_review_request(%{"spec_id" => spec_id, "requester_id" => requester_id}) do
+    with %Spec{} = spec <- load_spec(spec_id),
+         %Hive.Accounts.User{} = requester <- Hive.Accounts.get_user(requester_id),
+         {:ok, payload} <- ReviewRequests.draft(spec, requester) do
+      "spec.review.requested"
+      |> Slack.notification_targets_for()
+      |> Enum.reduce_while(:ok, &post_review_request_to_target(&1, spec, requester, payload, &2))
+    else
+      nil -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp post_review_request(_args), do: :ok
+
+  defp post_review_request_to_target(
+         %Installation{} = installation,
+         spec,
+         requester,
+         payload,
+         :ok
+       ) do
+    if Installation.connected?(installation) do
+      message =
+        installation
+        |> review_request_message(spec, requester, payload)
+        |> Map.put("channel", installation.notification_channel_id)
+
+      case API.post_message(installation, message) do
+        {:ok, _} ->
+          {:cont, :ok}
+
+        {:error, reason} ->
+          Logger.warning(
+            "[Slack.SendNotification] review request post failed: #{inspect(reason)}"
+          )
+
+          {:halt, {:error, reason}}
+      end
+    else
+      {:cont, :ok}
+    end
   end
 
   defp post_to_target(%Installation{} = installation, message, :ok) do
@@ -115,6 +165,94 @@ defmodule Hive.Slack.Workers.SendNotification do
 
   defp message_for(_event, _args), do: {:skipped, :unknown_event}
 
+  defp review_request_message(%Installation{} = installation, %Spec{} = spec, requester, payload) do
+    url = spec_url(spec)
+    reviewer_text = reviewers_text(installation, Map.get(payload, :reviewers, []))
+    summary = Map.get(payload, :summary, summary_text(spec))
+    review_focus = Map.get(payload, :review_focus, [])
+    revision = Map.get(payload, :last_revision)
+
+    blocks =
+      [
+        section("*Review requested:* <#{url}|##{spec.number} #{escape(spec.title)}>"),
+        context([
+          "Requested by #{user_or_slack_label(installation, requester)}",
+          "Status: #{status_label(spec.status)}",
+          revision_context(revision, spec)
+        ]),
+        section(escape(summary)),
+        maybe_reviewers_section(reviewer_text),
+        maybe_review_focus_section(review_focus),
+        actions([
+          %{
+            "type" => "button",
+            "text" => %{"type" => "plain_text", "text" => "Open spec"},
+            "url" => url
+          }
+        ])
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    %{
+      "text" => "Review requested for spec ##{spec.number}: #{spec.title}",
+      "blocks" => blocks
+    }
+  end
+
+  defp maybe_reviewers_section(""), do: nil
+  defp maybe_reviewers_section(text), do: section("*Reviewers:* #{text}")
+
+  defp maybe_review_focus_section([]), do: nil
+
+  defp maybe_review_focus_section(review_focus) do
+    text = Enum.map_join(review_focus, "\n", &"- #{escape(&1)}")
+
+    section("*Review focus:*\n#{text}")
+  end
+
+  defp reviewers_text(%Installation{} = installation, reviewers) do
+    slack_profiles =
+      installation
+      |> Slack.linked_user_profiles_by_user_ids(Enum.map(reviewers, & &1.id))
+
+    reviewers
+    |> Enum.map(fn reviewer ->
+      case Map.get(slack_profiles, reviewer.id) do
+        %{slack_user_id: slack_user_id} when is_binary(slack_user_id) ->
+          "<@#{slack_user_id}>"
+
+        _profile ->
+          escape(user_label(reviewer))
+      end
+    end)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join(", ")
+  end
+
+  defp user_or_slack_label(%Installation{} = installation, user) do
+    user_id = user.id
+
+    case Slack.linked_user_profiles_by_user_ids(installation, [user.id]) do
+      %{^user_id => %{slack_user_id: slack_user_id}} when is_binary(slack_user_id) ->
+        "<@#{slack_user_id}>"
+
+      _profiles ->
+        escape(user_label(user))
+    end
+  end
+
+  defp revision_context(nil, %Spec{lock_version: lock_version}), do: "Revision #{lock_version}"
+
+  defp revision_context(%{revision: revision, inserted_at: inserted_at}, _spec) do
+    ["Revision #{revision}", date_label(inserted_at)]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" - ")
+  end
+
+  defp revision_context(%{revision: revision}, _spec), do: "Revision #{revision}"
+
+  defp actions(elements), do: %{"type" => "actions", "elements" => elements}
+
   defp section(text), do: %{"type" => "section", "text" => mrkdwn(text)}
 
   defp context(elements) do
@@ -149,12 +287,22 @@ defmodule Hive.Slack.Workers.SendNotification do
 
   defp status_label(status), do: to_string(status)
 
+  defp date_label(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %-d, %Y")
+  defp date_label(_datetime), do: nil
+
   defp summary_text(%Spec{summary: summary}) when is_binary(summary) and summary != "",
     do: summary
 
   defp summary_text(%Spec{body: body}), do: body
 
   defp spec_url(%Spec{number: number}), do: HiveWeb.Endpoint.url() <> "/specs/#{number}"
+
+  defp load_spec(spec_id) do
+    spec_id
+    |> Specs.get_spec!()
+  rescue
+    Ecto.NoResultsError -> nil
+  end
 
   defp truncate(text, max) when is_binary(text) and byte_size(text) > max do
     String.slice(text, 0, max - 3) <> "..."
