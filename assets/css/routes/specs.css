@@ -539,6 +539,7 @@
   }
 
   & [data-part="comment-action-button"],
+  & [data-part="comment-actions"] [data-part="trigger"],
   & [data-part="comment-permalink"] {
     display: inline-flex;
     flex-shrink: 0;
