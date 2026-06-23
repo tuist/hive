@@ -43,7 +43,7 @@ Enum.each(account_identities, fn {email, provider, provider_uid} ->
     })
 end)
 
-# Promote the dev user to admin so /audit is reachable without manual SQL.
+# Promote the dev user to admin so /ops and /audit are reachable without manual SQL.
 case Accounts.get_user_by_email("test@hive.dev") do
   nil -> :ok
   user -> Accounts.update_user_role(user, :admin)

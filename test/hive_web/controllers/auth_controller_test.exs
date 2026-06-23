@@ -155,6 +155,7 @@ defmodule HiveWeb.AuthControllerTest do
 
     user = Accounts.get_user(user_id)
     assert user.email == "test@hive.dev"
+    assert user.role == :admin
   end
 
   test "POST /dev/login ignores requested personas", %{conn: conn} do
