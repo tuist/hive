@@ -16,6 +16,7 @@ defmodule HiveWeb.FeedController do
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Specs
   alias HiveWeb.Atom, as: AtomFeed
   alias HiveWeb.Endpoint
@@ -47,6 +48,9 @@ defmodule HiveWeb.FeedController do
 
   def domain_drops_atom(conn, %{"id" => id}), do: serve_domain_drops(conn, id, :atom)
   def domain_drops_rss(conn, %{"id" => id}), do: serve_domain_drops(conn, id, :rss)
+
+  def project_drops_atom(conn, %{"id" => id}), do: serve_project_drops(conn, id, :atom)
+  def project_drops_rss(conn, %{"id" => id}), do: serve_project_drops(conn, id, :rss)
 
   defp forage_feed(conn) do
     user = Auth.current_user(conn)
@@ -157,9 +161,15 @@ defmodule HiveWeb.FeedController do
   defp drops_feed(conn, params) do
     user = Auth.current_user(conn)
     domain_ids = parse_domain_ids(params["domain_ids"])
+    project_ids = parse_project_ids(params["project_ids"])
 
     {drops, _meta} =
-      Drops.list_drops(user: user, domain_ids: domain_ids, page_size: :all)
+      Drops.list_drops(
+        user: user,
+        domain_ids: domain_ids,
+        project_ids: project_ids,
+        page_size: :all
+      )
 
     %{
       id: feed_id(conn),
@@ -167,7 +177,7 @@ defmodule HiveWeb.FeedController do
       subtitle: "Shipped updates from GitHub releases and changelog feeds across every domain.",
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
-      alternate_url: page_url(conn, "/drops"),
+      alternate_url: page_url(conn, "/drops" <> drops_filter_query(project_ids, domain_ids)),
       entries: Enum.map(drops, &drop_entry/1)
     }
   end
@@ -197,6 +207,31 @@ defmodule HiveWeb.FeedController do
     }
   end
 
+  defp serve_project_drops(conn, id, format) do
+    user = Auth.current_user(conn)
+
+    case Projects.fetch_visible_project(id, user) do
+      {:ok, project} -> send_feed(conn, format, project_drops_feed(conn, project, user))
+      {:error, :not_found} -> not_found(conn, format)
+    end
+  end
+
+  defp project_drops_feed(conn, project, user) do
+    drops = Drops.list_drops_for_project(project, user: user)
+
+    %{
+      id: feed_id(conn),
+      title: "Hive · #{project.name} drops",
+      subtitle:
+        project.description ||
+          "Shipped updates from the #{project.name} project.",
+      updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/projects/#{project.id}"),
+      entries: Enum.map(drops, &drop_entry/1)
+    }
+  end
+
   defp drop_entry(drop) do
     repo_prefix =
       case drop.github_repository do
@@ -215,6 +250,22 @@ defmodule HiveWeb.FeedController do
 
   defp parse_domain_ids(nil), do: []
   defp parse_domain_ids(value), do: Query.csv_list(value)
+  defp parse_project_ids(nil), do: []
+  defp parse_project_ids(value), do: Query.csv_list(value)
+
+  defp drops_filter_query([], []), do: ""
+
+  defp drops_filter_query(project_ids, domain_ids) do
+    params =
+      %{}
+      |> maybe_put_csv("project_ids", project_ids)
+      |> maybe_put_csv("domain_ids", domain_ids)
+
+    "?" <> URI.encode_query(params)
+  end
+
+  defp maybe_put_csv(params, _key, []), do: params
+  defp maybe_put_csv(params, key, values), do: Map.put(params, key, Enum.join(values, ","))
 
   defp latest_entry_updated([]), do: DateTime.utc_now() |> DateTime.truncate(:second)
   defp latest_entry_updated([first | _rest]), do: first.updated

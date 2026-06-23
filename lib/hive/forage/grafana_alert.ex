@@ -1,8 +1,8 @@
 defmodule Hive.Forage.GrafanaAlert do
   @moduledoc """
-  A Grafana alert ingested via an inbound domain webhook.
+  A Grafana alert ingested via an inbound project webhook.
 
-  One row per Grafana `fingerprint` per domain. Firing and resolved
+  One row per Grafana `fingerprint` per project. Firing and resolved
   deliveries for the same fingerprint update the same row, so the UI can
   thread state transitions instead of stacking duplicate cards.
   """
@@ -27,8 +27,9 @@ defmodule Hive.Forage.GrafanaAlert do
     field :ends_at, :utc_datetime
     field :last_received_at, :utc_datetime
 
+    belongs_to :project, Hive.Projects.Project
     belongs_to :domain, Hive.Domains.Domain
-    belongs_to :webhook, Hive.Domains.Webhook
+    belongs_to :webhook, Hive.Projects.Webhook
 
     timestamps(type: :utc_datetime)
   end
@@ -54,6 +55,7 @@ defmodule Hive.Forage.GrafanaAlert do
       :starts_at,
       :ends_at,
       :last_received_at,
+      :project_id,
       :domain_id,
       :webhook_id
     ])
@@ -62,10 +64,10 @@ defmodule Hive.Forage.GrafanaAlert do
       :status,
       :title,
       :last_received_at,
-      :domain_id
+      :project_id
     ])
     |> validate_length(:title, max: 255)
     |> validate_inclusion(:status, @statuses)
-    |> unique_constraint([:domain_id, :fingerprint])
+    |> unique_constraint([:project_id, :fingerprint])
   end
 end

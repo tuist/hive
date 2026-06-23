@@ -4,17 +4,24 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
   alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Repo
 
   defp unique, do: System.unique_integer([:positive])
 
   defp create_domain!(attrs) do
+    attrs =
+      Map.put_new_lazy(attrs, :project_id, fn ->
+        {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+        project.id
+      end)
+
     {:ok, domain} = Domains.create_domain(attrs)
     domain
   end
 
   defp seed_issue!(domain, opts) do
-    repository = hd(domain.project.github_repositories)
+    repository = github_repository_for_domain!(domain)
 
     Forage.reconcile_repository_github_issues(repository, [
       %{
@@ -202,7 +209,7 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     seed_issue!(domain_a, number: 1, title: "Issue for A")
     seed_issue!(domain_b, number: 2, title: "Issue for B")
 
-    repository_b = hd(domain_b.project.github_repositories)
+    repository_b = github_repository_for_domain!(domain_b)
 
     {:ok, _view, html} =
       live(

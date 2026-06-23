@@ -11,6 +11,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
   alias Hive.Drops.DomainClassificationWorker
   alias Hive.GitHub.Client
   alias Hive.GitHub.Releases
+  alias Hive.Projects
 
   defp unique, do: System.unique_integer([:positive])
 
@@ -20,13 +21,19 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     {:ok, domain} =
       Domains.create_domain(%{
         name: "release-syncer-#{suffix}",
+        project_id: create_project!().id,
         visibility: "public",
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo#{suffix}",
         github_repository_visibility: "public"
       })
 
-    hd(domain.project.github_repositories)
+    github_repository_for_domain!(domain)
+  end
+
+  defp create_project! do
+    {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+    project
   end
 
   defp start_syncer!(item_generator \\ fn _repository, _release, _opts -> {:ok, []} end) do

@@ -227,10 +227,14 @@ defmodule Hive.Forage do
   """
   def accessible_domains_with_repositories(user) do
     Domain
-    |> preload(project: :github_repositories)
+    |> preload(projects: :github_repositories)
     |> Repo.all()
     |> Enum.flat_map(fn domain ->
-      repositories = (domain.project && domain.project.github_repositories) || []
+      repositories =
+        domain.projects
+        |> Enum.flat_map(& &1.github_repositories)
+        |> Enum.uniq_by(& &1.id)
+
       Enum.map(repositories, &{domain, &1})
     end)
     |> Enum.filter(fn {domain, repository} -> accessible_pair?(domain, repository, user) end)
@@ -458,7 +462,7 @@ defmodule Hive.Forage do
   end
 
   defp grafana_alert_item_entry(alert) do
-    domain = alert.domain
+    project = alert.project
 
     %Item{
       id: "grafana_alert:#{alert.id}",
@@ -471,13 +475,13 @@ defmodule Hive.Forage do
       status: alert.status,
       visibility: :organization,
       source_label: "Grafana",
-      external_label: domain && domain.name,
+      external_label: project && project.name,
       external_url: alert.generator_url,
       occurred_at: alert.starts_at || alert.inserted_at,
       updated_at: alert.last_received_at || alert.updated_at,
       comments: [],
       comments_status: :not_available,
-      domains: if(domain, do: [domain], else: [])
+      domains: if(alert.domain, do: [alert.domain], else: [])
     }
   end
 
@@ -837,10 +841,14 @@ defmodule Hive.Forage do
 
   def list_repositories_with_domains do
     Domain
-    |> preload(project: :github_repositories)
+    |> preload(projects: :github_repositories)
     |> Repo.all()
     |> Enum.flat_map(fn domain ->
-      repositories = (domain.project && domain.project.github_repositories) || []
+      repositories =
+        domain.projects
+        |> Enum.flat_map(& &1.github_repositories)
+        |> Enum.uniq_by(& &1.id)
+
       Enum.map(repositories, &{domain, &1})
     end)
   end

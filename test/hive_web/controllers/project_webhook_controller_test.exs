@@ -1,17 +1,18 @@
-defmodule HiveWeb.DomainWebhookControllerTest do
+defmodule HiveWeb.ProjectWebhookControllerTest do
   use HiveWeb.ConnCase, async: true
 
   alias Hive.Forage
-  alias Hive.Domains
-  alias Hive.Domains.Webhooks
+  alias Hive.Projects
+  alias Hive.Projects.Webhooks
 
   setup do
-    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
 
     {:ok, {webhook, token}} =
-      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(project, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, domain: domain, webhook: webhook, token: token}
+    {:ok, project: project, webhook: webhook, token: token}
   end
 
   test "POST accepts a valid Grafana payload and upserts alerts", ctx do
@@ -31,7 +32,7 @@ defmodule HiveWeb.DomainWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/domains/#{ctx.domain.id}/grafana/#{ctx.token}", body)
+      |> post(~p"/webhooks/projects/#{ctx.project.id}/grafana/#{ctx.token}", body)
 
     assert response(conn, 202) == ""
     assert [_alert] = Forage.list_grafana_alerts()
@@ -41,7 +42,7 @@ defmodule HiveWeb.DomainWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/domains/#{ctx.domain.id}/grafana/hwh_nope", %{
+      |> post(~p"/webhooks/projects/#{ctx.project.id}/grafana/hwh_nope", %{
         "status" => "firing",
         "alerts" => [%{"fingerprint" => "x"}]
       })
@@ -49,12 +50,12 @@ defmodule HiveWeb.DomainWebhookControllerTest do
     assert response(conn, 401) == ""
   end
 
-  test "POST 404s on an unknown domain", ctx do
+  test "POST 404s on an unknown project", ctx do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> post(
-        ~p"/webhooks/domains/00000000-0000-0000-0000-000000000000/grafana/#{ctx.token}",
+        ~p"/webhooks/projects/00000000-0000-0000-0000-000000000000/grafana/#{ctx.token}",
         %{"status" => "firing", "alerts" => [%{"fingerprint" => "x"}]}
       )
 
@@ -65,7 +66,7 @@ defmodule HiveWeb.DomainWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/domains/#{ctx.domain.id}/grafana/#{ctx.token}", %{
+      |> post(~p"/webhooks/projects/#{ctx.project.id}/grafana/#{ctx.token}", %{
         "status" => "firing"
       })
 
@@ -76,7 +77,7 @@ defmodule HiveWeb.DomainWebhookControllerTest do
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> post(~p"/webhooks/domains/#{ctx.domain.id}/pagerduty/#{ctx.token}", %{
+      |> post(~p"/webhooks/projects/#{ctx.project.id}/pagerduty/#{ctx.token}", %{
         "alerts" => []
       })
 

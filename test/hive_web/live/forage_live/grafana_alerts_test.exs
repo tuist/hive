@@ -4,18 +4,29 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
 
   alias Hive.Auth
   alias Hive.Forage.Grafana
-  alias Hive.Domains
-  alias Hive.Domains.Webhooks
+  alias Hive.Projects
+  alias Hive.Projects.Webhooks
+
+  defp create_project!(attrs) do
+    attrs =
+      Map.merge(
+        %{name: "Project #{System.unique_integer([:positive])}"},
+        attrs
+      )
+
+    {:ok, project} = Projects.create_project(attrs)
+    project
+  end
 
   test "hides organization-only alerts from guests", %{conn: conn} do
     Mimic.stub(Auth, :member?, fn _ -> false end)
-    {:ok, domain} = Domains.create_domain(%{name: "Guest hidden"})
+    project = create_project!(%{name: "Guest hidden"})
 
     {:ok, {webhook, _}} =
-      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(project, %{"name" => "G", "source" => "grafana"})
 
     {:ok, [_]} =
-      Grafana.ingest(domain, webhook, %{
+      Grafana.ingest(project, webhook, %{
         "alerts" => [
           %{
             "status" => "firing",
@@ -41,15 +52,15 @@ defmodule HiveWeb.ForageLive.GrafanaAlertsTest do
     assert html =~ "No forage items found"
   end
 
-  test "lists ingested alerts with domain and status", %{conn: conn} do
+  test "lists ingested alerts with project and status", %{conn: conn} do
     {conn, _user} = sign_in(conn, "alice@example.com")
-    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
+    project = create_project!(%{name: "Hive"})
 
     {:ok, {webhook, _}} =
-      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(project, %{"name" => "G", "source" => "grafana"})
 
     {:ok, [_]} =
-      Grafana.ingest(domain, webhook, %{
+      Grafana.ingest(project, webhook, %{
         "status" => "firing",
         "alerts" => [
           %{

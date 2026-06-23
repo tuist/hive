@@ -1,6 +1,6 @@
 defmodule HiveWeb.ForageLive.GrafanaAlerts do
   @moduledoc """
-  Renders Grafana alerts ingested via domain webhooks. Visibility is
+  Renders Grafana alerts ingested via project webhooks. Visibility is
   organization-only, gated through the forage policy.
   """
 

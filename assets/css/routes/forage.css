@@ -204,12 +204,12 @@
 
     & th:nth-child(1),
     & td:nth-child(1) {
-      width: 32%;
+      width: 30%;
     }
 
     & th:nth-child(2),
     & td:nth-child(2) {
-      width: 11%;
+      width: 13%;
     }
 
     & th:nth-child(3),
@@ -236,6 +236,18 @@
     & td:nth-child(7) {
       width: 120px;
       text-align: center;
+    }
+
+    & td:nth-child(2) [data-part="cell"][data-type="badge"],
+    & td:nth-child(3) [data-part="cell"][data-type="badge"] {
+      min-width: max-content;
+    }
+
+    & td:nth-child(2) .noora-badge,
+    & td:nth-child(3) .noora-badge,
+    & td:nth-child(2) .noora-badge > span,
+    & td:nth-child(3) .noora-badge > span {
+      white-space: nowrap;
     }
   }
 

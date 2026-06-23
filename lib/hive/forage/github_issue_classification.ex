@@ -19,6 +19,7 @@ defmodule Hive.Forage.GitHubIssueClassification do
   alias Hive.Forage.GitHubIssueDomain
   alias Hive.Domains.Domain
   alias Hive.Domains.GitHubRepository
+  alias Hive.Projects.ProjectDomain
   alias Hive.Repo
 
   @business_context """
@@ -137,7 +138,9 @@ defmodule Hive.Forage.GitHubIssueClassification do
     case Repo.get(GitHubRepository, repository_id) do
       %GitHubRepository{project_id: project_id} when is_binary(project_id) ->
         Domain
-        |> where([domain], domain.project_id == ^project_id)
+        |> join(:inner, [domain], link in ProjectDomain,
+          on: link.domain_id == domain.id and link.project_id == ^project_id
+        )
         |> order_by([domain], asc: domain.name)
         |> Repo.all()
 

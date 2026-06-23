@@ -1,15 +1,15 @@
-defmodule Hive.Domains.Webhooks do
+defmodule Hive.Projects.Webhooks do
   @moduledoc """
-  Manages inbound webhooks attached to a domain. Tokens are generated
-  once on creation: the plaintext is returned to the caller (shown once
-  in the UI), only the SHA-256 hash is persisted, and verification
-  hashes the URL-supplied token and looks it up by hash.
+  Manages inbound webhooks attached to a project. Tokens are generated
+  once on creation: the plaintext is returned to the caller, only the
+  SHA-256 hash is persisted, and verification hashes the URL-supplied
+  token and looks it up by hash.
   """
 
   import Ecto.Query
 
-  alias Hive.Domains.Domain
-  alias Hive.Domains.Webhook
+  alias Hive.Projects.Project
+  alias Hive.Projects.Webhook
   alias Hive.Repo
 
   @token_bytes 32
@@ -20,28 +20,28 @@ defmodule Hive.Domains.Webhooks do
   }
   @attr_keys Map.values(@attr_key_map)
 
-  def list_for_domain(%Domain{id: domain_id}), do: list_for_domain(domain_id)
+  def list_for_project(%Project{id: project_id}), do: list_for_project(project_id)
 
-  def list_for_domain(domain_id) when is_binary(domain_id) do
+  def list_for_project(project_id) when is_binary(project_id) do
     Webhook
-    |> where([webhook], webhook.domain_id == ^domain_id)
+    |> where([webhook], webhook.project_id == ^project_id)
     |> order_by([webhook], desc: webhook.inserted_at)
     |> Repo.all()
   end
 
   @doc """
-  Creates a webhook for `domain`. Returns `{:ok, {webhook, token}}` where
-  `token` is the plaintext token that should be displayed once and never
-  stored. On invalid attrs returns `{:error, changeset}`.
+  Creates a webhook for `project`. Returns `{:ok, {webhook, token}}`
+  where `token` is the plaintext token that should be displayed once
+  and never stored. On invalid attrs returns `{:error, changeset}`.
   """
-  def create(%Domain{} = domain, attrs) do
+  def create(%Project{} = project, attrs) do
     token = generate_token()
     hash = hash_token(token)
 
     attrs =
       attrs
       |> normalize_attrs()
-      |> Map.put(:domain_id, domain.id)
+      |> Map.put(:project_id, project.id)
       |> Map.put(:token_hash, hash)
 
     %Webhook{}
@@ -57,21 +57,15 @@ defmodule Hive.Domains.Webhooks do
 
   @doc """
   Finds a webhook matching the URL-supplied token, restricted to the
-  given domain and source. Returns the webhook or `nil`.
-
-  Lookup is a single indexed query: `token_hash` carries a unique index,
-  and the WHERE clause also pins `domain_id` and `source` so a token
-  belonging to a different domain or source can never resolve. Since
-  matching happens inside the database, there is no Elixir-level
-  iteration whose timing could leak which row (if any) matched.
+  given project and source. Returns the webhook or `nil`.
   """
-  def find_by_token(domain_id, source, token)
-      when is_binary(domain_id) and is_atom(source) and is_binary(token) do
+  def find_by_token(project_id, source, token)
+      when is_binary(project_id) and is_atom(source) and is_binary(token) do
     hash = hash_token(token)
-    Repo.get_by(Webhook, token_hash: hash, domain_id: domain_id, source: source)
+    Repo.get_by(Webhook, token_hash: hash, project_id: project_id, source: source)
   end
 
-  def find_by_token(_domain_id, _source, _token), do: nil
+  def find_by_token(_project_id, _source, _token), do: nil
 
   def touch_last_used(%Webhook{} = webhook) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)

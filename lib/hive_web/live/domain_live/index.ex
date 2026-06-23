@@ -4,7 +4,6 @@ defmodule HiveWeb.DomainLive.Index do
   use HiveWeb, :live_view
 
   alias Hive.Auth
-  alias Hive.GitHub.Repositories
   alias Hive.Domains
   alias Hive.Domains.Domain
   alias HiveWeb.Layouts
@@ -20,10 +19,6 @@ defmodule HiveWeb.DomainLive.Index do
      |> assign(:page_title, "Domains · #{socket.assigns.product_name}")
      |> assign(:domains, Domains.list_visible_domains(user))
      |> assign(:editable?, editable?)
-     |> assign(:repository_options, [])
-     |> assign(:repository_load_error, nil)
-     |> assign(:repository_options_loaded?, false)
-     |> assign(:selected_repository, nil)
      |> assign_form(Domains.change_domain())}
   end
 
@@ -36,21 +31,6 @@ defmodule HiveWeb.DomainLive.Index do
      |> push_event("reset-form", %{id: "new-domain-form"})}
   end
 
-  def handle_event("new_domain_modal_open_change", %{"open" => true}, socket) do
-    {:noreply, ensure_repositories_loaded(socket)}
-  end
-
-  def handle_event("new_domain_modal_open_change", %{"open" => false}, socket) do
-    {:noreply,
-     socket
-     |> reset_new_domain()
-     |> push_event("reset-form", %{id: "new-domain-form"})}
-  end
-
-  def handle_event("new_domain_modal_open_change", _params, socket) do
-    {:noreply, socket}
-  end
-
   def handle_event("validate", %{"domain" => params}, socket) do
     changeset =
       %Domain{}
@@ -58,21 +38,6 @@ defmodule HiveWeb.DomainLive.Index do
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
-  end
-
-  def handle_event("select_repository", %{"owner" => owner, "name" => name} = params, socket) do
-    repository = %Repositories{
-      owner: owner,
-      name: name,
-      description: Map.get(params, "description"),
-      visibility: parse_visibility(Map.get(params, "visibility"))
-    }
-
-    {:noreply, assign(socket, :selected_repository, repository)}
-  end
-
-  def handle_event("clear_repository", _params, socket) do
-    {:noreply, assign(socket, :selected_repository, nil)}
   end
 
   def handle_event("save", %{"domain" => params}, socket) do
@@ -102,46 +67,12 @@ defmodule HiveWeb.DomainLive.Index do
     end
   end
 
-  defp ensure_repositories_loaded(%{assigns: %{repository_options_loaded?: true}} = socket),
-    do: socket
-
-  defp ensure_repositories_loaded(socket) do
-    {repository_options, repository_load_error} =
-      case Repositories.list_accessible_repositories() do
-        {:ok, repositories} -> {repositories, nil}
-        {:error, reason} -> {[], repository_load_error(reason)}
-      end
-
-    socket
-    |> assign(:repository_options, repository_options)
-    |> assign(:repository_load_error, repository_load_error)
-    |> assign(:repository_options_loaded?, true)
-  end
-
-  defp parse_visibility("public"), do: :public
-  defp parse_visibility("private"), do: :private
-  defp parse_visibility(value) when is_atom(value), do: value
-  defp parse_visibility(_value), do: :public
-
-  defp repository_load_error({:not_configured, _missing}) do
-    "GitHub App is not configured."
-  end
-
-  defp repository_load_error({:unexpected_status, status, _body}) do
-    "GitHub returned #{status} while loading repositories."
-  end
-
-  defp repository_load_error(:invalid_private_key), do: "GitHub App private key is invalid."
-  defp repository_load_error(_reason), do: "GitHub repositories could not be loaded."
-
   defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(interpolate_errors(changeset), as: :domain))
   end
 
   defp reset_new_domain(socket) do
-    socket
-    |> assign(:selected_repository, nil)
-    |> assign_form(Domains.change_domain())
+    assign_form(socket, Domains.change_domain())
   end
 
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
@@ -177,9 +108,6 @@ defmodule HiveWeb.DomainLive.Index do
         domains={@domains}
         editable?={@editable?}
         form={@form}
-        repository_options={@repository_options}
-        repository_load_error={@repository_load_error}
-        selected_repository={@selected_repository}
       />
     </Layouts.dashboard>
     """

@@ -8,6 +8,7 @@ defmodule HiveWeb.DropsLive.Index do
 
   alias Hive.Drops
   alias Hive.Domains
+  alias Hive.Projects
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
   alias HiveWeb.OpenGraph
@@ -43,6 +44,7 @@ defmodule HiveWeb.DropsLive.Index do
        total_pages: 1
      })
      |> assign(:domains, [])
+     |> assign(:projects, [])
      |> assign(:query, "")
      |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
      |> assign(:uri, URI.parse("/drops"))
@@ -58,7 +60,8 @@ defmodule HiveWeb.DropsLive.Index do
   def handle_params(params, uri, socket) do
     user = socket.assigns[:current_user]
     domains = Domains.list_visible_domains(user)
-    available_filters = define_filters(domains)
+    projects = Projects.list_visible_projects(user)
+    available_filters = define_filters(domains, projects)
     query_params = Query.query_params(uri)
 
     page = Query.parse_page(params["page"])
@@ -72,6 +75,7 @@ defmodule HiveWeb.DropsLive.Index do
       socket
       |> assign(:uri, uri_from_query_params(query_params))
       |> assign(:domains, domains)
+      |> assign(:projects, projects)
       |> assign(:drops, drops)
       |> assign(:drops_meta, meta)
       |> assign(:available_filters, available_filters)
@@ -184,46 +188,48 @@ defmodule HiveWeb.DropsLive.Index do
               <.active_filter :for={filter <- @active_filters} filter={filter} />
             </div>
 
-            <.table id="drops-table" rows={@drops}>
-              <:col :let={drop} label="Published">
-                <.text_cell
-                  label={format_datetime(drop.published_at)}
-                  sublabel={format_date(drop.published_at)}
-                />
-              </:col>
-              <:col :let={drop} label="Title">
-                <.link navigate={~p"/drops/#{drop.id}"} data-part="title-link">
-                  <.text_and_description_cell
-                    label={Markdown.inline(drop.title)}
-                    description={truncate(drop.body)}
+            <div data-part="table-scroll">
+              <.table id="drops-table" rows={@drops}>
+                <:col :let={drop} label="Published">
+                  <time data-part="published-cell" datetime={published_iso8601(drop.published_at)}>
+                    <span data-part="published-date">{format_date(drop.published_at)}</span>
+                    <span data-part="published-time">{format_time(drop.published_at)}</span>
+                  </time>
+                </:col>
+                <:col :let={drop} label="Title">
+                  <.link navigate={~p"/drops/#{drop.id}"} data-part="title-link">
+                    <.text_and_description_cell
+                      label={Markdown.inline(drop.title)}
+                      description={truncate(drop.body)}
+                    />
+                  </.link>
+                </:col>
+                <:col :let={drop} label="Project">
+                  <.text_cell label={project_chips(drop)} />
+                </:col>
+                <:col :let={drop} label="Domains">
+                  <.text_cell label={domain_chips(drop.domains)} />
+                </:col>
+                <:col :let={drop} label="Version">
+                  <.text_cell :if={drop.version} label={drop.version} />
+                  <.text_cell :if={is_nil(drop.version)} label="—" />
+                </:col>
+                <:col :let={drop} label="Source">
+                  <.badge_cell
+                    label={Drops.source_type_label(drop.source_type)}
+                    color={source_badge_color(drop.source_type)}
+                    style="light-fill"
                   />
-                </.link>
-              </:col>
-              <:col :let={drop} label="Version">
-                <.text_cell :if={drop.version} label={drop.version} />
-                <.text_cell :if={is_nil(drop.version)} label="—" />
-              </:col>
-              <:col :let={drop} label="Project">
-                <.text_cell label={project_chips(drop.domains)} />
-              </:col>
-              <:col :let={drop} label="Domains">
-                <.text_cell label={domain_chips(drop.domains)} />
-              </:col>
-              <:col :let={drop} label="Source">
-                <.badge_cell
-                  label={Drops.source_type_label(drop.source_type)}
-                  color={source_badge_color(drop.source_type)}
-                  style="light-fill"
-                />
-              </:col>
-              <:empty_state>
-                <.table_empty_state
-                  icon="package"
-                  title="No drops yet"
-                  subtitle="Once a release is published or a changelog updates, drops will surface here."
-                />
-              </:empty_state>
-            </.table>
+                </:col>
+                <:empty_state>
+                  <.table_empty_state
+                    icon="package"
+                    title="No drops yet"
+                    subtitle="Once a release is published or a changelog updates, drops will surface here."
+                  />
+                </:empty_state>
+              </.table>
+            </div>
 
             <div :if={@drops_meta.total_pages > 1} data-part="pagination">
               <.button
@@ -257,7 +263,8 @@ defmodule HiveWeb.DropsLive.Index do
 
   defp atom_feed(params) do
     domain_ids = Query.csv_list(params["domain_ids"])
-    query = if domain_ids == [], do: "", else: "?domain_ids=" <> Enum.join(domain_ids, ",")
+    project_ids = Query.csv_list(params["project_ids"])
+    query = drops_filter_query(project_ids, domain_ids)
 
     %{
       title: "Hive · Drops",
@@ -279,6 +286,7 @@ defmodule HiveWeb.DropsLive.Index do
   defp list_opts(user, query, active_filters, page) do
     [user: user, page: page, page_size: @page_size, query: Query.present_string(query)]
     |> put_domain_filter(active_filters)
+    |> put_project_filter(active_filters)
     |> put_source_type_filter(active_filters)
   end
 
@@ -286,6 +294,16 @@ defmodule HiveWeb.DropsLive.Index do
     case Enum.find(active_filters, &(&1.id == "domain")) do
       %{operator: :==, value: value} when is_binary(value) and value != "" ->
         Keyword.put(opts, :domain_ids, [value])
+
+      _other ->
+        opts
+    end
+  end
+
+  defp put_project_filter(opts, active_filters) do
+    case Enum.find(active_filters, &(&1.id == "project")) do
+      %{operator: :==, value: value} when is_binary(value) and value != "" ->
+        Keyword.put(opts, :project_ids, [value])
 
       _other ->
         opts
@@ -319,7 +337,7 @@ defmodule HiveWeb.DropsLive.Index do
     end
   end
 
-  defp define_filters(domains) do
+  defp define_filters(domains, projects) do
     domain_options =
       domains
       |> Enum.map(& &1.id)
@@ -328,7 +346,25 @@ defmodule HiveWeb.DropsLive.Index do
     domain_display_names =
       Map.new(domains, fn domain -> {domain.id, domain.name} end)
 
+    project_options =
+      projects
+      |> Enum.map(& &1.id)
+      |> Enum.uniq()
+
+    project_display_names =
+      Map.new(projects, fn project -> {project.id, project.name} end)
+
     [
+      %Filter.Filter{
+        id: "project",
+        display_name: "Project",
+        type: :option,
+        options: project_options,
+        options_display_names: project_display_names,
+        operator: :==,
+        searchable: true,
+        value: nil
+      },
       %Filter.Filter{
         id: "domain",
         display_name: "Domain",
@@ -345,7 +381,7 @@ defmodule HiveWeb.DropsLive.Index do
         type: :option,
         options: ["github_release", "rss"],
         options_display_names: %{
-          "github_release" => "GitHub release",
+          "github_release" => "GitHub",
           "rss" => "RSS"
         },
         operator: :==,
@@ -360,11 +396,14 @@ defmodule HiveWeb.DropsLive.Index do
   defp source_badge_color(:rss), do: "information"
   defp source_badge_color(_other), do: "neutral"
 
-  defp format_datetime(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%H:%M:%S UTC")
-  defp format_datetime(_other), do: "-"
-
   defp format_date(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
   defp format_date(_other), do: "-"
+
+  defp format_time(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%H:%M UTC")
+  defp format_time(_other), do: "-"
+
+  defp published_iso8601(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
+  defp published_iso8601(_other), do: nil
 
   defp truncate(nil), do: nil
   defp truncate(body) when is_binary(body), do: Markdown.preview(body, 140)
@@ -373,17 +412,27 @@ defmodule HiveWeb.DropsLive.Index do
   defp domain_chips(nil), do: "Unclassified"
   defp domain_chips(domains), do: Enum.map_join(domains, ", ", & &1.name)
 
-  defp project_chips([]), do: "—"
-  defp project_chips(nil), do: "—"
-
-  defp project_chips(domains) do
-    domains
-    |> Enum.map(fn domain -> domain.project && domain.project.name end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
+  defp project_chips(drop) do
+    drop
+    |> Drops.projects_for_drop()
+    |> Enum.map(& &1.name)
     |> case do
       [] -> "—"
       names -> Enum.join(names, ", ")
     end
   end
+
+  defp drops_filter_query([], []), do: ""
+
+  defp drops_filter_query(project_ids, domain_ids) do
+    params =
+      %{}
+      |> maybe_put_csv("project_ids", project_ids)
+      |> maybe_put_csv("domain_ids", domain_ids)
+
+    "?" <> URI.encode_query(params)
+  end
+
+  defp maybe_put_csv(params, _key, []), do: params
+  defp maybe_put_csv(params, key, values), do: Map.put(params, key, Enum.join(values, ","))
 end

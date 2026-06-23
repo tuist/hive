@@ -5,6 +5,7 @@ defmodule Hive.Domains.EvolutionTest do
   alias Hive.Forage
   alias Hive.Domains
   alias Hive.Domains.Evolution
+  alias Hive.Projects
   alias Hive.Specs
 
   defp user(email \\ "alice@example.com") do
@@ -17,11 +18,13 @@ defmodule Hive.Domains.EvolutionTest do
   test "evolve_from_work_items/1 builds context and applies agent-proposed domain changes" do
     test_pid = self()
     user = user()
+    {:ok, project} = Projects.create_project(%{name: "Tuist", visibility: "public"})
 
     {:ok, tuist} =
       Domains.create_domain(%{
         name: "Tuist",
-        description: "Developer infrastructure for build systems."
+        description: "Developer infrastructure for build systems.",
+        project_id: project.id
       })
 
     {:ok, _feature_request} =
@@ -75,7 +78,8 @@ defmodule Hive.Domains.EvolutionTest do
 
     assert created.name == "Build Cache"
     assert updated.name == "Tuist Developer Tools"
-    assert Repo.preload(created, :project).project.name == "Tuist"
+    assert [project] = Repo.preload(created, :projects).projects
+    assert project.name == "Tuist"
 
     assert_receive {:evolution_input, input}
     assert Enum.any?(input.current_domains, &(&1.name == "Tuist"))
@@ -84,6 +88,8 @@ defmodule Hive.Domains.EvolutionTest do
   end
 
   test "apply_plan/1 skips too generic and too specific domain suggestions" do
+    {:ok, _project} = Projects.create_project(%{name: "Tuist", visibility: "public"})
+
     assert {:ok, %{created: [created], skipped: skipped}} =
              Evolution.apply_plan(%{
                changes: [
@@ -111,6 +117,21 @@ defmodule Hive.Domains.EvolutionTest do
 
     assert created.name == "Developer Experience"
     assert Enum.map(skipped, & &1.reason) == [:unfit_domain_name, :unfit_domain_name]
+  end
+
+  test "apply_plan/1 skips domain creation when the Tuist project has not been created" do
+    assert {:ok, %{created: [], skipped: [%{reason: :missing_tuist_project}]}} =
+             Evolution.apply_plan(%{
+               changes: [
+                 %{
+                   action: "create",
+                   name: "Developer Experience",
+                   description:
+                     "Developer onboarding, documentation, and CLI workflows for Tuist users.",
+                   rationale: "A durable Tuist business domain."
+                 }
+               ]
+             })
   end
 
   test "apply_plan/1 skips suggestions outside Tuist business domains" do

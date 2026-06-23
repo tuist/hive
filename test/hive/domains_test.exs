@@ -4,11 +4,13 @@ defmodule Hive.DomainsTest do
   alias Hive.Domains
   alias Hive.Domains.GitHubRepository
   alias Hive.Domains.Domain
+  alias Hive.Projects
   alias Hive.Projects.Project
 
   describe "change_domain/2" do
     test "is valid with a name" do
-      changeset = Domains.change_domain(%Domain{}, %{name: "Hive"})
+      changeset =
+        Domains.change_domain(%Domain{}, %{name: "Hive"})
 
       assert changeset.valid?
       assert get_field(changeset, :visibility) == :public
@@ -22,7 +24,12 @@ defmodule Hive.DomainsTest do
     end
 
     test "rejects unknown visibility" do
-      changeset = Domains.change_domain(%Domain{}, %{name: "Hive", visibility: "internal"})
+      changeset =
+        Domains.change_domain(%Domain{}, %{
+          name: "Hive",
+          project_id: Ecto.UUID.generate(),
+          visibility: "internal"
+        })
 
       refute changeset.valid?
       assert {"is invalid", _} = changeset.errors[:visibility]
@@ -32,12 +39,14 @@ defmodule Hive.DomainsTest do
       owner_changeset =
         Domains.change_domain(%Domain{}, %{
           name: "Hive",
+          project_id: Ecto.UUID.generate(),
           github_repository_owner: "tuist"
         })
 
       name_changeset =
         Domains.change_domain(%Domain{}, %{
           name: "Hive",
+          project_id: Ecto.UUID.generate(),
           github_repository_name: "hive"
         })
 
@@ -51,6 +60,7 @@ defmodule Hive.DomainsTest do
       changeset =
         Domains.change_domain(%Domain{}, %{
           name: "Hive",
+          project_id: Ecto.UUID.generate(),
           github_repository_owner: " Tuist ",
           github_repository_name: " Hive "
         })
@@ -61,26 +71,34 @@ defmodule Hive.DomainsTest do
   end
 
   describe "create_domain/1" do
-    test "auto-bootstraps a project named after the domain" do
+    test "can create a domain without a project association" do
       assert {:ok, domain} = Domains.create_domain(%{name: "Hive"})
 
       assert domain.name == "Hive"
-      assert domain.visibility == :public
-      assert domain.project.name == "Hive"
-      assert domain.project.github_repositories == []
+      assert domain.projects == []
     end
 
-    test "creates a private domain under a private project" do
-      assert {:ok, domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
+    test "creates a private domain associated with a private project" do
+      project = create_project!(%{name: "Atlas", visibility: "private"})
+
+      assert {:ok, domain} =
+               Domains.create_domain(%{
+                 name: "Atlas Operations",
+                 project_id: project.id,
+                 visibility: "private"
+               })
 
       assert domain.visibility == :private
-      assert domain.project.visibility == :private
+      assert [%Project{visibility: :private}] = domain.projects
     end
 
-    test "attaches a GitHub repository to the bootstrapped project" do
+    test "attaches a GitHub repository to the selected project" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:ok, domain} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  description: "Domain orchestration",
                  github_repository_owner: "Tuist",
                  github_repository_name: "Hive"
@@ -89,14 +107,13 @@ defmodule Hive.DomainsTest do
       assert domain.description == "Domain orchestration"
 
       assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
-               domain.project.github_repositories
+               project_repositories(domain)
 
       assert Repo.aggregate(GitHubRepository, :count) == 1
     end
 
     test "links a domain to an existing project when project_id is supplied" do
-      {:ok, project} =
-        Hive.Projects.create_project(%{name: "Tuist", visibility: "public"})
+      project = create_project!(%{name: "Tuist", visibility: "public"})
 
       assert {:ok, cache} =
                Domains.create_domain(%{name: "Cache", project_id: project.id})
@@ -104,22 +121,29 @@ defmodule Hive.DomainsTest do
       assert {:ok, generated} =
                Domains.create_domain(%{name: "Generated", project_id: project.id})
 
-      assert cache.project.id == project.id
-      assert generated.project.id == project.id
+      assert [%Project{id: cache_project_id}] = cache.projects
+      assert [%Project{id: generated_project_id}] = generated.projects
+      assert cache_project_id == project.id
+      assert generated_project_id == project.id
     end
 
     test "rejects duplicate domain names" do
-      assert {:ok, _} = Domains.create_domain(%{name: "Hive"})
+      project = create_project!(%{name: "Hive"})
 
-      assert {:error, changeset} = Domains.create_domain(%{name: "Hive"})
+      assert {:ok, _} = Domains.create_domain(%{name: "Hive", project_id: project.id})
+
+      assert {:error, changeset} = Domains.create_domain(%{name: "Hive", project_id: project.id})
 
       assert {"has already been taken", _} = changeset.errors[:name]
     end
 
     test "returns a changeset for invalid repository fields" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:error, changeset} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  github_repository_owner: "-tuist",
                  github_repository_name: "hive"
                })
@@ -130,29 +154,36 @@ defmodule Hive.DomainsTest do
   end
 
   describe "list_domains/0" do
-    test "returns domains ordered by name with their project preloaded" do
+    test "returns domains ordered by name with their projects preloaded" do
+      forge_project = create_project!(%{name: "Forge"})
+      atlas_project = create_project!(%{name: "Atlas"})
+
       assert {:ok, _} =
                Domains.create_domain(%{
                  name: "Forge",
+                 project_id: forge_project.id,
                  github_repository_owner: "tuist",
                  github_repository_name: "forge"
                })
 
-      assert {:ok, _} = Domains.create_domain(%{name: "Atlas"})
+      assert {:ok, _} = Domains.create_domain(%{name: "Atlas", project_id: atlas_project.id})
 
       assert [atlas, forge] = Domains.list_domains()
       assert atlas.name == "Atlas"
       assert forge.name == "Forge"
-      assert [%GitHubRepository{name: "forge"}] = forge.project.github_repositories
-      assert %Project{} = atlas.project
+      assert [%GitHubRepository{name: "forge"}] = project_repositories(forge)
+      assert [%Project{}] = atlas.projects
     end
   end
 
   describe "get_domain!/1" do
-    test "returns a domain with its project's repositories preloaded" do
+    test "returns a domain with its projects' repositories preloaded" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:ok, domain} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  github_repository_owner: "tuist",
                  github_repository_name: "hive"
                })
@@ -160,15 +191,18 @@ defmodule Hive.DomainsTest do
       assert domain = Domains.get_domain!(domain.id)
 
       assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
-               domain.project.github_repositories
+               project_repositories(domain)
     end
   end
 
   describe "delete_domain/1" do
     test "deletes the domain but leaves the project's repository intact" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:ok, domain} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  github_repository_owner: "tuist",
                  github_repository_name: "hive"
                })
@@ -182,7 +216,9 @@ defmodule Hive.DomainsTest do
 
   describe "update_domain/2" do
     test "updates domain fields" do
-      assert {:ok, domain} = Domains.create_domain(%{name: "Atlas"})
+      project = create_project!(%{name: "Atlas"})
+
+      assert {:ok, domain} = Domains.create_domain(%{name: "Atlas", project_id: project.id})
 
       assert {:ok, domain} =
                Domains.update_domain(domain, %{
@@ -197,9 +233,12 @@ defmodule Hive.DomainsTest do
     end
 
     test "replaces the project's repository when the form swaps it" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:ok, domain} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  github_repository_owner: "tuist",
                  github_repository_name: "hive"
                })
@@ -212,13 +251,16 @@ defmodule Hive.DomainsTest do
                })
 
       assert [%GitHubRepository{owner: "tuist"} | _] =
-               domain.project.github_repositories
+               project_repositories(domain)
     end
 
     test "keeps repositories when repository fields are omitted" do
+      project = create_project!(%{name: "Hive"})
+
       assert {:ok, domain} =
                Domains.create_domain(%{
                  name: "Hive",
+                 project_id: project.id,
                  github_repository_owner: "tuist",
                  github_repository_name: "hive"
                })
@@ -230,7 +272,19 @@ defmodule Hive.DomainsTest do
       assert domain.visibility == :private
 
       assert [%GitHubRepository{owner: "tuist", name: "hive"}] =
-               domain.project.github_repositories
+               project_repositories(domain)
     end
+  end
+
+  defp create_project!(attrs) do
+    attrs = Map.put_new(attrs, :visibility, "public")
+    {:ok, project} = Projects.create_project(attrs)
+    project
+  end
+
+  defp project_repositories(%Domain{} = domain) do
+    domain.projects
+    |> Enum.flat_map(& &1.github_repositories)
+    |> Enum.sort_by(&{&1.owner, &1.name})
   end
 end

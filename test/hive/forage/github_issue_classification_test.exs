@@ -7,10 +7,17 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
   alias Hive.Forage.GitHubIssueClassification
   alias Hive.Forage.GitHubIssueDomain
   alias Hive.Domains
+  alias Hive.Projects
 
   defp unique, do: System.unique_integer([:positive])
 
   defp create_domain!(attrs) do
+    attrs =
+      Map.put_new_lazy(attrs, :project_id, fn ->
+        {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+        project.id
+      end)
+
     {:ok, domain} = Domains.create_domain(attrs)
     domain
   end
@@ -39,7 +46,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
   end
 
   defp seed_issue!(domain) do
-    repo = hd(domain.project.github_repositories)
+    repo = github_repository_for_domain!(domain)
 
     Forage.reconcile_repository_github_issues(repo, [
       %{number: 1, title: "An issue", body: "Some body"}
@@ -50,7 +57,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "links every candidate domain when the LLM is unavailable" do
     domain_a = create_domain_with_new_repo!("alpha")
-    repo = hd(domain_a.project.github_repositories)
+    repo = github_repository_for_domain!(domain_a)
     domain_b = attach_domain!("beta", repo)
 
     {_repo, issue} = seed_issue!(domain_a)
@@ -70,7 +77,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "keeps only the domain ids the agent picked from the candidate set" do
     domain_a = create_domain_with_new_repo!("alpha")
-    repo = hd(domain_a.project.github_repositories)
+    repo = github_repository_for_domain!(domain_a)
     domain_b = attach_domain!("beta", repo)
     unrelated = create_domain_with_new_repo!("unrelated")
 
@@ -143,7 +150,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
 
   test "leaves classified_at nil when the repository has no domain attached" do
     domain = create_domain_with_new_repo!("orphan")
-    repo = hd(domain.project.github_repositories)
+    repo = github_repository_for_domain!(domain)
 
     issue =
       Repo.insert!(

@@ -27,6 +27,7 @@ defmodule HiveWeb.ForageComponents do
   attr :active_filters, :list, required: true
   attr :signed_in?, :boolean, required: true
   attr :can_create_spec?, :boolean, default: false
+  attr :current_path, :string, required: true
   attr :page_link, :any, required: true
   attr :item_link, :any, required: true
 
@@ -47,7 +48,11 @@ defmodule HiveWeb.ForageComponents do
           />
           <.button
             label={if @signed_in?, do: "New item", else: "Log in to submit"}
-            href={if @signed_in?, do: ~p"/forage/new", else: ~p"/login"}
+            href={
+              if @signed_in?,
+                do: ~p"/forage/new",
+                else: ~p"/login?#{[return_to: @current_path]}"
+            }
             size="medium"
             variant="primary"
           >
@@ -216,6 +221,7 @@ defmodule HiveWeb.ForageComponents do
   attr :edit_comment_form, :any, required: true
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
+  attr :current_path, :string, required: true
   attr :current_user, :map, default: nil
 
   def item_detail(assigns) do
@@ -382,7 +388,12 @@ defmodule HiveWeb.ForageComponents do
           >
             <p>Comments are available to authenticated users.</p>
             <:action>
-              <.button label="Sign in" href={~p"/login"} size="medium" variant="secondary" />
+              <.button
+                label="Sign in"
+                href={~p"/login?#{[return_to: @current_path]}"}
+                size="medium"
+                variant="secondary"
+              />
             </:action>
           </.alert>
         </.card_section>
@@ -658,7 +669,7 @@ defmodule HiveWeb.ForageComponents do
       <div data-part="widgets">
         <.forage_widget title="Active" value={@stats.firing} legend="primary" />
         <.forage_widget title="Resolved" value={@stats.resolved} legend="secondary" />
-        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
+        <.forage_widget title="Projects" value={@stats.projects} legend="tertiary" />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -667,7 +678,7 @@ defmodule HiveWeb.ForageComponents do
             <div data-part="empty-icon"><.bell /></div>
             <h2>No Grafana alerts yet</h2>
             <p>
-              Generate a webhook on a domain in settings and point a Grafana
+              Generate a webhook on a project and point a Grafana
               contact point at it. Firing and resolved deliveries will thread
               into one item per alert.
             </p>
@@ -689,8 +700,8 @@ defmodule HiveWeb.ForageComponents do
                   dot={true}
                 />
                 <.badge
-                  :if={alert.domain}
-                  label={alert.domain.name}
+                  :if={alert.project}
+                  label={alert.project.name}
                   color="neutral"
                   style="light-fill"
                   size="large"
@@ -715,7 +726,7 @@ defmodule HiveWeb.ForageComponents do
     %{
       firing: Enum.count(alerts, &(&1.status == :firing)),
       resolved: Enum.count(alerts, &(&1.status == :resolved)),
-      domains: alerts |> Enum.map(& &1.domain_id) |> Enum.uniq() |> length()
+      projects: alerts |> Enum.map(& &1.project_id) |> Enum.uniq() |> length()
     }
   end
 

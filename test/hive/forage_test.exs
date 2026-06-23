@@ -8,6 +8,7 @@ defmodule Hive.ForageTest do
   alias Hive.Forage.GitHubIssue
   alias Hive.GitHub.Issues
   alias Hive.Domains
+  alias Hive.Projects
 
   defp user(attrs \\ %{}) do
     {:ok, user} =
@@ -34,6 +35,7 @@ defmodule Hive.ForageTest do
     {:ok, domain} =
       Domains.create_domain(%{
         name: "forage-#{suffix}",
+        project_id: create_project!().id,
         visibility: visibility,
         github_repository_owner: "owner#{suffix}",
         github_repository_name: "repo#{suffix}",
@@ -41,6 +43,11 @@ defmodule Hive.ForageTest do
       })
 
     domain
+  end
+
+  defp create_project! do
+    {:ok, project} = Projects.create_project(%{name: "Project #{unique()}"})
+    project
   end
 
   defp unique, do: System.unique_integer([:positive])
@@ -134,12 +141,16 @@ defmodule Hive.ForageTest do
                Forage.accessible_domains_with_repositories(user_with_email("forage-pairs"))
 
       assert name == domain.name
-      assert owner == hd(domain.project.github_repositories).owner
-      assert repo_name == hd(domain.project.github_repositories).name
+      assert owner == github_repository_for_domain!(domain).owner
+      assert repo_name == github_repository_for_domain!(domain).name
     end
 
     test "skips domains without a connected repository" do
-      {:ok, _} = Domains.create_domain(%{name: "forage-no-repo-#{unique()}"})
+      {:ok, _} =
+        Domains.create_domain(%{
+          name: "forage-no-repo-#{unique()}",
+          project_id: create_project!().id
+        })
 
       assert Forage.accessible_domains_with_repositories(nil) == []
     end
@@ -271,7 +282,7 @@ defmodule Hive.ForageTest do
   describe "forage item comments" do
     test "fetches GitHub issue comments on demand without syncing them" do
       domain = domain_with_repo!([])
-      repository = hd(domain.project.github_repositories)
+      repository = github_repository_for_domain!(domain)
 
       Forage.reconcile_repository_github_issues(repository, [
         %{number: 42, title: "Crash on launch", body: "Detail"}

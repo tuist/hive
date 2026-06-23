@@ -51,10 +51,10 @@ Hive currently uses agents for:
   and return one drop item per user-facing improvement that actually
   landed. When no LLM is configured, GitHub release drop generation is
   skipped so release envelopes do not pollute the drops timeline.
-- Drop meadow classification: after a drop item exists, Hive queues a
-  job that asks the agent which meadows the drop belongs to. When no LLM
-  is configured, each drop is linked to every meadow attached to the
-  release repository's project.
+- Drop domain classification: after a drop item exists, Hive queues a
+  job that asks the agent which domains the drop belongs to. When no LLM
+  is configured, each drop is linked to every domain associated with
+  the release repository's project.
 
 ## Configuration
 

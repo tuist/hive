@@ -5,8 +5,18 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Accounts
   alias Hive.Auth
   alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Specs
   alias Hive.Specs.RevisionSummaries
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
@@ -85,6 +95,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs/#{spec.number}")
 
     assert html =~ "Sign in to comment"
+    assert html =~ ~s(href="/login?return_to=%2Fspecs%2F#{spec.number}")
     refute html =~ ~s|data-part="comment-form"|
   end
 
@@ -110,7 +121,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
   test "shows public specs attached to private domains to contributors", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    {:ok, domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
+    domain = create_domain!(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
@@ -134,7 +145,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
   test "labels public specs attached to private domains as public for members", %{conn: conn} do
     {conn, member} = sign_in(conn, "member@tuist.dev")
-    {:ok, domain} = Domains.create_domain(%{name: "Atlas", visibility: "private"})
+    domain = create_domain!(%{name: "Atlas", visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(

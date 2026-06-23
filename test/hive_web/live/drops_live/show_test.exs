@@ -3,8 +3,26 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
   alias Hive.Drops
   alias Hive.Domains
+  alias Hive.Projects
 
   defp unique_domain_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
+
+  defp create_domain!(attrs) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = put_project_id(attrs, project.id)
+    {:ok, domain} = Domains.create_domain(attrs)
+    domain
+  end
+
+  defp put_project_id(attrs, project_id) do
+    if Enum.any?(Map.keys(attrs), &is_binary/1) do
+      Map.put_new(attrs, "project_id", project_id)
+    else
+      Map.put_new(attrs, :project_id, project_id)
+    end
+  end
 
   defp insert_drop!(domain, overrides \\ %{}) do
     attrs =
@@ -28,8 +46,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
   end
 
   test "renders a drop from a public domain to anonymous visitors", %{conn: conn} do
-    {:ok, domain} =
-      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
+    domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
 
     drop = insert_drop!(domain)
 
@@ -42,8 +59,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
   end
 
   test "redirects anonymous visitors away from drops in a private domain", %{conn: conn} do
-    {:ok, domain} =
-      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "private"})
+    domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "private"})
 
     drop = insert_drop!(domain)
 
@@ -51,8 +67,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
   end
 
   test "shows the version chip when present", %{conn: conn} do
-    {:ok, domain} =
-      Domains.create_domain(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
+    domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
 
     drop = insert_drop!(domain, %{version: "v4.7.0"})
 

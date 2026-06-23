@@ -4,16 +4,17 @@ defmodule Hive.Forage.GrafanaTest do
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Forage.GrafanaAlert
-  alias Hive.Domains
-  alias Hive.Domains.Webhooks
+  alias Hive.Projects
+  alias Hive.Projects.Webhooks
 
   setup do
-    {:ok, domain} = Domains.create_domain(%{name: "Hive"})
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
 
     {:ok, {webhook, _token}} =
-      Webhooks.create(domain, %{"name" => "G", "source" => "grafana"})
+      Webhooks.create(project, %{"name" => "G", "source" => "grafana"})
 
-    {:ok, domain: domain, webhook: webhook}
+    {:ok, project: project, webhook: webhook}
   end
 
   test "ingest/3 inserts an alert from a firing payload", ctx do
@@ -35,7 +36,7 @@ defmodule Hive.Forage.GrafanaTest do
       ]
     }
 
-    assert {:ok, [%GrafanaAlert{} = alert]} = Grafana.ingest(ctx.domain, ctx.webhook, payload)
+    assert {:ok, [%GrafanaAlert{} = alert]} = Grafana.ingest(ctx.project, ctx.webhook, payload)
     assert alert.status == :firing
     assert alert.title == "Latency over budget"
     assert alert.summary == "p95 > 500ms"
@@ -44,7 +45,8 @@ defmodule Hive.Forage.GrafanaTest do
     assert alert.labels == %{"alertname" => "HighLatency"}
     assert alert.starts_at == ~U[2026-06-10 12:00:00Z]
     assert alert.ends_at == nil
-    assert alert.domain_id == ctx.domain.id
+    assert alert.project_id == ctx.project.id
+    assert alert.domain_id == nil
     assert alert.webhook_id == ctx.webhook.id
   end
 
@@ -52,10 +54,10 @@ defmodule Hive.Forage.GrafanaTest do
     firing = base_payload("firing", "fp-1")
     resolved = base_payload("resolved", "fp-1")
 
-    assert {:ok, [first]} = Grafana.ingest(ctx.domain, ctx.webhook, firing)
+    assert {:ok, [first]} = Grafana.ingest(ctx.project, ctx.webhook, firing)
     assert first.status == :firing
 
-    assert {:ok, [second]} = Grafana.ingest(ctx.domain, ctx.webhook, resolved)
+    assert {:ok, [second]} = Grafana.ingest(ctx.project, ctx.webhook, resolved)
     assert second.id == first.id
     assert second.status == :resolved
     assert [%GrafanaAlert{}] = Forage.list_grafana_alerts()
@@ -63,7 +65,7 @@ defmodule Hive.Forage.GrafanaTest do
 
   test "ingest/3 rejects a payload without alerts", ctx do
     assert {:error, :invalid_payload} =
-             Grafana.ingest(ctx.domain, ctx.webhook, %{"foo" => "bar"})
+             Grafana.ingest(ctx.project, ctx.webhook, %{"foo" => "bar"})
   end
 
   test "ingest/3 derives a fingerprint when Grafana doesn't send one", ctx do
@@ -78,7 +80,7 @@ defmodule Hive.Forage.GrafanaTest do
       ]
     }
 
-    assert {:ok, [alert]} = Grafana.ingest(ctx.domain, ctx.webhook, payload)
+    assert {:ok, [alert]} = Grafana.ingest(ctx.project, ctx.webhook, payload)
     assert is_binary(alert.fingerprint) and byte_size(alert.fingerprint) > 0
   end
 

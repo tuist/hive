@@ -245,31 +245,25 @@ defmodule Hive.Domains.Evolution do
         {:skipped, :duplicate_domain_name}
 
       nil ->
-        case Domains.create_domain(%{
-               name: name,
-               description: description,
-               project_id: evolution_project_id()
-             }) do
-          {:ok, domain} -> {:created, domain}
-          {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
+        with {:ok, project_id} <- evolution_project_id() do
+          case Domains.create_domain(%{
+                 name: name,
+                 description: description,
+                 project_id: project_id
+               }) do
+            {:ok, domain} -> {:created, domain}
+            {:error, changeset} -> {:skipped, {:invalid_domain, changeset_errors(changeset)}}
+          end
+        else
+          {:error, reason} -> {:skipped, reason}
         end
     end
   end
 
   defp evolution_project_id do
     case Repo.get_by(Project, name: "Tuist") do
-      %Project{id: id} ->
-        id
-
-      nil ->
-        %Project{}
-        |> Project.changeset(%{
-          name: "Tuist",
-          description: "Developer tooling for Xcode projects, CI, caching, and app delivery.",
-          visibility: :public
-        })
-        |> Repo.insert!()
-        |> Map.fetch!(:id)
+      %Project{id: id} -> {:ok, id}
+      nil -> {:error, :missing_tuist_project}
     end
   end
 

@@ -362,6 +362,7 @@ defmodule HiveWeb.SpecLive.Show do
         current_user={@current_user}
         editing_comment_id={@editing_comment_id}
         signed_in?={@signed_in?}
+        current_path={@current_path}
         expanded_revision_rows={@expanded_revision_rows}
         viewer_last_viewed_at={@viewer_last_viewed_at}
         revision_summaries_enabled?={@revision_summaries_enabled?}

@@ -156,7 +156,7 @@ defmodule HiveWeb.OpsLive.Drops do
             <h1>Drops</h1>
             <p>
               Register RSS/Atom changelog feeds. Each ingested entry is routed to one or
-              more domains by the classifier. GitHub Releases for any connected repository
+              more domains by the classifier. GitHub Releases for any linked repository
               are ingested automatically and don't need a source here.
             </p>
           </div>

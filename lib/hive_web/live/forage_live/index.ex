@@ -561,6 +561,7 @@ defmodule HiveWeb.ForageLive.Index do
         active_filters={@active_filters}
         signed_in?={@signed_in?}
         can_create_spec?={@can_create_spec?}
+        current_path={@current_path}
         page_link={fn page -> page_link(@uri, page) end}
         item_link={fn item -> item_link(@uri, item) end}
       />

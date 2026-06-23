@@ -12,23 +12,22 @@ typing into a form.
 Two source types feed drops:
 
 - **GitHub Releases**: every release published on a repository
-  connected to a domain is ingested automatically. No configuration
-  is required beyond the domain's existing repository binding. New
-  releases appear in `/drops` within fifteen minutes, attached to the
-  domains linked to the release's repository.
+  connected to a project is ingested automatically. New releases appear
+  in `/drops` within fifteen minutes, attached to the domains associated
+  with the release repository's project.
 - **RSS / Atom changelog feeds**: any public RSS or Atom feed can be
   registered as a source from `/ops/drops` (admin only). Sources are
-  global: you do not pick a domain at registration time. Hive polls
-  every enabled feed on the same fifteen-minute interval and routes
-  every ingested entry through the classifier.
+  registered for a project, not a domain. Hive polls every enabled feed
+  on the same fifteen-minute interval and routes every ingested entry
+  through the classifier for that project's associated domains.
 
 ## Routing entries to domains
 
-Each new RSS entry is processed by a classifier that decides which
-domains it belongs to. The classifier reads the entry's title and
-body, compares them against the description of each domain, and links
-the drop to the domains whose substance it actually matches. A single
-entry can end up linked to zero, one, or several domains.
+Each new entry is processed by a classifier that decides which domains
+it belongs to. The classifier reads the entry's title and body,
+compares them against the description of each candidate domain, and
+links the drop to the domains whose substance it actually matches. A
+single entry can end up linked to zero, one, or several domains.
 
 When an LLM is configured (see [Agents](./agents)) the classifier asks
 the agent to pick the right subset. When no LLM is configured, the
@@ -60,20 +59,25 @@ Every list-style surface in Hive ships an Atom 1.0 feed at
 exception:
 
 - `/drops/atom.xml`: every drop the subscriber is allowed to see.
+- `/drops/atom.xml?project_ids=<id>,<id>`: only drops from the listed
+  projects.
 - `/drops/atom.xml?domain_ids=<id>,<id>`: only drops linked to the
   listed domains.
+- `/drops/atom.xml?project_ids=<id>&domain_ids=<id>`: only drops that
+  match both the selected projects and selected domains.
+- `/projects/:id/drops/atom.xml`: only the drops for one project.
 - `/domains/:id/drops/atom.xml`: only the drops for one domain.
 - `/domains/:id/atom.xml`: the domain's merged feed (GitHub issues,
-  Grafana alerts, and drops together).
+  Grafana alerts tagged with that domain, and drops together).
 
 Replace `atom.xml` with `rss.xml` for the RSS 2.0 version. Visibility
 is enforced the same way as the HTML page: anonymous subscribers only
 see drops linked to a public domain.
 
 The `Subscribe` button on `/drops` opens a picker that lets visitors
-choose which domains they want, generates the matching URL with the
-right `domain_ids` query parameter, and exposes a copy button so the
-URL can go straight into a reader.
+choose projects, domains, or both, generates the matching URL with the
+right query parameters, and exposes a copy button so the URL can go
+straight into a reader.
 
 ## Managing RSS sources
 

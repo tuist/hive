@@ -5,8 +5,13 @@ defmodule Hive.Drops.DomainClassificationTest do
   alias Hive.Drops.Drop
   alias Hive.Drops.DomainClassification
   alias Hive.Domains
+  alias Hive.Projects
 
   defp create_domain!(name, attrs \\ %{}) do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    attrs = Map.put_new(attrs, :project_id, project.id)
     {:ok, domain} = Domains.create_domain(Map.merge(%{name: name, visibility: "public"}, attrs))
     domain
   end

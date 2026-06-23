@@ -22,6 +22,8 @@ defmodule Hive.Drops do
   alias Hive.Drops.DropDomain
   alias Hive.Drops.DropSource
   alias Hive.Domains.Domain
+  alias Hive.Projects.Project
+  alias Hive.Projects.ProjectDomain
   alias Hive.Repo
 
   @default_page_size 20
@@ -39,12 +41,13 @@ defmodule Hive.Drops do
   ]
   @drop_attr_key_map Map.new(@drop_attr_keys, &{Atom.to_string(&1), &1})
 
-  @doc "Lists drops the `user` can see, paginated and optionally filtered by domains."
+  @doc "Lists drops the `user` can see, paginated and optionally filtered by projects or domains."
   def list_drops(opts \\ []) do
     user = Keyword.get(opts, :user)
     page = Keyword.get(opts, :page, 1) |> max(1)
     page_size = Keyword.get(opts, :page_size, @default_page_size) |> normalize_page_size()
     domain_ids = Keyword.get(opts, :domain_ids, []) |> normalize_domain_ids()
+    project_ids = Keyword.get(opts, :project_ids, []) |> normalize_project_ids()
     query_text = Keyword.get(opts, :query)
     source_type = Keyword.get(opts, :source_type)
 
@@ -52,6 +55,7 @@ defmodule Hive.Drops do
       Drop
       |> apply_visibility(user)
       |> filter_domain_ids(domain_ids)
+      |> filter_project_ids(project_ids)
       |> filter_source_type(source_type)
       |> filter_search(query_text)
       |> distinct(true)
@@ -65,7 +69,7 @@ defmodule Hive.Drops do
       |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
       |> limit(^page_size)
       |> offset(^((page - 1) * page_size))
-      |> preload(domains: :project, github_repository: [], drop_source: [])
+      |> preload(domains: :projects, github_repository: :project, drop_source: :project)
       |> Repo.all()
 
     {entries,
@@ -87,7 +91,22 @@ defmodule Hive.Drops do
     )
     |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
     |> limit(^limit)
-    |> preload(domains: :project, github_repository: [], drop_source: [])
+    |> preload(domains: :projects, github_repository: :project, drop_source: :project)
+    |> Repo.all()
+  end
+
+  @doc "Lists drops for a single project ordered by `published_at` descending."
+  def list_drops_for_project(%Project{} = project, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 100)
+    user = Keyword.get(opts, :user)
+
+    Drop
+    |> apply_visibility(user)
+    |> filter_project_ids([project.id])
+    |> distinct(true)
+    |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
+    |> limit(^limit)
+    |> preload(domains: :projects, github_repository: :project, drop_source: :project)
     |> Repo.all()
   end
 
@@ -98,7 +117,12 @@ defmodule Hive.Drops do
         {:error, :not_found}
 
       %Drop{} = drop ->
-        drop = Repo.preload(drop, [:domains, :github_repository, :drop_source])
+        drop =
+          Repo.preload(drop,
+            domains: :projects,
+            github_repository: :project,
+            drop_source: :project
+          )
 
         if visible?(drop, user),
           do: {:ok, drop},
@@ -123,8 +147,11 @@ defmodule Hive.Drops do
 
   def get_drop(id) when is_binary(id) do
     case Repo.get(Drop, id) do
-      nil -> nil
-      %Drop{} = drop -> Repo.preload(drop, [:domains, :github_repository, :drop_source])
+      nil ->
+        nil
+
+      %Drop{} = drop ->
+        Repo.preload(drop, domains: :projects, github_repository: :project, drop_source: :project)
     end
   rescue
     Ecto.Query.CastError -> nil
@@ -249,10 +276,22 @@ defmodule Hive.Drops do
     end
   end
 
-  def source_type_label(:github_release), do: "GitHub release"
+  def source_type_label(:github_release), do: "GitHub"
   def source_type_label(:rss), do: "RSS"
   def source_type_label(value) when is_atom(value), do: value |> Atom.to_string()
   def source_type_label(_value), do: "Drop"
+
+  @doc """
+  Returns the projects a drop belongs to, first through assigned domains
+  and then through its source repository or feed.
+  """
+  def projects_for_drop(%Drop{} = drop) do
+    drop
+    |> domain_projects()
+    |> Kernel.++([source_project(drop)])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq_by(&project_key/1)
+  end
 
   defp apply_visibility(query, user) do
     if Auth.member?(user) do
@@ -272,6 +311,29 @@ defmodule Hive.Drops do
 
   defp filter_domain_ids(query, ids) when is_list(ids) do
     where(query, [domain_link: dm], dm.domain_id in ^ids)
+  end
+
+  defp filter_project_ids(query, []), do: query
+
+  defp filter_project_ids(query, ids) when is_list(ids) do
+    query
+    |> join(:left, [drop], repository in assoc(drop, :github_repository),
+      as: :project_filter_repository
+    )
+    |> join(:left, [drop], source in assoc(drop, :drop_source), as: :project_filter_source)
+    |> join(:left, [domain_link: dm], project_domain in ProjectDomain,
+      on: project_domain.domain_id == dm.domain_id,
+      as: :project_filter_domain
+    )
+    |> where(
+      [
+        project_filter_repository: repository,
+        project_filter_source: source,
+        project_filter_domain: project_domain
+      ],
+      repository.project_id in ^ids or source.project_id in ^ids or
+        project_domain.project_id in ^ids
+    )
   end
 
   defp filter_source_type(query, nil), do: query
@@ -302,6 +364,35 @@ defmodule Hive.Drops do
   defp normalize_domain_ids(nil), do: []
   defp normalize_domain_ids(ids) when is_list(ids), do: Enum.uniq(ids)
   defp normalize_domain_ids(_other), do: []
+
+  defp normalize_project_ids(nil), do: []
+  defp normalize_project_ids(ids) when is_list(ids), do: Enum.uniq(ids)
+  defp normalize_project_ids(_other), do: []
+
+  defp domain_projects(%{domains: %Ecto.Association.NotLoaded{}}), do: []
+  defp domain_projects(%{domains: nil}), do: []
+
+  defp domain_projects(%{domains: domains}) when is_list(domains),
+    do: Enum.flat_map(domains, &loaded_projects/1)
+
+  defp domain_projects(_drop), do: []
+
+  defp source_project(drop) do
+    loaded_project(Map.get(drop, :github_repository)) ||
+      loaded_project(Map.get(drop, :drop_source))
+  end
+
+  defp loaded_project(%{project: %Ecto.Association.NotLoaded{}}), do: nil
+  defp loaded_project(%{project: nil}), do: nil
+  defp loaded_project(%{project: project}), do: project
+  defp loaded_project(_record), do: nil
+
+  defp loaded_projects(%{projects: %Ecto.Association.NotLoaded{}}), do: []
+  defp loaded_projects(%{projects: projects}) when is_list(projects), do: projects
+  defp loaded_projects(record), do: List.wrap(loaded_project(record)) |> Enum.reject(&is_nil/1)
+
+  defp project_key(%{id: id}) when is_binary(id), do: id
+  defp project_key(%{name: name}), do: name
 
   defp escape_like(value) do
     value

@@ -10,6 +10,12 @@ defmodule Hive.MCP.Components.Tools.Drops do
 
     %{
       id: drop.id,
+      projects:
+        drop
+        |> Drops.projects_for_drop()
+        |> Enum.map(fn project ->
+          %{id: project.id, name: project.name}
+        end),
       domains:
         Enum.map(domains, fn domain ->
           %{id: domain.id, name: domain.name}
