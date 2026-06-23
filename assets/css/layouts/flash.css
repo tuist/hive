@@ -3,9 +3,13 @@
   flex-direction: column;
   gap: var(--noora-spacing-3);
   margin-bottom: var(--noora-spacing-7);
-  width: min(720px, 100%);
+  width: 100%;
 
   & .noora-alert {
     width: 100%;
+  }
+
+  & .noora-alert > [data-part="title"] {
+    flex: 1;
   }
 }
