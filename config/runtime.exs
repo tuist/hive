@@ -51,7 +51,11 @@ parse_domains = fn
 end
 
 parse_boolean = fn value ->
-  value in ~w(true 1)
+  value
+  |> to_string()
+  |> String.trim()
+  |> String.downcase()
+  |> then(&(&1 in ~w(true 1)))
 end
 
 object_storage_provider =
@@ -112,12 +116,31 @@ if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
 end
 
 if sentry_dsn = System.get_env("SENTRY_DSN") do
+  sentry_report_oban_retries? =
+    parse_boolean.(System.get_env("SENTRY_OBAN_REPORT_RETRIES", "true"))
+
+  oban_integration =
+    [
+      capture_errors: parse_boolean.(System.get_env("SENTRY_OBAN_CAPTURE_ERRORS", "true")),
+      cron: [enabled: parse_boolean.(System.get_env("SENTRY_OBAN_CRON_MONITORING", "true"))]
+    ]
+    |> then(fn config ->
+      if sentry_report_oban_retries? do
+        config
+      else
+        Keyword.put(config, :should_report_error_callback, fn _worker, job ->
+          job.attempt >= job.max_attempts
+        end)
+      end
+    end)
+
   config :sentry,
     dsn: sentry_dsn,
     environment_name: System.get_env("SENTRY_ENVIRONMENT", to_string(config_env())),
     release: System.get_env("SENTRY_RELEASE") || to_string(Application.spec(:hive, :vsn)),
     enable_source_code_context: true,
     root_source_code_paths: [File.cwd!()],
+    integrations: [oban: oban_integration],
     before_send: {Hive.SentryEventFilter, :before_send}
 end
 

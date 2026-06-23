@@ -1,5 +1,4 @@
 defmodule HiveWeb.Endpoint do
-  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :hive
 
   @session_options [
@@ -9,7 +8,15 @@ defmodule HiveWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [
+      connect_info: [
+        :peer_data,
+        :uri,
+        :user_agent,
+        session: @session_options
+      ]
+    ]
 
   plug Plug.Static,
     at: "/",
