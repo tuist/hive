@@ -68,6 +68,9 @@ defmodule HiveWeb.SlackProfileController do
       {:error, :workspace_not_installed} ->
         bail(conn, "That Slack workspace is not connected to Hive yet.")
 
+      {:error, :workspace_not_allowed} ->
+        bail(conn, "That Slack workspace is not allowed on this Hive instance.")
+
       {:error, reason} ->
         Logger.warning("[SlackProfile] OAuth exchange failed: #{inspect(reason)}")
         bail(conn, "Slack rejected the profile link. Try again.")

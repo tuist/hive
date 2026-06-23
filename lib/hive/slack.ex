@@ -61,7 +61,7 @@ defmodule Hive.Slack do
 
   Shape:
     `%{client_id: binary, client_secret: binary, signing_secret: binary,
-       scopes: [binary]}`
+       scopes: [binary], allowed_team_ids: [binary]}`
   """
   def config(conf \\ Application.get_env(:hive, :slack, [])) do
     with client_id when is_binary(client_id) and client_id != "" <-
@@ -74,7 +74,8 @@ defmodule Hive.Slack do
         client_id: client_id,
         client_secret: client_secret,
         signing_secret: signing_secret,
-        scopes: scopes_value(Keyword.get(conf, :scopes))
+        scopes: scopes_value(Keyword.get(conf, :scopes)),
+        allowed_team_ids: allowed_team_ids_value(Keyword.get(conf, :allowed_team_ids))
       }
     else
       _ -> nil
@@ -128,6 +129,29 @@ defmodule Hive.Slack do
   end
 
   defp scopes_value(value) when is_list(value), do: value
+
+  defp allowed_team_ids_value(value), do: list_value(value)
+
+  defp list_value(nil), do: []
+  defp list_value(""), do: []
+
+  defp list_value(value) when is_binary(value) do
+    value
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp list_value(value) when is_list(value) do
+    value
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp list_value(_value), do: []
 
   def notification_events_for(%Installation{notification_events: events})
       when is_list(events) and events != [],
@@ -203,17 +227,38 @@ defmodule Hive.Slack do
       nil ->
         {:error, :not_configured}
 
-      %{client_id: client_id} ->
+      %{client_id: client_id} = conf ->
         query =
-          URI.encode_query(%{
+          %{
             "client_id" => client_id,
             "scope" => Enum.join(profile_scopes(), " "),
             "redirect_uri" => redirect_uri,
             "response_type" => "code",
             "state" => state
-          })
+          }
+          |> put_single_team_hint(conf)
+          |> URI.encode_query()
 
         {:ok, "https://slack.com/openid/connect/authorize?" <> query}
+    end
+  end
+
+  @doc false
+  def put_single_team_hint(params, conf) when is_map(params) do
+    case allowed_team_ids_value(Map.get(conf, :allowed_team_ids, [])) do
+      [team_id] -> Map.put(params, "team", team_id)
+      _allowed_team_ids -> params
+    end
+  end
+
+  @doc false
+  def validate_allowed_team_id(team_id, allowed_team_ids) do
+    case allowed_team_ids_value(allowed_team_ids) do
+      [] ->
+        :ok
+
+      allowed_team_ids ->
+        if team_id in allowed_team_ids, do: :ok, else: {:error, :workspace_not_allowed}
     end
   end
 
@@ -229,6 +274,11 @@ defmodule Hive.Slack do
         with {:ok, token} <- request_profile_token(code, redirect_uri, client_id, client_secret),
              {:ok, profile} <- request_profile_info(token),
              {:ok, attrs} <- profile_attrs(profile),
+             :ok <-
+               validate_allowed_team_id(
+                 attrs.installation_team_id,
+                 Map.get(conf, :allowed_team_ids, [])
+               ),
              %Installation{} = installation <-
                find_active_installation_by_team_id(attrs.installation_team_id) ||
                  {:error, :workspace_not_installed} do

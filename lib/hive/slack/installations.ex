@@ -20,14 +20,16 @@ defmodule Hive.Slack.Installations do
       nil ->
         {:error, :not_configured}
 
-      %{client_id: client_id, scopes: scopes} ->
+      %{client_id: client_id, scopes: scopes} = conf ->
         query =
-          URI.encode_query(%{
+          %{
             "client_id" => client_id,
             "scope" => Enum.join(scopes, ","),
             "redirect_uri" => redirect_uri,
             "state" => state
-          })
+          }
+          |> Slack.put_single_team_hint(conf)
+          |> URI.encode_query()
 
         {:ok, "https://slack.com/oauth/v2/authorize?" <> query}
     end
@@ -50,7 +52,9 @@ defmodule Hive.Slack.Installations do
 
       %{client_id: client_id, client_secret: client_secret} ->
         with {:ok, response} <- request_token(code, redirect_uri, client_id, client_secret),
-             {:ok, attrs} <- parse_response(response, installed_by_user_id) do
+             {:ok, attrs} <- parse_response(response, installed_by_user_id),
+             :ok <-
+               Slack.validate_allowed_team_id(attrs.team_id, Map.get(conf, :allowed_team_ids, [])) do
           upsert(attrs)
         end
     end

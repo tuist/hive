@@ -108,6 +108,20 @@ defmodule HiveWeb.SlackInstallControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Workspace"
     end
 
+    test "reports workspaces outside the allowlist", %{conn: conn} do
+      stub(Installations, :complete_install, fn "code-1", _redirect_uri, _opts ->
+        {:error, :workspace_not_allowed}
+      end)
+
+      {conn, user} = sign_in(conn, "admin-disallowed-workspace@example.com")
+      {:ok, user} = Accounts.update_user_role(user, :admin)
+      state = slack_install_state(conn, user)
+      conn = get(conn, ~p"/slack/install/callback?state=#{state}&code=code-1")
+
+      assert redirected_to(conn) == ~p"/ops/slack"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not allowed"
+    end
+
     test "redirects anonymous callbacks to login", %{conn: conn} do
       conn = get(conn, ~p"/slack/install/callback?state=valid&code=code-1")
 

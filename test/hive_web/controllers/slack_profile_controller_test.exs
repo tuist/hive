@@ -79,6 +79,20 @@ defmodule HiveWeb.SlackProfileControllerTest do
       assert redirected_to(conn) == ~p"/account/identities"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "workspace is not connected"
     end
+
+    test "reports workspaces outside the allowlist", %{conn: conn} do
+      {conn, user} = sign_in(conn, "alice-slack-disallowed-workspace@example.com")
+      state = slack_profile_state(user)
+
+      stub(Hive.Slack, :complete_profile_link, fn "code-1", _redirect_uri, ^user ->
+        {:error, :workspace_not_allowed}
+      end)
+
+      conn = get(conn, ~p"/account/slack/callback?state=#{state}&code=code-1")
+
+      assert redirected_to(conn) == ~p"/account/identities"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not allowed"
+    end
   end
 
   defp slack_profile_state(user) do

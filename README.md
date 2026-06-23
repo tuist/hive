@@ -155,6 +155,11 @@ workspace, enable Slack Public Distribution. App Directory submission is
 not required for private install links. Instance admins manage workspace
 installs from `/ops/slack`.
 
+To restrict installs and profile linking to specific Slack workspaces,
+set `HIVE_SLACK_ALLOWED_TEAM_IDS` to a comma-separated list of Slack
+workspace identifiers. Slack calls these `team` values in its
+authorization flows.
+
 ## Documentation
 
 Read the documentation at
