@@ -424,6 +424,16 @@ defmodule Hive.Specs do
 
   def update_comment(_comment, _attrs, _user), do: {:error, :unauthorized}
 
+  def delete_comment(%Comment{} = comment, %User{} = user) do
+    if can_edit_comment?(comment, user) do
+      Repo.delete(comment)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def delete_comment(_comment, _user), do: {:error, :unauthorized}
+
   defp create_revision(%Spec{} = spec, %User{} = user) do
     with {:ok, revision} <-
            %Revision{}

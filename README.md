@@ -89,6 +89,14 @@ Tuist runs the canonical Hive instance at
 Hive in action and to follow along with how we shape product work at
 Tuist.
 
+## Model Context Protocol
+
+Hive exposes a [Model Context Protocol](https://modelcontextprotocol.io/)
+server at `/mcp` so authenticated clients can work with the same
+product-shaping resources as the dashboard. Clients can list, create,
+and update specs; add, update, and delete their own spec comments;
+read drops; and, for admins, inspect audit entries.
+
 ## Subscribe
 
 Every list-style surface ships both an Atom 1.0 feed at
