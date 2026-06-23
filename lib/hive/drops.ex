@@ -321,8 +321,12 @@ defmodule Hive.Drops do
       as: :project_filter_repository
     )
     |> join(:left, [drop], source in assoc(drop, :drop_source), as: :project_filter_source)
-    |> join(:left, [domain_link: dm], project_domain in ProjectDomain,
-      on: project_domain.domain_id == dm.domain_id,
+    |> join(:left, [drop], project_filter_domain_link in DropDomain,
+      on: project_filter_domain_link.drop_id == drop.id,
+      as: :project_filter_domain_link
+    )
+    |> join(:left, [project_filter_domain_link: domain_link], project_domain in ProjectDomain,
+      on: project_domain.domain_id == domain_link.domain_id,
       as: :project_filter_domain
     )
     |> where(
