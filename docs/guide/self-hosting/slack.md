@@ -36,6 +36,13 @@ Set these on the Hive deployment:
 - `HIVE_SLACK_BOT_SCOPES`: optional, comma-separated list of bot OAuth
   scopes to request at install time. Defaults to:
   `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,links:read,links:write,mpim:history,mpim:read,users:read,users:read.email`.
+- `HIVE_SLACK_ALLOWED_TEAM_IDS`: optional, comma-separated list of Slack
+  workspace identifiers allowed to install Hive or link Slack profiles.
+  Slack calls a workspace a `team` in its
+  [authorization flow](https://docs.slack.dev/authentication/installing-with-oauth/).
+  When exactly one workspace identifier is configured, Hive passes it to
+  Slack so the workspace picker is preselected. Hive still validates the
+  workspace returned by Slack before saving an install or linked profile.
 When any of the three required variables is missing, the integration
 stays dormant: the `/slack/install` link is hidden and `/ops/slack`
 shows an inert state.
@@ -168,6 +175,11 @@ Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
 4. To post product activity into Slack, enter a notification channel ID
    on the workspace row and choose which events Hive should post.
 
+If `HIVE_SLACK_ALLOWED_TEAM_IDS` is set, Hive rejects installs from any
+workspace outside that list. With a single configured workspace, Slack
+usually preselects it in the prompt for users who are already signed in
+there.
+
 ## Linking a Slack profile
 
 After an admin connects the workspace, signed-in users can open
@@ -176,6 +188,9 @@ the user through Slack's OpenID Connect flow and stores the returned
 Slack workspace and user IDs on the matching workspace install. This
 explicit link is used even when the user's Slack email differs from
 their Hive email.
+
+Profile linking uses the same `HIVE_SLACK_ALLOWED_TEAM_IDS` allowlist as
+workspace installs.
 
 ## What gets captured
 

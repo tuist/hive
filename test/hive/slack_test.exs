@@ -31,12 +31,18 @@ defmodule Hive.SlackTest do
   end
 
   describe "enabled?/0" do
-    test "is true when all three Slack env vars are set" do
-      config = [client_id: "id", client_secret: "secret", signing_secret: "sign"]
-      assert %{client_id: "id"} = Slack.config(config)
+    test "is true when all three Slack environment variables are set" do
+      config = [
+        client_id: "id",
+        client_secret: "secret",
+        signing_secret: "sign",
+        allowed_team_ids: " T1, T2 ,T1"
+      ]
+
+      assert %{client_id: "id", allowed_team_ids: ["T1", "T2"]} = Slack.config(config)
     end
 
-    test "is false when any Slack env var is missing or blank" do
+    test "is false when any Slack environment variable is missing or blank" do
       assert is_nil(Slack.config(client_id: "id", client_secret: "secret"))
       assert is_nil(Slack.config(client_id: "", client_secret: "s", signing_secret: "x"))
       assert is_nil(Slack.config([]))
@@ -202,7 +208,7 @@ defmodule Hive.SlackTest do
                Slack.profile_authorize_url(
                  "https://hive.example/account/slack/callback",
                  "state-1",
-                 %{client_id: "client-id"}
+                 config: %{client_id: "client-id"}
                )
 
       assert url =~ "https://slack.com/openid/connect/authorize?"
@@ -210,6 +216,39 @@ defmodule Hive.SlackTest do
       assert url =~ "scope=openid+profile+email"
       assert url =~ "response_type=code"
       assert url =~ "state=state-1"
+    end
+
+    test "passes a Slack team hint when exactly one workspace is allowed" do
+      assert {:ok, url} =
+               Slack.profile_authorize_url(
+                 "https://hive.example/account/slack/callback",
+                 "state-1",
+                 config: %{client_id: "client-id", allowed_team_ids: ["T-allowed"]}
+               )
+
+      assert url =~ "team=T-allowed"
+    end
+
+    test "does not pass a Slack team hint when multiple workspaces are allowed" do
+      assert {:ok, url} =
+               Slack.profile_authorize_url(
+                 "https://hive.example/account/slack/callback",
+                 "state-1",
+                 config: %{client_id: "client-id", allowed_team_ids: ["T1", "T2"]}
+               )
+
+      refute url =~ "team="
+    end
+
+    test "still accepts the legacy direct config map" do
+      assert {:ok, url} =
+               Slack.profile_authorize_url(
+                 "https://hive.example/account/slack/callback",
+                 "state-1",
+                 %{client_id: "client-id", allowed_team_ids: ["T-allowed"]}
+               )
+
+      assert url =~ "team=T-allowed"
     end
   end
 
@@ -292,6 +331,43 @@ defmodule Hive.SlackTest do
                  "https://hive.example/account/slack/callback",
                  hive_user,
                  config: %{client_id: "client-id", client_secret: "client-secret"}
+               )
+    end
+
+    test "rejects profiles from Slack workspaces outside the allowlist" do
+      {:ok, hive_user} =
+        Accounts.upsert_from_auth(%{
+          email: "hive-disallowed@example.com",
+          provider: "test",
+          provider_uid: "hive-disallowed@example.com"
+        })
+
+      stub(Req, :post, fn _url, _opts ->
+        {:ok, %Req.Response{status: 200, body: %{"ok" => true, "access_token" => "xoxp-user"}}}
+      end)
+
+      stub(Req, :get, fn _url, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: %{
+             "ok" => true,
+             "https://slack.com/team_id" => "T-disallowed",
+             "https://slack.com/user_id" => "U-openid"
+           }
+         }}
+      end)
+
+      assert {:error, :workspace_not_allowed} =
+               Slack.complete_profile_link(
+                 "code-1",
+                 "https://hive.example/account/slack/callback",
+                 hive_user,
+                 config: %{
+                   client_id: "client-id",
+                   client_secret: "client-secret",
+                   allowed_team_ids: ["T-allowed"]
+                 }
                )
     end
   end

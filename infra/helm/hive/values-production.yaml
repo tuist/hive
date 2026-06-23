@@ -65,6 +65,8 @@ externalSecrets:
       remoteRef: "hive-slack-oauth/credential"
     HIVE_SLACK_SIGNING_SECRET:
       remoteRef: "hive-slack-signing-secret/credential"
+    HIVE_SLACK_ALLOWED_TEAM_IDS:
+      remoteRef: "hive-slack-allowed-team-ids/credential"
     HIVE_S3_BUCKET:
       remoteRef: "hive-object-storage/bucket"
     HIVE_S3_REGION:

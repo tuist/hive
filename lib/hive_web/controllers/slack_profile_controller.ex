@@ -33,7 +33,7 @@ defmodule HiveWeb.SlackProfileController do
     if Slack.enabled?() do
       state = generate_state(conn, user)
 
-      case Slack.profile_authorize_url(redirect_uri(conn), state, Slack.config()) do
+      case Slack.profile_authorize_url(redirect_uri(conn), state, config: Slack.config()) do
         {:ok, url} ->
           redirect(conn, external: url)
 
@@ -67,6 +67,9 @@ defmodule HiveWeb.SlackProfileController do
 
       {:error, :workspace_not_installed} ->
         bail(conn, "That Slack workspace is not connected to Hive yet.")
+
+      {:error, :workspace_not_allowed} ->
+        bail(conn, "That Slack workspace is not allowed on this Hive instance.")
 
       {:error, reason} ->
         Logger.warning("[SlackProfile] OAuth exchange failed: #{inspect(reason)}")

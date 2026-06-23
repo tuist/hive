@@ -90,6 +90,9 @@ defmodule HiveWeb.SlackInstallController do
         )
         |> redirect(to: ~p"/ops/slack")
 
+      {:error, :workspace_not_allowed} ->
+        bail(conn, "That Slack workspace is not allowed on this Hive instance.")
+
       {:error, reason} ->
         Logger.warning("[SlackInstall] OAuth exchange failed: #{inspect(reason)}")
         bail(conn, "Slack rejected the install. Try again.")

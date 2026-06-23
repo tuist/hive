@@ -28,6 +28,32 @@ defmodule Hive.Slack.InstallationsTest do
       assert url =~ "redirect_uri=https%3A%2F%2Fhive.example%2Fslack%2Finstall%2Fcallback"
     end
 
+    test "passes a Slack team hint when exactly one workspace is allowed" do
+      config = Map.put(@config, :allowed_team_ids, ["T-allowed"])
+
+      assert {:ok, url} =
+               Installations.authorize_url(
+                 "https://hive.example/slack/install/callback",
+                 "abc",
+                 config
+               )
+
+      assert url =~ "team=T-allowed"
+    end
+
+    test "does not pass a Slack team hint when multiple workspaces are allowed" do
+      config = Map.put(@config, :allowed_team_ids, ["T1", "T2"])
+
+      assert {:ok, url} =
+               Installations.authorize_url(
+                 "https://hive.example/slack/install/callback",
+                 "abc",
+                 config
+               )
+
+      refute url =~ "team="
+    end
+
     test "returns :not_configured when no config is set" do
       assert {:error, :not_configured} =
                Installations.authorize_url("https://example", "abc", nil)
@@ -105,6 +131,25 @@ defmodule Hive.Slack.InstallationsTest do
 
       assert {:error, {:slack_oauth_error, "invalid_code"}} =
                Installations.complete_install("bad", "https://example", config: @config)
+    end
+
+    test "rejects installs from Slack workspaces outside the allowlist" do
+      stub(Req, :post, fn _url, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: %{
+             "ok" => true,
+             "access_token" => "xoxb-fresh",
+             "team" => %{"id" => "T-disallowed", "name" => "Wrong workspace"}
+           }
+         }}
+      end)
+
+      config = Map.put(@config, :allowed_team_ids, ["T-allowed"])
+
+      assert {:error, :workspace_not_allowed} =
+               Installations.complete_install("code", "https://example", config: config)
     end
 
     test "returns an error when called without config" do
