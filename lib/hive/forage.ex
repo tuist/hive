@@ -775,13 +775,7 @@ defmodule Hive.Forage do
       Repo.transaction(fn ->
         dirty_ids =
           entries
-          |> Enum.map(fn entry ->
-            case upsert_entry(repository_id, entry) do
-              {:ok, %GitHubIssue{id: id}, true} -> id
-              {:ok, %GitHubIssue{}, false} -> nil
-              {:error, changeset} -> Repo.rollback(changeset)
-            end
-          end)
+          |> Enum.map(&dirty_issue_id(repository_id, &1))
           |> Enum.reject(&is_nil/1)
 
         delete_missing(repository_id, incoming_numbers)
@@ -801,6 +795,14 @@ defmodule Hive.Forage do
     Hive.Domains.schedule_evolution()
 
     :ok
+  end
+
+  defp dirty_issue_id(repository_id, entry) do
+    case upsert_entry(repository_id, entry) do
+      {:ok, %GitHubIssue{id: id}, true} -> id
+      {:ok, %GitHubIssue{}, false} -> nil
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
   end
 
   defp list_unclassified_issue_ids(repository_id) do
