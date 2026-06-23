@@ -529,6 +529,7 @@ defmodule HiveWeb.SpecComponents do
     <.dropdown
       id={"spec-status-menu-#{@spec.id}"}
       label={status_label(@spec.status)}
+      size="medium"
       data-part="status-menu"
     >
       <.dropdown_item

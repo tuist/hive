@@ -1,12 +1,18 @@
 .feeds-dropdown {
-  & > [data-part="trigger"][data-icon-only] {
+  display: inline-flex;
+
+  & > .noora-dropdown {
+    gap: 0;
+  }
+
+  & > .noora-dropdown > [data-part="trigger"][data-icon-only] {
     box-sizing: border-box;
-    width: var(--noora-spacing-10);
-    height: var(--noora-spacing-10);
+    width: calc(var(--noora-icon-size-medium) + var(--noora-spacing-3) + var(--noora-spacing-3));
+    height: calc(var(--noora-icon-size-medium) + var(--noora-spacing-3) + var(--noora-spacing-3));
     padding: var(--noora-spacing-3);
   }
 
-  & > [data-part="trigger"][data-icon-only] [data-part="icon"] {
+  & > .noora-dropdown > [data-part="trigger"][data-icon-only] [data-part="icon"] {
     display: flex;
     align-items: center;
     justify-content: center;

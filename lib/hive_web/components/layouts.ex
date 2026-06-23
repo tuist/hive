@@ -87,15 +87,17 @@ defmodule HiveWeb.Layouts do
 
   def feeds_dropdown(assigns) do
     ~H"""
-    <.dropdown id={@id} class="feeds-dropdown" size="medium" icon_only={true}>
-      <:icon><.icon name="rss" /></:icon>
-      <.dropdown_item value="atom" label="Atom" href={@atom_href}>
-        <:left_icon><.icon name="rss" /></:left_icon>
-      </.dropdown_item>
-      <.dropdown_item value="rss" label="RSS" href={@rss_href}>
-        <:left_icon><.icon name="rss" /></:left_icon>
-      </.dropdown_item>
-    </.dropdown>
+    <div class="feeds-dropdown">
+      <.dropdown id={@id} size="medium" icon_only={true}>
+        <:icon><.icon name="rss" /></:icon>
+        <.dropdown_item value="atom" label="Atom" href={@atom_href}>
+          <:left_icon><.icon name="rss" /></:left_icon>
+        </.dropdown_item>
+        <.dropdown_item value="rss" label="RSS" href={@rss_href}>
+          <:left_icon><.icon name="rss" /></:left_icon>
+        </.dropdown_item>
+      </.dropdown>
+    </div>
     """
   end
 
