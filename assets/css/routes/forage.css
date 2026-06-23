@@ -378,7 +378,6 @@
     padding-top: var(--noora-spacing-7);
   }
 
-  & [data-part="detail-kicker"],
   & [data-part="metadata-badges"] {
     display: flex;
     flex-wrap: wrap;

@@ -136,9 +136,9 @@ defmodule Hive.Drops.Rss do
   defp maybe_capture_link_attr(%{entry: nil} = state, _local, _attrs), do: state
 
   defp maybe_capture_link_attr(state, "link", attrs) when is_list(attrs) do
-    case Enum.find(attrs, fn {key, _value} -> String.downcase(key) == "href" end) do
-      {_key, href} when is_binary(href) and href != "" ->
-        put_field(state, :url, href)
+    case attr_value(attrs, "href") do
+      href when is_binary(href) and href != "" ->
+        put_url_field(state, href, attr_value(attrs, "rel"))
 
       _other ->
         state
@@ -152,6 +152,40 @@ defmodule Hive.Drops.Rss do
   end
 
   defp put_field(state, _key, _value), do: state
+
+  defp put_url_field(%{entry: entry} = state, href, rel) do
+    rel = normalize_rel(rel)
+    preferred? = preferred_link_rel?(rel)
+    current_rel = Map.get(entry, :url_rel)
+
+    cond do
+      is_nil(Map.get(entry, :url)) ->
+        %{state | entry: entry |> Map.put(:url, href) |> Map.put(:url_rel, rel)}
+
+      preferred? and not preferred_link_rel?(current_rel) ->
+        %{state | entry: entry |> Map.put(:url, href) |> Map.put(:url_rel, rel)}
+
+      true ->
+        state
+    end
+  end
+
+  defp attr_value(attrs, name) do
+    attrs
+    |> Enum.find_value(fn {key, value} ->
+      if String.downcase(key) == name, do: value
+    end)
+  end
+
+  defp normalize_rel(nil), do: ""
+
+  defp normalize_rel(value) when is_binary(value) do
+    value
+    |> String.trim()
+    |> String.downcase()
+  end
+
+  defp preferred_link_rel?(rel), do: rel in ["", "alternate"]
 
   defp normalize_entry(entry) when map_size(entry) == 0, do: nil
 

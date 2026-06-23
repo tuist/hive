@@ -64,17 +64,10 @@ defmodule HiveWeb.DropsLive.Show do
       <section id="drop-show">
         <div data-part="header">
           <div data-part="title-group">
-            <div data-part="section-label">
-              <.badge label="Drop" color="information" style="light-fill" />
-              <.badge
-                label={Drops.source_type_label(@drop.source_type)}
-                color={source_badge_color(@drop.source_type)}
-                style="light-fill"
-              />
-              <span :if={@drop.version} data-part="version">{@drop.version}</span>
-            </div>
             <h1>{Markdown.inline(@drop.title)}</h1>
             <div data-part="meta">
+              <span>{Drops.source_type_label(@drop.source_type)}</span>
+              <span :if={@drop.version} data-part="version">{@drop.version}</span>
               <span :for={domain <- @drop.domains || []}>
                 <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-link">
                   {domain.name}
@@ -147,10 +140,6 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp domain_name(%{domains: [%{name: name} | _]}), do: name
   defp domain_name(_drop), do: "Unclassified"
-
-  defp source_badge_color(:github_release), do: "focus"
-  defp source_badge_color(:rss), do: "information"
-  defp source_badge_color(_other), do: "neutral"
 
   defp present?(value) when is_binary(value), do: String.trim(value) != ""
   defp present?(_other), do: false
