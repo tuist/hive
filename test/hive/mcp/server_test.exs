@@ -15,6 +15,7 @@ defmodule Hive.MCP.ServerTest do
              "get_spec",
              "list_audit_activities",
              "list_drops",
+             "list_spec_comments",
              "list_specs",
              "update_spec",
              "update_spec_comment",

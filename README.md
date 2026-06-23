@@ -94,8 +94,8 @@ Tuist.
 Hive exposes a [Model Context Protocol](https://modelcontextprotocol.io/)
 server at `/mcp` so authenticated clients can work with the same
 product-shaping resources as the dashboard. Clients can list, create,
-and update specs; add, update, and delete their own spec comments;
-read drops; and, for admins, inspect audit entries.
+and update specs; list spec comments; add, update, and delete their
+own spec comments; read drops; and, for admins, inspect audit entries.
 
 ## Subscribe
 
