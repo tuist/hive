@@ -4,6 +4,7 @@ defmodule Hive.Domains.EvolutionTest do
   alias Hive.Accounts
   alias Hive.Forage
   alias Hive.Domains
+  alias Hive.Domains.Agents.EvolutionAgent
   alias Hive.Domains.Evolution
   alias Hive.Projects
   alias Hive.Specs
@@ -108,6 +109,29 @@ defmodule Hive.Domains.EvolutionTest do
 
     assert [%{id: project_id}] = Repo.preload(created, :projects).projects
     assert project_id == project.id
+  end
+
+  test "evolution agent schema does not require a domain id for create changes" do
+    assert {:ok, operation} = EvolutionAgent.__operation__(:evolve_domains)
+
+    assert %{
+             properties: %{
+               changes: %{
+                 items: %{
+                   oneOf: [
+                     create_schema,
+                     update_schema
+                   ]
+                 }
+               }
+             }
+           } = operation.output_schema
+
+    refute Map.has_key?(create_schema.properties, :domain_id)
+    assert create_schema.required == ["action", "name", "description", "rationale"]
+
+    assert Map.has_key?(update_schema.properties, :domain_id)
+    assert "domain_id" in update_schema.required
   end
 
   test "apply_plan/1 skips too generic and too specific domain suggestions" do

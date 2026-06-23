@@ -78,11 +78,10 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     required: ["business_context", "current_projects", "current_domains", "work_items"]
   }
 
-  @change_schema %{
+  @create_change_schema %{
     type: "object",
     properties: %{
-      action: %{type: "string", enum: ["create", "update"]},
-      domain_id: %{type: "string"},
+      action: %{type: "string", enum: ["create"]},
       project_ids: %{type: "array", items: %{type: "string"}, maxItems: 5},
       name: %{type: "string", minLength: 2, maxLength: 120},
       description: %{type: "string", minLength: 20, maxLength: 500},
@@ -92,13 +91,26 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     additionalProperties: false
   }
 
+  @update_change_schema %{
+    type: "object",
+    properties: %{
+      action: %{type: "string", enum: ["update"]},
+      domain_id: %{type: "string"},
+      name: %{type: "string", minLength: 2, maxLength: 120},
+      description: %{type: "string", minLength: 20, maxLength: 500},
+      rationale: %{type: "string", minLength: 10, maxLength: 400}
+    },
+    required: ["action", "domain_id", "name", "description", "rationale"],
+    additionalProperties: false
+  }
+
   @output_schema %{
     type: "object",
     properties: %{
       changes: %{
         type: "array",
         maxItems: 8,
-        items: @change_schema
+        items: %{oneOf: [@create_change_schema, @update_change_schema]}
       }
     },
     required: ["changes"],
