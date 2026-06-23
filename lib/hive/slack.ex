@@ -222,7 +222,9 @@ defmodule Hive.Slack do
 
   def list_linked_user_profiles(_user), do: []
 
-  def profile_authorize_url(redirect_uri, state, conf \\ config()) do
+  def profile_authorize_url(redirect_uri, state, opts \\ []) do
+    conf = profile_authorize_config(opts)
+
     case conf do
       nil ->
         {:error, :not_configured}
@@ -242,6 +244,11 @@ defmodule Hive.Slack do
         {:ok, "https://slack.com/openid/connect/authorize?" <> query}
     end
   end
+
+  defp profile_authorize_config(opts) when is_list(opts),
+    do: Keyword.get(opts, :config) || config()
+
+  defp profile_authorize_config(conf), do: conf
 
   @doc false
   def put_single_team_hint(params, conf) when is_map(params) do

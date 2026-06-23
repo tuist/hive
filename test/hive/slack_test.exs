@@ -208,7 +208,7 @@ defmodule Hive.SlackTest do
                Slack.profile_authorize_url(
                  "https://hive.example/account/slack/callback",
                  "state-1",
-                 %{client_id: "client-id"}
+                 config: %{client_id: "client-id"}
                )
 
       assert url =~ "https://slack.com/openid/connect/authorize?"
@@ -223,7 +223,7 @@ defmodule Hive.SlackTest do
                Slack.profile_authorize_url(
                  "https://hive.example/account/slack/callback",
                  "state-1",
-                 %{client_id: "client-id", allowed_team_ids: ["T-allowed"]}
+                 config: %{client_id: "client-id", allowed_team_ids: ["T-allowed"]}
                )
 
       assert url =~ "team=T-allowed"
@@ -234,10 +234,21 @@ defmodule Hive.SlackTest do
                Slack.profile_authorize_url(
                  "https://hive.example/account/slack/callback",
                  "state-1",
-                 %{client_id: "client-id", allowed_team_ids: ["T1", "T2"]}
+                 config: %{client_id: "client-id", allowed_team_ids: ["T1", "T2"]}
                )
 
       refute url =~ "team="
+    end
+
+    test "still accepts the legacy direct config map" do
+      assert {:ok, url} =
+               Slack.profile_authorize_url(
+                 "https://hive.example/account/slack/callback",
+                 "state-1",
+                 %{client_id: "client-id", allowed_team_ids: ["T-allowed"]}
+               )
+
+      assert url =~ "team=T-allowed"
     end
   end
 

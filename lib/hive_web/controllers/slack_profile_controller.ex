@@ -33,7 +33,7 @@ defmodule HiveWeb.SlackProfileController do
     if Slack.enabled?() do
       state = generate_state(conn, user)
 
-      case Slack.profile_authorize_url(redirect_uri(conn), state, Slack.config()) do
+      case Slack.profile_authorize_url(redirect_uri(conn), state, config: Slack.config()) do
         {:ok, url} ->
           redirect(conn, external: url)
 
