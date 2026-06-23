@@ -200,6 +200,7 @@ defmodule HiveWeb.ProjectLive.Show do
         {:noreply,
          socket
          |> put_flash(:info, "Project deleted.")
+         |> push_event("close-modal", %{id: "delete-project-modal"})
          |> push_navigate(to: ~p"/projects")}
 
       true ->
