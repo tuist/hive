@@ -11,8 +11,9 @@ strongest:
 - `member`: part of the org. The default for users whose email domain
   matches `HIVE_ORG_DOMAINS` at signup, and for every signed-in user
   when no org domains are configured. Members can see private domains
-  and projects, create specs, and act on the dashboard the way the
-  team does.
+  and projects, create specs, and act on the dashboard or
+  [Model Context Protocol](https://modelcontextprotocol.io/) endpoint
+  the way the team does.
 - `admin`: explicitly promoted. Admins additionally see the audit
   trail at `/audit` and reach the ops surfaces at `/ops/*`, where they
   manage Slack workspaces and drop sources.

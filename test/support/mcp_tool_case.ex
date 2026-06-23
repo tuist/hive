@@ -22,6 +22,19 @@ defmodule Hive.MCPToolCase do
     user
   end
 
+  def mcp_user(email, role) do
+    email
+    |> mcp_user()
+    |> set_mcp_role(role)
+  end
+
+  def set_mcp_role(user, role) do
+    {:ok, user} = Hive.Accounts.update_user_role(user, role)
+    user
+  end
+
+  def unique_name(prefix), do: "#{prefix} #{System.unique_integer([:positive])}"
+
   def mcp_conn(user), do: %Plug.Conn{assigns: %{current_user: user}}
 
   def response_json(response) do

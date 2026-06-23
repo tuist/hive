@@ -1,0 +1,55 @@
+defmodule Hive.MCP.Components.Tools.DeleteProject do
+  @moduledoc false
+
+  use Hive.MCP.Tool,
+    name: "delete_project",
+    title: "Delete Project",
+    read_only_hint: false,
+    destructive_hint: true,
+    schema: %{
+      "type" => "object",
+      "required" => ["id"],
+      "properties" => %{
+        "id" => %{"type" => "string", "description" => "Project UUID."}
+      }
+    }
+
+  alias Hive.Auth
+  alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
+  alias Hive.MCP.Tool
+  alias Hive.Projects
+
+  @impl EMCP.Tool
+  def description, do: "Delete a project. Organization member only."
+
+  @impl EMCP.Tool
+  def call(conn, %{"id" => id}) do
+    user = conn.assigns[:current_user]
+
+    cond do
+      not Auth.member?(user) ->
+        Tool.json_response(%{error: "unauthorized"})
+
+      true ->
+        delete_project(user, id)
+    end
+  end
+
+  defp delete_project(user, id) do
+    case Projects.fetch_visible_project(id, user) do
+      {:ok, project} ->
+        deleted_project = ProjectTool.project_json(project)
+
+        case Projects.delete_project(project) do
+          {:ok, _project} ->
+            Tool.json_response(%{deleted_project: deleted_project})
+
+          {:error, changeset} ->
+            Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+        end
+
+      {:error, :not_found} ->
+        Tool.json_response(%{error: "not_found"})
+    end
+  end
+end
