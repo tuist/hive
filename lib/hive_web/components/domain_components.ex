@@ -58,7 +58,7 @@ defmodule HiveWeb.DomainComponents do
                       style="light-fill"
                       size="large"
                     >
-                      <:icon><.package /></:icon>
+                      <:icon><.icon name="apps" /></:icon>
                     </.badge>
                   </div>
                 </div>
@@ -254,7 +254,7 @@ defmodule HiveWeb.DomainComponents do
               style="light-fill"
               size="large"
             >
-              <:icon><.package /></:icon>
+              <:icon><.icon name="apps" /></:icon>
             </.badge>
           </div>
         </dd>
