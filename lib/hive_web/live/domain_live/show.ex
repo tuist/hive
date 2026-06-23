@@ -72,6 +72,7 @@ defmodule HiveWeb.DomainLive.Show do
         {:noreply,
          socket
          |> put_flash(:info, "Domain deleted.")
+         |> push_event("close-modal", %{id: "delete-domain-modal"})
          |> push_navigate(to: ~p"/domains")}
 
       true ->
