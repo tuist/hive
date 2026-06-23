@@ -294,39 +294,50 @@ defmodule HiveWeb.Layouts do
         </div>
       </a>
       <div data-part="right-section">
-        <div :if={@signed_in?} class="account-dropdown">
+        <div
+          :if={@signed_in?}
+          id="account-dropdown"
+          class="account-dropdown"
+          phx-hook="NooraDropdown"
+          data-loop-focus
+          data-close-on-select
+          data-typeahead
+          data-positioning-offset-main-axis={6}
+        >
           <button data-part="trigger" type="button">
             <.avatar id="current-user-avatar" name={@user_name} color={@avatar_color} size="small" />
             <span data-part="account-name">{@user_name}</span>
             <.chevron_down />
           </button>
-          <div data-part="content">
-            <div data-part="header">
-              <.avatar
-                id="current-user-menu-avatar"
-                name={@user_name}
-                color={@avatar_color}
-                size="medium"
-              />
-              <div data-part="identity">
-                <span data-part="name">{@user_name}</span>
-                <span :if={@user_email} data-part="email">{@user_email}</span>
+          <div data-part="positioner">
+            <div data-part="content">
+              <div data-part="header">
+                <.avatar
+                  id="current-user-menu-avatar"
+                  name={@user_name}
+                  color={@avatar_color}
+                  size="medium"
+                />
+                <div data-part="identity">
+                  <span data-part="name">{@user_name}</span>
+                  <span :if={@user_email} data-part="email">{@user_email}</span>
+                </div>
               </div>
+              <div data-part="actions">
+                <a href={~p"/account/identities"}>
+                  <.user />
+                  <span>Account</span>
+                </a>
+              </div>
+              <form method="post" action="/logout" data-part="actions">
+                <input type="hidden" name="_csrf_token" value={@csrf_token} />
+                <input type="hidden" name="return_to" value={@current_path} />
+                <button type="submit">
+                  <.logout />
+                  <span>Log out</span>
+                </button>
+              </form>
             </div>
-            <div data-part="actions">
-              <a href={~p"/account/identities"}>
-                <.user />
-                <span>Account</span>
-              </a>
-            </div>
-            <form method="post" action="/logout" data-part="actions">
-              <input type="hidden" name="_csrf_token" value={@csrf_token} />
-              <input type="hidden" name="return_to" value={@current_path} />
-              <button type="submit">
-                <.logout />
-                <span>Log out</span>
-              </button>
-            </form>
           </div>
         </div>
         <.button
