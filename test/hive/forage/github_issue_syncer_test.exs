@@ -33,6 +33,19 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
     project
   end
 
+  defp create_repository_for_project!(project) do
+    suffix = unique()
+
+    {:ok, repository} =
+      Projects.create_repository_for_project(project, %{
+        owner: "owner#{suffix}",
+        name: "repo#{suffix}",
+        visibility: "public"
+      })
+
+    repository
+  end
+
   defp start_syncer! do
     name = :"syncer_#{System.unique_integer([:positive])}"
 
@@ -87,6 +100,23 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
     assert [remaining] = Repo.all(GitHubIssue)
     assert remaining.number == 1
     assert remaining.title == "Updated title"
+  end
+
+  test "syncs repositories attached to projects before any domains exist" do
+    project = create_project!()
+    repository = create_repository_for_project!(project)
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    stub(Issues, :list_open_issues, fn ^repository ->
+      {:ok, [%Issues{number: 1, title: "Bootstrap domains", body: "New issue signal"}]}
+    end)
+
+    {_pid, name} = start_syncer!()
+    assert :ok = GitHubIssueSyncer.sync_now(name)
+
+    assert %GitHubIssue{title: "Bootstrap domains", classified_at: nil} =
+             Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: 1)
   end
 
   test "list_github_issues_for_user/1 returns issues with their domain/repo context" do

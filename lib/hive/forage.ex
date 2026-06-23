@@ -53,7 +53,7 @@ defmodule Hive.Forage do
     %{
       id: :github_issues,
       label: "GitHub issues",
-      description: "Open issues from the GitHub repositories connected to your domains.",
+      description: "Open issues from the GitHub repositories connected to your projects.",
       icon: "brand_github",
       path: "/forage/github-issues",
       visibility: :per_domain,
@@ -851,5 +851,12 @@ defmodule Hive.Forage do
 
       Enum.map(repositories, &{domain, &1})
     end)
+  end
+
+  def list_github_issue_repositories do
+    GitHubRepository
+    |> where([repository], not is_nil(repository.project_id))
+    |> order_by([repository], asc: repository.owner, asc: repository.name)
+    |> Repo.all()
   end
 end

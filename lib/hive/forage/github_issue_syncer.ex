@@ -66,9 +66,7 @@ defmodule Hive.Forage.GitHubIssueSyncer do
   defp run_sync do
     case Client.config() do
       {:ok, _config} ->
-        Forage.list_repositories_with_domains()
-        |> Enum.map(fn {_domain, repository} -> repository end)
-        |> Enum.uniq_by(& &1.id)
+        Forage.list_github_issue_repositories()
         |> Enum.each(&sync_repository/1)
 
         :ok
