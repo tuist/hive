@@ -117,7 +117,7 @@ end
 
 if sentry_dsn = System.get_env("SENTRY_DSN") do
   sentry_report_oban_retries? =
-    parse_boolean.(System.get_env("SENTRY_OBAN_REPORT_RETRIES", "true"))
+    parse_boolean.(System.get_env("SENTRY_OBAN_REPORT_RETRIES", "false"))
 
   oban_integration =
     [
@@ -128,9 +128,11 @@ if sentry_dsn = System.get_env("SENTRY_DSN") do
       if sentry_report_oban_retries? do
         config
       else
-        Keyword.put(config, :should_report_error_callback, fn _worker, job ->
-          job.attempt >= job.max_attempts
-        end)
+        Keyword.put(
+          config,
+          :should_report_error_callback,
+          &Hive.SentryEventFilter.report_oban_error?/2
+        )
       end
     end)
 
