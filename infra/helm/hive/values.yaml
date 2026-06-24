@@ -62,10 +62,10 @@ env:
   # When the Sentry Data Source Name is present, events are tagged with
   # this deployment environment. SENTRY_RELEASE is usually set per deploy.
   SENTRY_ENVIRONMENT: "production"
-  # Capture failed Oban job attempts in Sentry. Leave retry reporting on
-  # to see failures even when Oban will try the job again.
+  # Capture failed Oban jobs in Sentry after they exhaust all attempts.
+  # Turn retry reporting on to see every failed attempt.
   SENTRY_OBAN_CAPTURE_ERRORS: "true"
-  SENTRY_OBAN_REPORT_RETRIES: "true"
+  SENTRY_OBAN_REPORT_RETRIES: "false"
   SENTRY_OBAN_CRON_MONITORING: "true"
 
 probes:
