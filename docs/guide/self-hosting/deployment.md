@@ -78,9 +78,10 @@ same as a deployment without Sentry.
 
 When Sentry is enabled, Hive reports Phoenix request errors, LiveView
 errors with request context, and Oban job failures. Oban failures are
-reported for every failed attempt by default, including attempts that
-Oban will retry. Scheduled Oban jobs also send Sentry check-ins by
-default so Sentry can monitor whether they are running on time.
+reported only after a job exhausts all attempts by default, so retryable
+failures do not create noise while Oban is still recovering. Scheduled
+Oban jobs also send Sentry check-ins by default so Sentry can monitor
+whether they are running on time.
 
 Optional variables:
 
@@ -92,8 +93,8 @@ Optional variables:
 - `SENTRY_OBAN_CAPTURE_ERRORS`: captures failed Oban job attempts.
   Defaults to `true` in the Helm chart.
 - `SENTRY_OBAN_REPORT_RETRIES`: reports retryable Oban failures before
-  the final attempt. Defaults to `true`; set it to `false` to report
-  only jobs that have exhausted all attempts.
+  the final attempt. Defaults to `false`; set it to `true` to report
+  every failed attempt.
 - `SENTRY_OBAN_CRON_MONITORING`: sends Sentry check-ins for scheduled
   Oban jobs. Defaults to `true` in the Helm chart.
 
@@ -112,7 +113,7 @@ secret reference in your values overlay:
 ```yaml
 env:
   SENTRY_OBAN_CAPTURE_ERRORS: "true"
-  SENTRY_OBAN_REPORT_RETRIES: "true"
+  SENTRY_OBAN_REPORT_RETRIES: "false"
   SENTRY_OBAN_CRON_MONITORING: "true"
 
 externalSecrets:

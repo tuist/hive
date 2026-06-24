@@ -13,6 +13,13 @@ defmodule Hive.SentryEventFilter do
 
   @ignored_exception_types Enum.map(@ignored_exceptions, &inspect/1)
 
+  def report_oban_error?(_worker, %{attempt: attempt, max_attempts: max_attempts})
+      when is_integer(attempt) and is_integer(max_attempts) do
+    attempt >= max_attempts
+  end
+
+  def report_oban_error?(_worker, _job), do: true
+
   def before_send(%Sentry.Event{original_exception: exception, source: source} = event)
       when is_exception(exception) do
     if exception.__struct__ in @ignored_exceptions or
