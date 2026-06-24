@@ -32,6 +32,10 @@ defmodule Hive.Drops.Drop do
       join_through: Hive.Drops.DropDomain,
       join_keys: [drop_id: :id, domain_id: :id]
 
+    many_to_many :github_issues, Hive.Forage.GitHubIssue,
+      join_through: Hive.Drops.DropGitHubIssue,
+      join_keys: [drop_id: :id, forage_github_issue_id: :id]
+
     timestamps(type: :utc_datetime)
   end
 

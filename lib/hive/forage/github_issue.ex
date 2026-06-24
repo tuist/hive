@@ -11,6 +11,7 @@ defmodule Hive.Forage.GitHubIssue do
 
   alias Hive.Forage.GitHubIssueDomain
   alias Hive.Domains.GitHubRepository
+  alias Hive.Drops.Drop
   alias Hive.Domains.Domain
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -29,6 +30,10 @@ defmodule Hive.Forage.GitHubIssue do
     many_to_many :domains, Domain,
       join_through: GitHubIssueDomain,
       join_keys: [forage_github_issue_id: :id, domain_id: :id]
+
+    many_to_many :drops, Drop,
+      join_through: Hive.Drops.DropGitHubIssue,
+      join_keys: [forage_github_issue_id: :id, drop_id: :id]
 
     timestamps(type: :utc_datetime)
   end

@@ -18,7 +18,11 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.Audit
   alias Hive.Drops
   alias Hive.Drops.ReleaseDropItems
+  alias Hive.Forage
+  alias Hive.Forage.GitHubIssue
   alias Hive.GitHub.Client
+  alias Hive.GitHub.IssueRefs
+  alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
   alias Hive.Domains.GitHubRepository
   alias Hive.Repo
@@ -144,6 +148,9 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
     case Drops.upsert_drop(attrs) do
       {:ok, drop} ->
+        drop
+        |> link_release_item_github_issues(repository, item)
+
         record_audit(drop, domains, repository, release, item)
 
         if is_nil(drop.classified_at) do
@@ -157,6 +164,64 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           "[Drops.GitHubReleasesSyncer] Failed to upsert release drop item " <>
             inspect(item.title) <> ": " <> inspect(reason)
         )
+    end
+  end
+
+  defp link_release_item_github_issues(drop, repository, item) do
+    issue_ids =
+      item
+      |> release_item_issue_refs(repository)
+      |> Enum.flat_map(&fetch_or_upsert_issue(&1, repository))
+      |> Enum.map(& &1.id)
+
+    Drops.replace_drop_github_issues(drop, issue_ids)
+  end
+
+  defp release_item_issue_refs(item, repository) do
+    item.source_urls
+    |> Enum.join("\n")
+    |> IssueRefs.extract(default_repo: {repository.owner, repository.name}, limit: 10)
+  end
+
+  defp fetch_or_upsert_issue(ref, source_repository) do
+    case repository_for_ref(ref, source_repository) do
+      %GitHubRepository{} = repository ->
+        case Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: ref.number) do
+          %GitHubIssue{} = issue ->
+            [issue]
+
+          nil ->
+            fetch_and_upsert_issue(repository, ref)
+        end
+
+      nil ->
+        []
+    end
+  end
+
+  defp fetch_and_upsert_issue(repository, ref) do
+    with {:ok, issue} <- Issues.get_issue(repository, ref.number),
+         {:ok, forage_issue} <- Forage.upsert_repository_github_issue(repository, issue) do
+      [forage_issue]
+    else
+      {:error, reason} ->
+        log_reference_link_failure(ref, reason)
+        []
+    end
+  end
+
+  defp log_reference_link_failure(ref, reason) do
+    Logger.debug(
+      "[Drops.GitHubReleasesSyncer] Failed to link release reference " <>
+        "#{ref.owner}/#{ref.name}##{ref.number}: " <> inspect(reason)
+    )
+  end
+
+  defp repository_for_ref(ref, %GitHubRepository{owner: owner, name: name} = repository) do
+    if ref.owner == owner and ref.name == name do
+      repository
+    else
+      Repo.get_by(GitHubRepository, owner: ref.owner, name: ref.name)
     end
   end
 

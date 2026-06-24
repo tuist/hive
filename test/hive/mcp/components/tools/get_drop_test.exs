@@ -4,6 +4,8 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
   alias Hive.Drops
   alias Hive.MCP.Components.Tools.GetDrop
   alias Hive.Domains
+  alias Hive.Forage
+  alias Hive.GitHub.Issues
   alias Hive.Projects
 
   defp create_domain!(attrs) do
@@ -38,6 +40,51 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
 
     assert response["drop"]["id"] == drop.id
     assert response["drop"]["title"] == "Changelog v1"
+  end
+
+  test "returns linked GitHub issue forage items" do
+    user = mcp_user()
+
+    domain =
+      create_domain!(%{
+        name: "Hive",
+        visibility: "public",
+        github_repository_owner: "tuist",
+        github_repository_name: "hive",
+        github_repository_visibility: "public"
+      })
+
+    repository = github_repository_for_domain!(domain)
+
+    {:ok, issue} =
+      Forage.upsert_repository_github_issue(repository, %Issues{
+        number: 41,
+        title: "Ship release graph",
+        body: "Drops should point back to the forage item they addressed.",
+        state: "closed"
+      })
+
+    drop =
+      insert_drop!(domain, %{
+        source_type: :github_release,
+        external_id: "release-1",
+        title: "Release graph",
+        url: "https://github.com/tuist/hive/releases/tag/v1.2.0",
+        version: "v1.2.0"
+      })
+
+    Drops.replace_drop_github_issues(drop, [issue.id])
+
+    response = GetDrop.call(mcp_conn(user), %{"id" => drop.id}) |> response_json()
+
+    assert [
+             %{
+               "number" => 41,
+               "state" => "closed",
+               "title" => "Ship release graph",
+               "url" => "https://github.com/tuist/hive/issues/41"
+             }
+           ] = response["drop"]["github_issues"]
   end
 
   test "returns not_found when the drop is linked only to a private domain the user cannot see" do

@@ -20,8 +20,10 @@ defmodule Hive.Drops do
   alias Hive.Auth
   alias Hive.Drops.Drop
   alias Hive.Drops.DropDomain
+  alias Hive.Drops.DropGitHubIssue
   alias Hive.Drops.DropSource
   alias Hive.Domains.Domain
+  alias Hive.Forage.GitHubIssue
   alias Hive.Projects.Project
   alias Hive.Projects.ProjectDomain
   alias Hive.Repo
@@ -69,7 +71,7 @@ defmodule Hive.Drops do
       |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
       |> limit(^page_size)
       |> offset(^((page - 1) * page_size))
-      |> preload(domains: :projects, github_repository: :project, drop_source: :project)
+      |> preload(^drop_preloads())
       |> Repo.all()
 
     {entries,
@@ -91,7 +93,7 @@ defmodule Hive.Drops do
     )
     |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
     |> limit(^limit)
-    |> preload(domains: :projects, github_repository: :project, drop_source: :project)
+    |> preload(^drop_preloads())
     |> Repo.all()
   end
 
@@ -106,7 +108,22 @@ defmodule Hive.Drops do
     |> distinct(true)
     |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
     |> limit(^limit)
-    |> preload(domains: :projects, github_repository: :project, drop_source: :project)
+    |> preload(^drop_preloads())
+    |> Repo.all()
+  end
+
+  @doc "Lists GitHub-release drops linked to a cached GitHub issue forage item."
+  def list_release_drops_for_github_issue(%GitHubIssue{} = issue, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 100)
+
+    Drop
+    |> join(:inner, [drop], link in DropGitHubIssue,
+      on: link.drop_id == drop.id and link.forage_github_issue_id == ^issue.id
+    )
+    |> where([drop], drop.source_type == :github_release)
+    |> order_by([drop], desc: drop.published_at, desc: drop.inserted_at)
+    |> limit(^limit)
+    |> preload(^drop_preloads())
     |> Repo.all()
   end
 
@@ -118,11 +135,7 @@ defmodule Hive.Drops do
 
       %Drop{} = drop ->
         drop =
-          Repo.preload(drop,
-            domains: :projects,
-            github_repository: :project,
-            drop_source: :project
-          )
+          Repo.preload(drop, drop_preloads())
 
         if visible?(drop, user),
           do: {:ok, drop},
@@ -151,7 +164,7 @@ defmodule Hive.Drops do
         nil
 
       %Drop{} = drop ->
-        Repo.preload(drop, domains: :projects, github_repository: :project, drop_source: :project)
+        Repo.preload(drop, drop_preloads())
     end
   rescue
     Ecto.Query.CastError -> nil
@@ -191,6 +204,35 @@ defmodule Hive.Drops do
       Drop
       |> where([drop], drop.id == ^drop.id)
       |> Repo.update_all(set: [classified_at: classified_at])
+    end)
+
+    selected
+  end
+
+  @doc "Replaces the GitHub issue forage links for a drop."
+  def replace_drop_github_issues(%Drop{} = drop, issue_ids) when is_list(issue_ids) do
+    inserted_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    selected =
+      issue_ids
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
+
+    rows =
+      Enum.map(selected, fn issue_id ->
+        %{
+          drop_id: drop.id,
+          forage_github_issue_id: issue_id,
+          inserted_at: inserted_at,
+          updated_at: inserted_at
+        }
+      end)
+
+    Repo.transaction(fn ->
+      from(link in DropGitHubIssue, where: link.drop_id == ^drop.id)
+      |> Repo.delete_all()
+
+      if rows != [], do: Repo.insert_all(DropGitHubIssue, rows)
     end)
 
     selected
@@ -280,6 +322,15 @@ defmodule Hive.Drops do
   def source_type_label(:rss), do: "RSS"
   def source_type_label(value) when is_atom(value), do: value |> Atom.to_string()
   def source_type_label(_value), do: "Drop"
+
+  defp drop_preloads do
+    [
+      domains: :projects,
+      github_repository: :project,
+      github_issues: :github_repository,
+      drop_source: :project
+    ]
+  end
 
   @doc """
   Returns the projects a drop belongs to, first through assigned domains
