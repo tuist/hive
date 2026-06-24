@@ -60,6 +60,15 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     {pid, name}
   end
 
+  test "ignores stale Condukt operation submissions" do
+    {pid, _syncer_name} = start_syncer!()
+
+    send(pid, {make_ref(), :operation_submit, %{"items" => []}})
+
+    assert %{interval_ms: _interval_ms} = :sys.get_state(pid)
+    assert Process.alive?(pid)
+  end
+
   test "upserts one drop for each generated release item" do
     repository = setup_repository!()
     owner = repository.owner
