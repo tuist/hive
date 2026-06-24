@@ -73,6 +73,12 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
       {:error, :unauthorized} ->
         Tool.json_response(%{error: "unauthorized"})
 
+      {:error, :locked} ->
+        Tool.json_response(%{
+          error: "locked",
+          message: "Another update is in progress for this spec. Retry in a moment."
+        })
+
       {:error, changeset} ->
         Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end

@@ -24,6 +24,14 @@ defmodule Hive.Specs do
   @spec_number_lock_namespace 0x48695645
   @spec_number_lock_key 0x53504353
 
+  # A spec write only ever touches its own row, so it should never wait long for
+  # a lock. `lock_timeout` makes a contended write fail fast (surfaced as
+  # `{:error, :locked}`) instead of blocking forever behind a stuck transaction,
+  # and `idle_in_transaction_session_timeout` lets Postgres roll the write back
+  # if the caller dies mid-transaction so it can't leave the row locked.
+  @write_lock_timeout "10s"
+  @write_idle_in_transaction_timeout "30s"
+
   def can_create?(user), do: Auth.member?(user)
   def can_edit?(_spec, user), do: Auth.member?(user)
   def can_request_review?(%Spec{} = spec, user), do: can_edit?(spec, user)
@@ -297,7 +305,7 @@ defmodule Hive.Specs do
 
   def create_spec(attrs, %User{} = user) do
     if can_create?(user) do
-      Repo.transaction(fn -> create_spec_transaction(attrs, user) end)
+      write_transaction(fn -> create_spec_transaction(attrs, user) end)
       |> case do
         {:ok, spec} ->
           record_spec_event("spec.created", spec, user)
@@ -317,7 +325,7 @@ defmodule Hive.Specs do
 
   def update_spec(%Spec{} = spec, attrs, %User{} = user) do
     if can_edit?(spec, user) do
-      Repo.transaction(fn -> update_spec_transaction(spec, attrs, user) end)
+      write_transaction(fn -> update_spec_transaction(spec, attrs, user) end)
       |> case do
         {:ok, updated_spec} ->
           record_spec_event("spec.updated", updated_spec, user)
@@ -333,6 +341,26 @@ defmodule Hive.Specs do
   end
 
   def update_spec(_spec, _attrs, _user), do: {:error, :unauthorized}
+
+  defp write_transaction(fun) do
+    Repo.transaction(fn ->
+      Repo.query!("SET LOCAL lock_timeout = '#{@write_lock_timeout}'")
+
+      Repo.query!(
+        "SET LOCAL idle_in_transaction_session_timeout = '#{@write_idle_in_transaction_timeout}'"
+      )
+
+      fun.()
+    end)
+  rescue
+    error in Postgrex.Error ->
+      if lock_timeout?(error),
+        do: {:error, :locked},
+        else: reraise(error, __STACKTRACE__)
+  end
+
+  defp lock_timeout?(%Postgrex.Error{postgres: %{code: :lock_not_available}}), do: true
+  defp lock_timeout?(_error), do: false
 
   def request_review(%Spec{} = spec, %User{} = user) do
     cond do

@@ -78,6 +78,10 @@ defmodule HiveWeb.SpecLive.New do
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "Only organization members can create specs.")}
 
+      {:error, :locked} ->
+        {:noreply,
+         put_flash(socket, :error, "Another write is in progress. Try again in a moment.")}
+
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end

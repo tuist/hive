@@ -61,6 +61,14 @@ defmodule HiveWeb.SpecLive.Edit do
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "Only organization members can edit specs.")}
 
+      {:error, :locked} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Another update is in progress for this spec. Try again in a moment."
+         )}
+
       {:error, %{errors: [lock_version: _error]} = changeset} ->
         {:noreply,
          socket
