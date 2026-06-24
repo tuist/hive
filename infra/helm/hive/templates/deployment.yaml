@@ -38,8 +38,11 @@ spec:
             - /bin/bash
             - -ec
             - |
-              echo "Waiting for ${PGHOST}:${PGPORT}..."
-              until (echo > /dev/tcp/$PGHOST/$PGPORT) >/dev/null 2>&1; do sleep 2; done
+              wait_for_postgres() {
+                echo "Waiting for ${PGHOST}:${PGPORT}..."
+                until (echo > /dev/tcp/$PGHOST/$PGPORT) >/dev/null 2>&1; do sleep 2; done
+              }
+              wait_for_postgres
               export DATABASE_URL="ecto://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
               exec /app/bin/hive eval "Hive.Release.migrate"
           env:
@@ -86,9 +89,14 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - /bin/sh
-            - -c
+            - /bin/bash
+            - -ec
             - |
+              wait_for_postgres() {
+                echo "Waiting for ${PGHOST}:${PGPORT}..."
+                until (echo > /dev/tcp/$PGHOST/$PGPORT) >/dev/null 2>&1; do sleep 2; done
+              }
+              wait_for_postgres
               export DATABASE_URL="ecto://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
               exec /app/bin/server
           ports:
@@ -153,7 +161,7 @@ spec:
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           livenessProbe:
             httpGet:
-              path: /ready
+              path: /live
               port: http
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}

@@ -13,6 +13,32 @@ defmodule Hive.SentryEventFilterTest do
 
       assert Hive.SentryEventFilter.before_send(event) == event
     end
+
+    test "drops low-level database connection retry logs" do
+      event =
+        event(
+          original_exception:
+            DBConnection.ConnectionError.exception(
+              "tcp connect (hive-postgres-rw:5432): connection refused - :econnrefused"
+            ),
+          source: :logger
+        )
+
+      assert Hive.SentryEventFilter.before_send(event) == false
+    end
+
+    test "keeps database connection errors captured outside logger retry loops" do
+      event =
+        event(
+          original_exception:
+            DBConnection.ConnectionError.exception(
+              "tcp connect (hive-postgres-rw:5432): connection refused - :econnrefused"
+            ),
+          source: :plug
+        )
+
+      assert Hive.SentryEventFilter.before_send(event) == event
+    end
   end
 
   defp event(attrs) do
