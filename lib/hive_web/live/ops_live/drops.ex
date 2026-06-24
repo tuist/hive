@@ -10,11 +10,8 @@ defmodule HiveWeb.OpsLive.Drops do
   alias Hive.Drops.RssSyncer
   alias Hive.Ops.Policy
   alias Hive.Projects
-  alias HiveWeb.Components.EmptyCardSection
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
-
-  import EmptyCardSection
 
   def open_graph do
     %{
@@ -167,78 +164,95 @@ defmodule HiveWeb.OpsLive.Drops do
             <.new_drop_source_modal source_form={@source_form} projects={@projects} />
           </:actions>
 
-          <.empty_card_section :if={@sources == []} title="No RSS sources registered">
-            <:image>
-              <.icon name="rss" />
-            </:image>
-          </.empty_card_section>
-
-          <.card_section :if={@sources != []} data-part="sources-section">
-            <div data-part="sources-list">
-              <article :for={source <- @sources} data-part="source-row">
-                <div data-part="source-icon">
-                  <.icon name="rss" />
-                </div>
-                <div data-part="source-main">
-                  <div data-part="source-heading">
-                    <h2>{source.label || source.url}</h2>
-                    <.status_badge
-                      :if={source.enabled}
-                      label="Enabled"
-                      status="success"
-                    />
-                    <.status_badge
-                      :if={not source.enabled}
-                      label="Disabled"
-                      status="disabled"
-                    />
-                    <.status_badge
-                      :if={source.last_error}
-                      label="Error"
-                      status="error"
-                    />
-                  </div>
-                  <div data-part="source-meta">
-                    <span data-part="source-url">{source.url}</span>
-                    <span :if={source.last_polled_at}>
-                      Last polled {Calendar.strftime(source.last_polled_at, "%Y-%m-%d %H:%M UTC")}
-                    </span>
-                    <span :if={source.last_error} data-part="source-error">
-                      {source.last_error}
-                    </span>
-                  </div>
-                </div>
-                <div data-part="source-actions">
-                  <.button
-                    label="Sync"
-                    variant="secondary"
-                    size="small"
-                    phx-click="sync"
-                    phx-value-id={source.id}
+          <.card_section data-part="sources-section">
+            <div data-part="sources-table">
+              <.table
+                id="drop-sources-table"
+                rows={@sources}
+                row_key={fn source -> "drop-source-#{source.id}" end}
+              >
+                <:col :let={source} label="Source">
+                  <.text_and_description_cell
+                    icon="rss"
+                    label={source_label(source)}
+                    description={source.url}
                   />
-                  <.button
-                    label={if source.enabled, do: "Disable", else: "Enable"}
-                    variant="secondary"
-                    size="small"
-                    phx-click="toggle_enabled"
-                    phx-value-id={source.id}
+                </:col>
+                <:col :let={source} label="Status">
+                  <.badge_cell
+                    label={source_status_label(source)}
+                    color={source_status_color(source)}
+                    style="light-fill"
                   />
-                  <.button
-                    label="Remove"
-                    variant="destructive"
-                    size="small"
-                    phx-click="delete"
-                    phx-value-id={source.id}
-                    data-confirm={"Remove the source #{source.label || source.url}?"}
+                </:col>
+                <:col :let={source} label="Last poll">
+                  <.text_cell
+                    :if={source.last_error}
+                    label={source_poll_label(source)}
+                    sublabel={source.last_error}
                   />
-                </div>
-              </article>
+                  <.text_cell :if={is_nil(source.last_error)} label={source_poll_label(source)} />
+                </:col>
+                <:col :let={source} label="">
+                  <.button_cell>
+                    <:button>
+                      <.dropdown id={"drop-source-actions-#{source.id}"} icon_only>
+                        <:icon><.dots_vertical /></:icon>
+                        <.dropdown_item
+                          label="Sync now"
+                          value="sync"
+                          on_click="sync"
+                          phx-value-id={source.id}
+                        >
+                          <:left_icon><.reload /></:left_icon>
+                        </.dropdown_item>
+                        <.dropdown_item
+                          label={if source.enabled, do: "Disable", else: "Enable"}
+                          value="toggle_enabled"
+                          on_click="toggle_enabled"
+                          phx-value-id={source.id}
+                        />
+                        <.dropdown_item
+                          label="Remove"
+                          value="remove"
+                          on_click="delete"
+                          phx-value-id={source.id}
+                          data-confirm={"Remove the source #{source_label(source)}?"}
+                        >
+                          <:left_icon><.trash /></:left_icon>
+                        </.dropdown_item>
+                      </.dropdown>
+                    </:button>
+                  </.button_cell>
+                </:col>
+                <:empty_state>
+                  <.table_empty_state
+                    icon="rss"
+                    title="No RSS sources registered"
+                    subtitle="Add a source to start ingesting changelog feed entries."
+                  />
+                </:empty_state>
+              </.table>
             </div>
           </.card_section>
         </.card>
       </section>
     </Layouts.ops>
     """
+  end
+
+  defp source_label(source), do: source.label || source.url
+
+  defp source_status_label(%DropSource{enabled: true}), do: "Enabled"
+  defp source_status_label(%DropSource{enabled: false}), do: "Disabled"
+
+  defp source_status_color(%DropSource{enabled: true}), do: "success"
+  defp source_status_color(%DropSource{enabled: false}), do: "neutral"
+
+  defp source_poll_label(%DropSource{last_polled_at: nil}), do: "Never"
+
+  defp source_poll_label(%DropSource{last_polled_at: last_polled_at}) do
+    Calendar.strftime(last_polled_at, "%Y-%m-%d %H:%M UTC")
   end
 
   attr :source_form, :map, required: true
