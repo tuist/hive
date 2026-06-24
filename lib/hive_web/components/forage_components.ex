@@ -261,8 +261,12 @@ defmodule HiveWeb.ForageComponents do
         </div>
       </div>
 
-      <.card title="Details" icon={item_icon(@item.type)} data-part="details-card">
-        <.card_section data-part="details-card-section">
+      <.card
+        title={if @editing_item?, do: "Edit item", else: "Metadata"}
+        icon={item_icon(@item.type)}
+        data-part="metadata-card"
+      >
+        <.card_section data-part="metadata-card-section">
           <.form
             :if={@editing_item?}
             for={@item_edit_form}
@@ -297,11 +301,7 @@ defmodule HiveWeb.ForageComponents do
             </div>
           </.form>
 
-          <div :if={!@editing_item?} data-part="detail-body">
-            {Markdown.render(@item.body)}
-          </div>
-
-          <div data-part="metadata-grid">
+          <div :if={!@editing_item?} data-part="metadata-grid">
             <div data-part="metadata-row">
               <div data-part="metadata">
                 <div data-part="title">Source</div>
@@ -333,6 +333,14 @@ defmodule HiveWeb.ForageComponents do
                 </div>
               </div>
             </div>
+          </div>
+        </.card_section>
+      </.card>
+
+      <.card :if={!@editing_item?} title="Details" icon="file_text" data-part="body-card">
+        <.card_section data-part="body-card-section">
+          <div data-part="detail-body">
+            {Markdown.render(@item.body)}
           </div>
         </.card_section>
       </.card>

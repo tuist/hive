@@ -384,7 +384,8 @@
     gap: var(--noora-spacing-2);
   }
 
-  & [data-part="details-card-section"],
+  & [data-part="metadata-card-section"],
+  & [data-part="body-card-section"],
   & [data-part="comments-card-section"] {
     display: flex;
     flex-direction: column;
