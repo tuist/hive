@@ -60,12 +60,41 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     {:noreply, state}
   end
 
+  def handle_info({ref, :operation_submit, _submitted}, state) when is_reference(ref) do
+    Logger.debug("[Drops.GitHubReleasesSyncer] Ignoring stale Condukt operation submission")
+
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    Logger.debug(
+      "[Drops.GitHubReleasesSyncer] Ignoring unexpected message: " <> message_shape(message)
+    )
+
+    {:noreply, state}
+  end
+
   @impl true
   def handle_call(:sync_now, _from, state) do
     {:reply, run_sync(state), state}
   end
 
   defp schedule_tick(interval_ms), do: Process.send_after(self(), :tick, interval_ms)
+
+  defp message_shape(message) when is_atom(message), do: "atom #{inspect(message)}"
+
+  defp message_shape(message) when is_tuple(message) do
+    case elem(message, 0) do
+      first when is_atom(first) -> "tuple #{inspect(first)}/#{tuple_size(message)}"
+      _other -> "tuple/#{tuple_size(message)}"
+    end
+  end
+
+  defp message_shape(message) when is_list(message), do: "list/#{length(message)}"
+  defp message_shape(message) when is_map(message), do: "map/#{map_size(message)}"
+  defp message_shape(message) when is_pid(message), do: "pid"
+  defp message_shape(message) when is_reference(message), do: "reference"
+  defp message_shape(_message), do: "unknown"
 
   defp run_sync(state) do
     case Client.config() do
