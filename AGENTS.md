@@ -193,6 +193,7 @@ YAML
 - Prefer editing existing files over creating new ones; keep modules small and domain-focused.
 - No comments unless the *why* is non-obvious. Don't restate what well-named code does.
 - For UI work, the reference design system is Noora (already in `deps/`). Reference layouts and patterns from `../tuist/server` and `../atlas` when in doubt.
+- Before adding or restyling any table or list surface, inspect the closest equivalent in `../tuist/server` and mirror its Noora table components, row density, header/action layout, badges, empty/loading states, and pagination behavior. Those pages are the designer-reviewed reference; Hive should only diverge when there is a product-specific reason called out in the pull request.
 - Use Noora dropdown/select components for user-facing dropdowns instead of native browser `<select>` controls.
 - Every list-style table should ship with three controls: filter chips, a free-text search box, and pagination. Use Noora's `filter_dropdown` + `active_filter` for the filter UI, a Noora `text_input` of `type="search"` for the search, and the prev/next chevron pattern from `../tuist/server` (`RunnerWorkflowsLive`, mirrored in `lib/hive_web/live/audit_live.ex`) for pagination. Render pagination centered below the table, without a separator bar. The only reason to skip any of the three is a bounded, fixed-size dataset.
 - Do not add Back buttons to pages. The browser already provides back navigation; prefer clear page hierarchy and contextual links only when they go to a specific destination other than browser history.
