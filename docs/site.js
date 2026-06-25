@@ -27,6 +27,7 @@ export const site = {
       { text: "Authentication", link: "/guide/self-hosting/authentication" },
       { text: "Authorization", link: "/guide/self-hosting/authorization" },
       { text: "Agents", link: "/guide/self-hosting/agents" },
+      { text: "Inference relay", link: "/guide/self-hosting/inference" },
       { text: "Audit", link: "/guide/self-hosting/audit" },
       { text: "Drops", link: "/guide/self-hosting/drops" },
       { text: "Slack", link: "/guide/self-hosting/slack" },

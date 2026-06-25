@@ -6,8 +6,9 @@ different tool, and the loop between "what we want to build", "what we
 agreed to build", and "what is actually happening in production" only
 exists in the heads of the people who happen to be in the room.
 
-That gap matters more as coding agents and LLM-driven workflows enter
-the picture. Agents need the same context that humans rely on, but
+That gap matters more as coding agents and
+[large language model](https://en.wikipedia.org/wiki/Large_language_model)-driven
+workflows enter the picture. Agents need the same context that humans rely on, but
 that context is scattered across spec docs, project trackers,
 dashboards, and chat threads. Each tool understands only its own slice.
 
@@ -16,8 +17,9 @@ one place:
 
 - **Projects** group everything by product, codebase, or service the
   instance tracks, such as Atlas, Hive, Tuist, Kura, Noora, or Once.
-  A project owns its linked GitHub repositories and the RSS sources that
-  feed it.
+  A project owns its linked GitHub repositories and the Really Simple
+  Syndication ([RSS](https://www.rssboard.org/rss-specification)) sources
+  that feed it.
 - **Domains** are reusable classification tags that can be associated
   with one or more projects. A single-product instance can keep zero
   domains; a multi-domain project can carry several, and a shared
@@ -37,10 +39,11 @@ adopting an entire methodology.
 
 ## How it ships
 
-Hive is licensed under MPL-2.0 and ships as a single image plus a
-generic Helm chart. The container image lives at `ghcr.io/tuist/hive`
-and the Helm chart at `oci://ghcr.io/tuist/charts/hive`. Both artifacts
-are released from the [tuist/hive](https://github.com/tuist/hive)
+Hive is licensed under the Mozilla Public License 2.0
+([MPL-2.0](https://www.mozilla.org/en-US/MPL/2.0/)) and ships as a
+single image plus a generic Helm chart. The container image lives at
+`ghcr.io/tuist/hive` and the Helm chart at `oci://ghcr.io/tuist/charts/hive`.
+Both artifacts are released from the [tuist/hive](https://github.com/tuist/hive)
 repository on every push to `main`. Tuist runs the canonical instance
 at [hive.tuist.dev](https://hive.tuist.dev), but the same artifacts let
 any team self-host.
@@ -48,11 +51,15 @@ any team self-host.
 ## Next
 
 - [Authentication](./authentication) explains how to wire up Google and
-  generic OIDC providers.
+  generic OpenID Connect
+  ([OIDC](https://openid.net/developers/how-connect-works/)) providers.
 - [Authorization](./authorization) covers the roles each user can hold
   and what they can see.
-- [Agents](./agents) covers the LLM-backed workflows that activate when
-  an API key is configured.
+- [Agents](./agents) covers the
+  [large language model](https://en.wikipedia.org/wiki/Large_language_model)-backed
+  workflows that activate when a provider key is configured.
+- [Inference relay](./inference) explains how to expose model-bound
+  tokens for OpenAI-compatible automation clients.
 - [Drops](./drops) describes the shipped-updates surface and how
   releases and changelogs feed into it.
 - [Slack](./slack) covers connecting Slack workspaces so Hive can reply
