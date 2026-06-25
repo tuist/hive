@@ -33,170 +33,80 @@
     overflow: hidden;
   }
 
-  & [data-part="empty-state"] {
+  & [data-part="workspaces-table"] {
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  & #slack-workspaces-table table {
+    min-width: 1080px;
+    table-layout: fixed;
+  }
+
+  & #slack-workspaces-table th:first-child {
+    width: 24%;
+  }
+
+  & #slack-workspaces-table th:nth-child(2) {
+    width: 12%;
+  }
+
+  & #slack-workspaces-table th:nth-child(3) {
+    width: 18%;
+  }
+
+  & #slack-workspaces-table th:nth-child(4) {
+    width: 34%;
+  }
+
+  & #slack-workspaces-table th:nth-child(5) {
+    width: 12%;
+  }
+
+  & [data-part="notification-routes-cell"] {
     display: flex;
-    align-items: center;
-    gap: var(--noora-spacing-5);
-    min-height: 104px;
-  }
-
-  & [data-part="empty-copy"] {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: var(--noora-spacing-2);
-    min-width: 0;
-  }
-
-  & [data-part="empty-copy"] h2,
-  & [data-part="workspace-heading"] h2 {
-    margin: 0;
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
-    overflow-wrap: anywhere;
-  }
-
-  & [data-part="empty-copy"] p {
-    margin: 0;
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-  }
-
-  & [data-part="empty-copy"] code {
-    border-radius: var(--noora-radius-2);
-    background: var(--noora-surface-background-secondary);
-    padding: var(--noora-spacing-1) var(--noora-spacing-2);
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-regular) var(--noora-font-code-medium);
-  }
-
-  & [data-part="empty-icon"],
-  & [data-part="workspace-icon"] {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--noora-radius-4);
-    background: var(--noora-icon-neutral-background);
-    color: var(--noora-icon-neutral-label);
-  }
-
-  & [data-part="empty-icon"] {
-    width: 44px;
-    height: 44px;
-  }
-
-  & [data-part="workspace-icon"] {
-    width: 36px;
-    height: 36px;
-  }
-
-  & [data-part="empty-icon"] svg,
-  & [data-part="workspace-icon"] svg {
-    width: var(--noora-icon-size-large);
-    height: var(--noora-icon-size-large);
-  }
-
-  & [data-part="installations-list"] {
-    display: flex;
-    flex-direction: column;
-  }
-
-  & [data-part="installation-row"] {
-    display: flex;
-    align-items: center;
-    gap: var(--noora-spacing-5);
-    padding: var(--noora-spacing-6) 0;
-    border-bottom: 1px solid var(--noora-surface-border-primary);
-  }
-
-  & [data-part="installation-row"]:first-child {
-    padding-top: 0;
-  }
-
-  & [data-part="installation-row"]:last-child {
-    padding-bottom: 0;
-    border-bottom: 0;
-  }
-
-  & [data-part="workspace-main"] {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: var(--noora-spacing-3);
-    min-width: 0;
-  }
-
-  & [data-part="workspace-heading"] {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--noora-spacing-3);
-  }
-
-  & [data-part="workspace-meta"] {
-    display: flex;
-    flex-wrap: wrap;
+    align-items: flex-end;
     gap: var(--noora-spacing-4);
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    min-width: 0;
   }
 
-  & [data-part="workspace-meta"] span {
-    overflow-wrap: anywhere;
+  & [data-part="notification-route"] {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr);
+    align-items: end;
+    gap: var(--noora-spacing-4);
+    min-width: 0;
+  }
+
+  & [data-part="notification-route-copy"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-1);
+    min-width: 0;
+  }
+
+  & [data-part="notification-route-copy"] span {
+    overflow: hidden;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & [data-part="notification-route-copy"] small {
+    overflow: hidden;
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & [data-part="notification-route"] .noora-text-input {
+    min-width: 0;
   }
 
   & [data-part="workspace-actions"] {
-    display: flex;
-    flex: 0 0 auto;
-  }
-
-  & [data-part="notification-routes-form"] {
-    display: grid;
-    gap: var(--noora-spacing-4);
-    max-width: 760px;
-    padding-top: var(--noora-spacing-3);
-  }
-
-  & [data-part="notification-routes-table"] {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  & [data-part="notification-routes-table"] th {
-    padding: 0 0 var(--noora-spacing-2);
-    text-align: left;
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
-  }
-
-  & [data-part="notification-routes-table"] td {
-    padding: var(--noora-spacing-3) var(--noora-spacing-4) var(--noora-spacing-3) 0;
-    vertical-align: middle;
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-  }
-
-  & [data-part="notification-routes-table"] td:first-child {
-    min-width: 180px;
-    color: var(--noora-surface-label-primary);
-  }
-
-  & [data-part="notification-routes-table"] td:first-child strong,
-  & [data-part="notification-routes-table"] td:first-child span {
-    display: block;
-  }
-
-  & [data-part="notification-routes-table"] td:first-child span {
-    padding-top: var(--noora-spacing-1);
-    color: var(--noora-surface-label-secondary);
-  }
-
-  & [data-part="notification-routes-table"] .noora-text-input {
-    min-width: 220px;
-  }
-
-  & [data-part="notification-routes-actions"] {
     display: flex;
   }
 
@@ -206,48 +116,21 @@
       align-items: stretch;
     }
 
-    & [data-part="notification-routes-table"],
-    & [data-part="notification-routes-table"] thead,
-    & [data-part="notification-routes-table"] tbody,
-    & [data-part="notification-routes-table"] tr,
-    & [data-part="notification-routes-table"] th,
-    & [data-part="notification-routes-table"] td {
-      display: block;
-      width: 100%;
+    & [data-part="notification-routes-cell"] {
+      align-items: stretch;
     }
 
-    & [data-part="notification-routes-table"] thead {
-      display: none;
-    }
-
-    & [data-part="notification-routes-table"] td {
-      padding-right: 0;
-    }
-
-    & [data-part="notification-routes-table"] .noora-text-input {
-      min-width: 0;
+    & [data-part="notification-route"] {
+      grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 720px) {
-    & [data-part="empty-state"],
-    & [data-part="installation-row"] {
-      align-items: flex-start;
-    }
-
-    & [data-part="empty-state"] {
+    & [data-part="notification-routes-cell"] {
       flex-direction: column;
     }
 
-    & [data-part="installation-row"] {
-      flex-wrap: wrap;
-    }
-
-    & [data-part="workspace-actions"] {
-      width: 100%;
-    }
-
-    & [data-part="workspace-actions"] .noora-button {
+    & [data-part="notification-routes-cell"] .noora-button {
       width: 100%;
     }
   }

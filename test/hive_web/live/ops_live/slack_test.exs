@@ -28,6 +28,7 @@ defmodule HiveWeb.OpsLive.SlackTest do
     assert html =~ "Slack"
     assert html =~ "Workspaces"
     assert html =~ ~s(id="ops-slack")
+    assert html =~ ~s(id="slack-workspaces-table")
     assert html =~ ~s(href="/ops/slack")
   end
 
@@ -49,13 +50,14 @@ defmodule HiveWeb.OpsLive.SlackTest do
 
     assert {:ok, _view, html} = live(conn, ~p"/ops/slack")
 
-    assert html =~ ~s(data-part="installation-row")
+    assert html =~ ~s(data-part="workspaces-table")
+    assert html =~ ~s(id="slack-workspaces-table")
     assert html =~ "Tuist Company"
     assert html =~ "Connected"
-    assert html =~ "Installed by admin-slack@example.com"
+    assert html =~ "admin-slack@example.com"
     assert html =~ "Installed on 2026-06-17"
     assert html =~ "Disconnect"
-    assert html =~ "Object type"
+    assert html =~ "Notifications"
     assert html =~ "Specs"
     assert html =~ "Slack channel"
     assert html =~ "Spec review requests"

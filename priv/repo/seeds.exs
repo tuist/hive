@@ -32,6 +32,9 @@ defmodule Hive.Repo.Seeds do
   alias Hive.Inference.Token
   alias Hive.Inference.Usage
   alias Hive.Repo
+  alias Hive.Slack
+  alias Hive.Slack.Installation
+  alias Hive.Slack.NotificationRoute
 
   import Ecto.Query
 
@@ -125,6 +128,59 @@ defmodule Hive.Repo.Seeds do
     Usage
     |> where([usage], usage.token_id in ^token_ids)
     |> Repo.delete_all()
+  end
+
+  def slack_installation!(attrs) do
+    team_id = Map.fetch!(attrs, :team_id)
+
+    installation =
+      case Repo.get_by(Installation, team_id: team_id) do
+        nil ->
+          %Installation{}
+          |> Installation.changeset(attrs)
+          |> Repo.insert!()
+
+        %Installation{} = installation ->
+          installation
+          |> Installation.changeset(attrs)
+          |> Repo.update!()
+      end
+
+    Repo.preload(installation, [:installed_by_user, :notification_routes])
+  end
+
+  def slack_notification_route!(%Installation{} = installation, attrs) do
+    object_type = Map.fetch!(attrs, :object_type)
+
+    route =
+      Slack.notification_routes()
+      |> Enum.find(&(&1.object_type == object_type))
+      |> case do
+        nil -> raise "unknown Slack notification route #{inspect(object_type)}"
+        route -> route
+      end
+
+    attrs =
+      attrs
+      |> Map.put(:installation_id, installation.id)
+      |> Map.put_new(:notification_events, route.events)
+
+    allowed_object_types = Enum.map(Slack.notification_routes(), & &1.object_type)
+
+    case Repo.get_by(NotificationRoute,
+           installation_id: installation.id,
+           object_type: object_type
+         ) do
+      nil ->
+        %NotificationRoute{}
+        |> NotificationRoute.changeset(attrs, allowed_object_types, Slack.notification_events())
+        |> Repo.insert!()
+
+      %NotificationRoute{} = notification_route ->
+        notification_route
+        |> NotificationRoute.changeset(attrs, allowed_object_types, Slack.notification_events())
+        |> Repo.update!()
+    end
   end
 
   def seed_inference_usage!(%ModelBinding{} = profile, %Token{} = token, points, rates) do
@@ -595,6 +651,66 @@ Enum.each(inference_profiles, fn seed ->
       Map.fetch!(token_attrs, :usage),
       Map.fetch!(seed, :rates)
     )
+  end)
+end)
+
+slack_admin = Accounts.get_user_by_email("test@hive.dev")
+
+slack_installation_seeds = [
+  %{
+    installation: %{
+      team_id: "T-SEED-TUIST-COMMUNITY",
+      team_name: "Tuist Community",
+      bot_user_id: "U-SEED-HIVE-BOT",
+      bot_token: "slack-bot-token-placeholder",
+      scope: Enum.join(Hive.Slack.default_bot_scopes(), ","),
+      installed_at: ~U[2026-06-18 09:00:00Z],
+      installed_by_user_id: slack_admin && slack_admin.id
+    },
+    routes: [
+      %{
+        object_type: "specs",
+        slack_channel_id: "C0123456789"
+      }
+    ]
+  },
+  %{
+    installation: %{
+      team_id: "T-SEED-TUIST-COMPANY",
+      team_name: "Tuist Company",
+      bot_user_id: "U-SEED-HIVE-BOT",
+      bot_token: "slack-bot-token-placeholder",
+      scope: Enum.join(Hive.Slack.default_bot_scopes(), ","),
+      installed_at: ~U[2026-06-17 14:30:00Z],
+      installed_by_user_id: slack_admin && slack_admin.id
+    },
+    routes: [
+      %{
+        object_type: "specs",
+        slack_channel_id: "C9876543210"
+      }
+    ]
+  },
+  %{
+    installation: %{
+      team_id: "T-SEED-ARCHIVE",
+      team_name: "Archived workspace",
+      bot_user_id: "U-SEED-HIVE-BOT",
+      bot_token: nil,
+      scope: Enum.join(Hive.Slack.default_bot_scopes(), ","),
+      installed_at: ~U[2026-06-10 12:00:00Z],
+      disconnected_at: ~U[2026-06-20 12:00:00Z],
+      installed_by_user_id: slack_admin && slack_admin.id
+    },
+    routes: []
+  }
+]
+
+Enum.each(slack_installation_seeds, fn seed ->
+  installation = Seeds.slack_installation!(seed.installation)
+
+  Enum.each(seed.routes, fn route_attrs ->
+    Seeds.slack_notification_route!(installation, route_attrs)
   end)
 end)
 
