@@ -62,11 +62,10 @@ defmodule HiveWeb.OpsLive.Inference do
            total_entries: 0,
            total_pages: 1
          })
-         |> assign(:profiles_empty?, true)
+         |> assign(:profiles, [])
          |> assign(:query, "")
          |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
          |> assign(:uri, URI.parse("/ops/inference/profiles"))
-         |> stream(:profiles, [])
          |> assign_profile_form(Inference.change_profile(%ModelBinding{}, %{}))
          |> assign_provider_options()}
     end
@@ -88,12 +87,11 @@ defmodule HiveWeb.OpsLive.Inference do
       socket
       |> assign(:uri, uri_from_query_params(query_params))
       |> assign(:profiles_meta, meta)
-      |> assign(:profiles_empty?, profiles == [])
+      |> assign(:profiles, profiles)
       |> assign(:available_filters, available_filters)
       |> assign(:active_filters, active_filters)
       |> assign(:query, query)
       |> assign(:search_form, to_form(%{"query" => query}, as: :search))
-      |> stream(:profiles, profiles, reset: true)
 
     {:noreply, socket}
   end
@@ -255,44 +253,45 @@ defmodule HiveWeb.OpsLive.Inference do
             <div data-part="table-scroll">
               <.table
                 id="inference-profiles-table"
-                rows={@streams.profiles}
-                row_navigate={fn {_id, profile} -> ~p"/ops/inference/profiles/#{profile.id}" end}
+                rows={@profiles}
+                row_key={fn profile -> "inference-profile-#{profile.id}" end}
+                row_navigate={fn profile -> ~p"/ops/inference/profiles/#{profile.id}" end}
               >
-                <:col :let={{_id, profile}} label="Profile">
+                <:col :let={profile} label="Profile">
                   <.text_and_description_cell
                     icon="lock"
                     label={profile.name}
                     description={profile.description || "No description"}
                   />
                 </:col>
-                <:col :let={{_id, profile}} label="Status">
+                <:col :let={profile} label="Status">
                   <% status = profile_status(profile) %>
                   <.badge_cell label={status.label} color={status.color} style="light-fill" />
                 </:col>
-                <:col :let={{_id, profile}} label="Upstream">
+                <:col :let={profile} label="Upstream">
                   <div data-part="route-cell">
                     <span>{profile.upstream_provider}</span>
                     <code>{profile.upstream_model}</code>
                   </div>
                 </:col>
-                <:col :let={{_id, profile}} label="Tokens">
+                <:col :let={profile} label="Tokens">
                   <div data-part="token-count-cell">
                     <span>{token_count_label(profile)}</span>
                     <small>{active_token_count_label(profile)}</small>
                   </div>
                 </:col>
-                <:col :let={{_id, profile}} label="Last used">
+                <:col :let={profile} label="Last used">
                   <.text_cell label={last_used_label(profile.last_used_at)} />
                 </:col>
+                <:empty_state>
+                  <.table_empty_state
+                    icon="lock"
+                    title="No inference profiles"
+                    subtitle="Create a profile to expose a stable model name to repository automation."
+                  />
+                </:empty_state>
               </.table>
             </div>
-
-            <.table_empty_state
-              :if={@profiles_empty?}
-              icon="lock"
-              title="No inference profiles"
-              subtitle="Create a profile to expose a stable model name to repository automation."
-            />
 
             <div :if={@profiles_meta.total_pages > 1} data-part="pagination">
               <.button
@@ -449,8 +448,7 @@ defmodule HiveWeb.OpsLive.Inference do
 
     socket
     |> assign(:profiles_meta, meta)
-    |> assign(:profiles_empty?, profiles == [])
-    |> stream(:profiles, profiles, reset: true)
+    |> assign(:profiles, profiles)
   end
 
   defp assign_provider_options(socket) do

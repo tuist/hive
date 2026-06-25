@@ -59,6 +59,7 @@ defmodule HiveWeb.OpsLive.Slack do
             {:noreply,
              socket
              |> put_flash(:info, "Slack notification routes updated.")
+             |> push_event("close-modal", %{id: "slack-routes-modal-#{installation.id}"})
              |> assign(:installations, Slack.list_installations())}
 
           {:error, _changeset} ->
@@ -93,127 +94,161 @@ defmodule HiveWeb.OpsLive.Slack do
         </div>
 
         <.card icon="brand_slack" title="Workspaces" data-part="workspaces-card">
-          <:actions :if={@slack_enabled? and @installations != []}>
+          <:actions :if={@slack_enabled?}>
             <.button
-              label="Connect another workspace"
+              label={if @installations == [], do: "Connect workspace", else: "Connect another workspace"}
               href={~p"/slack/install"}
               variant="secondary"
               size="small"
             />
           </:actions>
           <.card_section data-part="installations-section">
-            <div :if={not @slack_enabled?} data-part="empty-state">
-              <div data-part="empty-icon">
-                <.icon name="brand_slack" />
-              </div>
-              <div data-part="empty-copy">
-                <h2>Slack is not configured</h2>
-                <p>
-                  Set <code>HIVE_SLACK_CLIENT_ID</code>, <code>HIVE_SLACK_CLIENT_SECRET</code>, and
-                  <code>HIVE_SLACK_SIGNING_SECRET</code> to enable workspace installs.
-                </p>
-              </div>
-            </div>
-
-            <div :if={@slack_enabled? and @installations == []} data-part="empty-state">
-              <div data-part="empty-icon">
-                <.icon name="brand_slack" />
-              </div>
-              <div data-part="empty-copy">
-                <h2>No workspaces connected</h2>
-                <p>
-                  Connect a workspace so Hive can reply in threads and capture messages as feature requests.
-                </p>
-              </div>
-              <.button
-                label="Connect a Slack workspace"
-                href={~p"/slack/install"}
-                variant="primary"
-              />
-            </div>
-
-            <div :if={@slack_enabled? and @installations != []} data-part="installations-list">
-              <article :for={installation <- @installations} data-part="installation-row">
-                <div data-part="workspace-icon">
-                  <.icon name="brand_slack" />
-                </div>
-
-                <div data-part="workspace-main">
-                  <div data-part="workspace-heading">
-                    <h2>{installation.team_name || installation.team_id}</h2>
-                    <.status_badge
-                      :if={is_nil(installation.disconnected_at)}
-                      label="Connected"
-                      status="success"
-                    />
-                    <.status_badge
-                      :if={installation.disconnected_at}
-                      label="Disconnected"
-                      status="disabled"
-                    />
-                  </div>
-
-                  <div data-part="workspace-meta">
-                    <span :if={installation.installed_by_user}>
-                      Installed by {installation.installed_by_user.email}
-                    </span>
-                    <span :if={installation.installed_at}>
-                      Installed on {Calendar.strftime(installation.installed_at, "%Y-%m-%d")}
-                    </span>
-                  </div>
-
-                  <.form
+            <div data-part="workspaces-table">
+              <.table
+                id="slack-workspaces-table"
+                rows={if @slack_enabled?, do: @installations, else: []}
+                row_key={fn installation -> "slack-installation-#{installation.id}" end}
+              >
+                <:col :let={installation} label="Workspace">
+                  <.text_and_description_cell
+                    icon="brand_slack"
+                    label={installation.team_name || installation.team_id}
+                    description={workspace_description(installation)}
+                  />
+                </:col>
+                <:col :let={installation} label="Status">
+                  <.badge_cell
                     :if={is_nil(installation.disconnected_at)}
-                    for={%{}}
-                    as={:installation}
-                    phx-submit="save_notification_routes"
-                    phx-value-id={installation.id}
-                    data-part="notification-routes-form"
-                  >
-                    <table data-part="notification-routes-table">
-                      <thead>
-                        <tr>
-                          <th>Object type</th>
-                          <th>Slack channel</th>
-                          <th>Notifications</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr :for={route <- @notification_routes} data-part="notification-route-row">
-                          <td>
-                            <strong>{route.label}</strong>
-                            <span>{route.description}</span>
-                          </td>
-                          <td>
-                            <.text_input
-                              id={"notification-route-#{installation.id}-#{route.object_type}"}
-                              name={"installation[notification_routes][#{route.object_type}][slack_channel_id]"}
-                              value={notification_channel_value(installation, route)}
-                              label="Slack channel"
-                              placeholder="C0123456789"
-                              show_suffix={false}
-                            />
-                          </td>
-                          <td>{notification_event_labels(route)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div data-part="notification-routes-actions">
-                      <.button label="Save routes" variant="secondary" size="small" />
-                    </div>
-                  </.form>
-                </div>
+                    label="Connected"
+                    color="success"
+                    style="light-fill"
+                  />
+                  <.badge_cell
+                    :if={installation.disconnected_at}
+                    label="Disconnected"
+                    color="neutral"
+                    style="light-fill"
+                  />
+                </:col>
+                <:col :let={installation} label="Installed">
+                  <.text_cell
+                    label={installed_by_label(installation)}
+                    sublabel={installed_on_label(installation)}
+                  />
+                </:col>
+                <:col :let={installation} label="Channel">
+                  <.text_cell
+                    label={notification_channel_label(installation, @notification_routes)}
+                    sublabel={notification_channel_sublabel(installation, @notification_routes)}
+                  />
+                </:col>
+                <:col :let={installation} label="Notifications">
+                  <.text_cell
+                    label={notification_summary_label(installation, @notification_routes)}
+                    sublabel={notification_summary_sublabel(installation, @notification_routes)}
+                  />
+                </:col>
+                <:col :let={installation} label="">
+                  <.button_cell>
+                    <:button :if={is_nil(installation.disconnected_at)}>
+                      <.modal
+                        id={"slack-routes-modal-#{installation.id}"}
+                        title={"Edit #{installation.team_name || installation.team_id} routes"}
+                        description="Route Hive notifications to Slack channel identifiers."
+                        header_type="icon"
+                        header_size="large"
+                      >
+                        <:trigger :let={attrs}>
+                          <.button
+                            label="Edit routes"
+                            variant="secondary"
+                            size="small"
+                            icon_only={true}
+                            title="Edit routes"
+                            aria-label="Edit routes"
+                            {attrs}
+                          >
+                            <.pencil />
+                          </.button>
+                        </:trigger>
+                        <:header_icon>
+                          <.icon name="brand_slack" />
+                        </:header_icon>
 
-                <form
-                  :if={is_nil(installation.disconnected_at)}
-                  method="post"
-                  action={~p"/slack/installations/#{installation.id}/disconnect"}
-                  data-part="workspace-actions"
-                >
-                  <input type="hidden" name="_csrf_token" value={@csrf_token} />
-                  <.button label="Disconnect" variant="destructive" size="small" />
-                </form>
-              </article>
+                        <.form
+                          id={"slack-routes-form-#{installation.id}"}
+                          for={%{}}
+                          as={:installation}
+                          phx-submit="save_notification_routes"
+                          phx-value-id={installation.id}
+                          data-part="notification-routes-form"
+                        >
+                          <div data-part="notification-route-fields">
+                            <div
+                              :for={route <- @notification_routes}
+                              data-part="notification-route-field"
+                            >
+                              <div data-part="notification-route-copy">
+                                <span>{route.label}</span>
+                                <small>{route.description}</small>
+                                <small>{notification_event_labels(route)}</small>
+                              </div>
+                              <.text_input
+                                id={"notification-route-#{installation.id}-#{route.object_type}"}
+                                name={"installation[notification_routes][#{route.object_type}][slack_channel_id]"}
+                                value={notification_channel_value(installation, route)}
+                                label="Slack channel"
+                                placeholder="C0123456789"
+                                show_suffix={false}
+                              />
+                            </div>
+                          </div>
+                        </.form>
+
+                        <:footer>
+                          <.modal_footer>
+                            <:action>
+                              <.button
+                                label="Save routes"
+                                variant="primary"
+                                size="medium"
+                                type="submit"
+                                form={"slack-routes-form-#{installation.id}"}
+                              />
+                            </:action>
+                          </.modal_footer>
+                        </:footer>
+                      </.modal>
+                    </:button>
+                    <:button :if={is_nil(installation.disconnected_at)}>
+                      <form
+                        method="post"
+                        action={~p"/slack/installations/#{installation.id}/disconnect"}
+                        data-part="workspace-actions"
+                      >
+                        <input type="hidden" name="_csrf_token" value={@csrf_token} />
+                        <.button
+                          label="Disconnect"
+                          variant="destructive"
+                          size="small"
+                          icon_only={true}
+                          title="Disconnect workspace"
+                          aria-label="Disconnect workspace"
+                        >
+                          <.trash />
+                        </.button>
+                      </form>
+                    </:button>
+                  </.button_cell>
+                </:col>
+                <:empty_state>
+                  <.table_empty_state
+                    icon="brand_slack"
+                    title={slack_empty_title(@slack_enabled?)}
+                    subtitle={slack_empty_subtitle(@slack_enabled?)}
+                  />
+                </:empty_state>
+              </.table>
             </div>
           </.card_section>
         </.card>
@@ -228,7 +263,89 @@ defmodule HiveWeb.OpsLive.Slack do
     |> Map.get(:slack_channel_id, "")
   end
 
+  defp workspace_description(installation) do
+    case installation.team_id do
+      team_id when is_binary(team_id) and team_id != "" -> "Workspace #{team_id}"
+      _team_id -> "Workspace"
+    end
+  end
+
+  defp installed_by_label(%{installed_by_user: %{email: email}}) when is_binary(email), do: email
+  defp installed_by_label(_installation), do: "Unknown installer"
+
+  defp installed_on_label(%{installed_at: %DateTime{} = installed_at}) do
+    "Installed on #{Calendar.strftime(installed_at, "%Y-%m-%d")}"
+  end
+
+  defp installed_on_label(_installation), do: "Install date unknown"
+
+  defp notification_channel_label(%{disconnected_at: %DateTime{}}, _routes), do: "No channel"
+
+  defp notification_channel_label(installation, routes) do
+    case configured_routes(installation, routes) do
+      [] -> "Not routed"
+      [route] -> route.slack_channel_id
+      routes -> "#{length(routes)} channels"
+    end
+  end
+
+  defp notification_channel_sublabel(_installation, _routes), do: nil
+
+  defp notification_summary_label(%{disconnected_at: %DateTime{}}, _routes), do: "No routes"
+
+  defp notification_summary_label(installation, routes) do
+    case configured_routes(installation, routes) do
+      [] -> "No routes"
+      [route] -> route.label
+      routes -> "#{length(routes)} routes"
+    end
+  end
+
+  defp notification_summary_sublabel(%{disconnected_at: %DateTime{}}, _routes), do: nil
+
+  defp notification_summary_sublabel(installation, routes) do
+    case configured_routes(installation, routes) do
+      [] -> "Configure notifications"
+      [route] -> "#{length(route.events)} events"
+      routes -> "#{configured_event_count(routes)} events"
+    end
+  end
+
+  defp configured_routes(installation, routes) do
+    routes
+    |> Enum.map(fn route ->
+      configured_route = Slack.notification_route_for(installation, route.object_type)
+
+      if configured_route.slack_channel_id in [nil, ""] do
+        nil
+      else
+        route
+        |> Map.put(:slack_channel_id, configured_route.slack_channel_id)
+        |> Map.put(:events, configured_route.notification_events || route.events)
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp configured_event_count(routes) do
+    routes
+    |> Enum.flat_map(& &1.events)
+    |> Enum.uniq()
+    |> length()
+  end
+
   defp notification_event_labels(route) do
     Enum.map_join(route.events, ", ", &Slack.notification_event_label/1)
+  end
+
+  defp slack_empty_title(false), do: "Slack is not configured"
+  defp slack_empty_title(true), do: "No workspaces connected"
+
+  defp slack_empty_subtitle(false) do
+    "Set Slack credentials in the environment to enable workspace installs."
+  end
+
+  defp slack_empty_subtitle(true) do
+    "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
   end
 end
