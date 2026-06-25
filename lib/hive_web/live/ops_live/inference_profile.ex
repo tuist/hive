@@ -692,14 +692,13 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
       "provider": {
         "hive": {
           "name": "Hive",
-          "api": "openai",
-          "env": ["HIVE_INFERENCE_TOKEN"],
+          "npm": "@ai-sdk/openai-compatible",
           "options": {
-            "baseURL": "#{base_url}"
+            "baseURL": "#{base_url}",
+            "apiKey": "{env:HIVE_INFERENCE_TOKEN}"
           },
           "models": {
             "#{name}": {
-              "id": "#{name}",
               "name": "#{name}"
             }
           }

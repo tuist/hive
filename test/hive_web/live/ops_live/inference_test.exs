@@ -118,7 +118,9 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ "Blick model"
     assert html =~ "hive/blick-code-review"
     assert html =~ "HIVE_INFERENCE_TOKEN"
+    assert html =~ "@ai-sdk/openai-compatible"
     assert html =~ "baseURL"
+    assert html =~ "apiKey"
     assert html =~ "$0.15 / million tokens"
     assert html =~ "$0.60 / million tokens"
     assert html =~ ~s(id="edit-inference-profile-provider")

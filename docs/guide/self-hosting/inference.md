@@ -110,17 +110,17 @@ Add a custom `opencode` provider named `hive`:
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "provider": {
     "hive": {
       "name": "Hive",
-      "api": "openai",
-      "env": ["HIVE_INFERENCE_TOKEN"],
+      "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "https://hive.example.com/v1"
+        "baseURL": "https://hive.example.com/v1",
+        "apiKey": "{env:HIVE_INFERENCE_TOKEN}"
       },
       "models": {
         "blick-code-review": {
-          "id": "blick-code-review",
           "name": "Blick code review",
           "reasoning": true,
           "temperature": true,
