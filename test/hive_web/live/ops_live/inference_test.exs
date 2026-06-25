@@ -65,6 +65,8 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ "Profiles"
     assert html =~ "Create profile"
     assert html =~ ~s(id="ops-inference")
+    assert html =~ ~s(id="inference-profiles-filter")
+    assert html =~ ~s(id="inference-profiles-search")
     assert html =~ ~s(href="/ops/inference/profiles")
     assert html =~ ~s(href="/ops/inference/providers")
     assert html =~ ~s(id="new-inference-profile-provider")

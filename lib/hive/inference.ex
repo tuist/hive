@@ -21,6 +21,8 @@ defmodule Hive.Inference do
     "expires_at" => :expires_at
   }
   @token_attr_keys Map.values(@token_attr_key_map)
+  @default_profile_page_size 10
+  @max_profile_page_size 100
 
   def list_model_bindings do
     ModelBinding
@@ -28,11 +30,37 @@ defmodule Hive.Inference do
     |> Repo.all()
   end
 
-  def list_profiles do
-    ModelBinding
-    |> order_by([binding], asc: binding.name)
-    |> preload(tokens: ^tokens_query())
-    |> Repo.all()
+  def list_profiles(opts \\ []) do
+    page = opts |> Keyword.get(:page, 1) |> normalize_profile_page()
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_profile_page_size) |> normalize_profile_page_size()
+
+    query =
+      ModelBinding
+      |> maybe_filter_profiles_query(Keyword.get(opts, :query))
+      |> maybe_filter_profiles_enabled(Keyword.get(opts, :enabled))
+
+    total_entries = Repo.aggregate(query, :count, :id)
+    total_pages = total_pages(total_entries, page_size)
+    page = min(page, total_pages)
+    offset = (page - 1) * page_size
+
+    profiles =
+      query
+      |> order_by([binding], asc: binding.name)
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> preload(tokens: ^tokens_query())
+      |> Repo.all()
+
+    {profiles,
+     %{
+       current_page: page,
+       page_size: page_size,
+       total_entries: total_entries,
+       total_pages: total_pages
+     }}
   end
 
   def get_model_binding!(id), do: Repo.get!(ModelBinding, id)
@@ -66,6 +94,7 @@ defmodule Hive.Inference do
   def change_token(%ModelBinding{id: profile_id}, attrs \\ %{}) do
     %Token{model_binding_id: profile_id, token_hash: "pending"}
     |> Token.changeset(normalize_token_attrs(attrs))
+    |> Ecto.Changeset.validate_required([:model_binding_id])
   end
 
   def create_model_binding(attrs) when is_map(attrs) do
@@ -194,11 +223,12 @@ defmodule Hive.Inference do
     attrs =
       attrs
       |> normalize_token_attrs()
-      |> Map.put(:model_binding_id, binding.id)
       |> Map.put(:token_hash, hash_token(token_value))
 
     %Token{}
     |> Token.changeset(attrs)
+    |> Ecto.Changeset.put_change(:model_binding_id, binding.id)
+    |> Ecto.Changeset.validate_required([:model_binding_id])
     |> Repo.insert()
     |> case do
       {:ok, token} -> {:ok, {token, token_value}}
@@ -275,8 +305,6 @@ defmodule Hive.Inference do
     output_tokens = Map.fetch!(usage, :output_tokens)
 
     attrs = %{
-      model_binding_id: binding.id,
-      token_id: token.id,
       upstream_provider: binding.upstream_provider,
       upstream_model: binding.upstream_model,
       status: response_status(response),
@@ -288,6 +316,9 @@ defmodule Hive.Inference do
 
     %Usage{}
     |> Usage.changeset(attrs)
+    |> Ecto.Changeset.put_change(:model_binding_id, binding.id)
+    |> Ecto.Changeset.put_change(:token_id, token.id)
+    |> Ecto.Changeset.validate_required([:model_binding_id, :token_id])
     |> Repo.insert()
   end
 
@@ -383,6 +414,60 @@ defmodule Hive.Inference do
       cost_usd: decimal_value(summary.cost_usd)
     }
   end
+
+  defp maybe_filter_profiles_query(query, value) when is_binary(value) do
+    case String.trim(value) do
+      "" ->
+        query
+
+      value ->
+        pattern = "%#{value}%"
+
+        where(
+          query,
+          [binding],
+          ilike(binding.name, ^pattern) or
+            ilike(binding.description, ^pattern) or
+            ilike(binding.upstream_provider, ^pattern) or
+            ilike(binding.upstream_model, ^pattern)
+        )
+    end
+  end
+
+  defp maybe_filter_profiles_query(query, _value), do: query
+
+  defp maybe_filter_profiles_enabled(query, enabled) when is_boolean(enabled) do
+    where(query, [binding], binding.enabled == ^enabled)
+  end
+
+  defp maybe_filter_profiles_enabled(query, _enabled), do: query
+
+  defp normalize_profile_page(page) when is_integer(page) and page > 0, do: page
+
+  defp normalize_profile_page(page) when is_binary(page) do
+    case Integer.parse(page) do
+      {page, ""} when page > 0 -> page
+      _other -> 1
+    end
+  end
+
+  defp normalize_profile_page(_page), do: 1
+
+  defp normalize_profile_page_size(page_size)
+       when is_integer(page_size) and page_size > 0,
+       do: min(page_size, @max_profile_page_size)
+
+  defp normalize_profile_page_size(page_size) when is_binary(page_size) do
+    case Integer.parse(page_size) do
+      {page_size, ""} when page_size > 0 -> normalize_profile_page_size(page_size)
+      _other -> @default_profile_page_size
+    end
+  end
+
+  defp normalize_profile_page_size(_page_size), do: @default_profile_page_size
+
+  defp total_pages(0, _page_size), do: 1
+  defp total_pages(total_entries, page_size), do: div(total_entries + page_size - 1, page_size)
 
   defp usage_series_query(query, {start_datetime, end_datetime}, bucket) do
     bucket_name = usage_bucket_name(bucket)

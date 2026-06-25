@@ -28,9 +28,9 @@ defmodule Hive.Inference.Token do
 
   def changeset(token, attrs) do
     token
-    |> cast(attrs, [:name, :token_hash, :enabled, :expires_at, :last_used_at, :model_binding_id])
+    |> cast(attrs, [:name, :token_hash, :enabled, :expires_at, :last_used_at])
     |> update_change(:name, &normalize_name/1)
-    |> validate_required([:name, :token_hash, :model_binding_id])
+    |> validate_required([:name, :token_hash])
     |> unique_constraint(:token_hash)
     |> foreign_key_constraint(:model_binding_id)
   end

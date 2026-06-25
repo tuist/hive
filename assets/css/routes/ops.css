@@ -386,6 +386,35 @@
     overflow-x: auto;
   }
 
+  & [data-part="table-toolbar"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--noora-spacing-4);
+    margin-bottom: var(--noora-spacing-5);
+  }
+
+  & [data-part="search"] {
+    flex: 1;
+    max-width: 360px;
+  }
+
+  & [data-part="active-filters"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--noora-spacing-2);
+    margin-bottom: var(--noora-spacing-4);
+  }
+
+  & [data-part="pagination"] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: var(--noora-spacing-4);
+    padding-top: var(--noora-spacing-7);
+  }
+
   & #inference-profiles-table table,
   & #inference-providers-table table,
   & #inference-profile-tokens-table table {
@@ -720,7 +749,8 @@
 
   @media (max-width: 960px) {
     & [data-part="page-header"],
-    & [data-part="generated-token"] {
+    & [data-part="generated-token"],
+    & [data-part="table-toolbar"] {
       flex-direction: column;
       align-items: stretch;
     }

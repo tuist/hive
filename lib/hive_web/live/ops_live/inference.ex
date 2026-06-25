@@ -2,6 +2,9 @@ defmodule HiveWeb.OpsLive.Inference do
   @moduledoc false
 
   use HiveWeb, :live_view
+  use Noora
+
+  import Noora.Filter
 
   alias Hive.Audit
   alias Hive.Inference
@@ -10,9 +13,13 @@ defmodule HiveWeb.OpsLive.Inference do
   alias Hive.Ops.Policy
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
+  alias HiveWeb.Utilities.Query
+  alias Noora.Filter
 
   import HiveWeb.OpsLive.InferenceHelpers,
     only: [model_identifier_placeholder: 1, provider_select_options: 0]
+
+  @page_size 10
 
   def open_graph do
     %{
@@ -47,10 +54,48 @@ defmodule HiveWeb.OpsLive.Inference do
          socket
          |> assign(:page_title, "Inference profiles · #{socket.assigns.product_name}")
          |> assign(OpenGraph.assigns(open_graph()))
+         |> assign(:available_filters, [])
+         |> assign(:active_filters, [])
+         |> assign(:profiles_meta, %{
+           current_page: 1,
+           page_size: @page_size,
+           total_entries: 0,
+           total_pages: 1
+         })
+         |> assign(:profiles_empty?, true)
+         |> assign(:query, "")
+         |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
+         |> assign(:uri, URI.parse("/ops/inference/profiles"))
+         |> stream(:profiles, [])
          |> assign_profile_form(Inference.change_profile(%ModelBinding{}, %{}))
-         |> assign_provider_options()
-         |> assign_profiles()}
+         |> assign_provider_options()}
     end
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    available_filters = define_filters()
+    query_params = Query.query_params(uri)
+
+    page = Query.parse_page(params["page"])
+    query = params["q"] || ""
+    active_filters = Filter.Operations.decode_filters_from_query(params, available_filters)
+
+    {profiles, meta} =
+      Inference.list_profiles(profile_list_opts(query, active_filters, page))
+
+    socket =
+      socket
+      |> assign(:uri, uri_from_query_params(query_params))
+      |> assign(:profiles_meta, meta)
+      |> assign(:profiles_empty?, profiles == [])
+      |> assign(:available_filters, available_filters)
+      |> assign(:active_filters, active_filters)
+      |> assign(:query, query)
+      |> assign(:search_form, to_form(%{"query" => query}, as: :search))
+      |> stream(:profiles, profiles, reset: true)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -103,6 +148,43 @@ defmodule HiveWeb.OpsLive.Inference do
      |> push_event("close-modal", %{id: "new-inference-profile-modal"})}
   end
 
+  def handle_event("search", %{"search" => %{"query" => query}}, socket) do
+    {:noreply,
+     push_patch(socket,
+       to:
+         ~p"/ops/inference/profiles?#{profile_query_params(query, socket.assigns.active_filters)}",
+       replace: true
+     )}
+  end
+
+  def handle_event("add_filter", %{"value" => filter_id}, socket) do
+    updated_params =
+      socket
+      |> current_query_params()
+      |> Map.delete("page")
+      |> then(&Filter.Operations.add_filter_to_query(filter_id, socket, &1))
+
+    {:noreply,
+     socket
+     |> push_patch(to: ~p"/ops/inference/profiles?#{updated_params}")
+     |> push_event("open-dropdown", %{id: "filter-#{filter_id}-value-dropdown"})
+     |> push_event("open-popover", %{id: "filter-#{filter_id}-value-popover"})}
+  end
+
+  def handle_event("update_filter", params, socket) do
+    updated_params =
+      socket
+      |> current_query_params()
+      |> Map.delete("page")
+      |> then(&Filter.Operations.update_filters_in_query(params, socket, &1))
+
+    {:noreply,
+     socket
+     |> push_patch(to: ~p"/ops/inference/profiles?#{updated_params}")
+     |> push_event("close-dropdown", %{id: "all", all: true})
+     |> push_event("close-popover", %{id: "all", all: true})}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -139,46 +221,101 @@ defmodule HiveWeb.OpsLive.Inference do
               Stable model names that repositories can request through Hive.
             </p>
 
+            <div data-part="table-toolbar">
+              <.filter_dropdown
+                id="inference-profiles-filter"
+                label="Filter"
+                available_filters={@available_filters}
+                active_filters={@active_filters}
+                on_select="add_filter"
+              />
+
+              <div data-part="search">
+                <.form
+                  id="inference-profiles-search-form"
+                  for={@search_form}
+                  phx-change="search"
+                  phx-submit="search"
+                >
+                  <.text_input
+                    id="inference-profiles-search"
+                    field={@search_form[:query]}
+                    type="search"
+                    show_suffix={false}
+                    placeholder="Search profiles..."
+                  />
+                </.form>
+              </div>
+            </div>
+
+            <div :if={@active_filters != []} data-part="active-filters">
+              <.active_filter :for={filter <- @active_filters} filter={filter} />
+            </div>
+
             <div data-part="table-scroll">
               <.table
                 id="inference-profiles-table"
-                rows={@profiles}
-                row_navigate={fn profile -> ~p"/ops/inference/profiles/#{profile.id}" end}
+                rows={@streams.profiles}
+                row_navigate={fn {_id, profile} -> ~p"/ops/inference/profiles/#{profile.id}" end}
               >
-                <:col :let={profile} label="Profile">
+                <:col :let={{_id, profile}} label="Profile">
                   <.text_and_description_cell
                     icon="lock"
                     label={profile.name}
                     description={profile.description || "No description"}
                   />
                 </:col>
-                <:col :let={profile} label="Status">
+                <:col :let={{_id, profile}} label="Status">
                   <% status = profile_status(profile) %>
                   <.badge_cell label={status.label} color={status.color} style="light-fill" />
                 </:col>
-                <:col :let={profile} label="Upstream">
+                <:col :let={{_id, profile}} label="Upstream">
                   <div data-part="route-cell">
                     <span>{profile.upstream_provider}</span>
                     <code>{profile.upstream_model}</code>
                   </div>
                 </:col>
-                <:col :let={profile} label="Tokens">
+                <:col :let={{_id, profile}} label="Tokens">
                   <div data-part="token-count-cell">
                     <span>{token_count_label(profile)}</span>
                     <small>{active_token_count_label(profile)}</small>
                   </div>
                 </:col>
-                <:col :let={profile} label="Last used">
+                <:col :let={{_id, profile}} label="Last used">
                   <.text_cell label={last_used_label(profile.last_used_at)} />
                 </:col>
-                <:empty_state>
-                  <.table_empty_state
-                    icon="lock"
-                    title="No inference profiles"
-                    subtitle="Create a profile to expose a stable model name to repository automation."
-                  />
-                </:empty_state>
               </.table>
+            </div>
+
+            <.table_empty_state
+              :if={@profiles_empty?}
+              icon="lock"
+              title="No inference profiles"
+              subtitle="Create a profile to expose a stable model name to repository automation."
+            />
+
+            <div :if={@profiles_meta.total_pages > 1} data-part="pagination">
+              <.button
+                variant="secondary"
+                label="Prev"
+                disabled={@profiles_meta.current_page <= 1}
+                patch={page_link(@uri, max(1, @profiles_meta.current_page - 1))}
+              >
+                <:icon_left><.chevron_left /></:icon_left>
+              </.button>
+              <.button
+                variant="secondary"
+                label="Next"
+                disabled={@profiles_meta.current_page >= @profiles_meta.total_pages}
+                patch={
+                  page_link(
+                    @uri,
+                    min(@profiles_meta.total_pages, @profiles_meta.current_page + 1)
+                  )
+                }
+              >
+                <:icon_right><.chevron_right /></:icon_right>
+              </.button>
             </div>
           </.card_section>
         </.card>
@@ -305,7 +442,15 @@ defmodule HiveWeb.OpsLive.Inference do
   end
 
   defp assign_profiles(socket) do
-    assign(socket, :profiles, Inference.list_profiles())
+    {profiles, meta} =
+      Inference.list_profiles(
+        profile_list_opts(socket.assigns.query, socket.assigns.active_filters, 1)
+      )
+
+    socket
+    |> assign(:profiles_meta, meta)
+    |> assign(:profiles_empty?, profiles == [])
+    |> stream(:profiles, profiles, reset: true)
   end
 
   defp assign_provider_options(socket) do
@@ -360,6 +505,63 @@ defmodule HiveWeb.OpsLive.Inference do
 
   defp pluralize(word, 1), do: word
   defp pluralize(word, _count), do: word <> "s"
+
+  defp page_link(uri, page) do
+    "?" <> Query.put(uri.query, "page", Integer.to_string(page))
+  end
+
+  defp profile_query_params(query, active_filters) do
+    active_filters
+    |> Filter.Operations.encode_filters_to_query()
+    |> Query.put_present("q", Query.present_string(query))
+  end
+
+  defp profile_list_opts(query, active_filters, page) do
+    [page: page, page_size: @page_size, query: Query.present_string(query)]
+    |> put_status_filter(active_filters)
+  end
+
+  defp put_status_filter(opts, active_filters) do
+    case Enum.find(active_filters, &(&1.id == "status")) do
+      %{operator: :==, value: "enabled"} -> Keyword.put(opts, :enabled, true)
+      %{operator: :==, value: "disabled"} -> Keyword.put(opts, :enabled, false)
+      _filter -> opts
+    end
+  end
+
+  defp current_query_params(socket) do
+    socket.assigns.uri.query
+    |> Kernel.||("")
+    |> URI.decode_query()
+  end
+
+  defp uri_from_query_params(params) do
+    case URI.encode_query(params) do
+      "" -> URI.parse("")
+      query -> URI.parse("?" <> query)
+    end
+  end
+
+  defp define_filters do
+    options = ["enabled", "disabled"]
+
+    [
+      %Filter.Filter{
+        id: "status",
+        display_name: "Status",
+        type: :option,
+        options: options,
+        options_display_names: Map.new(options, &{&1, status_filter_label(&1)}),
+        operator: :==,
+        searchable: false,
+        value: nil
+      }
+    ]
+  end
+
+  defp status_filter_label("enabled"), do: "Enabled"
+  defp status_filter_label("disabled"), do: "Disabled"
+  defp status_filter_label(status), do: status
 
   defp record_profile_audit(action, %ModelBinding{} = profile) do
     Audit.record(action, %{

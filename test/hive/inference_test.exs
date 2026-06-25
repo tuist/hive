@@ -5,6 +5,7 @@ defmodule Hive.InferenceTest do
   alias Hive.Inference.ModelBinding
   alias Hive.Inference.Provider
   alias Hive.Inference.Token
+  alias Hive.Inference.Usage
 
   describe "model bindings" do
     test "creates a stable model binding" do
@@ -99,7 +100,7 @@ defmodule Hive.InferenceTest do
     test "creates runtime providers with encrypted credentials" do
       assert {:ok, %Provider{} = provider} =
                Inference.create_provider(%{
-                 key: "fireworks-ai",
+                 key: "unit-runtime-fireworks",
                  base_url: "https://api.fireworks.ai/inference/v1/",
                  api_key: "fw-test",
                  timeout: 120_000
@@ -110,7 +111,7 @@ defmodule Hive.InferenceTest do
 
       assert [
                %{
-                 id: "fireworks-ai",
+                 id: "unit-runtime-fireworks",
                  base_url: "https://api.fireworks.ai/inference/v1/",
                  configured?: true,
                  credential_configured?: true,
@@ -153,6 +154,51 @@ defmodule Hive.InferenceTest do
       assert Inference.authenticate_token(revoked_value) == :error
       assert Inference.authenticate_token(expired_value) == :error
     end
+
+    test "binds tokens to the verified profile instead of caller supplied attrs" do
+      binding = model_binding!()
+
+      other_binding =
+        model_binding!(
+          name: "other-profile",
+          upstream_model: "fireworks-ai/accounts/fireworks/models/other"
+        )
+
+      assert {:ok, {%Token{} = token, token_value}} =
+               Inference.create_token(binding, %{
+                 name: "Repository automation",
+                 model_binding_id: other_binding.id
+               })
+
+      assert token.model_binding_id == binding.id
+
+      assert {:ok, %Token{model_binding: %ModelBinding{id: binding_id}}} =
+               Inference.authenticate_token(token_value)
+
+      assert binding_id == binding.id
+    end
+
+    test "token changesets ignore caller supplied owner attrs" do
+      binding = model_binding!()
+
+      other_binding =
+        model_binding!(
+          name: "other-token-profile",
+          upstream_model: "fireworks-ai/accounts/fireworks/models/other-token"
+        )
+
+      changeset =
+        %Token{model_binding_id: binding.id, token_hash: "pending"}
+        |> Token.changeset(%{
+          name: "Repository automation",
+          model_binding_id: other_binding.id
+        })
+
+      token = Ecto.Changeset.apply_changes(changeset)
+
+      assert token.model_binding_id == binding.id
+      refute Map.has_key?(changeset.changes, :model_binding_id)
+    end
   end
 
   describe "relay requests" do
@@ -189,11 +235,15 @@ defmodule Hive.InferenceTest do
     end
 
     test "resolves runtime providers before environment providers" do
-      binding = model_binding!()
+      binding =
+        model_binding!(
+          upstream_provider: "unit-runtime-precedence",
+          upstream_model: "unit-runtime-precedence/accounts/fireworks/models/kimi-k2p5"
+        )
 
       assert {:ok, %Provider{} = _provider} =
                Inference.create_provider(%{
-                 key: "fireworks-ai",
+                 key: "unit-runtime-precedence",
                  base_url: "https://runtime.example.com/v1/",
                  api_key: "runtime-token",
                  timeout: 120_000
@@ -205,7 +255,7 @@ defmodule Hive.InferenceTest do
                  %{"model" => "blick-code-review", "messages" => []},
                  config: [
                    providers: %{
-                     "fireworks-ai" => %{
+                     "unit-runtime-precedence" => %{
                        "base_url" => "https://environment.example.com/v1/",
                        "api_key" => "environment-token"
                      }
@@ -282,6 +332,41 @@ defmodule Hive.InferenceTest do
       assert series = [_entry | _entries] = Inference.usage_series(binding, period, :day)
       assert Enum.any?(series, &(&1.input_tokens == 1_000))
       assert Enum.all?(series, &match?(%DateTime{}, &1.bucket))
+    end
+
+    test "usage changesets ignore caller supplied owner attrs" do
+      binding = model_binding!()
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      other_binding =
+        model_binding!(
+          name: "other-usage-profile",
+          upstream_model: "fireworks-ai/accounts/fireworks/models/other-usage"
+        )
+
+      {:ok, {other_token, _token_value}} =
+        Inference.create_token(other_binding, %{name: "Other repository"})
+
+      changeset =
+        %Usage{model_binding_id: binding.id, token_id: token.id}
+        |> Usage.changeset(%{
+          upstream_provider: binding.upstream_provider,
+          upstream_model: binding.upstream_model,
+          status: 200,
+          input_tokens: 1_000,
+          output_tokens: 2_000,
+          total_tokens: 3_000,
+          cost_usd: Decimal.new("0.005"),
+          model_binding_id: other_binding.id,
+          token_id: other_token.id
+        })
+
+      usage = Ecto.Changeset.apply_changes(changeset)
+
+      assert usage.model_binding_id == binding.id
+      assert usage.token_id == token.id
+      refute Map.has_key?(changeset.changes, :model_binding_id)
+      refute Map.has_key?(changeset.changes, :token_id)
     end
 
     test "falls back to provider pricing when profile pricing is not configured" do

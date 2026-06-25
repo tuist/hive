@@ -37,9 +37,7 @@ defmodule Hive.Inference.Usage do
       :input_tokens,
       :output_tokens,
       :total_tokens,
-      :cost_usd,
-      :model_binding_id,
-      :token_id
+      :cost_usd
     ])
     |> validate_required([
       :upstream_provider,
@@ -48,9 +46,7 @@ defmodule Hive.Inference.Usage do
       :input_tokens,
       :output_tokens,
       :total_tokens,
-      :cost_usd,
-      :model_binding_id,
-      :token_id
+      :cost_usd
     ])
     |> validate_number(:status, greater_than_or_equal_to: 100)
     |> validate_number(:input_tokens, greater_than_or_equal_to: 0)
