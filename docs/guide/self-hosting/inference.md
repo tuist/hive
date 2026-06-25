@@ -1,14 +1,14 @@
 ## Inference relay
 
 Hive can expose an OpenAI-compatible inference relay for automation that
-already knows how to talk to that standard provider surface. The relay is
-designed for tools such as [Blick](https://github.com/tuist/blick) running
-through [opencode](https://opencode.ai): the repository points at Hive with
-a Hive token, and Hive decides which upstream provider and model should
-handle the request.
+already knows how to talk to that standard provider surface. Repositories and
+workflows point at Hive with a Hive token, and Hive decides which upstream
+provider and model should handle the request.
 
 This gives operators one place to retarget a model for cost, latency, or
-quality without changing every repository.
+quality without changing every repository. It also gives them a more granular
+usage and cost view because every request is attributed to the profile and
+token that made it.
 
 ## Configure upstream providers
 
@@ -83,7 +83,7 @@ admin.
 Create a profile with:
 
 - **Profile name**: the stable model name repositories will request, such as
-  `blick-code-review`.
+  `repository-review`.
 - **Upstream provider**: the provider key from **Ops → Inference → Providers**
   or the environment configuration, such as `fireworks-ai`.
 - **Upstream model**: the models.dev `provider/model` identifier, such as
@@ -99,57 +99,23 @@ Then create a token under that profile. Hive prints the token once in the
 dashboard. Store it in the repository secret manager before dismissing it;
 Hive stores only a hash and cannot show the token again.
 
+::: tip Token attribution
+Tokens are the attribution boundary for relay usage. Create one token per
+repository, workflow, team, or automation boundary that should have its own
+usage and cost breakdown. The profile keeps the stable model routing, while
+each token gives operators a separate usage trail and revocation point.
+:::
+
 To retarget repositories later, edit the profile's upstream provider or model.
 Existing tokens keep working because they are bound to the stable profile name.
 Disable a profile to stop all of its tokens, or open a token detail page to
 revoke that token.
 
-## Connect opencode and Blick
+## Connect clients
 
-Add a custom `opencode` provider named `hive`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "hive": {
-      "name": "Hive",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "baseURL": "https://hive.example.com/v1",
-        "apiKey": "{env:HIVE_INFERENCE_TOKEN}"
-      },
-      "models": {
-        "blick-code-review": {
-          "name": "Blick code review",
-          "reasoning": true,
-          "temperature": true,
-          "tool_call": true,
-          "limit": {
-            "context": 200000,
-            "output": 8192
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-Then configure Blick:
-
-```toml
-[agent]
-kind = "opencode"
-model = "hive/blick-code-review"
-```
-
-In the workflow that runs Blick, provide only the Hive relay token:
-
-```
-env:
-  HIVE_INFERENCE_TOKEN: ${{ secrets.HIVE_INFERENCE_TOKEN }}
-```
+Open a profile detail page to copy the client configuration for that profile.
+Hive shows the base address, model name, authorization header shape, and a
+client snippet that can be adapted to any OpenAI-compatible client.
 
 The relay exposes:
 
