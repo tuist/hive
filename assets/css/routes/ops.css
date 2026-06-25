@@ -39,7 +39,7 @@
   }
 
   & #slack-workspaces-table table {
-    min-width: 1080px;
+    min-width: 1120px;
     table-layout: fixed;
   }
 
@@ -56,26 +56,28 @@
   }
 
   & #slack-workspaces-table th:nth-child(4) {
-    width: 34%;
+    width: 16%;
   }
 
   & #slack-workspaces-table th:nth-child(5) {
+    width: 20%;
+  }
+
+  & #slack-workspaces-table th:nth-child(6) {
     width: 12%;
   }
 
-  & [data-part="notification-routes-cell"] {
+  & [data-part="notification-route-fields"] {
     display: flex;
-    align-items: flex-end;
-    gap: var(--noora-spacing-4);
-    min-width: 0;
+    flex-direction: column;
+    gap: var(--noora-spacing-6);
   }
 
-  & [data-part="notification-route"] {
+  & [data-part="notification-route-field"] {
     display: grid;
-    flex: 1;
-    grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr);
-    align-items: end;
-    gap: var(--noora-spacing-4);
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+    align-items: start;
+    gap: var(--noora-spacing-6);
     min-width: 0;
   }
 
@@ -87,23 +89,13 @@
   }
 
   & [data-part="notification-route-copy"] span {
-    overflow: hidden;
     color: var(--noora-surface-label-primary);
     font: var(--noora-font-weight-medium) var(--noora-font-body-small);
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   & [data-part="notification-route-copy"] small {
-    overflow: hidden;
     color: var(--noora-surface-label-secondary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  & [data-part="notification-route"] .noora-text-input {
-    min-width: 0;
   }
 
   & [data-part="workspace-actions"] {
@@ -116,22 +108,8 @@
       align-items: stretch;
     }
 
-    & [data-part="notification-routes-cell"] {
-      align-items: stretch;
-    }
-
-    & [data-part="notification-route"] {
+    & [data-part="notification-route-field"] {
       grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 720px) {
-    & [data-part="notification-routes-cell"] {
-      flex-direction: column;
-    }
-
-    & [data-part="notification-routes-cell"] .noora-button {
-      width: 100%;
     }
   }
 }

@@ -42,7 +42,18 @@ defmodule HiveWeb.OpsLive.SlackTest do
       team_name: "Tuist Company",
       installed_at: ~U[2026-06-17 12:00:00Z],
       installed_by_user: user,
-      bot_token: "xoxb-token"
+      bot_token: "xoxb-token",
+      notification_routes: [
+        %NotificationRoute{
+          object_type: "specs",
+          slack_channel_id: "C123456789",
+          notification_events: [
+            "spec.created",
+            "spec.comment.created",
+            "spec.review.requested"
+          ]
+        }
+      ]
     }
 
     stub(Hive.Slack, :enabled?, fn -> true end)
@@ -56,15 +67,19 @@ defmodule HiveWeb.OpsLive.SlackTest do
     assert html =~ "Connected"
     assert html =~ "admin-slack@example.com"
     assert html =~ "Installed on 2026-06-17"
-    assert html =~ "Disconnect"
+    assert html =~ "Channel"
+    assert html =~ "C123456789"
     assert html =~ "Notifications"
     assert html =~ "Specs"
+    assert html =~ "3 events"
+    assert html =~ ~s(aria-label="Edit routes")
+    assert html =~ ~s(aria-label="Disconnect workspace")
     assert html =~ "Slack channel"
     assert html =~ "Spec review requests"
-    assert html =~ "noora-button"
+    refute html =~ "Object type"
   end
 
-  test "updates Slack notification routes from the workspace row", %{conn: conn} do
+  test "updates Slack notification routes from the workspace route modal", %{conn: conn} do
     {conn, user} = sign_in(conn, "admin-slack-notifications@example.com")
     {:ok, user} = Accounts.update_user_role(user, :admin)
 
