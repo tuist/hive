@@ -138,14 +138,6 @@ defmodule HiveWeb.SpecLive.Show do
             {:noreply,
              put_flash(socket, :error, "Only organization members can change spec status.")}
 
-          {:error, :locked} ->
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               "Another update is in progress for this spec. Try again in a moment."
-             )}
-
           {:error, _changeset} ->
             {:noreply, put_flash(socket, :error, "Couldn't update the spec status.")}
         end

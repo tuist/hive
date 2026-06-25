@@ -1,6 +1,5 @@
 defmodule Hive.MCP.Components.Tools.UpdateSpecTest do
   use Hive.MCPToolCase
-  use Mimic
 
   alias Hive.MCP.Components.Tools.UpdateSpec
   alias Hive.Specs
@@ -41,22 +40,5 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecTest do
 
     assert response["error"] == "stale_revision"
     assert response["current_revision"] == 2
-  end
-
-  test "reports a locked spec instead of failing the update" do
-    user = mcp_user()
-    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
-
-    stub(Specs, :update_spec, fn _spec, _attrs, _user -> {:error, :locked} end)
-
-    response =
-      UpdateSpec.call(mcp_conn(user), %{
-        "id" => spec.id,
-        "expected_revision" => 1,
-        "summary" => "A small tweak."
-      })
-      |> response_json()
-
-    assert response["error"] == "locked"
   end
 end
