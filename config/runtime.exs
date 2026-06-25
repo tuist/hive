@@ -133,7 +133,7 @@ end
 inference_providers =
   case System.get_env("HIVE_INFERENCE_PROVIDERS") do
     value when is_binary(value) ->
-      if present?.(value), do: Jason.decode!(value), else: %{}
+      if present?.(value), do: JSON.decode!(value), else: %{}
 
     _other ->
       %{}

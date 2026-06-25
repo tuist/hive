@@ -311,7 +311,7 @@ defmodule Hive.Inference do
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 in ["", "[DONE]"]))
     |> Enum.find_value(fn payload ->
-      case Jason.decode(payload) do
+      case JSON.decode(payload) do
         {:ok, body} -> usage_from_body(body)
         {:error, _error} -> nil
       end
