@@ -21,6 +21,229 @@ alias Hive.Specs.Revision
 alias Hive.Specs.Spec
 alias Hive.Specs.View, as: SpecView
 
+defmodule Hive.Repo.Seeds do
+  @moduledoc false
+
+  alias Hive.Accounts
+  alias Hive.Accounts.User
+  alias Hive.Inference
+  alias Hive.Inference.ModelBinding
+  alias Hive.Inference.Provider
+  alias Hive.Inference.Token
+  alias Hive.Inference.Usage
+  alias Hive.Repo
+
+  import Ecto.Query
+
+  def user!(email, opts \\ []) do
+    provider = Keyword.get(opts, :provider, "seed")
+    provider_uid = Keyword.get(opts, :provider_uid, email)
+    name = Keyword.get(opts, :name)
+
+    {:ok, user} =
+      Accounts.upsert_from_auth(%{
+        email: email,
+        name: name,
+        provider: provider,
+        provider_uid: provider_uid
+      })
+
+    maybe_update_user_name(user, name)
+  end
+
+  def update_role!(email, role) do
+    case Accounts.get_user_by_email(email) do
+      nil ->
+        :ok
+
+      user ->
+        {:ok, _user} = Accounts.update_user_role(user, role)
+        :ok
+    end
+  end
+
+  def inference_profile!(attrs) do
+    name = Map.fetch!(attrs, :name)
+
+    case Inference.get_model_binding_by_name(name) do
+      nil ->
+        {:ok, profile} = Inference.create_profile(attrs)
+        profile
+
+      %ModelBinding{} = profile ->
+        {:ok, profile} = Inference.update_profile(profile, attrs)
+        profile
+    end
+  end
+
+  def inference_provider!(attrs) do
+    key = Map.fetch!(attrs, :key)
+
+    case Inference.get_provider_by_key(key) do
+      nil ->
+        {:ok, provider} = Inference.create_provider(attrs)
+        provider
+
+      %Provider{} = provider ->
+        {:ok, provider} =
+          provider
+          |> Provider.changeset(attrs)
+          |> Repo.update()
+
+        provider
+    end
+  end
+
+  def inference_token!(%ModelBinding{id: profile_id} = profile, attrs) do
+    name = Map.fetch!(attrs, :name)
+
+    case Repo.get_by(Token, model_binding_id: profile_id, name: name) do
+      nil ->
+        {:ok, {token, _token_value}} = Inference.create_profile_token(profile, attrs)
+        token
+
+      %Token{} = token ->
+        {:ok, token} =
+          token
+          |> Token.changeset(Map.take(attrs, [:name, :enabled, :expires_at]))
+          |> Repo.update()
+
+        token
+    end
+  end
+
+  def revoke_token!(%Token{enabled: false} = token), do: token
+
+  def revoke_token!(%Token{} = token) do
+    {:ok, token} = Inference.revoke_token(token)
+    token
+  end
+
+  def reset_inference_usage!(tokens) do
+    token_ids = Enum.map(tokens, & &1.id)
+
+    Usage
+    |> where([usage], usage.token_id in ^token_ids)
+    |> Repo.delete_all()
+  end
+
+  def seed_inference_usage!(%ModelBinding{} = profile, %Token{} = token, points, rates) do
+    Enum.each(points, fn point ->
+      input_tokens = Map.fetch!(point, :input_tokens)
+      output_tokens = Map.fetch!(point, :output_tokens)
+
+      Repo.insert!(%Usage{
+        model_binding_id: profile.id,
+        token_id: token.id,
+        upstream_provider: profile.upstream_provider,
+        upstream_model: profile.upstream_model,
+        status: Map.get(point, :status, 200),
+        input_tokens: input_tokens,
+        output_tokens: output_tokens,
+        total_tokens: input_tokens + output_tokens,
+        cost_usd: usage_cost_usd(input_tokens, output_tokens, rates),
+        inserted_at: Map.fetch!(point, :at)
+      })
+    end)
+
+    case latest_usage_at(points) do
+      nil ->
+        :ok
+
+      latest_at ->
+        {:ok, _token} = Token.changeset(token, %{last_used_at: latest_at}) |> Repo.update()
+        profile = Repo.get!(ModelBinding, profile.id)
+
+        last_used_at =
+          case profile.last_used_at do
+            nil ->
+              latest_at
+
+            current ->
+              if DateTime.compare(current, latest_at) == :lt, do: latest_at, else: current
+          end
+
+        {:ok, _profile} =
+          ModelBinding.changeset(profile, %{last_used_at: last_used_at}) |> Repo.update()
+
+        :ok
+    end
+  end
+
+  def inference_usage_points(days, input_base, output_base, offset \\ 0) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    0..(days - 1)
+    |> Enum.flat_map(fn index ->
+      days_ago = days - index - 1
+      multiplier = 1 + rem(index + offset, 5)
+
+      primary = %{
+        at: DateTime.add(now, -days_ago, :day),
+        input_tokens: input_base + multiplier * 720 + rem(index * 97 + offset, 800),
+        output_tokens: output_base + multiplier * 360 + rem(index * 53 + offset, 500)
+      }
+
+      if rem(index + offset, 4) == 0 do
+        [
+          primary,
+          %{
+            at: DateTime.add(primary.at, -6, :hour),
+            input_tokens: div(input_base, 2) + multiplier * 410,
+            output_tokens: div(output_base, 2) + multiplier * 220
+          }
+        ]
+      else
+        [primary]
+      end
+    end)
+  end
+
+  defp latest_usage_at(points) do
+    Enum.reduce(points, nil, fn point, latest ->
+      at = Map.fetch!(point, :at)
+
+      cond do
+        is_nil(latest) -> at
+        DateTime.compare(at, latest) == :gt -> at
+        true -> latest
+      end
+    end)
+  end
+
+  defp usage_cost_usd(input_tokens, output_tokens, rates) do
+    input_cost =
+      token_cost_usd(input_tokens, Map.fetch!(rates, :input_cost_per_million))
+
+    output_cost =
+      token_cost_usd(output_tokens, Map.fetch!(rates, :output_cost_per_million))
+
+    Decimal.add(input_cost, output_cost)
+  end
+
+  defp token_cost_usd(tokens, cost_per_million) do
+    tokens
+    |> Decimal.new()
+    |> Decimal.mult(Decimal.new(cost_per_million))
+    |> Decimal.div(Decimal.new(1_000_000))
+  end
+
+  defp maybe_update_user_name(user, nil), do: user
+  defp maybe_update_user_name(user, ""), do: user
+  defp maybe_update_user_name(%User{name: name} = user, name), do: user
+
+  defp maybe_update_user_name(%User{} = user, name) do
+    {:ok, user} =
+      user
+      |> User.changeset(%{name: name})
+      |> Repo.update()
+
+    user
+  end
+end
+
+alias Hive.Repo.Seeds
+
 account_identities = [
   {"test@hive.dev", "google", "google-test-hive-dev"},
   {"maya@example.com", "google", "google-maya-example"},
@@ -35,19 +258,17 @@ UserIdentity
 |> Repo.delete_all()
 
 Enum.each(account_identities, fn {email, provider, provider_uid} ->
-  {:ok, _user} =
-    Accounts.upsert_from_auth(%{
-      email: email,
-      provider: provider,
-      provider_uid: provider_uid
-    })
+  Seeds.user!(email, provider: provider, provider_uid: provider_uid)
 end)
 
-# Promote the dev user to admin so /ops and /audit are reachable without manual SQL.
-case Accounts.get_user_by_email("test@hive.dev") do
-  nil -> :ok
-  user -> Accounts.update_user_role(user, :admin)
-end
+# Keep the local development login useful for admin-only dashboard pages.
+Seeds.user!("test@hive.dev",
+  provider: "dev",
+  provider_uid: "test@hive.dev",
+  name: "Hive Admin"
+)
+
+Seeds.update_role!("test@hive.dev", :admin)
 
 forage_items = [
   %{
@@ -101,13 +322,7 @@ Enum.each(forage_items, fn seed ->
     |> List.first()
 
   user =
-    Accounts.get_user_by_email(seed.email) ||
-      Accounts.upsert_from_auth(%{
-        email: seed.email,
-        provider: "seed",
-        provider_uid: seed.email
-      })
-      |> then(fn {:ok, user} -> user end)
+    Seeds.user!(seed.email)
 
   case existing_item do
     nil ->
@@ -273,6 +488,113 @@ Enum.each(projects_fixtures, fn fixture ->
       end
 
     Domains.link_domain_to_project(domain, project.id)
+  end)
+end)
+
+[
+  %{
+    key: "fireworks-ai",
+    base_url: "https://api.fireworks.ai/inference/v1",
+    api_key: "development-fireworks-placeholder",
+    timeout: 300_000
+  },
+  %{
+    key: "openai",
+    base_url: "https://api.openai.com/v1",
+    api_key: "development-openai-placeholder",
+    timeout: 300_000
+  }
+]
+|> Enum.each(&Seeds.inference_provider!/1)
+
+inference_profiles = [
+  %{
+    rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
+    profile: %{
+      name: "blick-code-review",
+      description:
+        "Repository code review profile used by Blick through opencode. Repositories keep this stable name while Hive can retarget the upstream model.",
+      upstream_provider: "fireworks-ai",
+      upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5",
+      input_cost_per_million: "0.15",
+      output_cost_per_million: "0.60",
+      enabled: true
+    },
+    tokens: [
+      %{
+        name: "Tuist repositories",
+        enabled: true,
+        expires_at: nil,
+        usage: Seeds.inference_usage_points(30, 10_400, 2_900, 1)
+      },
+      %{
+        name: "Hive repositories",
+        enabled: true,
+        expires_at: nil,
+        usage: Seeds.inference_usage_points(30, 6_800, 1_900, 3)
+      },
+      %{
+        name: "Noora repositories",
+        enabled: true,
+        expires_at: nil,
+        usage: Seeds.inference_usage_points(18, 4_200, 1_350, 5)
+      }
+    ]
+  },
+  %{
+    rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
+    profile: %{
+      name: "spec-drafting-experiment",
+      description:
+        "Disabled sample profile for experimenting with repository-local spec drafting without changing production tokens.",
+      upstream_provider: "openai",
+      upstream_model: "openai/gpt-4o-mini",
+      input_cost_per_million: "0.15",
+      output_cost_per_million: "0.60",
+      enabled: false
+    },
+    tokens: [
+      %{
+        name: "Retired local experiment",
+        enabled: false,
+        expires_at: nil,
+        usage: Seeds.inference_usage_points(12, 3_200, 2_600, 8)
+      }
+    ]
+  }
+]
+
+Enum.each(inference_profiles, fn seed ->
+  profile = Seeds.inference_profile!(seed.profile)
+
+  tokens =
+    Enum.map(seed.tokens, fn token_attrs ->
+      token_attrs = Map.drop(token_attrs, [:usage])
+      token = Seeds.inference_token!(profile, token_attrs)
+
+      unless token_attrs.enabled do
+        Seeds.revoke_token!(token)
+      end
+
+      {token, token_attrs}
+    end)
+
+  tokens = Enum.map(tokens, fn {token, _token_attrs} -> token end)
+  Seeds.reset_inference_usage!(tokens)
+
+  Enum.each(seed.tokens, fn token_attrs ->
+    token = Seeds.inference_token!(profile, token_attrs)
+
+    unless token_attrs.enabled do
+      Seeds.revoke_token!(token)
+    end
+
+    Seeds.seed_inference_usage!(
+      profile,
+      token,
+      Map.fetch!(token_attrs, :usage),
+      Map.fetch!(seed, :rates)
+    )
   end)
 end)
 
@@ -714,12 +1036,7 @@ spec_needs_update? = fn spec, attrs ->
 end
 
 Enum.each(specs, fn seed ->
-  {:ok, user} =
-    Accounts.upsert_from_auth(%{
-      email: seed.author,
-      provider: "seed",
-      provider_uid: seed.author
-    })
+  user = Seeds.user!(seed.author)
 
   attrs =
     case seed[:source_title] do
@@ -790,14 +1107,7 @@ Enum.each(specs, fn seed ->
 
     comment_user =
       if String.contains?(author, "@") do
-        {:ok, user} =
-          Accounts.upsert_from_auth(%{
-            email: author,
-            provider: "seed",
-            provider_uid: author
-          })
-
-        user
+        Seeds.user!(author)
       end
 
     comment_exists? =
@@ -1016,18 +1326,9 @@ demo_actors = %{
   "octo@example.com" => {"Octo Cat", :member}
 }
 
-Enum.each(demo_actors, fn {email, {name, _role}} ->
-  case Accounts.get_user_by_email(email) do
-    nil ->
-      :ok
-
-    user ->
-      if is_nil(user.name) or user.name == "" do
-        user
-        |> Hive.Accounts.User.changeset(%{name: name})
-        |> Repo.update()
-      end
-  end
+Enum.each(demo_actors, fn {email, {name, role}} ->
+  Seeds.user!(email, name: name)
+  Seeds.update_role!(email, role)
 end)
 
 get_by_title = fn schema, titles ->

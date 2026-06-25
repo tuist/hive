@@ -10,6 +10,8 @@ defmodule Hive.Ops.Policy do
     `:admin` role.
   - **manage drop sources** — restricted to users with the stored
     `:admin` role.
+  - **manage inference profiles** — restricted to users with the stored
+    `:admin` role.
   """
 
   use LetMe.Policy
@@ -21,6 +23,12 @@ defmodule Hive.Ops.Policy do
   end
 
   object :drop_source do
+    action :manage do
+      allow(:admin)
+    end
+  end
+
+  object :inference_profile do
     action :manage do
       allow(:admin)
     end

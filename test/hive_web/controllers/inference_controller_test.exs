@@ -1,0 +1,174 @@
+defmodule HiveWeb.InferenceControllerTest do
+  use HiveWeb.ConnCase, async: true
+
+  alias Hive.Inference
+
+  setup do
+    on_exit(fn -> Inference.delete_process_config() end)
+  end
+
+  test "GET /v1/models lists the token-bound model", %{conn: conn} do
+    {_binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> get(~p"/v1/models")
+      |> json_response(200)
+
+    assert %{
+             "object" => "list",
+             "data" => [%{"id" => "blick-code-review", "object" => "model"}]
+           } = response
+  end
+
+  test "POST /v1/chat/completions rewrites the model before forwarding", %{conn: conn} do
+    parent = self()
+
+    put_relay_config(fn request ->
+      send(parent, {:upstream_request, request})
+
+      {:ok,
+       Req.Response.new(
+         status: 200,
+         headers: [{"content-type", "application/json"}],
+         body: %{"id" => "chatcmpl-test", "object" => "chat.completion"}
+       )}
+    end)
+
+    {_binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/v1/chat/completions", %{
+        "model" => "blick-code-review",
+        "messages" => [%{"role" => "user", "content" => "Review this change."}]
+      })
+      |> json_response(200)
+
+    assert response["id"] == "chatcmpl-test"
+
+    assert_received {:upstream_request, request}
+    assert Keyword.fetch!(request, :url) == "https://relay.example/v1/chat/completions"
+    assert Keyword.fetch!(request, :json)["model"] == "accounts/fireworks/models/kimi-k2p5"
+    assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
+  end
+
+  test "POST /v1/chat/completions persists token usage", %{conn: conn} do
+    put_relay_config(fn _request ->
+      {:ok,
+       Req.Response.new(
+         status: 200,
+         headers: [{"content-type", "application/json"}],
+         body: %{
+           "id" => "chatcmpl-test",
+           "usage" => %{
+             "prompt_tokens" => 1_000,
+             "completion_tokens" => 2_000,
+             "total_tokens" => 3_000
+           }
+         }
+       )}
+    end)
+
+    {binding, token_value} = relay_token!()
+
+    conn
+    |> put_req_header("authorization", "Bearer #{token_value}")
+    |> post(~p"/v1/chat/completions", %{
+      "model" => "blick-code-review",
+      "messages" => [%{"role" => "user", "content" => "Review this change."}]
+    })
+    |> json_response(200)
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 1,
+             input_tokens: 1_000,
+             output_tokens: 2_000,
+             total_tokens: 3_000,
+             cost_usd: cost_usd
+           } = Inference.usage_summary(binding, period)
+
+    assert Decimal.equal?(cost_usd, Decimal.new("0.005"))
+  end
+
+  test "POST /v1/chat/completions rejects a model outside the token binding", %{conn: conn} do
+    parent = self()
+    put_relay_config(fn request -> send(parent, {:upstream_request, request}) end)
+    {_binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/v1/chat/completions", %{"model" => "other-model", "messages" => []})
+      |> json_response(403)
+
+    assert response["error"]["message"] =~ "not allowed"
+    refute_received {:upstream_request, _request}
+  end
+
+  test "POST /v1/chat/completions streams upstream event data", %{conn: conn} do
+    put_relay_config(fn request ->
+      into = Keyword.fetch!(request, :into)
+      response = Req.Response.new(status: 200, headers: [{"content-type", "text/event-stream"}])
+
+      assert {:cont, _acc} =
+               into.({:data, "data: {\"id\":\"chatcmpl-stream\"}\n\n"}, {request, response})
+
+      {:ok, %{response | body: nil}}
+    end)
+
+    {_binding, token_value} = relay_token!()
+
+    conn =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/v1/chat/completions", %{
+        "model" => "blick-code-review",
+        "messages" => [],
+        "stream" => true
+      })
+
+    assert response(conn, 200) =~ "chatcmpl-stream"
+  end
+
+  test "returns an OpenAI-compatible authorization error", %{conn: conn} do
+    response =
+      conn
+      |> get(~p"/v1/models")
+      |> json_response(401)
+
+    assert response["error"]["code"] == "invalid_api_key"
+  end
+
+  defp relay_token! do
+    {:ok, binding} =
+      Inference.create_model_binding(%{
+        name: "blick-code-review",
+        upstream_provider: "fireworks-ai",
+        upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
+      })
+
+    {:ok, {_token, token_value}} =
+      Inference.create_token(binding, %{name: "Repository automation"})
+
+    {binding, token_value}
+  end
+
+  defp put_relay_config(request_fun) do
+    Inference.put_process_config(
+      providers: %{
+        "fireworks-ai" => %{
+          "base_url" => "https://relay.example/v1",
+          "api_key" => "upstream-token",
+          "input_cost_per_million" => "1.00",
+          "output_cost_per_million" => "2.00"
+        }
+      },
+      request: request_fun
+    )
+  end
+end

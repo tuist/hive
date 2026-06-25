@@ -137,16 +137,16 @@ defmodule HiveWeb.SpecComponents do
 
     ~H"""
     <section id="specs">
-      <div data-part="header">
-        <div data-part="title-group">
-          <h1>{@spec.title}</h1>
-          <p>
-            {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
-            <span :if={@new_activity_since_visit?}> · New activity</span>
-          </p>
-          <div :if={spec_domains(@spec) != []} data-part="domain-list">
-            <.badge
-              :for={domain <- spec_domains(@spec)}
+        <div data-part="header">
+          <div data-part="title-group">
+            <h1>{@spec.title}</h1>
+            <p>
+              {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
+              <span :if={@new_activity_since_visit?}> · New activity</span>
+            </p>
+            <div :if={spec_domains(@spec) != []} data-part="domain-list">
+              <.badge
+                :for={domain <- spec_domains(@spec)}
               label={domain.name}
               color="neutral"
               style="light-fill"

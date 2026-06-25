@@ -226,13 +226,13 @@ defmodule HiveWeb.ForageComponents do
   def item_detail(assigns) do
     ~H"""
     <section id="forage">
-      <div data-part="header">
-        <div data-part="title-group">
-          <h1>{Markdown.inline(@item.title)}</h1>
-          <p>{Forage.item_type_label(@item.type)} · {Forage.item_status_label(@item.status)}</p>
-        </div>
+        <div data-part="header">
+          <div data-part="title-group">
+            <h1>{Markdown.inline(@item.title)}</h1>
+            <p>{Forage.item_type_label(@item.type)} · {Forage.item_status_label(@item.status)}</p>
+          </div>
 
-        <div data-part="header-actions">
+          <div data-part="header-actions">
           <.button
             :if={@can_edit_item? and !@editing_item?}
             label="Edit"

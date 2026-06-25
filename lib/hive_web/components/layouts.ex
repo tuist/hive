@@ -185,13 +185,6 @@ defmodule HiveWeb.Layouts do
             href={~p"/drops"}
             selected={String.starts_with?(@current_path, ~p"/drops")}
           />
-          <.sidebar_item
-            :if={@admin?}
-            label="Audit"
-            icon="history"
-            href={~p"/audit"}
-            selected={String.starts_with?(@current_path, ~p"/audit")}
-          />
         </.sidebar>
         <section data-part="content">
           <.flash_group flash={@flash} />
@@ -279,6 +272,37 @@ defmodule HiveWeb.Layouts do
             icon="package"
             href={~p"/ops/drops"}
             selected={String.starts_with?(@current_path, ~p"/ops/drops")}
+          />
+          <% inference_selected? = String.starts_with?(@current_path, ~p"/ops/inference") %>
+          <details data-part="inference" open={inference_selected?}>
+            <summary>
+              <.tab_menu_vertical label="Inference" data-selected={inference_selected?}>
+                <:icon_left><.icon name="lock" /></:icon_left>
+                <:icon_right>
+                  <span data-part="indicator"><.chevron_down /></span>
+                </:icon_right>
+              </.tab_menu_vertical>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                label="Profiles"
+                icon="list_tree"
+                href={~p"/ops/inference/profiles"}
+                selected={inference_profiles_path?(@current_path)}
+              />
+              <.sidebar_item
+                label="Providers"
+                icon="server"
+                href={~p"/ops/inference/providers"}
+                selected={@current_path == ~p"/ops/inference/providers"}
+              />
+            </div>
+          </details>
+          <.sidebar_item
+            label="Audit"
+            icon="history"
+            href={~p"/ops/audit"}
+            selected={String.starts_with?(@current_path, ~p"/ops/audit")}
           />
         </.sidebar>
         <section data-part="content">
@@ -389,4 +413,10 @@ defmodule HiveWeb.Layouts do
   end
 
   defp flash_value(_flash, _key), do: nil
+
+  defp inference_profiles_path?(current_path) do
+    current_path in [~p"/ops/inference", ~p"/ops/inference/profiles"] or
+      String.starts_with?(current_path, ~p"/ops/inference/profiles/") or
+      String.starts_with?(current_path, "/ops/inference/tokens/")
+  end
 end

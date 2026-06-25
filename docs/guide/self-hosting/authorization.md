@@ -15,8 +15,8 @@ strongest:
   [Model Context Protocol](https://modelcontextprotocol.io/) endpoint
   the way the team does.
 - `admin`: explicitly promoted. Admins additionally see the audit
-  trail at `/audit` and reach the ops surfaces at `/ops/*`, where they
-  manage Slack workspaces and drop sources.
+  trail at `/ops/audit` and reach the Operations surfaces at `/ops/*`,
+  where they manage Slack workspaces and drop sources.
 
 The role is derived from the email domain the first time a user signs
 in and then stored. Changing `HIVE_ORG_DOMAINS` later does not
@@ -31,8 +31,8 @@ reclassify existing users; promote and demote with
 | Sign-in, create forage items | no | yes | yes | yes |
 | Private domains, projects, specs, drops | no | no | yes | yes |
 | Spec editing | no | own only | yes | yes |
-| Audit trail (`/audit`) | no | no | no | yes |
-| Ops surfaces (`/ops/*`): Slack and drop sources | no | no | no | yes |
+| Audit trail (`/ops/audit`) | no | no | no | yes |
+| Operations surfaces (`/ops/*`): Slack and drop sources | no | no | no | yes |
 
 Anonymous access also depends on `HIVE_VISIBILITY`. When the instance
 is `private` everyone must sign in first, including for the public

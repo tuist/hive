@@ -8,6 +8,8 @@ defmodule HiveWeb.Components.EmptyCardSection do
 
   use Phoenix.Component
 
+  import HiveWeb.Components.EmptyStateBackground
+
   attr :title, :string, required: true
   attr :rest, :global
   slot :image, required: true
@@ -15,6 +17,9 @@ defmodule HiveWeb.Components.EmptyCardSection do
   def empty_card_section(assigns) do
     ~H"""
     <div class="noora-card__section" data-empty {@rest}>
+      <div data-part="background">
+        <.empty_state_background />
+      </div>
       <div data-part="image">
         {render_slot(@image)}
       </div>

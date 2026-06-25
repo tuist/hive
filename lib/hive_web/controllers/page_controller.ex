@@ -8,4 +8,8 @@ defmodule HiveWeb.PageController do
   def ops(conn, _params) do
     redirect(conn, to: ~p"/ops/slack")
   end
+
+  def audit(conn, _params) do
+    redirect(conn, to: ~p"/ops/audit")
+  end
 end
