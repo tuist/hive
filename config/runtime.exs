@@ -305,7 +305,19 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6,
     ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
-    ssl_opts: database_ssl_opts
+    ssl_opts: database_ssl_opts,
+    # Hive connects directly to Postgres (no transaction pooler), so bound how
+    # long a stuck or severed connection can hold a row lock — otherwise a write
+    # whose row is locked by an abandoned transaction waits forever. TCP
+    # keepalives let Postgres notice a dead client and release its locks, and
+    # idle_in_transaction_session_timeout rolls back a writer abandoned
+    # mid-transaction so it can't wedge the next writer.
+    parameters: [
+      tcp_keepalives_idle: "60",
+      tcp_keepalives_interval: "30",
+      tcp_keepalives_count: "3",
+      idle_in_transaction_session_timeout: "60s"
+    ]
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
