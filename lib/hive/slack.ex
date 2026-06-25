@@ -24,6 +24,7 @@ defmodule Hive.Slack do
   alias Hive.Slack.Channel
   alias Hive.Slack.Installation
   alias Hive.Slack.Message
+  alias Hive.Slack.NotificationRoute
   alias Hive.Slack.User, as: SlackUser
 
   @default_bot_scopes [
@@ -44,7 +45,16 @@ defmodule Hive.Slack do
     "users:read",
     "users:read.email"
   ]
-  @notification_events ["spec.created", "spec.comment.created"]
+  @spec_notification_events ["spec.created", "spec.comment.created", "spec.review.requested"]
+  @notification_routes [
+    %{
+      object_type: "specs",
+      label: "Specs",
+      description: "Spec creations, comments, and review requests",
+      events: @spec_notification_events
+    }
+  ]
+  @notification_events Enum.flat_map(@notification_routes, & &1.events)
   @profile_scopes ["openid", "profile", "email"]
 
   @doc """
@@ -94,21 +104,29 @@ defmodule Hive.Slack do
 
   def default_notification_events, do: @notification_events
 
+  def notification_routes, do: @notification_routes
+
   def notification_event_label("spec.created"), do: "New specs"
   def notification_event_label("spec.comment.created"), do: "New spec comments"
+  def notification_event_label("spec.review.requested"), do: "Spec review requests"
   def notification_event_label(event), do: event
 
   def notification_targets_for(event) when is_binary(event) do
-    Installation
-    |> where([installation], is_nil(installation.disconnected_at))
-    |> where([installation], not is_nil(installation.bot_token) and installation.bot_token != "")
-    |> where(
-      [installation],
-      not is_nil(installation.notification_channel_id) and
-        installation.notification_channel_id != ""
-    )
-    |> Repo.all()
-    |> Enum.filter(&(event in notification_events_for(&1)))
+    case notification_route_for_event(event) do
+      %{object_type: object_type} ->
+        Installation
+        |> where([installation], is_nil(installation.disconnected_at))
+        |> where(
+          [installation],
+          not is_nil(installation.bot_token) and installation.bot_token != ""
+        )
+        |> preload(:notification_routes)
+        |> Repo.all()
+        |> Enum.flat_map(&target_installation(&1, object_type, event))
+
+      _unknown_event ->
+        []
+    end
   end
 
   def notification_enabled_for?(event) when is_binary(event),
@@ -159,6 +177,32 @@ defmodule Hive.Slack do
 
   def notification_events_for(%Installation{}), do: default_notification_events()
 
+  def notification_route_for(%Installation{} = installation, object_type) do
+    persisted_notification_route(installation, object_type) ||
+      legacy_notification_route(installation, object_type) ||
+      empty_notification_route(object_type)
+  end
+
+  def update_notification_routes(%Installation{} = installation, attrs) do
+    case do_update_notification_routes(installation, attrs) do
+      {:ok, updated} ->
+        Audit.record("slack.notification_routes.updated", %{
+          target_type: "slack_installation",
+          target_id: updated.id,
+          target_label: updated.team_name || updated.team_id,
+          metadata: %{
+            team_id: updated.team_id,
+            notification_routes: notification_routes_metadata(updated)
+          }
+        })
+
+        {:ok, updated}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
   def change_notification_settings(%Installation{} = installation, attrs \\ %{}) do
     Installation.notification_changeset(installation, attrs, notification_events())
   end
@@ -187,6 +231,182 @@ defmodule Hive.Slack do
     end
   end
 
+  defp do_update_notification_routes(%Installation{} = installation, attrs) do
+    routes_params = notification_routes_params(attrs)
+
+    Repo.transaction(fn ->
+      case save_notification_routes(installation, routes_params) do
+        :ok -> get_installation(installation.id)
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp save_notification_routes(%Installation{} = installation, routes_params) do
+    Enum.reduce_while(notification_routes(), :ok, fn route, :ok ->
+      result =
+        save_notification_route(
+          installation,
+          route,
+          route_params(routes_params, route.object_type)
+        )
+
+      case result do
+        :ok -> {:cont, :ok}
+        {:ok, _route} -> {:cont, :ok}
+        {:error, changeset} -> {:halt, {:error, changeset}}
+      end
+    end)
+  end
+
+  defp save_notification_route(%Installation{} = installation, route, params) do
+    channel_id = params |> Map.get("slack_channel_id", "") |> normalize_route_value()
+
+    if channel_id == "" do
+      delete_notification_route(installation, route.object_type)
+    else
+      attrs = %{
+        installation_id: installation.id,
+        object_type: route.object_type,
+        slack_channel_id: channel_id,
+        notification_events: route.events
+      }
+
+      existing =
+        Repo.get_by(NotificationRoute,
+          installation_id: installation.id,
+          object_type: route.object_type
+        )
+
+      (existing || %NotificationRoute{})
+      |> NotificationRoute.changeset(
+        attrs,
+        notification_route_object_types(),
+        notification_events()
+      )
+      |> Repo.insert_or_update()
+    end
+  end
+
+  defp delete_notification_route(%Installation{} = installation, object_type) do
+    NotificationRoute
+    |> where([route], route.installation_id == ^installation.id)
+    |> where([route], route.object_type == ^object_type)
+    |> Repo.delete_all()
+
+    :ok
+  end
+
+  defp notification_routes_params(attrs) when is_map(attrs) do
+    Map.get(attrs, "notification_routes") || Map.get(attrs, :notification_routes) || %{}
+  end
+
+  defp notification_routes_params(_attrs), do: %{}
+
+  defp route_params(routes_params, object_type) when is_map(routes_params) do
+    Map.get(routes_params, object_type) || %{}
+  end
+
+  defp route_params(_routes_params, _object_type), do: %{}
+
+  defp notification_routes_metadata(%Installation{} = installation) do
+    Enum.map(notification_routes(), fn route ->
+      configured_route = notification_route_for(installation, route.object_type)
+
+      %{
+        object_type: route.object_type,
+        slack_channel_id: configured_route.slack_channel_id,
+        notification_events: configured_route.notification_events
+      }
+    end)
+  end
+
+  defp target_installation(%Installation{} = installation, object_type, event) do
+    with %NotificationRoute{} = route <- notification_route_for_target(installation, object_type),
+         true <- notification_route_includes_event?(route, event),
+         channel_id when is_binary(channel_id) and channel_id != "" <- route.slack_channel_id do
+      [%{installation | notification_channel_id: channel_id}]
+    else
+      _not_configured -> []
+    end
+  end
+
+  defp notification_route_for_target(%Installation{} = installation, object_type) do
+    persisted_notification_route(installation, object_type) ||
+      legacy_notification_route(installation, object_type)
+  end
+
+  defp notification_route_includes_event?(%NotificationRoute{notification_events: events}, event)
+       when is_list(events) and events != [],
+       do: event in events
+
+  defp notification_route_includes_event?(%NotificationRoute{object_type: object_type}, event),
+    do: event in notification_events_for_object_type(object_type)
+
+  defp persisted_notification_route(%Installation{notification_routes: routes}, object_type)
+       when is_list(routes) do
+    Enum.find(routes, &(&1.object_type == object_type))
+  end
+
+  defp persisted_notification_route(
+         %Installation{notification_routes: %Ecto.Association.NotLoaded{}} = installation,
+         object_type
+       ),
+       do: persisted_notification_route_by_id(installation, object_type)
+
+  defp persisted_notification_route(%Installation{} = installation, object_type),
+    do: persisted_notification_route_by_id(installation, object_type)
+
+  defp persisted_notification_route_by_id(%Installation{id: installation_id}, object_type)
+       when is_binary(installation_id) do
+    Repo.get_by(NotificationRoute, installation_id: installation_id, object_type: object_type)
+  end
+
+  defp persisted_notification_route_by_id(_installation, _object_type), do: nil
+
+  defp legacy_notification_route(
+         %Installation{notification_channel_id: channel_id} = installation,
+         "specs"
+       )
+       when is_binary(channel_id) and channel_id != "" do
+    %NotificationRoute{
+      installation_id: installation.id,
+      object_type: "specs",
+      slack_channel_id: channel_id,
+      notification_events: notification_events_for(installation)
+    }
+  end
+
+  defp legacy_notification_route(_installation, _object_type), do: nil
+
+  defp empty_notification_route(object_type) do
+    %NotificationRoute{
+      object_type: object_type,
+      slack_channel_id: "",
+      notification_events: notification_events_for_object_type(object_type)
+    }
+  end
+
+  defp notification_route_for_event(event) do
+    Enum.find(notification_routes(), &(event in &1.events))
+  end
+
+  defp notification_events_for_object_type(object_type) do
+    notification_routes()
+    |> Enum.find(&(&1.object_type == object_type))
+    |> case do
+      nil -> []
+      route -> route.events
+    end
+  end
+
+  defp notification_route_object_types do
+    Enum.map(notification_routes(), & &1.object_type)
+  end
+
+  defp normalize_route_value(value) when is_binary(value), do: String.trim(value)
+  defp normalize_route_value(_value), do: ""
+
   @doc """
   Lists installations (most recent first), preloading the user that
   initially installed each workspace.
@@ -194,12 +414,14 @@ defmodule Hive.Slack do
   def list_installations do
     Installation
     |> order_by([installation], desc: installation.inserted_at)
-    |> preload(:installed_by_user)
+    |> preload([:installed_by_user, :notification_routes])
     |> Repo.all()
   end
 
   def get_installation(nil), do: nil
-  def get_installation(id), do: Installation |> preload(:installed_by_user) |> Repo.get(id)
+
+  def get_installation(id),
+    do: Installation |> preload([:installed_by_user, :notification_routes]) |> Repo.get(id)
 
   def get_linked_user_profile(%User{id: user_id}, installation_id)
       when is_binary(installation_id) do
@@ -221,6 +443,22 @@ defmodule Hive.Slack do
   end
 
   def list_linked_user_profiles(_user), do: []
+
+  def linked_user_profiles_by_user_ids(%Installation{id: installation_id}, user_ids)
+      when is_list(user_ids) do
+    normalized_user_ids =
+      user_ids
+      |> Enum.filter(&is_binary/1)
+      |> Enum.uniq()
+
+    SlackUser
+    |> where([slack_user], slack_user.installation_id == ^installation_id)
+    |> where([slack_user], slack_user.linked_user_id in ^normalized_user_ids)
+    |> Repo.all()
+    |> Map.new(&{&1.linked_user_id, &1})
+  end
+
+  def linked_user_profiles_by_user_ids(_installation, _user_ids), do: %{}
 
   def profile_authorize_url(redirect_uri, state, opts \\ []) do
     conf = profile_authorize_config(opts)

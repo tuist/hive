@@ -53,6 +53,10 @@ defmodule HiveWeb.DropsLive.ShowTest do
     {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
 
     assert html =~ "Slack workspace management moved to Ops"
+    assert html =~ ~s(data-part="metadata-card")
+    assert html =~ "Metadata"
+    assert html =~ "Source"
+    assert html =~ "Published"
     assert html =~ "v0.25.0"
     assert html =~ domain.name
     assert html =~ "Open original"

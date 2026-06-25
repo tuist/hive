@@ -144,7 +144,7 @@ defmodule HiveWeb.FeedController do
     entries =
       (Enum.map(issues, &github_issue_entry/1) ++
          Enum.map(alerts, &grafana_alert_entry(conn, &1)) ++
-         Enum.map(drops, &drop_entry/1))
+         Enum.map(drops, &drop_entry(conn, &1)))
       |> Enum.sort_by(& &1.updated, {:desc, DateTime})
 
     %{
@@ -178,7 +178,7 @@ defmodule HiveWeb.FeedController do
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/drops" <> drops_filter_query(project_ids, domain_ids)),
-      entries: Enum.map(drops, &drop_entry/1)
+      entries: Enum.map(drops, &drop_entry(conn, &1))
     }
   end
 
@@ -203,7 +203,7 @@ defmodule HiveWeb.FeedController do
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/drops?domain_ids=#{domain.id}"),
-      entries: Enum.map(drops, &drop_entry/1)
+      entries: Enum.map(drops, &drop_entry(conn, &1))
     }
   end
 
@@ -228,25 +228,30 @@ defmodule HiveWeb.FeedController do
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/projects/#{project.id}"),
-      entries: Enum.map(drops, &drop_entry/1)
+      entries: Enum.map(drops, &drop_entry(conn, &1))
     }
   end
 
-  defp drop_entry(drop) do
+  defp drop_entry(conn, drop) do
     repo_prefix =
       case drop.github_repository do
         %{owner: owner, name: name} -> "#{owner}/#{name}: "
         _other -> ""
       end
 
+    url = source_url(drop) || page_url(conn, "/drops/#{drop.id}")
+
     %{
       id: "urn:hive:drop:#{drop.id}",
       title: repo_prefix <> drop.title,
       updated: drop.published_at || drop.updated_at,
-      url: drop.url,
+      url: url,
       summary: drop.body
     }
   end
+
+  defp source_url(%{url: url}) when is_binary(url) and url != "", do: url
+  defp source_url(_drop), do: nil
 
   defp parse_domain_ids(nil), do: []
   defp parse_domain_ids(value), do: Query.csv_list(value)

@@ -59,6 +59,14 @@ env:
   # below, usually with credentials coming from `externalSecrets.items`.
   HIVE_OBJECT_STORAGE_PROVIDER: "none"
   HIVE_S3_FORCE_PATH_STYLE: "false"
+  # When the Sentry Data Source Name is present, events are tagged with
+  # this deployment environment. SENTRY_RELEASE is usually set per deploy.
+  SENTRY_ENVIRONMENT: "production"
+  # Capture failed Oban jobs in Sentry after they exhaust all attempts.
+  # Turn retry reporting on to see every failed attempt.
+  SENTRY_OBAN_CAPTURE_ERRORS: "true"
+  SENTRY_OBAN_REPORT_RETRIES: "false"
+  SENTRY_OBAN_CRON_MONITORING: "true"
 
 probes:
   readiness:
@@ -109,6 +117,8 @@ externalSecrets:
   #       remoteRef: "google-oauth/username"
   #     HIVE_GOOGLE_CLIENT_SECRET:
   #       remoteRef: "google-oauth/credential"
+  #     SENTRY_DSN:
+  #       remoteRef: "hive-sentry/dsn"
   items: {}
   pullSecret:
     enabled: false

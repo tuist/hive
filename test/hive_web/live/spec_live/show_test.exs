@@ -6,6 +6,8 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Auth
   alias Hive.Domains
   alias Hive.Projects
+  alias Hive.Repo
+  alias Hive.Slack.Installation
   alias Hive.Specs
   alias Hive.Specs.RevisionSummaries
 
@@ -16,6 +18,22 @@ defmodule HiveWeb.SpecLive.ShowTest do
     attrs = Map.put_new(attrs, :project_id, project.id)
     {:ok, domain} = Domains.create_domain(attrs)
     domain
+  end
+
+  defp slack_review_notifications! do
+    suffix = System.unique_integer([:positive])
+
+    {:ok, _installation} =
+      %Installation{}
+      |> Installation.changeset(%{
+        team_id: "T#{suffix}",
+        team_name: "Workspace #{suffix}",
+        bot_token: "xoxb-#{suffix}",
+        installed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        notification_channel_id: "C#{suffix}",
+        notification_events: ["spec.review.requested"]
+      })
+      |> Repo.insert()
   end
 
   test "renders a spec and OpenGraph metadata", %{conn: conn} do
@@ -349,6 +367,22 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert Enum.any?(refreshed.revisions, &(&1.status == :approved))
   end
 
+  test "lets members request review from the show header", %{conn: conn} do
+    {conn, user} = sign_in(conn, "alice@example.com")
+    slack_review_notifications!()
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Memory subsystem", "body" => "Initial proposal."}, user)
+
+    {:ok, view, html} = live(conn, ~p"/specs/#{spec.number}")
+
+    assert html =~ "Ask for review"
+
+    html = render_click(view, "request_review")
+
+    assert html =~ "Review request posted to Slack."
+  end
+
   test "rejects status changes from non-members", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
@@ -481,7 +515,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ ~s|>New<|
   end
 
-  test "shows the new-activity header badge and per-comment tag after activity since last visit",
+  test "shows the new-activity header text and per-comment tag after activity since last visit",
        %{conn: conn} do
     {author_conn, author} = sign_in(conn, "author@example.com")
     {reader_conn, reader} = sign_in(conn, "reader@example.com")
@@ -507,12 +541,12 @@ defmodule HiveWeb.SpecLive.ShowTest do
       Specs.add_comment(spec, %{"body" => "Fresh note for the reader."}, author)
 
     {:ok, _view, html} = live(reader_conn, ~p"/specs/#{spec.number}")
-    assert html =~ ~s|>New activity<|
+    assert html =~ "New activity"
     assert html =~ "comment-#{fresh_comment.id}"
     refute html =~ ~s|id="comment-#{old_comment.id}"[^>]*>\\s*<.*>New<|
 
     {:ok, _view, html2} = live(author_conn, ~p"/specs/#{spec.number}")
-    refute html2 =~ ~s|>New activity<|
+    refute html2 =~ "New activity"
   end
 
   test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do

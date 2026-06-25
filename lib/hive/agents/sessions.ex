@@ -20,6 +20,13 @@ defmodule Hive.Agents.Sessions do
 
   alias Hive.Audit
 
+  # Hive's agents are short, single-purpose runs (revision summaries, issue
+  # triage, domain evolution), not long interactive sessions. Cap each run so a
+  # slow or unresponsive LLM fails fast and frees its agents-queue worker and
+  # HTTP connection instead of lingering for Condukt's 5-minute default and
+  # starving the shared LLM connection pool. Callers may override `:timeout`.
+  @run_timeout :timer.minutes(2)
+
   @doc """
   Runs an agent module with the given prompt. Caller-supplied opts are
   merged on top of the resolved LLM client options.
@@ -28,7 +35,7 @@ defmodule Hive.Agents.Sessions do
       when is_atom(agent_module) and is_binary(prompt) and is_list(opts) do
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
-        Condukt.run(agent_module, prompt, Keyword.merge(llm_opts, opts))
+        Condukt.run(agent_module, prompt, run_opts(llm_opts, opts))
       end)
     end
   end
@@ -40,9 +47,15 @@ defmodule Hive.Agents.Sessions do
       when is_atom(agent_module) and is_atom(operation_name) and is_map(args) and is_list(opts) do
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
-        Condukt.Operation.run(agent_module, operation_name, args, Keyword.merge(llm_opts, opts))
+        Condukt.Operation.run(agent_module, operation_name, args, run_opts(llm_opts, opts))
       end)
     end
+  end
+
+  defp run_opts(llm_opts, opts) do
+    llm_opts
+    |> Keyword.merge(opts)
+    |> Keyword.put_new(:timeout, @run_timeout)
   end
 
   defp agent_actor_context(agent_module, llm_opts) do

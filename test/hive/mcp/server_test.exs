@@ -29,6 +29,7 @@ defmodule Hive.MCP.ServerTest do
              "list_projects",
              "list_spec_comments",
              "list_specs",
+             "request_spec_review",
              "unlink_project_domain",
              "unlink_project_repository",
              "update_domain",

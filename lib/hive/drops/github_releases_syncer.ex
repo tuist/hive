@@ -18,7 +18,11 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.Audit
   alias Hive.Drops
   alias Hive.Drops.ReleaseDropItems
+  alias Hive.Forage
+  alias Hive.Forage.GitHubIssue
   alias Hive.GitHub.Client
+  alias Hive.GitHub.IssueRefs
+  alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
   alias Hive.Domains.GitHubRepository
   alias Hive.Repo
@@ -60,12 +64,41 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     {:noreply, state}
   end
 
+  def handle_info({ref, :operation_submit, _submitted}, state) when is_reference(ref) do
+    Logger.debug("[Drops.GitHubReleasesSyncer] Ignoring stale Condukt operation submission")
+
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    Logger.debug(
+      "[Drops.GitHubReleasesSyncer] Ignoring unexpected message: " <> message_shape(message)
+    )
+
+    {:noreply, state}
+  end
+
   @impl true
   def handle_call(:sync_now, _from, state) do
     {:reply, run_sync(state), state}
   end
 
   defp schedule_tick(interval_ms), do: Process.send_after(self(), :tick, interval_ms)
+
+  defp message_shape(message) when is_atom(message), do: "atom #{inspect(message)}"
+
+  defp message_shape(message) when is_tuple(message) do
+    case elem(message, 0) do
+      first when is_atom(first) -> "tuple #{inspect(first)}/#{tuple_size(message)}"
+      _other -> "tuple/#{tuple_size(message)}"
+    end
+  end
+
+  defp message_shape(message) when is_list(message), do: "list/#{length(message)}"
+  defp message_shape(message) when is_map(message), do: "map/#{map_size(message)}"
+  defp message_shape(message) when is_pid(message), do: "pid"
+  defp message_shape(message) when is_reference(message), do: "reference"
+  defp message_shape(_message), do: "unknown"
 
   defp run_sync(state) do
     case Client.config() do
@@ -137,13 +170,16 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
       external_id: release_item_external_id(repository, release, item),
       title: item.title,
       body: item.body,
-      url: List.first(item.source_urls) || release.html_url,
+      url: item_url(item, release),
       published_at: parse_timestamp(release.published_at || release.created_at),
       version: release.tag_name
     }
 
     case Drops.upsert_drop(attrs) do
       {:ok, drop} ->
+        drop
+        |> link_release_item_github_issues(repository, item)
+
         record_audit(drop, domains, repository, release, item)
 
         if is_nil(drop.classified_at) do
@@ -157,6 +193,64 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           "[Drops.GitHubReleasesSyncer] Failed to upsert release drop item " <>
             inspect(item.title) <> ": " <> inspect(reason)
         )
+    end
+  end
+
+  defp link_release_item_github_issues(drop, repository, item) do
+    issue_ids =
+      item
+      |> release_item_issue_refs(repository)
+      |> Enum.flat_map(&fetch_or_upsert_issue(&1, repository))
+      |> Enum.map(& &1.id)
+
+    Drops.replace_drop_github_issues(drop, issue_ids)
+  end
+
+  defp release_item_issue_refs(item, repository) do
+    item.source_urls
+    |> Enum.join("\n")
+    |> IssueRefs.extract(default_repo: {repository.owner, repository.name}, limit: 10)
+  end
+
+  defp fetch_or_upsert_issue(ref, source_repository) do
+    case repository_for_ref(ref, source_repository) do
+      %GitHubRepository{} = repository ->
+        case Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: ref.number) do
+          %GitHubIssue{} = issue ->
+            [issue]
+
+          nil ->
+            fetch_and_upsert_issue(repository, ref)
+        end
+
+      nil ->
+        []
+    end
+  end
+
+  defp fetch_and_upsert_issue(repository, ref) do
+    with {:ok, issue} <- Issues.get_issue(repository, ref.number),
+         {:ok, forage_issue} <- Forage.upsert_repository_github_issue(repository, issue) do
+      [forage_issue]
+    else
+      {:error, reason} ->
+        log_reference_link_failure(ref, reason)
+        []
+    end
+  end
+
+  defp log_reference_link_failure(ref, reason) do
+    Logger.debug(
+      "[Drops.GitHubReleasesSyncer] Failed to link release reference " <>
+        "#{ref.owner}/#{ref.name}##{ref.number}: " <> inspect(reason)
+    )
+  end
+
+  defp repository_for_ref(ref, %GitHubRepository{owner: owner, name: name} = repository) do
+    if ref.owner == owner and ref.name == name do
+      repository
+    else
+      Repo.get_by(GitHubRepository, owner: ref.owner, name: ref.name)
     end
   end
 
@@ -208,6 +302,35 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     release_key = release.tag_name || release.html_url || release.published_at || "untagged"
     "#{repository.owner}/#{repository.name}@#{release_key}"
   end
+
+  defp item_url(item, release) do
+    Enum.find(item.source_urls, &github_issue_or_pull_url?/1) ||
+      List.first(item.source_urls) ||
+      release.html_url
+  end
+
+  defp github_issue_or_pull_url?(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host, path: path}
+      when scheme in ["http", "https"] and is_binary(host) and is_binary(path) ->
+        host = String.downcase(host)
+        path_parts = path |> String.trim_leading("/") |> String.split("/")
+
+        host in ["github.com", "www.github.com"] and github_issue_or_pull_path?(path_parts)
+
+      _other ->
+        false
+    end
+  end
+
+  defp github_issue_or_pull_url?(_url), do: false
+
+  defp github_issue_or_pull_path?([_owner, _name, type, number | _rest])
+       when type in ["issues", "pull"] do
+    match?({_number, ""}, Integer.parse(number))
+  end
+
+  defp github_issue_or_pull_path?(_path_parts), do: false
 
   defp hash_key(value) do
     :sha256

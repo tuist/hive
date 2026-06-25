@@ -51,7 +51,11 @@ parse_domains = fn
 end
 
 parse_boolean = fn value ->
-  value in ~w(true 1)
+  value
+  |> to_string()
+  |> String.trim()
+  |> String.downcase()
+  |> then(&(&1 in ~w(true 1)))
 end
 
 object_storage_provider =
@@ -109,6 +113,37 @@ config :hive, :slack,
 
 if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
+end
+
+if sentry_dsn = System.get_env("SENTRY_DSN") do
+  sentry_report_oban_retries? =
+    parse_boolean.(System.get_env("SENTRY_OBAN_REPORT_RETRIES", "false"))
+
+  oban_integration =
+    [
+      capture_errors: parse_boolean.(System.get_env("SENTRY_OBAN_CAPTURE_ERRORS", "true")),
+      cron: [enabled: parse_boolean.(System.get_env("SENTRY_OBAN_CRON_MONITORING", "true"))]
+    ]
+    |> then(fn config ->
+      if sentry_report_oban_retries? do
+        config
+      else
+        Keyword.put(
+          config,
+          :should_report_error_callback,
+          &Hive.SentryEventFilter.report_oban_error?/2
+        )
+      end
+    end)
+
+  config :sentry,
+    dsn: sentry_dsn,
+    environment_name: System.get_env("SENTRY_ENVIRONMENT", to_string(config_env())),
+    release: System.get_env("SENTRY_RELEASE") || to_string(Application.spec(:hive, :vsn)),
+    enable_source_code_context: true,
+    root_source_code_paths: [File.cwd!()],
+    integrations: [oban: oban_integration],
+    before_send: {Hive.SentryEventFilter, :before_send}
 end
 
 # Condukt-backed agents read their LLM credentials from `:hive, :llm`.
@@ -301,7 +336,19 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6,
     ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
-    ssl_opts: database_ssl_opts
+    ssl_opts: database_ssl_opts,
+    # Hive connects directly to Postgres (no transaction pooler), so bound how
+    # long a stuck or severed connection can hold a row lock — otherwise a write
+    # whose row is locked by an abandoned transaction waits forever. TCP
+    # keepalives let Postgres notice a dead client and release its locks, and
+    # idle_in_transaction_session_timeout rolls back a writer abandoned
+    # mid-transaction so it can't wedge the next writer.
+    parameters: [
+      tcp_keepalives_idle: "60",
+      tcp_keepalives_interval: "30",
+      tcp_keepalives_count: "3",
+      idle_in_transaction_session_timeout: "60s"
+    ]
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||

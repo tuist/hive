@@ -5,11 +5,12 @@ defmodule HiveWeb.ForageComponentsTest do
   import Phoenix.LiveViewTest
 
   alias Hive.Accounts.User
+  alias Hive.Domains.Domain
+  alias Hive.Domains.GitHubRepository
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
-  alias Hive.Domains.GitHubRepository
-  alias Hive.Domains.Domain
+  alias Hive.Forage.Item
   alias HiveWeb.ForageComponents
 
   describe "feature_requests/1" do
@@ -71,6 +72,67 @@ defmodule HiveWeb.ForageComponentsTest do
       assert html =~ "Title"
       assert html =~ "Description"
       assert html =~ ~s(phx-submit="save")
+    end
+  end
+
+  describe "item_detail/1" do
+    test "renders metadata and body in separate cards" do
+      item = %Item{
+        id: "manual:feature-request-1",
+        type: :feature_request,
+        origin: :manual,
+        source_record_id: "feature-request-1",
+        title: "Import GitHub discussions",
+        body: "Use Markdown for longer context.",
+        status: :open,
+        source_label: "Hive",
+        external_label: "Submitted by alice@example.com",
+        requester_label: "alice@example.com",
+        updated_at: ~U[2026-06-24 10:00:00Z],
+        comments: [],
+        comments_status: :loaded,
+        domains: []
+      }
+
+      assigns = %{
+        item: item,
+        can_edit_item?: false,
+        can_create_spec?: false,
+        can_comment_item?: false,
+        editing_item?: false,
+        item_edit_form: to_form(Forage.change_forage_item(), as: :forage_item_edit),
+        comment_form: to_form(Forage.change_comment(), as: :comment),
+        edit_comment_form: to_form(Forage.change_comment(), as: :comment_edit),
+        editing_comment_id: nil,
+        signed_in?: false,
+        current_path: "/forage/items/manual/feature-request-1",
+        current_user: nil
+      }
+
+      html =
+        rendered_to_string(~H"""
+        <ForageComponents.item_detail
+          item={@item}
+          can_edit_item?={@can_edit_item?}
+          can_create_spec?={@can_create_spec?}
+          can_comment_item?={@can_comment_item?}
+          editing_item?={@editing_item?}
+          item_edit_form={@item_edit_form}
+          comment_form={@comment_form}
+          edit_comment_form={@edit_comment_form}
+          editing_comment_id={@editing_comment_id}
+          signed_in?={@signed_in?}
+          current_path={@current_path}
+          current_user={@current_user}
+        />
+        """)
+
+      assert html =~ ~s(data-part="metadata-card")
+      assert html =~ ~s(data-part="body-card")
+      assert html =~ "Metadata"
+      assert html =~ "Details"
+      assert html =~ "Use Markdown for longer context."
+      assert html =~ ~r/data-part="metadata-card".*data-part="body-card"/s
     end
   end
 

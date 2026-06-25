@@ -6,6 +6,7 @@ defmodule Hive.SlackTest do
   alias Hive.Slack
   alias Hive.Slack.Channel
   alias Hive.Slack.Installation
+  alias Hive.Slack.NotificationRoute
   alias Hive.Slack.User, as: SlackUser
 
   defp installation!(attrs \\ %{}) do
@@ -89,6 +90,70 @@ defmodule Hive.SlackTest do
   end
 
   describe "notification settings" do
+    test "updates notification routes by object type" do
+      installation = installation!()
+
+      assert {:ok, updated} =
+               Slack.update_notification_routes(installation, %{
+                 "notification_routes" => %{
+                   "specs" => %{"slack_channel_id" => " C123 "}
+                 }
+               })
+
+      assert %NotificationRoute{
+               slack_channel_id: "C123",
+               notification_events: [
+                 "spec.created",
+                 "spec.comment.created",
+                 "spec.review.requested"
+               ]
+             } = Slack.notification_route_for(updated, "specs")
+    end
+
+    test "deletes notification routes when the channel is blank" do
+      installation = installation!()
+
+      assert {:ok, _updated} =
+               Slack.update_notification_routes(installation, %{
+                 "notification_routes" => %{
+                   "specs" => %{"slack_channel_id" => "C123"}
+                 }
+               })
+
+      assert {:ok, updated} =
+               Slack.update_notification_routes(installation, %{
+                 "notification_routes" => %{
+                   "specs" => %{"slack_channel_id" => ""}
+                 }
+               })
+
+      assert Slack.notification_route_for(updated, "specs").slack_channel_id == ""
+    end
+
+    test "lists connected notification targets from routes" do
+      matching = installation!()
+      other = installation!()
+
+      assert {:ok, _updated} =
+               Slack.update_notification_routes(matching, %{
+                 "notification_routes" => %{
+                   "specs" => %{"slack_channel_id" => "C-route"}
+                 }
+               })
+
+      assert {:ok, _updated} =
+               Slack.update_notification_routes(other, %{
+                 "notification_routes" => %{
+                   "specs" => %{"slack_channel_id" => ""}
+                 }
+               })
+
+      assert [%Installation{id: id, notification_channel_id: "C-route"}] =
+               Slack.notification_targets_for("spec.review.requested")
+
+      assert id == matching.id
+    end
+
     test "updates the notification channel and selected events" do
       installation = installation!()
 
@@ -199,6 +264,37 @@ defmodule Hive.SlackTest do
 
       assert is_nil(slack_user.linked_user_id)
       assert [%SlackUser{}] = Repo.all(SlackUser)
+    end
+
+    test "loads linked profiles by Hive user id for one workspace" do
+      installation = installation!()
+      other_installation = installation!()
+
+      {:ok, hive_user} =
+        Accounts.upsert_from_auth(%{
+          email: "alice@example.com",
+          provider: "test",
+          provider_uid: "alice"
+        })
+
+      {:ok, slack_user} =
+        Slack.upsert_user(installation, %{
+          slack_user_id: "U1",
+          email: "alice@example.com"
+        })
+
+      {:ok, _other_slack_user} =
+        Slack.upsert_user(other_installation, %{
+          slack_user_id: "U2",
+          email: "alice@example.com"
+        })
+
+      user_id = hive_user.id
+
+      assert %{^user_id => %{id: id, slack_user_id: "U1"}} =
+               Slack.linked_user_profiles_by_user_ids(installation, [hive_user.id])
+
+      assert id == slack_user.id
     end
   end
 

@@ -119,6 +119,24 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
              Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: 1)
   end
 
+  test "keeps closed issues that were linked from release drops" do
+    domain = setup_domain!()
+    repository = github_repository_for_domain!(domain)
+
+    assert {:ok, %GitHubIssue{state: :closed}} =
+             Forage.upsert_repository_github_issue(repository, %Issues{
+               number: 10,
+               title: "Released change",
+               body: "This was addressed by a release.",
+               state: "closed"
+             })
+
+    assert :ok = Forage.reconcile_repository_github_issues(repository, [])
+
+    assert %GitHubIssue{title: "Released change", state: :closed} =
+             Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: 10)
+  end
+
   test "list_github_issues_for_user/1 returns issues with their domain/repo context" do
     domain = setup_domain!()
     repository = github_repository_for_domain!(domain)

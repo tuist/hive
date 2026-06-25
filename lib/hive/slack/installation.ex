@@ -13,6 +13,7 @@ defmodule Hive.Slack.Installation do
   alias Hive.Accounts.User
   alias Hive.Slack.Channel
   alias Hive.Slack.Message
+  alias Hive.Slack.NotificationRoute
   alias Hive.Slack.User, as: SlackUser
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -33,6 +34,7 @@ defmodule Hive.Slack.Installation do
     has_many :channels, Channel
     has_many :users, SlackUser
     has_many :messages, Message
+    has_many :notification_routes, NotificationRoute
 
     timestamps(type: :utc_datetime)
   end

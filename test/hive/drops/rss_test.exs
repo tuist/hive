@@ -35,6 +35,23 @@ defmodule Hive.Drops.RssTest do
       assert second.external_id == "urn:example:2"
       assert second.published_at == ~U[2026-06-19 10:00:00Z]
     end
+
+    test "prefers alternate links as the entry permalink" do
+      xml = ~S"""
+      <?xml version="1.0" encoding="UTF-8"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <entry>
+          <id>urn:example:1</id>
+          <title>Release notes</title>
+          <link rel="self" href="https://example.com/feed/items/1" />
+          <link rel="alternate" href="https://example.com/changelog/releases#release-notes" />
+        </entry>
+      </feed>
+      """
+
+      assert {:ok, [item]} = Rss.parse(xml)
+      assert item.url == "https://example.com/changelog/releases#release-notes"
+    end
   end
 
   describe "parse/1 with RSS 2.0" do

@@ -67,6 +67,7 @@ defmodule Hive.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:saxy, "~> 1.5"},
+      {:sentry, "~> 13.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.7", only: :test}
     ]

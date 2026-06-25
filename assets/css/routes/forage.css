@@ -378,14 +378,14 @@
     padding-top: var(--noora-spacing-7);
   }
 
-  & [data-part="detail-kicker"],
   & [data-part="metadata-badges"] {
     display: flex;
     flex-wrap: wrap;
     gap: var(--noora-spacing-2);
   }
 
-  & [data-part="details-card-section"],
+  & [data-part="metadata-card-section"],
+  & [data-part="body-card-section"],
   & [data-part="comments-card-section"] {
     display: flex;
     flex-direction: column;

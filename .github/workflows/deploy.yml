@@ -114,6 +114,7 @@ jobs:
             --namespace "$NAMESPACE" --create-namespace \
             --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
+            --set env.SENTRY_RELEASE="$DEPLOY_SHA" \
             --timeout 15m
       - name: Diagnostics on failure
         if: failure()

@@ -123,6 +123,7 @@ defmodule HiveWeb.SpecComponents do
   attr :edit_comment_form, :any, required: true
   attr :mention_suggestions, :list, default: []
   attr :can_edit?, :boolean, required: true
+  attr :can_request_review?, :boolean, required: true
   attr :current_user, :map, default: nil
   attr :editing_comment_id, :string, default: nil
   attr :signed_in?, :boolean, required: true
@@ -136,22 +137,16 @@ defmodule HiveWeb.SpecComponents do
 
     ~H"""
     <section id="specs">
-      <div data-part="header">
-        <div data-part="title-group">
-          <h1>{@spec.title}</h1>
-          <div data-part="title-badges">
-            <.badge label={"Spec #{spec_number(@spec)}"} color="information" style="light-fill" />
-            <.badge
-              :if={@new_activity_since_visit?}
-              label="New activity"
-              color="information"
-              style="light-fill"
-            />
-          </div>
-          <p>{visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}</p>
-          <div :if={spec_domains(@spec) != []} data-part="domain-list">
-            <.badge
-              :for={domain <- spec_domains(@spec)}
+        <div data-part="header">
+          <div data-part="title-group">
+            <h1>{@spec.title}</h1>
+            <p>
+              {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
+              <span :if={@new_activity_since_visit?}> · New activity</span>
+            </p>
+            <div :if={spec_domains(@spec) != []} data-part="domain-list">
+              <.badge
+                :for={domain <- spec_domains(@spec)}
               label={domain.name}
               color="neutral"
               style="light-fill"
@@ -164,6 +159,15 @@ defmodule HiveWeb.SpecComponents do
             atom_href="/specs/atom.xml"
             rss_href="/specs/rss.xml"
           />
+          <.button
+            :if={@can_request_review?}
+            label="Ask for review"
+            size="medium"
+            variant="secondary"
+            phx-click="request_review"
+          >
+            <:icon_left><.bell /></:icon_left>
+          </.button>
           <.status_menu :if={@can_edit?} spec={@spec} />
           <.badge
             :if={!@can_edit?}

@@ -5,11 +5,15 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
   import Ecto.Query
 
+  alias Hive.Agents
+  alias Hive.Drops
   alias Hive.Drops.Drop
   alias Hive.Drops.GitHubReleasesSyncer
   alias Hive.Domains
+  alias Hive.Forage.GitHubIssue
   alias Hive.Drops.DomainClassificationWorker
   alias Hive.GitHub.Client
+  alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
   alias Hive.Projects
 
@@ -49,9 +53,20 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
       )
 
     Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), pid)
+    Mimic.allow(Agents, self(), pid)
     Mimic.allow(Client, self(), pid)
+    Mimic.allow(Issues, self(), pid)
     Mimic.allow(Releases, self(), pid)
     {pid, name}
+  end
+
+  test "ignores stale Condukt operation submissions" do
+    {pid, _syncer_name} = start_syncer!()
+
+    send(pid, {make_ref(), :operation_submit, %{"items" => []}})
+
+    assert %{interval_ms: _interval_ms} = :sys.get_state(pid)
+    assert Process.alive?(pid)
   end
 
   test "upserts one drop for each generated release item" do
@@ -79,6 +94,28 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
        ]}
     end)
 
+    stub(Agents, :enabled?, fn -> false end)
+
+    stub(Issues, :get_issue, fn
+      %{owner: ^owner, name: ^name}, 41 ->
+        {:ok,
+         %Issues{
+           number: 41,
+           title: "Project cache warmups finish faster",
+           body: "Warmups now reuse existing cache metadata before planning work.",
+           state: "closed"
+         }}
+
+      %{owner: ^owner, name: ^name}, 42 ->
+        {:ok,
+         %Issues{
+           number: 42,
+           title: "Generated project paths stay stable",
+           body: "Generated projects now preserve path casing across machines.",
+           state: "closed"
+         }}
+    end)
+
     item_generator = fn %{owner: ^owner, name: ^name},
                         %Releases{tag_name: "v1.2.0"} = release,
                         [] ->
@@ -89,7 +126,10 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
          %{
            title: "Project cache warmups finish faster",
            body: "Warmups now reuse existing cache metadata before planning work.",
-           source_urls: ["https://github.com/#{owner}/#{name}/issues/41"]
+           source_urls: [
+             "https://github.com/#{owner}/#{name}/releases/tag/v1.2.0",
+             "https://github.com/#{owner}/#{name}/issues/41"
+           ]
          },
          %{
            title: "Generated project paths stay stable",
@@ -127,6 +167,31 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
            )
 
     assert drops |> Enum.map(& &1.external_id) |> Enum.uniq() |> length() == 2
+
+    github_issues = Repo.all(from issue in GitHubIssue, order_by: [asc: issue.number])
+
+    assert Enum.map(github_issues, &{&1.number, &1.state}) == [
+             {41, :closed},
+             {42, :closed}
+           ]
+
+    drops_by_title =
+      drops
+      |> Repo.preload(:github_issues)
+      |> Map.new(fn drop -> {drop.title, drop.github_issues} end)
+
+    assert drops_by_title
+           |> Map.fetch!("Generated project paths stay stable")
+           |> Enum.map(& &1.number) == [42]
+
+    assert drops_by_title
+           |> Map.fetch!("Project cache warmups finish faster")
+           |> Enum.map(& &1.number) == [41]
+
+    issue_41 = Enum.find(github_issues, &(&1.number == 41))
+    assert [release_drop] = Drops.list_release_drops_for_github_issue(issue_41)
+    assert release_drop.version == "v1.2.0"
+    assert release_drop.title == "Project cache warmups finish faster"
 
     drop_ids = Enum.map(drops, & &1.id) |> Enum.sort()
 

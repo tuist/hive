@@ -16,6 +16,7 @@ defmodule Hive.Specs do
   alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
   alias Hive.Specs.View
+  alias Hive.Slack
   alias Hive.Slack.Workers.SendNotification
 
   @pubsub Hive.PubSub
@@ -25,6 +26,7 @@ defmodule Hive.Specs do
 
   def can_create?(user), do: Auth.member?(user)
   def can_edit?(_spec, user), do: Auth.member?(user)
+  def can_request_review?(%Spec{} = spec, user), do: can_edit?(spec, user)
   def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
   def can_comment?(_spec, _user), do: false
 
@@ -331,6 +333,34 @@ defmodule Hive.Specs do
   end
 
   def update_spec(_spec, _attrs, _user), do: {:error, :unauthorized}
+
+  def request_review(%Spec{} = spec, %User{} = user) do
+    cond do
+      not can_request_review?(spec, user) ->
+        {:error, :unauthorized}
+
+      not Slack.notification_enabled_for?("spec.review.requested") ->
+        {:error, :slack_notifications_not_configured}
+
+      true ->
+        case SendNotification.enqueue("spec.review.requested", %{
+               "spec_id" => spec.id,
+               "requester_id" => user.id
+             }) do
+          {:ok, _job} ->
+            record_spec_event("spec.review.requested", spec, user)
+            {:ok, spec}
+
+          :skipped ->
+            {:error, :slack_notifications_not_configured}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
+
+  def request_review(_spec, _user), do: {:error, :unauthorized}
 
   defp create_spec_transaction(attrs, user) do
     with {:ok, spec} <-

@@ -40,6 +40,14 @@ config :flop, repo: Hive.Repo
 
 config :mdex_native, syntax_highlighter: :lumis
 
+# Every agent LLM call runs through ReqLLM's own `ReqLLM.Finch` pool, which
+# defaults to just 8 connections (size 1 x count 8) per host. A slow model plus
+# ReqLLM/Oban retries can starve that pool ("Finch was unable to provide a
+# connection"), stalling agent work. The `:agents` Oban queue caps real
+# concurrency low, so extra pool capacity costs nothing at the endpoint while
+# absorbing retry and connection-teardown churn.
+config :req_llm, stream_pool_count: 16
+
 config :boruta, Boruta.Oauth,
   repo: Hive.Repo,
   contexts: [

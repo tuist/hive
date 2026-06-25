@@ -4,6 +4,7 @@ defmodule Hive.MCP.Components.Tools.Drops do
   """
 
   alias Hive.Drops
+  alias Hive.Forage.GitHubIssue
 
   def drop_json(drop) do
     domains = drop.domains || []
@@ -29,6 +30,7 @@ defmodule Hive.MCP.Components.Tools.Drops do
       url: drop.url,
       version: drop.version,
       repository: repository_label(drop),
+      github_issues: github_issues_json(drop),
       published_at: iso8601(drop.published_at),
       inserted_at: iso8601(drop.inserted_at),
       updated_at: iso8601(drop.updated_at)
@@ -39,6 +41,28 @@ defmodule Hive.MCP.Components.Tools.Drops do
     do: "#{owner}/#{name}"
 
   defp repository_label(_drop), do: nil
+
+  defp github_issues_json(%{github_issues: %Ecto.Association.NotLoaded{}}), do: []
+
+  defp github_issues_json(%{github_issues: issues}) when is_list(issues) do
+    Enum.map(issues, fn issue ->
+      %{
+        id: issue.id,
+        number: issue.number,
+        title: issue.title,
+        state: Atom.to_string(issue.state),
+        url: github_issue_url(issue)
+      }
+    end)
+  end
+
+  defp github_issues_json(_drop), do: []
+
+  defp github_issue_url(%GitHubIssue{github_repository: %Ecto.Association.NotLoaded{}}),
+    do: nil
+
+  defp github_issue_url(%GitHubIssue{github_repository: nil}), do: nil
+  defp github_issue_url(%GitHubIssue{} = issue), do: GitHubIssue.html_url(issue)
 
   defp iso8601(nil), do: nil
   defp iso8601(%DateTime{} = dt), do: DateTime.to_iso8601(dt)

@@ -55,6 +55,7 @@ defmodule HiveWeb.Router do
   end
 
   scope "/", HiveWeb do
+    get "/live", HealthController, :live
     get "/ready", HealthController, :ready
 
     scope "/" do

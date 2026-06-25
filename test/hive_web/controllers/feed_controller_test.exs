@@ -4,6 +4,7 @@ defmodule HiveWeb.FeedControllerTest do
   import Ecto.Query
 
   alias Hive.Accounts
+  alias Hive.Drops
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Forage.GrafanaAlert
@@ -281,6 +282,56 @@ defmodule HiveWeb.FeedControllerTest do
       conn = get(conn, ~p"/forage/grafana-alerts/rss.xml")
       assert response_content_type(conn, :xml) =~ "application/rss+xml"
       assert response(conn, 404) =~ "<error/>"
+    end
+  end
+
+  describe "GET /drops/atom.xml" do
+    test "uses the source permalink for drop entries", %{conn: conn} do
+      domain = create_domain!(%{name: "drops-#{System.unique_integer([:positive])}"})
+
+      {:ok, drop} =
+        Drops.upsert_drop(%{
+          source_type: :github_release,
+          external_id: "tuist/hive@v1.0.0:pull-42",
+          title: "Build cache warmups",
+          body: "Warmups now reuse existing cache metadata before planning work.",
+          url: "https://github.com/tuist/hive/pull/42",
+          version: "v1.0.0",
+          published_at: ~U[2026-06-18 09:30:00Z]
+        })
+
+      Drops.replace_drop_domains(drop, [domain.id])
+
+      body = conn |> get(~p"/drops/atom.xml") |> response(200)
+
+      assert body =~ ~s(<title>Build cache warmups</title>)
+
+      assert body =~
+               ~s(<link rel="alternate" type="text/html" href="https://github.com/tuist/hive/pull/42"/>)
+    end
+  end
+
+  describe "GET /drops/rss.xml" do
+    test "uses the changelog permalink for imported drop entries", %{conn: conn} do
+      domain = create_domain!(%{name: "drops-#{System.unique_integer([:positive])}"})
+
+      {:ok, drop} =
+        Drops.upsert_drop(%{
+          source_type: :rss,
+          external_id: "https://example.com/changelog#2026-06-18",
+          title: "Changelog entry",
+          body: "A changelog update that belongs in the drops feed.",
+          url: "https://example.com/changelog#2026-06-18",
+          published_at: ~U[2026-06-18 09:30:00Z]
+        })
+
+      Drops.replace_drop_domains(drop, [domain.id])
+
+      body = conn |> get(~p"/drops/rss.xml") |> response(200)
+
+      assert body =~ "<title>Changelog entry</title>"
+      assert body =~ "<link>https://example.com/changelog#2026-06-18</link>"
+      assert body =~ ~s(<guid isPermaLink="true">https://example.com/changelog#2026-06-18</guid>)
     end
   end
 

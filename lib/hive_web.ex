@@ -33,6 +33,8 @@ defmodule HiveWeb do
     quote do
       use Phoenix.LiveView
 
+      on_mount Sentry.LiveViewHook
+
       import HiveWeb.Gettext
       use Noora
 

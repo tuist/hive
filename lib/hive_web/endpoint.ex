@@ -8,7 +8,15 @@ defmodule HiveWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [
+      connect_info: [
+        :peer_data,
+        :uri,
+        :user_agent,
+        session: @session_options
+      ]
+    ]
 
   plug Plug.Static,
     at: "/",
@@ -23,6 +31,7 @@ defmodule HiveWeb.Endpoint do
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Sentry.PlugContext
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
