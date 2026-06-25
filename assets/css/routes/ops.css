@@ -265,6 +265,7 @@
   & [data-part="providers-card"],
   & [data-part="usage-card"],
   & [data-part="configuration-card"],
+  & [data-part="client-configuration-card"],
   & [data-part="tokens-card"] {
     width: 100%;
     overflow: hidden;
@@ -530,6 +531,49 @@
     white-space: nowrap;
   }
 
+  & [data-part="card-intro"] code {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small);
+  }
+
+  & [data-part="client-configuration-grid"] {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--noora-spacing-5);
+  }
+
+  & [data-part="client-snippets-card-section"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--noora-spacing-5);
+  }
+
+  & [data-part="client-snippet"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-3);
+    min-width: 0;
+  }
+
+  & [data-part="client-snippet"] > span {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+  }
+
+  & [data-part="client-snippet"] pre {
+    overflow: auto;
+    margin: 0;
+    border-radius: var(--noora-radius-6);
+    background: var(--noora-surface-background-tertiary);
+    padding: var(--noora-spacing-5);
+  }
+
+  & [data-part="client-snippet"] code {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small);
+    white-space: pre;
+  }
+
   & [data-part="definition-link"] {
     overflow: hidden;
     color: var(--noora-surface-label-primary);
@@ -648,7 +692,9 @@
       align-items: stretch;
     }
 
-    & [data-part="definition-grid"] {
+    & [data-part="definition-grid"],
+    & [data-part="client-configuration-grid"],
+    & [data-part="client-snippets-card-section"] {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -680,7 +726,9 @@
       min-width: 0;
     }
 
-    & [data-part="definition-grid"] {
+    & [data-part="definition-grid"],
+    & [data-part="client-configuration-grid"],
+    & [data-part="client-snippets-card-section"] {
       grid-template-columns: 1fr;
     }
 

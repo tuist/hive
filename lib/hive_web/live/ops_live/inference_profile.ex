@@ -321,6 +321,43 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           </.card_section>
         </.card>
 
+        <.card title="Client configuration" icon="external_link" data-part="client-configuration-card">
+          <.card_section>
+            <p data-part="card-intro">
+              Use a profile token as the authorization secret. Create one below and store it as
+              <code>HIVE_INFERENCE_TOKEN</code>.
+            </p>
+            <div data-part="client-configuration-grid">
+              <div data-part="definition-item">
+                <span>Base address</span>
+                <code>{@client_base_url}</code>
+              </div>
+              <div data-part="definition-item">
+                <span>OpenAI-compatible model</span>
+                <code>{@profile.name}</code>
+              </div>
+              <div data-part="definition-item">
+                <span>Blick model</span>
+                <code>hive/{@profile.name}</code>
+              </div>
+              <div data-part="definition-item">
+                <span>Authorization header</span>
+                <code>Bearer $HIVE_INFERENCE_TOKEN</code>
+              </div>
+            </div>
+          </.card_section>
+          <.card_section data-part="client-snippets-card-section">
+            <div data-part="client-snippet">
+              <span>opencode provider</span>
+              <pre><code>{opencode_provider_snippet(@client_base_url, @profile)}</code></pre>
+            </div>
+            <div data-part="client-snippet">
+              <span>blick.toml</span>
+              <pre><code>{blick_snippet(@profile)}</code></pre>
+            </div>
+          </.card_section>
+        </.card>
+
         <.card title="Tokens" icon="lock_password" data-part="tokens-card">
           <:actions>
             <.new_token_modal profile={@profile} token_form={@token_form} />
@@ -574,6 +611,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     |> assign(OpenGraph.assigns(open_graph(profile)))
     |> assign(:profile, profile)
     |> assign(:tokens, profile.tokens)
+    |> assign(:client_base_url, HiveWeb.Endpoint.url() <> "/v1")
     |> assign(:provider_options, provider_select_options(profile.upstream_provider))
     |> assign_profile_form(Inference.change_profile(profile))
     |> assign_token_form(Inference.change_token(profile))
@@ -647,6 +685,39 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
 
   defp with_query(path, ""), do: path
   defp with_query(path, query), do: path <> "?" <> query
+
+  defp opencode_provider_snippet(base_url, %ModelBinding{name: name}) do
+    """
+    {
+      "provider": {
+        "hive": {
+          "name": "Hive",
+          "api": "openai",
+          "env": ["HIVE_INFERENCE_TOKEN"],
+          "options": {
+            "baseURL": "#{base_url}"
+          },
+          "models": {
+            "#{name}": {
+              "id": "#{name}",
+              "name": "#{name}"
+            }
+          }
+        }
+      }
+    }
+    """
+    |> String.trim()
+  end
+
+  defp blick_snippet(%ModelBinding{name: name}) do
+    """
+    [agent]
+    kind = "opencode"
+    model = "hive/#{name}"
+    """
+    |> String.trim()
+  end
 
   defp record_profile_audit(action, %ModelBinding{} = profile) do
     Audit.record(action, %{

@@ -109,9 +109,16 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     {:ok, detail, html} = live(conn, ~p"/ops/inference/profiles/#{profile.id}")
 
     assert html =~ "Configuration"
+    assert html =~ "Client configuration"
     assert html =~ "Tokens"
     assert html =~ "Edit profile"
     assert html =~ "Create token"
+    assert html =~ HiveWeb.Endpoint.url() <> "/v1"
+    assert html =~ "OpenAI-compatible model"
+    assert html =~ "Blick model"
+    assert html =~ "hive/blick-code-review"
+    assert html =~ "HIVE_INFERENCE_TOKEN"
+    assert html =~ "baseURL"
     assert html =~ "$0.15 / million tokens"
     assert html =~ "$0.60 / million tokens"
     assert html =~ ~s(id="edit-inference-profile-provider")
