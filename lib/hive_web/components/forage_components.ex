@@ -228,6 +228,7 @@ defmodule HiveWeb.ForageComponents do
     <section id="forage">
       <div data-part="header">
         <div data-part="title-group">
+          <h1>{Markdown.inline(@item.title)}</h1>
           <div data-part="detail-kicker">
             <.badge
               label={Forage.item_type_label(@item.type)}
@@ -240,7 +241,6 @@ defmodule HiveWeb.ForageComponents do
               style="light-fill"
             />
           </div>
-          <h1>{Markdown.inline(@item.title)}</h1>
         </div>
 
         <div data-part="header-actions">
@@ -611,7 +611,6 @@ defmodule HiveWeb.ForageComponents do
     <section id="forage">
       <div data-part="header">
         <div data-part="title-group">
-          <.badge label="Forage" color="information" style="light-fill" />
           <h1>New forage item</h1>
           <p>Capture a public feature request, bug report, or feedback item.</p>
           <span data-part="requester">
@@ -860,7 +859,6 @@ defmodule HiveWeb.ForageComponents do
     ~H"""
     <div data-part="header">
       <div data-part="title-group">
-        <.badge label="Forage" color="information" style="light-fill" />
         <h1>{@source.label}</h1>
         <p>{@source.description}</p>
       </div>

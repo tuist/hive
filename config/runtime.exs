@@ -130,6 +130,37 @@ case System.get_env("HIVE_LLM_API_KEY") do
       base_url: System.get_env("HIVE_LLM_BASE_URL")
 end
 
+inference_providers =
+  case System.get_env("HIVE_INFERENCE_PROVIDERS") do
+    value when is_binary(value) ->
+      if present?.(value), do: Jason.decode!(value), else: %{}
+
+    _other ->
+      %{}
+  end
+
+inference_base_url = System.get_env("HIVE_INFERENCE_UPSTREAM_BASE_URL")
+
+inference_providers =
+  if present?.(inference_base_url) do
+    provider_id = System.get_env("HIVE_INFERENCE_UPSTREAM_ID", "default")
+
+    provider =
+      %{
+        "base_url" => inference_base_url,
+        "api_key" => System.get_env("HIVE_INFERENCE_UPSTREAM_API_KEY"),
+        "timeout" => System.get_env("HIVE_INFERENCE_UPSTREAM_TIMEOUT")
+      }
+
+    Map.put(inference_providers, provider_id, provider)
+  else
+    inference_providers
+  end
+
+if map_size(inference_providers) > 0 do
+  config :hive, :inference, providers: inference_providers
+end
+
 google_client_id = System.get_env("HIVE_GOOGLE_CLIENT_ID")
 google_client_secret = System.get_env("HIVE_GOOGLE_CLIENT_SECRET")
 google_allowed = parse_domains.(System.get_env("HIVE_GOOGLE_ALLOWED_DOMAINS"))

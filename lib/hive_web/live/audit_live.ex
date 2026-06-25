@@ -23,7 +23,7 @@ defmodule HiveWeb.AuditLive do
       section_label: "Audit",
       highlights: ["Dashboard", "Webhooks", "Workers"],
       id: "audit",
-      path: "/audit",
+      path: "/ops/audit",
       title: "Audit"
     }
   end
@@ -73,7 +73,7 @@ defmodule HiveWeb.AuditLive do
   def handle_event("search", %{"search" => %{"query" => query}}, socket) do
     {:noreply,
      push_patch(socket,
-       to: ~p"/audit?#{audit_query_params(query, socket.assigns.active_filters)}",
+       to: ~p"/ops/audit?#{audit_query_params(query, socket.assigns.active_filters)}",
        replace: true
      )}
   end
@@ -87,7 +87,7 @@ defmodule HiveWeb.AuditLive do
 
     {:noreply,
      socket
-     |> push_patch(to: ~p"/audit?#{updated_params}")
+     |> push_patch(to: ~p"/ops/audit?#{updated_params}")
      |> push_event("open-dropdown", %{id: "filter-#{filter_id}-value-dropdown"})
      |> push_event("open-popover", %{id: "filter-#{filter_id}-value-popover"})}
   end
@@ -101,26 +101,22 @@ defmodule HiveWeb.AuditLive do
 
     {:noreply,
      socket
-     |> push_patch(to: ~p"/audit?#{updated_params}")
+     |> push_patch(to: ~p"/ops/audit?#{updated_params}")
      |> push_event("close-dropdown", %{id: "all", all: true})
      |> push_event("close-popover", %{id: "all", all: true})}
   end
 
   def render(assigns) do
     ~H"""
-    <Layouts.dashboard
+    <Layouts.ops
       flash={@flash}
       product_name={@product_name}
       user_name={@user_name}
       user_email={@user_email}
       avatar_color={@avatar_color}
-      auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
-      admin?={@admin?}
       csrf_token={@csrf_token}
       current_path={@current_path}
-      forage_sources={@forage_sources}
-      specs_have_new_activity?={@specs_have_new_activity?}
     >
       <section id="audit">
         <div data-part="header">
@@ -245,7 +241,7 @@ defmodule HiveWeb.AuditLive do
           </.card_section>
         </.card>
       </section>
-    </Layouts.dashboard>
+    </Layouts.ops>
     """
   end
 

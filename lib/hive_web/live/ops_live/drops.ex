@@ -153,7 +153,6 @@ defmodule HiveWeb.OpsLive.Drops do
       <section id="ops-drops">
         <div data-part="page-header">
           <div data-part="title-group">
-            <.badge label="Ops" color="information" style="light-fill" />
             <h1>Drops</h1>
             <p>
               Register RSS/Atom changelog feeds. Each ingested entry is routed to one or

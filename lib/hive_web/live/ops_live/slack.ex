@@ -83,7 +83,6 @@ defmodule HiveWeb.OpsLive.Slack do
       <section id="ops-slack">
         <div data-part="page-header">
           <div data-part="title-group">
-            <.badge label="Ops" color="information" style="light-fill" />
             <h1>Slack</h1>
             <p>
               Connect Slack workspaces to Hive. Once installed, the bot can reply in threads

@@ -35,6 +35,11 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.MCPAuthentication
   end
 
+  pipeline :inference do
+    plug :accepts, ["json"]
+    plug HiveWeb.Plugs.InferenceAuthentication
+  end
+
   scope "/webhooks", HiveWeb do
     pipe_through :json_api
 
@@ -121,6 +126,7 @@ defmodule HiveWeb.Router do
     end
 
     get "/ops", PageController, :ops
+    get "/audit", PageController, :audit
 
     live_session :forage,
       on_mount: HiveWeb.DashboardLive.Hooks,
@@ -168,6 +174,12 @@ defmodule HiveWeb.Router do
       root_layout: {HiveWeb.Layouts, :root} do
       live "/ops/slack", OpsLive.Slack
       live "/ops/drops", OpsLive.Drops
+      live "/ops/inference", OpsLive.Inference
+      live "/ops/inference/profiles", OpsLive.Inference
+      live "/ops/inference/profiles/:id", OpsLive.InferenceProfile
+      live "/ops/inference/providers", OpsLive.InferenceProviders
+      live "/ops/inference/tokens/:id", OpsLive.InferenceToken
+      live "/ops/audit", AuditLive
     end
 
     scope "/slack" do
@@ -185,12 +197,6 @@ defmodule HiveWeb.Router do
       get "/callback", SlackProfileController, :callback
     end
 
-    live_session :audit,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/audit", AuditLive
-    end
-
     scope "/auth" do
       pipe_through :oauth
       get "/:provider", AuthController, :request
@@ -206,5 +212,12 @@ defmodule HiveWeb.Router do
     pipe_through :mcp
 
     forward "/mcp", EMCP.Transport.StreamableHTTP, server: Hive.MCP.Server
+  end
+
+  scope "/v1", HiveWeb do
+    pipe_through :inference
+
+    get "/models", InferenceController, :models
+    post "/chat/completions", InferenceController, :chat_completions
   end
 end

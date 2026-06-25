@@ -50,6 +50,7 @@
       }
 
       & [data-part="forage-sources"],
+      & [data-part="inference"],
       & [data-part="settings"] {
         & > summary {
           cursor: pointer;
@@ -90,8 +91,8 @@
         & > [data-part="content"] {
           display: flex;
           flex-direction: column;
-          gap: var(--noora-spacing-1);
-          margin-top: var(--noora-spacing-4);
+          gap: var(--noora-spacing-6);
+          margin-top: 20px;
           margin-left: 14px;
           border-left: 1.5px solid var(--noora-surface-border-primary);
           padding-left: 20px;

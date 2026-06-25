@@ -64,8 +64,8 @@ defmodule HiveWeb.DropsLive.Show do
       <section id="drop-show">
         <div data-part="header">
           <div data-part="title-group">
+            <h1>{Markdown.inline(@drop.title)}</h1>
             <div data-part="section-label">
-              <.badge label="Drop" color="information" style="light-fill" />
               <.badge
                 label={Drops.source_type_label(@drop.source_type)}
                 color={source_badge_color(@drop.source_type)}
@@ -73,7 +73,6 @@ defmodule HiveWeb.DropsLive.Show do
               />
               <span :if={@drop.version} data-part="version">{@drop.version}</span>
             </div>
-            <h1>{Markdown.inline(@drop.title)}</h1>
             <div data-part="meta">
               <span :for={domain <- @drop.domains || []}>
                 <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-link">
