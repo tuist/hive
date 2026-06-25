@@ -11,10 +11,18 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
           "type" => "string",
           "description" => "Restrict to a single domain id."
         },
+        "project_id" => %{
+          "type" => "string",
+          "description" => "Restrict to a single project id."
+        },
         "source_type" => %{
           "type" => "string",
           "enum" => ["github_release", "rss"],
           "description" => "Restrict to a source type."
+        },
+        "query" => %{
+          "type" => "string",
+          "description" => "Search drop titles and bodies."
         },
         "page" => %{"type" => "integer", "minimum" => 1},
         "page_size" => %{"type" => "integer", "minimum" => 1, "maximum" => 100}
@@ -36,8 +44,9 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
     page_size = Map.get(args, "page_size", 20)
 
     opts =
-      [user: user, page: page, page_size: page_size]
+      [user: user, page: page, page_size: page_size, query: present_string(args["query"])]
       |> put_present(:domain_ids, wrap(args["domain_id"]))
+      |> put_present(:project_ids, wrap(args["project_id"]))
       |> put_present(:source_type, parse_source_type(args["source_type"]))
 
     {drops, meta} = Drops.list_drops(opts)
@@ -56,6 +65,12 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
   defp parse_source_type("github_release"), do: :github_release
   defp parse_source_type("rss"), do: :rss
   defp parse_source_type(_other), do: nil
+
+  defp present_string(value) when is_binary(value) do
+    if String.trim(value) == "", do: nil, else: value
+  end
+
+  defp present_string(_value), do: nil
 
   defp wrap(nil), do: nil
   defp wrap(""), do: nil
