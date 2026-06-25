@@ -65,22 +65,6 @@ defmodule HiveWeb.DropsLive.Show do
         <div data-part="header">
           <div data-part="title-group">
             <h1>{Markdown.inline(@drop.title)}</h1>
-            <div data-part="meta">
-              <span>{Drops.source_type_label(@drop.source_type)}</span>
-              <span :if={@drop.version} data-part="version">{@drop.version}</span>
-              <span :for={domain <- @drop.domains || []}>
-                <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-link">
-                  {domain.name}
-                </.link>
-              </span>
-              <span :if={(@drop.domains || []) == []}>Unclassified</span>
-              <span :if={@drop.published_at}>
-                {Calendar.strftime(@drop.published_at, "%b %d, %Y · %H:%M UTC")}
-              </span>
-              <span :if={@drop.github_repository}>
-                {@drop.github_repository.owner}/{@drop.github_repository.name}
-              </span>
-            </div>
           </div>
           <div data-part="header-actions">
             <.button
@@ -95,6 +79,51 @@ defmodule HiveWeb.DropsLive.Show do
             </.button>
           </div>
         </div>
+
+        <.card title="Metadata" icon="package" data-part="metadata-card">
+          <.card_section data-part="metadata-card-section">
+            <div data-part="metadata-grid">
+              <div data-part="metadata-row">
+                <div data-part="metadata">
+                  <div data-part="title">Source</div>
+                  <span data-part="label">{Drops.source_type_label(@drop.source_type)}</span>
+                </div>
+                <div :if={@drop.version} data-part="metadata">
+                  <div data-part="title">Version</div>
+                  <span data-part="version">{@drop.version}</span>
+                </div>
+                <div data-part="metadata">
+                  <div data-part="title">Domains</div>
+                  <div :if={drop_domains(@drop) != []} data-part="metadata-badges">
+                    <.link
+                      :for={domain <- drop_domains(@drop)}
+                      navigate={~p"/domains/#{domain.id}"}
+                      data-part="domain-link"
+                    >
+                      {domain.name}
+                    </.link>
+                  </div>
+                  <span :if={drop_domains(@drop) == []} data-part="label">Unclassified</span>
+                </div>
+              </div>
+
+              <div data-part="metadata-row">
+                <div :if={@drop.published_at} data-part="metadata">
+                  <div data-part="title">Published</div>
+                  <span data-part="label">
+                    {Calendar.strftime(@drop.published_at, "%b %d, %Y · %H:%M UTC")}
+                  </span>
+                </div>
+                <div :if={@drop.github_repository} data-part="metadata">
+                  <div data-part="title">Repository</div>
+                  <span data-part="label">
+                    {@drop.github_repository.owner}/{@drop.github_repository.name}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </.card_section>
+        </.card>
 
         <.card title="Update" icon="package">
           <.card_section>
@@ -140,6 +169,9 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp domain_name(%{domains: [%{name: name} | _]}), do: name
   defp domain_name(_drop), do: "Unclassified"
+
+  defp drop_domains(%{domains: domains}) when is_list(domains), do: domains
+  defp drop_domains(_drop), do: []
 
   defp present?(value) when is_binary(value), do: String.trim(value) != ""
   defp present?(_other), do: false
