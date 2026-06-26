@@ -16,6 +16,7 @@ defmodule Hive.Drops do
   """
 
   use Gettext, backend: HiveWeb.Gettext
+  use HiveWeb, :verified_routes
 
   import Ecto.Query
 
@@ -31,6 +32,9 @@ defmodule Hive.Drops do
   alias Hive.Repo
 
   @default_page_size 20
+  # PostgreSQL advisory locks need stable application-defined integer keys.
+  @drop_number_lock_namespace :binary.decode_unsigned("Hive")
+  @drop_number_lock_key :binary.decode_unsigned("DROP")
   @drop_attr_keys [
     :source_type,
     :external_id,
@@ -129,35 +133,44 @@ defmodule Hive.Drops do
     |> Repo.all()
   end
 
-  @doc "Fetches a drop by id when the `user` is allowed to see it."
-  def fetch_visible_drop(id, user) when is_binary(id) do
-    case Repo.get(Drop, id) do
-      nil ->
+  @doc "Fetches a drop by public number, shared URL, or internal id when the `user` can see it."
+  def fetch_visible_drop(reference, user) when is_integer(reference),
+    do: fetch_visible_drop_by_number(reference, user)
+
+  def fetch_visible_drop(reference, user) when is_binary(reference) do
+    reference
+    |> reference_identifier()
+    |> case do
+      "" ->
         {:error, :not_found}
 
-      %Drop{} = drop ->
-        drop =
-          Repo.preload(drop, drop_preloads())
-
-        if visible?(drop, user),
-          do: {:ok, drop},
-          else: {:error, :not_found}
+      identifier ->
+        if public_number?(identifier),
+          do: fetch_visible_drop_by_number(identifier, user),
+          else: fetch_visible_drop_by_internal_id(identifier, user)
     end
-  rescue
-    Ecto.Query.CastError -> {:error, :not_found}
   end
+
+  def public_path(%Drop{number: number}) when is_integer(number), do: ~p"/drops/#{number}"
 
   @doc "Idempotently inserts or updates a drop based on the unique (source_type, external_id)."
   def upsert_drop(attrs) when is_map(attrs) do
     attrs = normalize_drop_attrs(attrs)
 
-    %Drop{}
-    |> Drop.changeset(attrs)
-    |> Repo.insert(
-      on_conflict: {:replace, [:title, :body, :url, :published_at, :updated_at]},
-      conflict_target: [:source_type, :external_id],
-      returning: true
-    )
+    Repo.transaction(fn ->
+      %Drop{}
+      |> Drop.changeset(attrs)
+      |> put_next_drop_number()
+      |> Repo.insert(
+        on_conflict: {:replace, [:title, :body, :url, :published_at, :updated_at]},
+        conflict_target: [:source_type, :external_id],
+        returning: true
+      )
+      |> case do
+        {:ok, drop} -> drop
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   def get_drop(id) when is_binary(id) do
@@ -414,6 +427,68 @@ defmodule Hive.Drops do
     )
   end
 
+  defp fetch_visible_drop_by_number(number, user) when is_binary(number) do
+    case Integer.parse(number) do
+      {number, ""} -> fetch_visible_drop_by_number(number, user)
+      _invalid -> {:error, :not_found}
+    end
+  end
+
+  defp fetch_visible_drop_by_number(number, user) when is_integer(number) do
+    case Repo.get_by(Drop, number: number) do
+      nil ->
+        {:error, :not_found}
+
+      %Drop{} = drop ->
+        drop =
+          Repo.preload(drop, drop_preloads())
+
+        if visible?(drop, user),
+          do: {:ok, drop},
+          else: {:error, :not_found}
+    end
+  end
+
+  defp fetch_visible_drop_by_internal_id(id, user) do
+    case Repo.get(Drop, id) do
+      nil ->
+        {:error, :not_found}
+
+      %Drop{} = drop ->
+        drop =
+          Repo.preload(drop, drop_preloads())
+
+        if visible?(drop, user),
+          do: {:ok, drop},
+          else: {:error, :not_found}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
+  end
+
+  defp reference_identifier(reference) do
+    reference = String.trim(reference)
+
+    case URI.parse(reference) do
+      %URI{path: path} when is_binary(path) and path != "" ->
+        path
+        |> String.split("/", trim: true)
+        |> drop_path_number()
+        |> Kernel.||(reference)
+
+      _uri ->
+        reference
+    end
+  end
+
+  defp drop_path_number(["drops", number | _rest]), do: number
+  defp drop_path_number([_segment | rest]), do: drop_path_number(rest)
+  defp drop_path_number([]), do: nil
+
+  defp public_number?(identifier) do
+    match?({_number, ""}, Integer.parse(identifier))
+  end
+
   defp normalize_page_size(size) when is_integer(size) and size > 0 and size <= 100, do: size
   defp normalize_page_size(:all), do: 10_000
   defp normalize_page_size(_size), do: @default_page_size
@@ -450,6 +525,24 @@ defmodule Hive.Drops do
 
   defp project_key(%{id: id}) when is_binary(id), do: id
   defp project_key(%{name: name}), do: name
+
+  defp put_next_drop_number(%Ecto.Changeset{valid?: true} = changeset) do
+    lock_drops_for_numbering()
+    Ecto.Changeset.put_change(changeset, :number, next_drop_number())
+  end
+
+  defp put_next_drop_number(%Ecto.Changeset{} = changeset), do: changeset
+
+  defp lock_drops_for_numbering do
+    Repo.query!(
+      "SELECT pg_advisory_xact_lock($1::integer, $2::integer)",
+      [@drop_number_lock_namespace, @drop_number_lock_key]
+    )
+  end
+
+  defp next_drop_number do
+    Repo.one!(from(drop in Drop, select: fragment("COALESCE(MAX(?), 0) + 1", drop.number)))
+  end
 
   defp escape_like(value) do
     value

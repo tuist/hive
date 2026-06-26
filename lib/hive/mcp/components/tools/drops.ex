@@ -10,7 +10,8 @@ defmodule Hive.MCP.Components.Tools.Drops do
     domains = drop.domains || []
 
     %{
-      id: drop.id,
+      id: drop.number,
+      number: drop.number,
       projects:
         drop
         |> Drops.projects_for_drop()
@@ -28,6 +29,7 @@ defmodule Hive.MCP.Components.Tools.Drops do
       title: drop.title,
       body: drop.body,
       url: drop.url,
+      hive_url: Drops.public_path(drop),
       version: drop.version,
       repository: repository_label(drop),
       github_issues: github_issues_json(drop),

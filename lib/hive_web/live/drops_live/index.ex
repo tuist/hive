@@ -17,19 +17,17 @@ defmodule HiveWeb.DropsLive.Index do
 
   @page_size 10
 
-  def open_graph do
+  def open_graph(drops \\ [], meta \\ nil) do
+    total_entries = total_entries(drops, meta)
+
     %{
       description:
         dgettext(
           "dashboard_drops",
-          "Shipped updates from GitHub releases and changelog feeds across every domain."
+          "Shipped updates from connected project releases and changelog feeds."
         ),
       section_label: dgettext("dashboard_drops", "Drops"),
-      highlights: [
-        dgettext("dashboard_drops", "GitHub releases"),
-        dgettext("dashboard_drops", "RSS / Atom changelogs"),
-        dgettext("dashboard_drops", "Subscribe per domain")
-      ],
+      highlights: drops_highlights(drops, total_entries),
       id: "drops",
       path: "/drops",
       title: dgettext("dashboard_drops", "Drops")
@@ -93,6 +91,7 @@ defmodule HiveWeb.DropsLive.Index do
       |> assign(:query, query)
       |> assign(:atom_feed, atom_feed(params))
       |> assign(:search_form, to_form(%{"query" => query}, as: :search))
+      |> assign(OpenGraph.assigns(open_graph(drops, meta)))
 
     {:noreply, socket}
   end
@@ -212,7 +211,7 @@ defmodule HiveWeb.DropsLive.Index do
                   </time>
                 </:col>
                 <:col :let={drop} label={dgettext("dashboard_drops", "Title")}>
-                  <.link navigate={~p"/drops/#{drop.id}"} data-part="title-link">
+                  <.link navigate={~p"/drops/#{drop.number}"} data-part="title-link">
                     <.text_and_description_cell
                       label={Markdown.inline(drop.title)}
                       description={truncate(drop.body)}
@@ -455,4 +454,45 @@ defmodule HiveWeb.DropsLive.Index do
 
   defp maybe_put_csv(params, _key, []), do: params
   defp maybe_put_csv(params, key, values), do: Map.put(params, key, Enum.join(values, ","))
+
+  defp total_entries(_drops, %{total_entries: total}) when is_integer(total), do: total
+  defp total_entries(drops, _meta), do: length(drops)
+
+  defp drops_highlights(drops, total_entries) do
+    [
+      count_label(total_entries)
+      | source_highlights(drops)
+    ]
+    |> Kernel.++([dgettext("dashboard_drops", "Subscribe per domain")])
+    |> Enum.uniq()
+    |> Enum.take(3)
+  end
+
+  defp source_highlights(drops) do
+    drops
+    |> Enum.map(& &1.source_type)
+    |> Enum.uniq()
+    |> Enum.flat_map(fn
+      :github_release -> [dgettext("dashboard_drops", "GitHub releases")]
+      :rss -> [dgettext("dashboard_drops", "Changelog feeds")]
+      _other -> []
+    end)
+    |> case do
+      [] ->
+        [
+          dgettext("dashboard_drops", "Connected releases"),
+          dgettext("dashboard_drops", "Changelog feeds")
+        ]
+
+      highlights ->
+        highlights
+    end
+  end
+
+  defp count_label(1), do: dgettext("dashboard_drops", "1 drop")
+
+  defp count_label(count) when is_integer(count),
+    do: dgettext("dashboard_drops", "%{count} drops", count: count)
+
+  defp count_label(_count), do: dgettext("dashboard_drops", "0 drops")
 end

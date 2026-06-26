@@ -25,18 +25,22 @@ defmodule Hive.MCP.Components.Tools.ListDropsTest do
     user = mcp_user()
     domain = create_domain!(%{name: "Hive", visibility: "public"})
 
-    insert_drop!(domain, %{
-      source_type: :rss,
-      external_id: "ext-1",
-      title: "Changelog v1",
-      body: "Initial body",
-      url: "https://example.com/changelog/1",
-      published_at: ~U[2026-06-18 12:00:00Z]
-    })
+    drop =
+      insert_drop!(domain, %{
+        source_type: :rss,
+        external_id: "ext-1",
+        title: "Changelog v1",
+        body: "Initial body",
+        url: "https://example.com/changelog/1",
+        published_at: ~U[2026-06-18 12:00:00Z]
+      })
 
     response = ListDrops.call(mcp_conn(user), %{}) |> response_json()
 
     assert [drop_json] = response["drops"]
+    assert drop_json["id"] == drop.number
+    assert drop_json["number"] == drop.number
+    assert drop_json["hive_url"] == "/drops/#{drop.number}"
     assert drop_json["title"] == "Changelog v1"
     assert [%{"name" => "Hive"}] = drop_json["domains"]
     assert drop_json["source_type"] == "rss"

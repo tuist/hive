@@ -14,34 +14,38 @@ defmodule HiveWeb.DropsLive.Show do
       description: description(drop),
       section_label: section_label(drop),
       highlights: highlights(drop),
-      id: "drop-#{drop.id}",
-      path: "/drops/#{drop.id}",
+      id: "drop-#{drop.number}",
+      path: Drops.public_path(drop),
       title: drop.title
     }
   end
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"number" => reference}, _session, socket) do
     user = socket.assigns[:current_user]
 
-    case Drops.fetch_visible_drop(id, user) do
+    case Drops.fetch_visible_drop(reference, user) do
       {:ok, drop} ->
-        {:ok,
-         socket
-         |> assign(
-           :page_title,
-           dgettext("dashboard_drops", "%{title} · %{product}",
-             title: drop.title,
-             product: socket.assigns.product_name
+        if reference == to_string(drop.number) do
+          {:ok,
+           socket
+           |> assign(
+             :page_title,
+             dgettext("dashboard_drops", "%{title} · %{product}",
+               title: drop.title,
+               product: socket.assigns.product_name
+             )
            )
-         )
-         |> assign(:drop, drop)
-         |> assign(:atom_feed, %{
-           title: dgettext("dashboard_drops", "Hive · Drops"),
-           atom_href: "/drops/atom.xml",
-           rss_href: "/drops/rss.xml"
-         })
-         |> assign(OpenGraph.assigns(open_graph(drop)))}
+           |> assign(:drop, drop)
+           |> assign(:atom_feed, %{
+             title: dgettext("dashboard_drops", "Hive · Drops"),
+             atom_href: "/drops/atom.xml",
+             rss_href: "/drops/rss.xml"
+           })
+           |> assign(OpenGraph.assigns(open_graph(drop)))}
+        else
+          {:ok, redirect(socket, to: Drops.public_path(drop))}
+        end
 
       {:error, :not_found} ->
         {:ok,
@@ -154,21 +158,29 @@ defmodule HiveWeb.DropsLive.Show do
   end
 
   defp description(drop) do
-    case drop.body do
-      nil ->
-        dgettext("dashboard_drops", "Shipped update from the %{domain} domain.",
-          domain: domain_name(drop)
-        )
+    if present?(drop.body) do
+      Markdown.preview(drop.body, 180)
+    else
+      case primary_context(drop) do
+        nil ->
+          dgettext("dashboard_drops", "Shipped update from %{source}.",
+            source: source_card_label(drop.source_type)
+          )
 
-      body ->
-        Markdown.preview(body, 180)
+        context ->
+          dgettext("dashboard_drops", "Shipped update for %{context} from %{source}.",
+            context: context,
+            source: source_card_label(drop.source_type)
+          )
+      end
     end
   end
 
   defp section_label(drop) do
     parts =
       [
-        Drops.source_type_label(drop.source_type),
+        dgettext("dashboard_drops", "Drop"),
+        source_card_label(drop.source_type),
         drop.version
       ]
       |> Enum.reject(&(is_nil(&1) or &1 == ""))
@@ -178,15 +190,78 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp highlights(drop) do
     [
-      domain_name(drop),
-      drop.version,
-      Drops.source_type_label(drop.source_type)
+      project_context(drop),
+      domain_context(drop),
+      published_context(drop.published_at)
     ]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> case do
+      [] -> [source_card_label(drop.source_type)]
+      highlights -> highlights
+    end
+  end
+
+  defp source_card_label(:github_release), do: dgettext("dashboard_drops", "GitHub release")
+  defp source_card_label(:rss), do: dgettext("dashboard_drops", "Changelog feed")
+  defp source_card_label(_source_type), do: dgettext("dashboard_drops", "Drop")
+
+  defp primary_context(drop) do
+    case project_names(drop) do
+      [name | _] -> name
+      [] -> drop |> domain_names() |> List.first()
+    end
+  end
+
+  defp project_context(drop) do
+    drop
+    |> project_names()
+    |> context_label(
+      dgettext("dashboard_drops", "Project"),
+      dgettext("dashboard_drops", "Projects")
+    )
+  end
+
+  defp domain_context(drop) do
+    drop
+    |> domain_names()
+    |> context_label(
+      dgettext("dashboard_drops", "Domain"),
+      dgettext("dashboard_drops", "Domains")
+    )
+  end
+
+  defp context_label([], _singular, _plural), do: nil
+
+  defp context_label([name], singular, _plural),
+    do: dgettext("dashboard_drops", "%{label}: %{name}", label: singular, name: name)
+
+  defp context_label(names, _singular, plural) do
+    dgettext("dashboard_drops", "%{label}: %{names}",
+      label: plural,
+      names: names |> Enum.take(2) |> Enum.join(", ")
+    )
+  end
+
+  defp project_names(drop) do
+    drop
+    |> Drops.projects_for_drop()
+    |> Enum.map(& &1.name)
     |> Enum.reject(&(is_nil(&1) or &1 == ""))
   end
 
-  defp domain_name(%{domains: [%{name: name} | _]}), do: name
-  defp domain_name(_drop), do: dgettext("dashboard_drops", "Unclassified")
+  defp domain_names(%{domains: domains}) when is_list(domains) do
+    domains
+    |> Enum.map(& &1.name)
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+  end
+
+  defp domain_names(_drop), do: []
+
+  defp published_context(%DateTime{} = datetime) do
+    Calendar.strftime(datetime, "%b %d, %Y")
+  end
+
+  defp published_context(_datetime), do: nil
 
   defp drop_domains(%{domains: domains}) when is_list(domains), do: domains
   defp drop_domains(_drop), do: []

@@ -5,6 +5,7 @@ defmodule HiveWeb.DropsLive.IndexTest do
   alias Hive.Domains
   alias Hive.Domains.GitHubRepository
   alias Hive.Projects
+  alias HiveWeb.OpenGraph
 
   test "renders project and domains next to the title columns", %{conn: conn} do
     {:ok, project} = Projects.create_project(%{name: "Tuist", visibility: "public"})
@@ -16,11 +17,12 @@ defmodule HiveWeb.DropsLive.IndexTest do
         visibility: "public"
       })
 
-    insert_drop!(domain, %{
-      title: "Generated project paths stay stable",
-      body: "Generated projects now preserve path casing across machines.",
-      version: "4.201.0-canary.19"
-    })
+    drop =
+      insert_drop!(domain, %{
+        title: "Generated project paths stay stable",
+        body: "Generated projects now preserve path casing across machines.",
+        version: "4.201.0-canary.19"
+      })
 
     {:ok, _view, html} = live(conn, ~p"/drops")
     table = table_fragment(html)
@@ -32,6 +34,7 @@ defmodule HiveWeb.DropsLive.IndexTest do
     assert label_index(table, "Version") < label_index(table, "Source")
     assert html =~ "Tuist"
     assert html =~ "Generated projects"
+    assert html =~ ~s(href="/drops/#{drop.number}")
   end
 
   test "renders the source project when a drop has no domains yet", %{conn: conn} do
@@ -65,6 +68,41 @@ defmodule HiveWeb.DropsLive.IndexTest do
     assert html =~ "Unclassified"
   end
 
+  test "advertises an OpenGraph image that reflects the loaded drops", %{conn: conn} do
+    {:ok, project} = Projects.create_project(%{name: "Hive", visibility: "public"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Release notes",
+        project_id: project.id,
+        visibility: "public"
+      })
+
+    insert_drop!(domain, %{
+      title: "Slack notifications shipped",
+      body: "Spec comments now notify the right maintainers.",
+      version: "0.37.0"
+    })
+
+    insert_drop!(domain, %{
+      source_type: :rss,
+      external_id: "release-feed-#{System.unique_integer([:positive])}",
+      title: "Changelog feed update",
+      body: "The public changelog now includes release notes.",
+      url: "https://example.com/changelog/release-feed",
+      published_at: ~U[2026-06-19 12:00:00Z]
+    })
+
+    {:ok, _view, html} = live(conn, ~p"/drops")
+
+    assert {:ok, data} = advertised_open_graph_data(html)
+
+    assert data.description ==
+             "Shipped updates from connected project releases and changelog feeds."
+
+    assert data.highlights == ["2 drops", "GitHub releases", "Changelog feeds"]
+  end
+
   defp insert_drop!(domain, attrs) do
     attrs =
       Map.merge(
@@ -91,6 +129,16 @@ defmodule HiveWeb.DropsLive.IndexTest do
     case :binary.match(html, label) do
       {index, _length} -> index
       :nomatch -> flunk("expected #{inspect(label)} in drops table")
+    end
+  end
+
+  defp advertised_open_graph_data(html) do
+    with [_, image] <- Regex.run(~r/property="og:image" content="([^"]+)"/, html),
+         %URI{query: query} when is_binary(query) <- URI.parse(image),
+         %{"token" => token} <- URI.decode_query(query) do
+      OpenGraph.verify_token(HiveWeb.Endpoint, token)
+    else
+      _other -> {:error, :missing_open_graph_image}
     end
   end
 end

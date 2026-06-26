@@ -266,7 +266,8 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           release: release.tag_name,
           references: item.source_urls,
           domains: Enum.map_join(domains, ", ", & &1.name),
-          path: "/drops"
+          number: to_string(drop.number),
+          path: Drops.public_path(drop)
         }
       })
     end

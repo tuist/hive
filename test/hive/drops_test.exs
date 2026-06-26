@@ -26,7 +26,53 @@ defmodule Hive.DropsTest do
                Drops.upsert_drop(%{attrs | title: "Updated title"})
 
       assert updated.id == drop.id
+      assert is_integer(drop.number)
+      assert updated.number == drop.number
       assert Repo.aggregate(Drop, :count, :id) == 1
+    end
+
+    test "assigns incremental public numbers to new drops" do
+      {:ok, first} =
+        Drops.upsert_drop(%{
+          source_type: :rss,
+          external_id: "numbered-1",
+          title: "First",
+          url: "https://example.com/numbered-1"
+        })
+
+      {:ok, second} =
+        Drops.upsert_drop(%{
+          source_type: :rss,
+          external_id: "numbered-2",
+          title: "Second",
+          url: "https://example.com/numbered-2"
+        })
+
+      assert second.number == first.number + 1
+      assert Drops.public_path(first) == "/drops/#{first.number}"
+    end
+
+    test "keeps numbering incremental when existing drops are upserted" do
+      first_attrs = %{
+        source_type: :rss,
+        external_id: "numbered-upsert-1",
+        title: "First",
+        url: "https://example.com/numbered-upsert-1"
+      }
+
+      {:ok, first} = Drops.upsert_drop(first_attrs)
+      {:ok, updated} = Drops.upsert_drop(%{first_attrs | title: "Updated first"})
+
+      {:ok, second} =
+        Drops.upsert_drop(%{
+          source_type: :rss,
+          external_id: "numbered-upsert-2",
+          title: "Second",
+          url: "https://example.com/numbered-upsert-2"
+        })
+
+      assert updated.number == first.number
+      assert second.number == first.number + 1
     end
 
     test "accepts string-keyed attrs and ignores unknown keys" do
@@ -44,6 +90,24 @@ defmodule Hive.DropsTest do
       assert drop.source_type == :github_release
       assert drop.external_id == "release-1"
       assert drop.body == "Release notes"
+    end
+  end
+
+  describe "fetch_visible_drop/2" do
+    test "accepts public numbers, shared drop URLs, and internal ids" do
+      domain = create_domain!(%{name: "Public domain", visibility: :public})
+      {:ok, drop} = insert_drop(domain)
+
+      assert {:ok, by_number} = Drops.fetch_visible_drop(to_string(drop.number), nil)
+
+      assert {:ok, by_url} =
+               Drops.fetch_visible_drop("https://hive.test/drops/#{drop.number}", nil)
+
+      assert {:ok, by_id} = Drops.fetch_visible_drop(drop.id, nil)
+
+      assert by_number.id == drop.id
+      assert by_url.id == drop.id
+      assert by_id.id == drop.id
     end
   end
 

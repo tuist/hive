@@ -228,6 +228,14 @@ defmodule Hive.Audit do
       when is_binary(number) and number != "",
       do: "/specs/#{number}"
 
+  def resource_path("drop", _target_id, %{"number" => number})
+      when is_binary(number) and number != "",
+      do: "/drops/#{number}"
+
+  def resource_path("drop", _target_id, %{number: number})
+      when is_binary(number) and number != "",
+      do: "/drops/#{number}"
+
   def resource_path("domain", target_id, _metadata) when is_binary(target_id) and target_id != "",
     do: "/domains/#{target_id}"
 

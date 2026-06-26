@@ -4,6 +4,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
   alias Hive.Drops
   alias Hive.Domains
   alias Hive.Projects
+  alias HiveWeb.OpenGraph
 
   defp unique_domain_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
 
@@ -50,7 +51,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
     drop = insert_drop!(domain)
 
-    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
 
     assert html =~ "Slack workspace management moved to Ops"
     assert html =~ ~s(data-part="metadata-card")
@@ -62,12 +63,21 @@ defmodule HiveWeb.DropsLive.ShowTest do
     assert html =~ "Open original"
   end
 
+  test "redirects old internal id URLs to the public number URL", %{conn: conn} do
+    domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
+
+    drop = insert_drop!(domain)
+    expected_path = "/drops/#{drop.number}"
+
+    assert {:error, {:redirect, %{to: ^expected_path}}} = live(conn, ~p"/drops/#{drop.id}")
+  end
+
   test "redirects anonymous visitors away from drops in a private domain", %{conn: conn} do
     domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "private"})
 
     drop = insert_drop!(domain)
 
-    assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.id}")
+    assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.number}")
   end
 
   test "shows the version chip when present", %{conn: conn} do
@@ -75,13 +85,43 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
     drop = insert_drop!(domain, %{version: "v4.7.0"})
 
-    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
 
     assert html =~ "v4.7.0"
   end
 
+  test "advertises an OpenGraph image with drop-specific context", %{conn: conn} do
+    {:ok, project} = Projects.create_project(%{name: "Hive", visibility: "public"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Slack",
+        project_id: project.id,
+        visibility: "public"
+      })
+
+    drop = insert_drop!(domain)
+
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
+
+    assert {:ok, data} = advertised_open_graph_data(html)
+    assert data.id == "drop-#{drop.number}"
+    assert data.section_label == "Drop · GitHub release · v0.25.0"
+    assert data.highlights == ["Project: Hive", "Domain: Slack", "Jun 18, 2026"]
+  end
+
   test "redirects when the drop does not exist", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/drops"}}} =
-             live(conn, ~p"/drops/00000000-0000-0000-0000-000000000000")
+             live(conn, ~p"/drops/999999999")
+  end
+
+  defp advertised_open_graph_data(html) do
+    with [_, image] <- Regex.run(~r/property="og:image" content="([^"]+)"/, html),
+         %URI{query: query} when is_binary(query) <- URI.parse(image),
+         %{"token" => token} <- URI.decode_query(query) do
+      OpenGraph.verify_token(HiveWeb.Endpoint, token)
+    else
+      _other -> {:error, :missing_open_graph_image}
+    end
   end
 end
