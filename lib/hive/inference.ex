@@ -283,7 +283,12 @@ defmodule Hive.Inference do
          method: :post,
          url: upstream_url(upstream.base_url, "chat/completions"),
          headers: upstream_headers(upstream, stream?(body)),
-         json: Map.put(body, "model", ModelIdentifier.upstream_model(binding.upstream_model)),
+         json:
+           Map.put(
+             body,
+             "model",
+             ModelIdentifier.upstream_model(binding.upstream_model, binding.upstream_provider)
+           ),
          receive_timeout: upstream.timeout
        ]}
     end
@@ -775,7 +780,7 @@ defmodule Hive.Inference do
         {:error, _reason} -> %{}
       end
 
-    price = price_for_model(provider, binding.upstream_model)
+    price = price_for_binding_model(provider, binding.upstream_provider, binding.upstream_model)
 
     input_cost =
       input_tokens
@@ -790,10 +795,10 @@ defmodule Hive.Inference do
     |> Decimal.round(9)
   end
 
-  defp price_for_model(provider, model) do
+  defp price_for_binding_model(provider, upstream_provider, model) do
     provider
     |> provider_value(:prices)
-    |> price_for_model(model, ModelIdentifier.upstream_model(model))
+    |> price_for_model(model, ModelIdentifier.upstream_model(model, upstream_provider))
   end
 
   defp price_for_model(prices, model, upstream_model) when is_map(prices) or is_list(prices) do

@@ -55,7 +55,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
   test "admins can create profiles from the list and retarget them from the detail page", %{
     conn: conn
   } do
-    provider!("fireworks-ai")
+    provider!("fireworks")
     provider!("openai")
 
     {conn, _user} = log_in_admin(conn, "admin-inference@example.com")
@@ -72,23 +72,23 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ ~s(id="new-inference-profile-provider")
     assert html =~ ~s(name="profile[upstream_provider]")
     assert html =~ ~s(data-on-value-change="profile_provider_changed")
-    assert html =~ ~s(value="fireworks-ai")
+    assert html =~ ~s(value="fireworks")
     assert html =~ ~s(value="openai")
 
     html =
       render_hook(view, "profile_provider_changed", %{
-        "value" => ["fireworks-ai"]
+        "value" => ["fireworks"]
       })
 
-    assert html =~ ~s(placeholder="fireworks-ai/accounts/fireworks/models/kimi-k2p5")
+    assert html =~ ~s(placeholder="accounts/fireworks/models/kimi-k2p5")
 
     html =
       render_submit(view, "create_profile", %{
         "profile" => %{
           "name" => "blick-code-review",
           "description" => "Repository code review profile",
-          "upstream_provider" => "fireworks-ai",
-          "upstream_model" => "fireworks-ai/accounts/fireworks/models/kimi-k2p5",
+          "upstream_provider" => "fireworks",
+          "upstream_model" => "accounts/fireworks/models/kimi-k2p5",
           "input_cost_per_million" => "0.15",
           "output_cost_per_million" => "0.60"
         }
@@ -134,7 +134,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
         "value" => ["openai"]
       })
 
-    assert html =~ ~s(placeholder="openai/gpt-4o-mini")
+    assert html =~ ~s(placeholder="gpt-4o-mini")
 
     html =
       render_submit(detail, "update_profile", %{
@@ -142,7 +142,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
           "name" => "blick-code-review",
           "description" => "Repository code review profile",
           "upstream_provider" => "openai",
-          "upstream_model" => "openai/gpt-4o-mini",
+          "upstream_model" => "gpt-4o-mini",
           "input_cost_per_million" => "0.10",
           "output_cost_per_million" => "0.40"
         }
@@ -161,7 +161,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
       Inference.create_profile(%{
         name: "missing-provider",
         upstream_provider: "missing",
-        upstream_model: "missing/missing-model"
+        upstream_model: "missing-model"
       })
 
     {conn, _user} = log_in_admin(conn, "admin-inference-providers@example.com")
@@ -349,7 +349,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
         name: "blick-code-review",
         description: "Repository code review profile",
         upstream_provider: "fireworks-ai",
-        upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5",
+        upstream_model: "accounts/fireworks/models/kimi-k2p5",
         input_cost_per_million: "1.00",
         output_cost_per_million: "2.00"
       })

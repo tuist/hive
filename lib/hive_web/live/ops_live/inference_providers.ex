@@ -204,7 +204,7 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
           id="new-inference-provider-key"
           field={@provider_form[:key]}
           label="Provider key"
-          placeholder="fireworks-ai"
+          placeholder="fireworks"
         />
         <.text_input
           id="new-inference-provider-endpoint"

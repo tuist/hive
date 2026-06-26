@@ -12,38 +12,35 @@ defmodule Hive.InferenceTest do
       assert {:ok, %ModelBinding{} = binding} =
                Inference.create_model_binding(%{
                  name: "blick-code-review",
+                 upstream_provider: "fireworks",
+                 upstream_model: "accounts/fireworks/models/minimax-m3"
+               })
+
+      assert binding.name == "blick-code-review"
+      assert binding.upstream_provider == "fireworks"
+      assert binding.enabled
+    end
+
+    test "accepts legacy provider-prefixed model bindings" do
+      assert {:ok, %ModelBinding{} = binding} =
+               Inference.create_model_binding(%{
+                 name: "legacy-code-review",
                  upstream_provider: "fireworks-ai",
                  upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
                })
 
-      assert binding.name == "blick-code-review"
-      assert binding.upstream_provider == "fireworks-ai"
-      assert binding.enabled
+      assert binding.upstream_model == "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
     end
 
-    test "requires models.dev provider/model identifiers" do
+    test "requires valid provider model identifiers" do
       assert {:error, changeset} =
                Inference.create_model_binding(%{
                  name: "missing-prefix",
                  upstream_provider: "openai",
-                 upstream_model: "gpt-4o-mini"
+                 upstream_model: "gpt 4o mini"
                })
 
-      assert "must use the models.dev provider/model format, for example openai/gpt-4o-mini" in error_messages(
-               changeset,
-               :upstream_model
-             )
-    end
-
-    test "requires the model provider to match the selected provider" do
-      assert {:error, changeset} =
-               Inference.create_model_binding(%{
-                 name: "wrong-provider",
-                 upstream_provider: "openai",
-                 upstream_model: "anthropic/claude-sonnet-4-5"
-               })
-
-      assert "must start with the selected provider, for example openai/model-id" in error_messages(
+      assert "must be a provider model identifier, for example gpt-4o-mini" in error_messages(
                changeset,
                :upstream_model
              )
@@ -211,7 +208,7 @@ defmodule Hive.InferenceTest do
     end
 
     test "rewrites the model and resolves the upstream provider" do
-      binding = model_binding!()
+      binding = model_binding!(upstream_model: "accounts/fireworks/models/kimi-k2p5")
 
       assert {:ok, request} =
                Inference.relay_request(
@@ -232,6 +229,26 @@ defmodule Hive.InferenceTest do
 
       assert Keyword.fetch!(request, :json)["model"] == "accounts/fireworks/models/kimi-k2p5"
       assert {"authorization", "Bearer fw-test"} in Keyword.fetch!(request, :headers)
+    end
+
+    test "strips a matching legacy provider prefix when rewriting the model" do
+      binding = model_binding!()
+
+      assert {:ok, request} =
+               Inference.relay_request(
+                 binding,
+                 %{"model" => "blick-code-review", "messages" => []},
+                 config: [
+                   providers: %{
+                     "fireworks-ai" => %{
+                       "base_url" => "https://api.fireworks.ai/inference/v1/",
+                       "api_key" => "fw-test"
+                     }
+                   }
+                 ]
+               )
+
+      assert Keyword.fetch!(request, :json)["model"] == "accounts/fireworks/models/kimi-k2p5"
     end
 
     test "resolves runtime providers before environment providers" do
