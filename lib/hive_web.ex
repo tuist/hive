@@ -23,7 +23,7 @@ defmodule HiveWeb do
         layouts: [html: HiveWeb.Layouts]
 
       import Plug.Conn
-      import HiveWeb.Gettext
+      use Gettext, backend: HiveWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -35,7 +35,7 @@ defmodule HiveWeb do
 
       on_mount Sentry.LiveViewHook
 
-      import HiveWeb.Gettext
+      use Gettext, backend: HiveWeb.Gettext
       use Noora
 
       unquote(verified_routes())
@@ -49,7 +49,7 @@ defmodule HiveWeb do
       import Phoenix.Controller,
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
-      import HiveWeb.Gettext
+      use Gettext, backend: HiveWeb.Gettext
       use Noora
 
       unquote(verified_routes())
