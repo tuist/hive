@@ -58,9 +58,12 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · Forage",
+      title: dgettext("dashboard_forage", "Hive · Forage"),
       subtitle:
-        "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue.",
+        dgettext(
+          "dashboard_forage",
+          "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue."
+        ),
       updated: latest_updated(items, fn item -> item.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage"),
@@ -73,8 +76,9 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · Feature requests",
-      subtitle: "Public domain ideas submitted by authenticated users.",
+      title: dgettext("dashboard_forage", "Hive · Feature requests"),
+      subtitle:
+        dgettext("dashboard_forage", "Public domain ideas submitted by authenticated users."),
       updated: latest_updated(feature_requests, fn fr -> fr.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/feature-requests"),
@@ -88,8 +92,9 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · GitHub issues",
-      subtitle: "Open issues from GitHub repositories connected to domains.",
+      title: dgettext("dashboard_forage", "Hive · GitHub issues"),
+      subtitle:
+        dgettext("dashboard_forage", "Open issues from GitHub repositories connected to domains."),
       updated: latest_updated(triples, fn {_repo, issue, _domains} -> issue.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/github-issues"),
@@ -113,8 +118,9 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · Grafana alerts",
-      subtitle: "Operational signals visible only to organization members.",
+      title: dgettext("dashboard_forage", "Hive · Grafana alerts"),
+      subtitle:
+        dgettext("dashboard_forage", "Operational signals visible only to organization members."),
       updated: latest_updated(alerts, fn alert -> alert.last_received_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/grafana-alerts"),
@@ -149,8 +155,12 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · #{domain.name}",
-      subtitle: domain.description || "Updates belonging to the #{domain.name} domain.",
+      title: dgettext("dashboard_domains", "Hive · %{domain}", domain: domain.name),
+      subtitle:
+        domain.description ||
+          dgettext("dashboard_domains", "Updates belonging to the %{domain} domain.",
+            domain: domain.name
+          ),
       updated: latest_entry_updated(entries),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/domains/#{domain.id}"),
@@ -173,8 +183,12 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · Drops",
-      subtitle: "Shipped updates from GitHub releases and changelog feeds across every domain.",
+      title: dgettext("dashboard_drops", "Hive · Drops"),
+      subtitle:
+        dgettext(
+          "dashboard_drops",
+          "Shipped updates from GitHub releases and changelog feeds across every domain."
+        ),
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/drops" <> drops_filter_query(project_ids, domain_ids)),
@@ -196,10 +210,12 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · #{domain.name} drops",
+      title: dgettext("dashboard_drops", "Hive · %{domain} drops", domain: domain.name),
       subtitle:
         domain.description ||
-          "Shipped updates from the #{domain.name} domain.",
+          dgettext("dashboard_drops", "Shipped updates from the %{domain} domain.",
+            domain: domain.name
+          ),
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/drops?domain_ids=#{domain.id}"),
@@ -221,10 +237,12 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · #{project.name} drops",
+      title: dgettext("dashboard_drops", "Hive · %{project} drops", project: project.name),
       subtitle:
         project.description ||
-          "Shipped updates from the #{project.name} project.",
+          dgettext("dashboard_drops", "Shipped updates from the %{project} project.",
+            project: project.name
+          ),
       updated: latest_updated(drops, fn drop -> drop.published_at || drop.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/projects/#{project.id}"),
@@ -281,8 +299,9 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: feed_id(conn),
-      title: "Hive · Specs",
-      subtitle: "Editable proposals that shape forage into buildable work.",
+      title: dgettext("dashboard_specs", "Hive · Specs"),
+      subtitle:
+        dgettext("dashboard_specs", "Editable proposals that shape forage into buildable work."),
       updated: latest_updated(specs, fn spec -> spec.updated_at end),
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/specs"),
@@ -307,7 +326,11 @@ defmodule HiveWeb.FeedController do
 
     %{
       id: "urn:hive:forage-item:#{item.id}",
-      title: "#{Forage.item_type_label(item.type)}: #{item.title}",
+      title:
+        dgettext("dashboard_forage", "%{type}: %{title}",
+          type: Forage.item_type_label(item.type),
+          title: item.title
+        ),
       updated: item.updated_at,
       url: url,
       summary: item.body,
@@ -330,7 +353,7 @@ defmodule HiveWeb.FeedController do
 
   defp grafana_alert_entry(conn, alert) do
     url = alert.generator_url || page_url(conn, "/forage/grafana-alerts")
-    status_label = alert.status |> Atom.to_string() |> String.capitalize()
+    status_label = Forage.item_status_label(alert.status)
 
     %{
       id: "urn:hive:grafana-alert:#{alert.id}",

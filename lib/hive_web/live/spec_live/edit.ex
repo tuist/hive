@@ -11,12 +11,16 @@ defmodule HiveWeb.SpecLive.Edit do
 
   def open_graph(spec) do
     %{
-      description: "Edit an existing domain proposal.",
-      section_label: "Spec",
-      highlights: ["Editable proposal", "Optimistic locking", "Member only"],
+      description: dgettext("dashboard_specs", "Edit an existing domain proposal."),
+      section_label: dgettext("dashboard_specs", "Spec"),
+      highlights: [
+        dgettext("dashboard_specs", "Editable proposal"),
+        dgettext("dashboard_specs", "Optimistic locking"),
+        dgettext("dashboard_specs", "Member only")
+      ],
       id: "specs-edit-#{spec.number}",
       path: "/specs/#{spec.number}/edit",
-      title: "Edit #{spec.title}"
+      title: dgettext("dashboard_specs", "Edit %{title}", title: spec.title)
     }
   end
 
@@ -27,7 +31,13 @@ defmodule HiveWeb.SpecLive.Edit do
     if Specs.can_edit?(spec, socket.assigns.current_user) do
       {:ok,
        socket
-       |> assign(:page_title, "Edit #{spec.title} · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_specs", "Edit %{title} · %{product}",
+           title: spec.title,
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph(spec)))
        |> assign(:domains, Domains.list_domains())
        |> assign(:spec, spec)
@@ -35,7 +45,10 @@ defmodule HiveWeb.SpecLive.Edit do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Only organization members can edit specs.")
+       |> put_flash(
+         :error,
+         dgettext("dashboard_specs", "Only organization members can edit specs.")
+       )
        |> redirect(to: ~p"/specs/#{spec.number}")}
     end
   end
@@ -55,18 +68,26 @@ defmodule HiveWeb.SpecLive.Edit do
       {:ok, spec} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Spec updated.")
+         |> put_flash(:info, dgettext("dashboard_specs", "Spec updated."))
          |> push_navigate(to: ~p"/specs/#{spec.number}")}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only organization members can edit specs.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only organization members can edit specs.")
+         )}
 
       {:error, %{errors: [lock_version: _error]} = changeset} ->
         {:noreply,
          socket
          |> put_flash(
            :error,
-           "This spec changed elsewhere. Pull the latest version before saving."
+           dgettext(
+             "dashboard_specs",
+             "This spec changed elsewhere. Pull the latest version before saving."
+           )
          )
          |> assign_form(Map.put(changeset, :action, :validate))}
 
@@ -111,8 +132,8 @@ defmodule HiveWeb.SpecLive.Edit do
     >
       <SpecComponents.spec_form
         form={@form}
-        title="Edit spec"
-        action_label="Save spec"
+        title={dgettext("dashboard_specs", "Edit spec")}
+        action_label={dgettext("dashboard_specs", "Save spec")}
         domains={@domains}
         source={@spec.source_feature_request}
       />

@@ -14,25 +14,25 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
     <div data-part="widgets">
       <.metric_widget
         id="inference-requests-widget"
-        title="Requests"
+        title={dgettext("dashboard_inference", "Requests")}
         value={format_count(@summary.request_count)}
         legend_color="tertiary"
       />
       <.metric_widget
         id="inference-input-tokens-widget"
-        title="Input tokens"
+        title={dgettext("dashboard_inference", "Input tokens")}
         value={format_count(@summary.input_tokens)}
         legend_color="primary"
       />
       <.metric_widget
         id="inference-output-tokens-widget"
-        title="Output tokens"
+        title={dgettext("dashboard_inference", "Output tokens")}
         value={format_count(@summary.output_tokens)}
         legend_color="secondary"
       />
       <.metric_widget
         id="inference-cost-widget"
-        title="Estimated cost"
+        title={dgettext("dashboard_inference", "Estimated cost")}
         value={format_cost(@summary.cost_usd)}
         legend_color="p50"
       />
@@ -76,14 +76,14 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
       >
         <:actions>
           <.button
-            label="Cancel"
+            label={dgettext("dashboard_inference", "Cancel")}
             variant="secondary"
             phx-click={
               Phoenix.LiveView.JS.dispatch("phx:date-picker-cancel", detail: %{id: @id})
             }
           />
           <.button
-            label="Apply"
+            label={dgettext("dashboard_inference", "Apply")}
             phx-click={
               Phoenix.LiveView.JS.dispatch("phx:date-picker-apply", detail: %{id: @id})
             }
@@ -141,25 +141,30 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
     end
   end
 
-  def profile_status(%ModelBinding{enabled: true}), do: %{label: "Enabled", color: "success"}
-  def profile_status(%ModelBinding{}), do: %{label: "Disabled", color: "neutral"}
+  def profile_status(%ModelBinding{enabled: true}),
+    do: %{label: dgettext("dashboard_inference", "Enabled"), color: "success"}
 
-  def token_status(%Token{enabled: false}), do: %{label: "Revoked", color: "neutral"}
+  def profile_status(%ModelBinding{}),
+    do: %{label: dgettext("dashboard_inference", "Disabled"), color: "neutral"}
+
+  def token_status(%Token{enabled: false}),
+    do: %{label: dgettext("dashboard_inference", "Revoked"), color: "neutral"}
 
   def token_status(%Token{expires_at: %DateTime{} = expires_at}) do
     if DateTime.compare(expires_at, DateTime.utc_now()) == :gt do
-      %{label: "Active", color: "success"}
+      %{label: dgettext("dashboard_inference", "Active"), color: "success"}
     else
-      %{label: "Expired", color: "warning"}
+      %{label: dgettext("dashboard_inference", "Expired"), color: "warning"}
     end
   end
 
-  def token_status(%Token{}), do: %{label: "Active", color: "success"}
+  def token_status(%Token{}),
+    do: %{label: dgettext("dashboard_inference", "Active"), color: "success"}
 
-  def token_expiry_table_label(nil), do: "Never expires"
+  def token_expiry_table_label(nil), do: dgettext("dashboard_inference", "Never expires")
   def token_expiry_table_label(%DateTime{} = at), do: format_compact_datetime(at)
 
-  def last_used_label(nil), do: "Never used"
+  def last_used_label(nil), do: dgettext("dashboard_inference", "Never used")
   def last_used_label(%DateTime{} = at), do: Calendar.strftime(at, "%Y-%m-%d %H:%M UTC")
 
   def format_compact_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %H:%M")
@@ -210,17 +215,33 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
 
   def usage_period_presets do
     [
-      %{id: "last-24-hours", label: "Last 24 hours", period: {24, :hour}},
-      %{id: "last-7-days", label: "Last 7 days", period: {7, :day}},
-      %{id: "last-30-days", label: "Last 30 days", period: {30, :day}},
-      %{id: "last-12-months", label: "Last 12 months", period: {12, :month}},
-      %{id: "custom", label: "Custom"}
+      %{
+        id: "last-24-hours",
+        label: dgettext("dashboard_inference", "Last 24 hours"),
+        period: {24, :hour}
+      },
+      %{
+        id: "last-7-days",
+        label: dgettext("dashboard_inference", "Last 7 days"),
+        period: {7, :day}
+      },
+      %{
+        id: "last-30-days",
+        label: dgettext("dashboard_inference", "Last 30 days"),
+        period: {30, :day}
+      },
+      %{
+        id: "last-12-months",
+        label: dgettext("dashboard_inference", "Last 12 months"),
+        period: {12, :month}
+      },
+      %{id: "custom", label: dgettext("dashboard_inference", "Custom")}
     ]
   end
 
   def usage_period_label(preset) do
     usage_period_presets()
-    |> Enum.find_value("Last 30 days", fn option ->
+    |> Enum.find_value(dgettext("dashboard_inference", "Last 30 days"), fn option ->
       if option.id == preset, do: option.label
     end)
   end
@@ -245,10 +266,10 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
 
   def format_cost(_value), do: "$0.00"
 
-  def format_cost_per_million(nil), do: "Not configured"
+  def format_cost_per_million(nil), do: dgettext("dashboard_inference", "Not configured")
 
   def format_cost_per_million(value) do
-    "#{format_cost(value)} / million tokens"
+    dgettext("dashboard_inference", "%{cost} / million tokens", cost: format_cost(value))
   end
 
   defp usage_chart_series(series) do
@@ -256,13 +277,13 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
       %{
         color: "var:noora-chart-primary",
         data: usage_chart_points(series, :input_tokens),
-        name: "Input",
+        name: dgettext("dashboard_inference", "Input"),
         smooth: 0.1
       },
       %{
         color: "var:noora-chart-secondary",
         data: usage_chart_points(series, :output_tokens),
-        name: "Output",
+        name: dgettext("dashboard_inference", "Output"),
         smooth: 0.1
       }
     ]
@@ -378,7 +399,7 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
   end
 
   defp provider_select_option(%{id: id, source: :reference}) do
-    %{label: "#{id} (not configured)", value: id}
+    %{label: dgettext("dashboard_inference", "%{id} (not configured)", id: id), value: id}
   end
 
   defp provider_select_option(%{id: id}), do: %{label: id, value: id}

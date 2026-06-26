@@ -12,12 +12,19 @@ defmodule HiveWeb.PageHTML do
   def open_graph do
     %{
       description:
-        "Sign in to submit public ideas and help turn domain signals into actionable work.",
+        dgettext(
+          "dashboard_auth",
+          "Sign in to submit public ideas and help turn domain signals into actionable work."
+        ),
       section_label: Auth.product_name(),
-      highlights: ["OIDC sign-in", "Public by default", "Organization-aware"],
+      highlights: [
+        dgettext("dashboard_auth", "OpenID Connect sign-in"),
+        dgettext("dashboard_auth", "Public by default"),
+        dgettext("dashboard_auth", "Organization-aware")
+      ],
       id: "login",
       path: "/login",
-      title: "Log in to #{Auth.product_name()}"
+      title: dgettext("dashboard_auth", "Log in to %{product}", product: Auth.product_name())
     }
   end
 
@@ -36,20 +43,25 @@ defmodule HiveWeb.PageHTML do
     }
 
     ~H"""
-    <Layouts.app title={"Sign in · #{@product_name}"} open_graph={@open_graph}>
+    <Layouts.app
+      title={dgettext("dashboard_auth", "Sign in · %{product}", product: @product_name)}
+      open_graph={@open_graph}
+    >
       <main id="login">
         <div data-part="frame">
           <div data-part="content">
             <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
             <div data-part="header">
-              <h1 data-part="title">Log in to {@product_name}</h1>
+              <h1 data-part="title">
+                {dgettext("dashboard_auth", "Log in to %{product}", product: @product_name)}
+              </h1>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
             <form :if={@dev_login?} method="post" action={~p"/dev/login"} data-part="oauth">
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <.button
                 type="submit"
-                label="Sign in as test user"
+                label={dgettext("dashboard_auth", "Sign in as test user")}
                 variant="primary"
                 size="medium"
               />
@@ -57,14 +69,18 @@ defmodule HiveWeb.PageHTML do
             <div :if={@providers != []} data-part="oauth">
               <.button
                 :for={{key, meta} <- @providers}
-                label={"Continue with #{meta.display_name}"}
+                label={
+                  dgettext("dashboard_auth", "Continue with %{provider}",
+                    provider: meta.display_name
+                  )
+                }
                 href={~p"/auth/#{Atom.to_string(key)}"}
                 variant="secondary"
                 size="medium"
               />
               <.button
                 :if={!@auth_enabled?}
-                label="Continue without signing in"
+                label={dgettext("dashboard_auth", "Continue without signing in")}
                 href={~p"/"}
                 variant="secondary"
                 size="medium"
@@ -74,19 +90,29 @@ defmodule HiveWeb.PageHTML do
               <.alert
                 status="warning"
                 size="large"
-                title="No identity provider is configured"
-                description="Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
+                title={dgettext("dashboard_auth", "No identity provider is configured")}
+                description={
+                  dgettext(
+                    "dashboard_auth",
+                    "Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
+                  )
+                }
               />
             </div>
             <div :if={@providers == [] and !@auth_enabled?} data-part="oauth">
               <.alert
                 status="information"
                 size="large"
-                title="This instance is public"
-                description="Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
+                title={dgettext("dashboard_auth", "This instance is public")}
+                description={
+                  dgettext(
+                    "dashboard_auth",
+                    "Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
+                  )
+                }
               />
               <.button
-                label="Continue without signing in"
+                label={dgettext("dashboard_auth", "Continue without signing in")}
                 href={~p"/"}
                 variant="secondary"
                 size="medium"

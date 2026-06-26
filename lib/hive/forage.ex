@@ -3,10 +3,14 @@ defmodule Hive.Forage do
   Collects sources that can feed Hive with workable pieces of work.
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   import Ecto.Query
 
   alias Hive.Accounts.User
   alias Hive.Auth
+  alias Hive.Domains.Domain
+  alias Hive.Domains.GitHubRepository
   alias Hive.Forage.Comment
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
@@ -16,68 +20,88 @@ defmodule Hive.Forage do
   alias Hive.Forage.Item
   alias Hive.Forage.Policy
   alias Hive.GitHub.Issues
-  alias Hive.Domains.GitHubRepository
-  alias Hive.Domains.Domain
   alias Hive.Repo
 
   @default_item_page_size 20
 
-  @sources [
+  @source_ids [:feature_requests, :bug_reports, :feedback, :github_issues, :grafana_alerts]
+
+  def sources, do: Enum.map(@source_ids, &source/1)
+
+  def visible_sources(user) do
+    Enum.filter(sources(), &can_access?(&1, user))
+  end
+
+  def get_source!(id) do
+    Enum.find(sources(), &(&1.id == id)) || raise ArgumentError, "unknown forage source: #{id}"
+  end
+
+  defp source(:feature_requests) do
     %{
       id: :feature_requests,
-      label: "Feature requests",
-      description: "Public domain ideas submitted by authenticated users.",
+      label: dgettext("dashboard_forage", "Feature requests"),
+      description:
+        dgettext("dashboard_forage", "Public domain ideas submitted by authenticated users."),
       icon: "bulb",
       path: "/forage/feature-requests",
       visibility: :public,
       creatable?: true
-    },
+    }
+  end
+
+  defp source(:bug_reports) do
     %{
       id: :bug_reports,
-      label: "Bug reports",
-      description: "Public defects that should become actionable work.",
+      label: dgettext("dashboard_forage", "Bug reports"),
+      description:
+        dgettext("dashboard_forage", "Public defects that should become actionable work."),
       icon: "file_alert",
       path: "/forage/bug-reports",
       visibility: :public,
       creatable?: true
-    },
+    }
+  end
+
+  defp source(:feedback) do
     %{
       id: :feedback,
-      label: "Feedback",
-      description: "Public feedback that helps shape the domain direction.",
+      label: dgettext("dashboard_forage", "Feedback"),
+      description:
+        dgettext("dashboard_forage", "Public feedback that helps shape the domain direction."),
       icon: "message_circle",
       path: "/forage/feedback",
       visibility: :public,
       creatable?: true
-    },
+    }
+  end
+
+  defp source(:github_issues) do
     %{
       id: :github_issues,
-      label: "GitHub issues",
-      description: "Open issues from the GitHub repositories connected to your projects.",
+      label: dgettext("dashboard_forage", "GitHub issues"),
+      description:
+        dgettext(
+          "dashboard_forage",
+          "Open issues from the GitHub repositories connected to your projects."
+        ),
       icon: "brand_github",
       path: "/forage/github-issues",
       visibility: :per_domain,
       creatable?: false
-    },
+    }
+  end
+
+  defp source(:grafana_alerts) do
     %{
       id: :grafana_alerts,
-      label: "Grafana alerts",
-      description: "Operational signals visible only to organization members.",
+      label: dgettext("dashboard_forage", "Grafana alerts"),
+      description:
+        dgettext("dashboard_forage", "Operational signals visible only to organization members."),
       icon: "bell",
       path: "/forage/grafana-alerts",
       visibility: :organization,
       creatable?: false
     }
-  ]
-
-  def sources, do: @sources
-
-  def visible_sources(user) do
-    Enum.filter(@sources, &can_access?(&1, user))
-  end
-
-  def get_source!(id) do
-    Enum.find(@sources, &(&1.id == id)) || raise ArgumentError, "unknown forage source: #{id}"
   end
 
   def can_access?(%{visibility: :per_domain}, user) do
@@ -119,14 +143,20 @@ defmodule Hive.Forage do
     [:open, :planned, :closed, :firing, :resolved]
   end
 
-  def item_type_label(:feature_request), do: "Feature request"
-  def item_type_label(:bug_report), do: "Bug report"
-  def item_type_label(:feedback), do: "Feedback"
-  def item_type_label(:github_issue), do: "GitHub issue"
-  def item_type_label(:grafana_alert), do: "Grafana alert"
+  def item_type_label(:feature_request), do: dgettext("dashboard_forage", "Feature request")
+  def item_type_label(:bug_report), do: dgettext("dashboard_forage", "Bug report")
+  def item_type_label(:feedback), do: dgettext("dashboard_forage", "Feedback")
+  def item_type_label(:github_issue), do: dgettext("dashboard_forage", "GitHub issue")
+  def item_type_label(:grafana_alert), do: dgettext("dashboard_forage", "Grafana alert")
 
   def item_type_label(type),
     do: type |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+  def item_status_label(:open), do: dgettext("dashboard_forage", "Open")
+  def item_status_label(:planned), do: dgettext("dashboard_forage", "Planned")
+  def item_status_label(:closed), do: dgettext("dashboard_forage", "Closed")
+  def item_status_label(:firing), do: dgettext("dashboard_forage", "Firing")
+  def item_status_label(:resolved), do: dgettext("dashboard_forage", "Resolved")
 
   def item_status_label(status),
     do: status |> to_string() |> String.replace("_", " ") |> String.capitalize()

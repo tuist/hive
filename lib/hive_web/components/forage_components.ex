@@ -36,8 +36,13 @@ defmodule HiveWeb.ForageComponents do
     <section id="forage">
       <div data-part="header">
         <div data-part="title-group">
-          <h1>Forage</h1>
-          <p>Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue.</p>
+          <h1>{dgettext("dashboard_forage", "Forage")}</h1>
+          <p>
+            {dgettext(
+              "dashboard_forage",
+              "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue."
+            )}
+          </p>
         </div>
         <div data-part="header-actions">
           <Layouts.feeds_dropdown
@@ -46,7 +51,11 @@ defmodule HiveWeb.ForageComponents do
             rss_href="/forage/rss.xml"
           />
           <.button
-            label={if @signed_in?, do: "New item", else: "Log in to submit"}
+            label={
+              if @signed_in?,
+                do: dgettext("dashboard_forage", "New item"),
+                else: dgettext("dashboard_forage", "Log in to submit")
+            }
             href={
               if @signed_in?,
                 do: ~p"/forage/new",
@@ -64,17 +73,29 @@ defmodule HiveWeb.ForageComponents do
       </div>
 
       <div data-part="widgets">
-        <.forage_widget title="Items" value={@stats.total} legend="primary" />
-        <.forage_widget title="Open signals" value={@stats.open} legend="secondary" />
-        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Items")}
+          value={@stats.total}
+          legend="primary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Open signals")}
+          value={@stats.open}
+          legend="secondary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Domains")}
+          value={@stats.domains}
+          legend="tertiary"
+        />
       </div>
 
-      <.card icon="rss" title="Forage items">
+      <.card icon="rss" title={dgettext("dashboard_forage", "Forage items")}>
         <.card_section>
           <div data-part="table-toolbar">
             <.filter_dropdown
               id="forage-filter"
-              label="Filter"
+              label={dgettext("dashboard_forage", "Filter")}
               available_filters={@available_filters}
               active_filters={@active_filters}
               on_select="add_filter"
@@ -92,7 +113,7 @@ defmodule HiveWeb.ForageComponents do
                   field={@search_form[:query]}
                   type="search"
                   show_suffix={false}
-                  placeholder="Search forage..."
+                  placeholder={dgettext("dashboard_forage", "Search forage...")}
                 />
               </.form>
             </div>
@@ -104,12 +125,14 @@ defmodule HiveWeb.ForageComponents do
 
           <div :if={@items == []} data-part="empty-state">
             <div data-part="empty-icon"><.icon name="rss" /></div>
-            <h2>No forage items found</h2>
-            <p>Items that match the active filters will appear here.</p>
+            <h2>{dgettext("dashboard_forage", "No forage items found")}</h2>
+            <p>
+              {dgettext("dashboard_forage", "Items that match the active filters will appear here.")}
+            </p>
           </div>
 
           <.table :if={@items != []} id="forage-items-table" rows={@items}>
-            <:col :let={item} label="Item">
+            <:col :let={item} label={dgettext("dashboard_forage", "Item")}>
               <div data-part="item-table-cell">
                 <.icon name={item_icon(item.type)} />
                 <div data-part="item-table-copy">
@@ -122,21 +145,21 @@ defmodule HiveWeb.ForageComponents do
                 </div>
               </div>
             </:col>
-            <:col :let={item} label="Type">
+            <:col :let={item} label={dgettext("dashboard_forage", "Type")}>
               <.badge_cell
                 label={Forage.item_type_label(item.type)}
                 color={type_color(item.type)}
                 style="light-fill"
               />
             </:col>
-            <:col :let={item} label="Status">
+            <:col :let={item} label={dgettext("dashboard_forage", "Status")}>
               <.badge_cell
                 label={Forage.item_status_label(item.status)}
                 color={Forage.item_status_color(item.status)}
                 style="light-fill"
               />
             </:col>
-            <:col :let={item} label="Domains">
+            <:col :let={item} label={dgettext("dashboard_forage", "Domains")}>
               <div data-part="item-table-domains">
                 <.badge
                   :for={domain <- item.domains}
@@ -146,24 +169,24 @@ defmodule HiveWeb.ForageComponents do
                   size="large"
                 />
                 <span :if={item.domains == []} data-part="empty-domains">
-                  No domains
+                  {dgettext("dashboard_forage", "No domains")}
                 </span>
               </div>
             </:col>
-            <:col :let={item} label="Source">
+            <:col :let={item} label={dgettext("dashboard_forage", "Source")}>
               <div data-part="item-table-source">
                 <span>{item.source_label || "-"}</span>
                 <span :if={item.external_label}>{item.external_label}</span>
               </div>
             </:col>
-            <:col :let={item} label="Updated">
+            <:col :let={item} label={dgettext("dashboard_forage", "Updated")}>
               <.time_cell time={item.updated_at} />
             </:col>
-            <:col :let={item} label="Actions">
+            <:col :let={item} label={dgettext("dashboard_forage", "Actions")}>
               <div data-part="item-actions">
                 <.button
                   :if={@can_create_spec? and item.origin == :manual}
-                  label="Create spec"
+                  label={dgettext("dashboard_forage", "Create spec")}
                   href={~p"/specs/new?source_feature_request_id=#{item.source_record_id}"}
                   size="small"
                   variant="secondary"
@@ -189,7 +212,7 @@ defmodule HiveWeb.ForageComponents do
           <div :if={@meta.total_pages > 1} data-part="pagination">
             <.button
               variant="secondary"
-              label="Prev"
+              label={dgettext("dashboard_forage", "Prev")}
               disabled={@meta.current_page <= 1}
               patch={@page_link.(max(1, @meta.current_page - 1))}
             >
@@ -197,7 +220,7 @@ defmodule HiveWeb.ForageComponents do
             </.button>
             <.button
               variant="secondary"
-              label="Next"
+              label={dgettext("dashboard_forage", "Next")}
               disabled={@meta.current_page >= @meta.total_pages}
               patch={@page_link.(min(@meta.total_pages, @meta.current_page + 1))}
             >
@@ -235,7 +258,7 @@ defmodule HiveWeb.ForageComponents do
           <div data-part="header-actions">
           <.button
             :if={@can_edit_item? and !@editing_item?}
-            label="Edit"
+            label={dgettext("dashboard_forage", "Edit")}
             size="medium"
             variant="secondary"
             phx-click="edit_item"
@@ -244,7 +267,7 @@ defmodule HiveWeb.ForageComponents do
           </.button>
           <.button
             :if={@can_create_spec? and @item.origin == :manual}
-            label="Create spec"
+            label={dgettext("dashboard_forage", "Create spec")}
             href={~p"/specs/new?source_feature_request_id=#{@item.source_record_id}"}
             size="medium"
             variant="secondary"
@@ -262,7 +285,11 @@ defmodule HiveWeb.ForageComponents do
       </div>
 
       <.card
-        title={if @editing_item?, do: "Edit item", else: "Metadata"}
+        title={
+          if @editing_item?,
+            do: dgettext("dashboard_forage", "Edit item"),
+            else: dgettext("dashboard_forage", "Metadata")
+        }
         icon={item_icon(@item.type)}
         data-part="metadata-card"
       >
@@ -277,13 +304,13 @@ defmodule HiveWeb.ForageComponents do
             <.item_type_select form={@item_edit_form} id="forage-item-edit-type" />
             <.text_input
               field={@item_edit_form[:title]}
-              label="Title"
+              label={dgettext("dashboard_forage", "Title")}
               required={true}
               show_required={true}
             />
             <.text_area
               field={@item_edit_form[:description]}
-              label="Description"
+              label={dgettext("dashboard_forage", "Description")}
               max_length={2_000}
               rows={8}
               required={true}
@@ -291,37 +318,41 @@ defmodule HiveWeb.ForageComponents do
             />
             <div data-part="form-actions">
               <.button
-                label="Cancel"
+                label={dgettext("dashboard_forage", "Cancel")}
                 size="medium"
                 variant="secondary"
                 type="button"
                 phx-click="cancel_item_edit"
               />
-              <.button label="Save item" size="medium" variant="primary" />
+              <.button
+                label={dgettext("dashboard_forage", "Save item")}
+                size="medium"
+                variant="primary"
+              />
             </div>
           </.form>
 
           <div :if={!@editing_item?} data-part="metadata-grid">
             <div data-part="metadata-row">
               <div data-part="metadata">
-                <div data-part="title">Source</div>
+                <div data-part="title">{dgettext("dashboard_forage", "Source")}</div>
                 <span data-part="label">
                   {@item.source_label}{if @item.external_label, do: " #{@item.external_label}"}
                 </span>
               </div>
               <div :if={@item.requester_label} data-part="metadata">
-                <div data-part="title">Requester</div>
+                <div data-part="title">{dgettext("dashboard_forage", "Requester")}</div>
                 <span data-part="label">{@item.requester_label}</span>
               </div>
               <div data-part="metadata">
-                <div data-part="title">Updated</div>
+                <div data-part="title">{dgettext("dashboard_forage", "Updated")}</div>
                 <span data-part="label">{Calendar.strftime(@item.updated_at, "%b %-d, %Y")}</span>
               </div>
             </div>
 
             <div :if={@item.domains != []} data-part="metadata-row">
               <div data-part="metadata">
-                <div data-part="title">Domains</div>
+                <div data-part="title">{dgettext("dashboard_forage", "Domains")}</div>
                 <div data-part="metadata-badges">
                   <.badge
                     :for={domain <- @item.domains}
@@ -337,7 +368,12 @@ defmodule HiveWeb.ForageComponents do
         </.card_section>
       </.card>
 
-      <.card :if={!@editing_item?} title="Details" icon="file_text" data-part="body-card">
+      <.card
+        :if={!@editing_item?}
+        title={dgettext("dashboard_forage", "Details")}
+        icon="file_text"
+        data-part="body-card"
+      >
         <.card_section data-part="body-card-section">
           <div data-part="detail-body">
             {Markdown.render(@item.body)}
@@ -345,7 +381,11 @@ defmodule HiveWeb.ForageComponents do
         </.card_section>
       </.card>
 
-      <.card title="Comments" icon="message_circle" data-part="comments-card">
+      <.card
+        title={dgettext("dashboard_forage", "Comments")}
+        icon="message_circle"
+        data-part="comments-card"
+      >
         <.card_section data-part="comments-card-section">
           <.comments_list
             item={@item}
@@ -362,15 +402,19 @@ defmodule HiveWeb.ForageComponents do
           >
             <.text_area
               field={@comment_form[:body]}
-              label="Comment"
-              placeholder="Add context or feedback with Markdown"
+              label={dgettext("dashboard_forage", "Comment")}
+              placeholder={dgettext("dashboard_forage", "Add context or feedback with Markdown")}
               max_length={20_000}
               rows={5}
               required={true}
               show_required={true}
             />
             <div data-part="form-actions">
-              <.button label="Comment" size="medium" variant="primary" />
+              <.button
+                label={dgettext("dashboard_forage", "Comment")}
+                size="medium"
+                variant="primary"
+              />
             </div>
           </.form>
 
@@ -379,13 +423,13 @@ defmodule HiveWeb.ForageComponents do
             status="information"
             type="secondary"
             size="large"
-            title="Sign in to comment"
+            title={dgettext("dashboard_forage", "Sign in to comment")}
             data-part="comment-auth-required"
           >
-            <p>Comments are available to authenticated users.</p>
+            <p>{dgettext("dashboard_forage", "Comments are available to authenticated users.")}</p>
             <:action>
               <.button
-                label="Sign in"
+                label={dgettext("dashboard_forage", "Sign in")}
                 href={~p"/login?#{[return_to: @current_path]}"}
                 size="medium"
                 variant="secondary"
@@ -406,8 +450,13 @@ defmodule HiveWeb.ForageComponents do
   defp comments_list(assigns) do
     ~H"""
     <div :if={@item.comments_status == :error} data-part="comments-unavailable">
-      <.alert status="information" type="secondary" size="large" title="GitHub comments unavailable">
-        <p>Open the issue on GitHub to read or add comments.</p>
+      <.alert
+        status="information"
+        type="secondary"
+        size="large"
+        title={dgettext("dashboard_forage", "GitHub comments unavailable")}
+      >
+        <p>{dgettext("dashboard_forage", "Open the issue on GitHub to read or add comments.")}</p>
       </.alert>
     </div>
 
@@ -437,8 +486,8 @@ defmodule HiveWeb.ForageComponents do
                 data-part="comment-action-button"
                 phx-click="edit_comment"
                 phx-value-id={comment.id}
-                aria-label="Edit comment"
-                title="Edit comment"
+                aria-label={dgettext("dashboard_forage", "Edit comment")}
+                title={dgettext("dashboard_forage", "Edit comment")}
               >
                 <.pencil />
               </button>
@@ -448,8 +497,8 @@ defmodule HiveWeb.ForageComponents do
                 target="_blank"
                 rel="noopener noreferrer"
                 data-part="comment-permalink"
-                aria-label="Open comment"
-                title="Open comment"
+                aria-label={dgettext("dashboard_forage", "Open comment")}
+                title={dgettext("dashboard_forage", "Open comment")}
               >
                 <.icon name="external_link" />
               </a>
@@ -466,7 +515,7 @@ defmodule HiveWeb.ForageComponents do
             <input type="hidden" name="comment_id" value={comment_id(comment)} />
             <.text_area
               field={@edit_comment_form[:body]}
-              label="Edit comment"
+              label={dgettext("dashboard_forage", "Edit comment")}
               max_length={20_000}
               rows={5}
               required={true}
@@ -474,13 +523,17 @@ defmodule HiveWeb.ForageComponents do
             />
             <div data-part="form-actions">
               <.button
-                label="Cancel"
+                label={dgettext("dashboard_forage", "Cancel")}
                 size="medium"
                 variant="secondary"
                 type="button"
                 phx-click="cancel_comment_edit"
               />
-              <.button label="Save comment" size="medium" variant="primary" />
+              <.button
+                label={dgettext("dashboard_forage", "Save comment")}
+                size="medium"
+                variant="primary"
+              />
             </div>
           </.form>
 
@@ -499,7 +552,7 @@ defmodule HiveWeb.ForageComponents do
 
   defp comment_author(%{user: %{email: email}}) when is_binary(email), do: email
   defp comment_author(%{user_login: login}) when is_binary(login), do: login
-  defp comment_author(_comment), do: "Unknown"
+  defp comment_author(_comment), do: dgettext("dashboard_forage", "Unknown")
 
   defp comment_body(%{body: body}) when is_binary(body), do: body
   defp comment_body(_comment), do: ""
@@ -511,7 +564,7 @@ defmodule HiveWeb.ForageComponents do
   defp comment_timestamp(%{created_at: created_at}) when is_binary(created_at) do
     case DateTime.from_iso8601(created_at) do
       {:ok, created_at, _offset} -> Calendar.strftime(created_at, "%b %-d, %Y")
-      _error -> "GitHub"
+      _error -> dgettext("dashboard_forage", "GitHub")
     end
   end
 
@@ -531,10 +584,12 @@ defmodule HiveWeb.ForageComponents do
   defp comment_editable?(_comment, _current_user), do: false
 
   defp empty_comments_text(%{origin: :github, comments_status: :loaded}),
-    do: "No GitHub comments yet."
+    do: dgettext("dashboard_forage", "No GitHub comments yet.")
 
-  defp empty_comments_text(%{origin: :manual}), do: "No comments yet."
-  defp empty_comments_text(_item), do: "No comments available."
+  defp empty_comments_text(%{origin: :manual}),
+    do: dgettext("dashboard_forage", "No comments yet.")
+
+  defp empty_comments_text(_item), do: dgettext("dashboard_forage", "No comments available.")
 
   attr :source, :map, required: true
   attr :feature_requests, :list, required: true
@@ -549,19 +604,37 @@ defmodule HiveWeb.ForageComponents do
       <.forage_header source={@source} signed_in?={@signed_in?} />
 
       <div data-part="widgets">
-        <.forage_widget title="Total requests" value={@stats.total} legend="primary" />
-        <.forage_widget title="Open" value={@stats.open} legend="secondary" />
-        <.forage_widget title="Contributors" value={@stats.contributors} legend="tertiary" />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Total requests")}
+          value={@stats.total}
+          legend="primary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Open")}
+          value={@stats.open}
+          legend="secondary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Contributors")}
+          value={@stats.contributors}
+          legend="tertiary"
+        />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
         <.card_section>
           <div :if={@feature_requests == []} data-part="empty-state">
             <div data-part="empty-icon"><.bulb /></div>
-            <h2>No feature requests yet</h2>
-            <p>Public ideas submitted here will appear as forage for the hive.</p>
+            <h2>{dgettext("dashboard_forage", "No feature requests yet")}</h2>
+            <p>
+              {dgettext("dashboard_forage", "Public ideas submitted here will appear as forage for Hive.")}
+            </p>
             <.button
-              label={if @signed_in?, do: "Create the first request", else: "Log in to request"}
+              label={
+                if @signed_in?,
+                  do: dgettext("dashboard_forage", "Create the first request"),
+                  else: dgettext("dashboard_forage", "Log in to request")
+              }
               href={if @signed_in?, do: ~p"/forage/new", else: ~p"/login"}
               size="medium"
               variant="secondary"
@@ -583,10 +656,15 @@ defmodule HiveWeb.ForageComponents do
                   size="large"
                   dot={true}
                 />
-                <.badge label="Public" color="success" style="light-fill" size="large" />
+                <.badge
+                  label={dgettext("dashboard_forage", "Public")}
+                  color="success"
+                  style="light-fill"
+                  size="large"
+                />
                 <.button
                   :if={@can_create_spec?}
-                  label="Create spec"
+                  label={dgettext("dashboard_forage", "Create spec")}
                   href={~p"/specs/new?source_feature_request_id=#{feature_request.id}"}
                   size="small"
                   variant="secondary"
@@ -608,36 +686,50 @@ defmodule HiveWeb.ForageComponents do
     <section id="forage">
       <div data-part="header">
         <div data-part="title-group">
-          <h1>New forage item</h1>
-          <p>Capture a public feature request, bug report, or feedback item.</p>
+          <h1>{dgettext("dashboard_forage", "New forage item")}</h1>
+          <p>
+            {dgettext(
+              "dashboard_forage",
+              "Capture a public feature request, bug report, or feedback item."
+            )}
+          </p>
           <span data-part="requester">
-            Requesting as {@user_name}
+            {dgettext("dashboard_forage", "Requesting as %{user}", user: @user_name)}
           </span>
         </div>
       </div>
 
-      <.card icon="rss" title="Item details" data-part="form-card">
+      <.card icon="rss" title={dgettext("dashboard_forage", "Item details")} data-part="form-card">
         <.card_section>
           <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
             <.item_type_select form={@form} id="forage-item-type" />
             <.text_input
               field={@form[:title]}
-              label="Title"
-              placeholder="Describe the item in one sentence"
+              label={dgettext("dashboard_forage", "Title")}
+              placeholder={dgettext("dashboard_forage", "Describe the item in one sentence")}
               required={true}
               show_required={true}
             />
             <.text_area
               field={@form[:description]}
-              label="Description"
-              placeholder="Explain the problem, who needs it, and why it matters."
+              label={dgettext("dashboard_forage", "Description")}
+              placeholder={
+                dgettext(
+                  "dashboard_forage",
+                  "Explain the problem, who needs it, and why it matters."
+                )
+              }
               max_length={2_000}
               rows={8}
               required={true}
               show_required={true}
             />
             <div data-part="form-actions">
-              <.button label="Submit item" size="medium" variant="primary" />
+              <.button
+                label={dgettext("dashboard_forage", "Submit item")}
+                size="medium"
+                variant="primary"
+              />
             </div>
           </.form>
         </.card_section>
@@ -662,20 +754,33 @@ defmodule HiveWeb.ForageComponents do
       <.forage_header source={@source} signed_in?={true} />
 
       <div data-part="widgets">
-        <.forage_widget title="Active" value={@stats.firing} legend="primary" />
-        <.forage_widget title="Resolved" value={@stats.resolved} legend="secondary" />
-        <.forage_widget title="Projects" value={@stats.projects} legend="tertiary" />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Active")}
+          value={@stats.firing}
+          legend="primary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Resolved")}
+          value={@stats.resolved}
+          legend="secondary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Projects")}
+          value={@stats.projects}
+          legend="tertiary"
+        />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
         <.card_section>
           <div :if={@alerts == []} data-part="empty-state">
             <div data-part="empty-icon"><.bell /></div>
-            <h2>No Grafana alerts yet</h2>
+            <h2>{dgettext("dashboard_forage", "No Grafana alerts yet")}</h2>
             <p>
-              Generate a webhook on a project and point a Grafana
-              contact point at it. Firing and resolved deliveries will thread
-              into one item per alert.
+              {dgettext(
+                "dashboard_forage",
+                "Generate a webhook on a project and point a Grafana contact point at it. Firing and resolved deliveries will thread into one item per alert."
+              )}
             </p>
           </div>
 
@@ -703,7 +808,7 @@ defmodule HiveWeb.ForageComponents do
                 />
                 <.button
                   :if={alert.generator_url}
-                  label="Open in Grafana"
+                  label={dgettext("dashboard_forage", "Open in Grafana")}
                   href={alert.generator_url}
                   size="small"
                   variant="secondary"
@@ -726,7 +831,9 @@ defmodule HiveWeb.ForageComponents do
   end
 
   defp grafana_meta(alert) do
-    "Last received #{Calendar.strftime(alert.last_received_at, "%Y-%m-%d %H:%M UTC")}"
+    dgettext("dashboard_forage", "Last received %{date}",
+      date: Calendar.strftime(alert.last_received_at, "%Y-%m-%d %H:%M UTC")
+    )
   end
 
   attr :source, :map, required: true
@@ -742,9 +849,21 @@ defmodule HiveWeb.ForageComponents do
       <.forage_header source={@source} signed_in?={@signed_in?} />
 
       <div data-part="widgets">
-        <.forage_widget title={String.capitalize(@stats.state_label)} value={@stats.total} legend="primary" />
-        <.forage_widget title="Repositories" value={@stats.repositories} legend="secondary" />
-        <.forage_widget title="Domains" value={@stats.domains} legend="tertiary" />
+        <.forage_widget
+          title={state_label(@stats.state_label)}
+          value={@stats.total}
+          legend="primary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Repositories")}
+          value={@stats.repositories}
+          legend="secondary"
+        />
+        <.forage_widget
+          title={dgettext("dashboard_forage", "Domains")}
+          value={@stats.domains}
+          legend="tertiary"
+        />
       </div>
 
       <.card icon={@source.icon} title={@source.label}>
@@ -752,7 +871,7 @@ defmodule HiveWeb.ForageComponents do
           <div data-part="filters">
             <.filter_dropdown
               id="github-issues-filter"
-              label="Filter"
+              label={dgettext("dashboard_forage", "Filter")}
               available_filters={@available_filters}
               active_filters={@active_filters}
               on_select="add_filter"
@@ -764,11 +883,16 @@ defmodule HiveWeb.ForageComponents do
 
           <div :if={@entries == []} data-part="empty-state">
             <div data-part="empty-icon"><.icon name={@source.icon} /></div>
-            <h2>No {@stats.state_label} to show</h2>
+            <h2>
+              {dgettext("dashboard_forage", "No %{state} to show", state: @stats.state_label)}
+            </h2>
             <p>
-              Connect a GitHub repository to a domain in
-              <a href={~p"/domains"}>Domains</a>
-              and matching issues will appear here once they have been synced.
+              {dgettext("dashboard_forage", "Connect a GitHub repository to a domain in")}
+              <a href={~p"/domains"}>{dgettext("dashboard_forage", "Domains")}</a>
+              {dgettext(
+                "dashboard_forage",
+                "and matching issues will appear here once they have been synced."
+              )}
             </p>
           </div>
 
@@ -811,7 +935,7 @@ defmodule HiveWeb.ForageComponents do
                   size="large"
                 />
                 <.button
-                  label="View on GitHub"
+                  label={dgettext("dashboard_forage", "View on GitHub")}
                   href={GitHubIssue.html_url(%{issue | github_repository: repository})}
                   size="small"
                   variant="secondary"
@@ -840,8 +964,13 @@ defmodule HiveWeb.ForageComponents do
         <.card_section>
           <div data-part="empty-state">
             <div data-part="empty-icon"><.icon name={@source.icon} /></div>
-            <h2>This forage source is not connected yet</h2>
-            <p>The source is modeled so access can be gated before ingestion is implemented.</p>
+            <h2>{dgettext("dashboard_forage", "This forage source is not connected yet")}</h2>
+            <p>
+              {dgettext(
+                "dashboard_forage",
+                "The source is modeled so access can be gated before ingestion is implemented."
+              )}
+            </p>
           </div>
         </.card_section>
       </.card>
@@ -867,7 +996,11 @@ defmodule HiveWeb.ForageComponents do
         />
         <.button
           :if={@source.id == :feature_requests}
-          label={if @signed_in?, do: "New request", else: "Log in to request"}
+          label={
+            if @signed_in?,
+              do: dgettext("dashboard_forage", "New request"),
+              else: dgettext("dashboard_forage", "Log in to request")
+          }
           href={if @signed_in?, do: ~p"/forage/new", else: ~p"/login"}
           size="medium"
           variant="primary"
@@ -911,8 +1044,13 @@ defmodule HiveWeb.ForageComponents do
 
     ~H"""
     <div data-part="select-field">
-      <span>Type</span>
-      <.select id={@id} name={@form[:type].name} value={@value} label="Choose type">
+      <span>{dgettext("dashboard_forage", "Type")}</span>
+      <.select
+        id={@id}
+        name={@form[:type].name}
+        value={@value}
+        label={dgettext("dashboard_forage", "Choose type")}
+      >
         <:item
           :for={type <- FeatureRequest.types()}
           value={Atom.to_string(type)}
@@ -938,9 +1076,13 @@ defmodule HiveWeb.ForageComponents do
   defp type_color(:grafana_alert), do: "attention"
   defp type_color(_type), do: "neutral"
 
-  defp external_action_label(%{type: :github_issue}), do: "Open on GitHub"
-  defp external_action_label(%{type: :grafana_alert}), do: "Open in Grafana"
-  defp external_action_label(_item), do: "Open"
+  defp external_action_label(%{type: :github_issue}),
+    do: dgettext("dashboard_forage", "Open on GitHub")
+
+  defp external_action_label(%{type: :grafana_alert}),
+    do: dgettext("dashboard_forage", "Open in Grafana")
+
+  defp external_action_label(_item), do: dgettext("dashboard_forage", "Open")
 
   defp external_action_icon(%{type: :github_issue}), do: "brand_github"
   defp external_action_icon(_item), do: "external_link"
@@ -972,16 +1114,24 @@ defmodule HiveWeb.ForageComponents do
     }
   end
 
+  defp status_label(:open), do: dgettext("dashboard_forage", "Open")
+  defp status_label(:planned), do: dgettext("dashboard_forage", "Planned")
+  defp status_label(:closed), do: dgettext("dashboard_forage", "Closed")
   defp status_label(status), do: status |> Atom.to_string() |> String.capitalize()
 
   defp status_color(:open), do: "information"
   defp status_color(:planned), do: "attention"
   defp status_color(:closed), do: "neutral"
 
-  defp requester_label(%{user: %{email: email}}) when is_binary(email),
-    do: "Submitted by #{email}"
+  defp state_label("open issues"), do: dgettext("dashboard_forage", "Open issues")
+  defp state_label("closed issues"), do: dgettext("dashboard_forage", "Closed issues")
+  defp state_label(state), do: String.capitalize(state)
 
-  defp requester_label(_feature_request), do: "Submitted anonymously"
+  defp requester_label(%{user: %{email: email}}) when is_binary(email),
+    do: dgettext("dashboard_forage", "Submitted by %{email}", email: email)
+
+  defp requester_label(_feature_request),
+    do: dgettext("dashboard_forage", "Submitted anonymously")
 
   defp issue_excerpt(nil), do: nil
   defp issue_excerpt(""), do: nil

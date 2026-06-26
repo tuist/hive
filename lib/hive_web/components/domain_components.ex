@@ -16,12 +16,12 @@ defmodule HiveWeb.DomainComponents do
     <section id="domains">
       <div data-part="page-header">
         <div data-part="title-group">
-          <h1>Domains</h1>
-          <p>The domains this Hive instance plans and routes work for.</p>
+          <h1>{dgettext("dashboard_domains", "Domains")}</h1>
+          <p>{dgettext("dashboard_domains", "The domains this Hive instance plans and routes work for.")}</p>
         </div>
       </div>
 
-      <.card icon="treemap" title="Domains" data-part="domains-card">
+      <.card icon="treemap" title={dgettext("dashboard_domains", "Domains")} data-part="domains-card">
         <:actions :if={@editable?}>
           <.new_domain_modal form={@form} />
         </:actions>
@@ -35,18 +35,18 @@ defmodule HiveWeb.DomainComponents do
                 if @editable?, do: fn domain -> ~p"/domains/#{domain.id}" end, else: nil
               }
             >
-              <:col :let={domain} label="Domain">
+              <:col :let={domain} label={dgettext("dashboard_domains", "Domain")}>
                 <.text_and_description_cell
                   label={domain.name}
                   description={domain_description(domain)}
                 />
               </:col>
-              <:col :let={domain} label="Projects">
+              <:col :let={domain} label={dgettext("dashboard_domains", "Projects")}>
                 <div data-part="cell" data-type="badge">
                   <div data-part="project-cell">
                     <.badge
                       :if={domain_projects(domain) == []}
-                      label="No project"
+                      label={dgettext("dashboard_domains", "No project")}
                       color="neutral"
                       style="light-fill"
                       size="large"
@@ -63,28 +63,28 @@ defmodule HiveWeb.DomainComponents do
                   </div>
                 </div>
               </:col>
-              <:col :let={domain} label="Feed">
+              <:col :let={domain} label={dgettext("dashboard_domains", "Feed")}>
                 <div :if={domain.id} data-part="cell" data-type="feed">
                   <a
                     href={"/domains/#{domain.id}/atom.xml"}
                     data-part="feed-link"
-                    title="Subscribe via Atom"
+                    title={dgettext("dashboard_domains", "Subscribe via Atom")}
                   >
-                    <.icon name="rss" /><span>Atom</span>
+                    <.icon name="rss" /><span>{dgettext("dashboard_domains", "Atom")}</span>
                   </a>
                   <a
                     href={"/domains/#{domain.id}/rss.xml"}
                     data-part="feed-link"
-                    title="Subscribe via RSS"
+                    title={dgettext("dashboard_domains", "Subscribe via RSS")}
                   >
-                    <.icon name="rss" /><span>RSS</span>
+                    <.icon name="rss" /><span>{dgettext("dashboard_domains", "RSS")}</span>
                   </a>
                 </div>
               </:col>
               <:empty_state>
                 <.table_empty_state
                   icon="treemap"
-                  title="No domains yet"
+                  title={dgettext("dashboard_domains", "No domains yet")}
                   subtitle={domain_empty_subtitle(@editable?)}
                 />
               </:empty_state>
@@ -119,7 +119,7 @@ defmodule HiveWeb.DomainComponents do
       </div>
 
       <div data-part="domain-detail-layout">
-        <.card icon="treemap" title="Domain">
+        <.card icon="treemap" title={dgettext("dashboard_domains", "Domain")}>
           <.card_section>
             <.form
               :if={@editable?}
@@ -131,21 +131,27 @@ defmodule HiveWeb.DomainComponents do
             >
               <.text_input
                 field={@form[:name]}
-                label="Name"
+                label={dgettext("dashboard_domains", "Name")}
                 placeholder="Hive"
                 required={true}
                 show_required={true}
               />
               <.text_area
                 field={@form[:description]}
-                label="Description"
-                placeholder="What this domain covers inside the organization."
+                label={dgettext("dashboard_domains", "Description")}
+                placeholder={
+                  dgettext("dashboard_domains", "What this domain covers inside the organization.")
+                }
                 max_length={500}
                 rows={4}
               />
 
               <div data-part="form-actions">
-                <.button label="Save domain" size="medium" variant="primary" />
+                <.button
+                  label={dgettext("dashboard_domains", "Save domain")}
+                  size="medium"
+                  variant="primary"
+                />
               </div>
             </.form>
             <.domain_readonly :if={!@editable?} domain={@domain} />
@@ -169,8 +175,10 @@ defmodule HiveWeb.DomainComponents do
     ~H"""
     <.card_section data-part="delete-domain-card-section">
       <div data-part="header">
-        <span data-part="title">Delete domain</span>
-        <span data-part="subtitle">This action cannot be undone.</span>
+        <span data-part="title">{dgettext("dashboard_domains", "Delete domain")}</span>
+        <span data-part="subtitle">
+          {dgettext("dashboard_domains", "This action cannot be undone.")}
+        </span>
       </div>
       <div data-part="content">
         <.form
@@ -181,22 +189,29 @@ defmodule HiveWeb.DomainComponents do
         >
           <.modal
             id="delete-domain-modal"
-            title="Are you sure you want to delete this?"
+            title={dgettext("dashboard_domains", "Are you sure you want to delete this?")}
             header_size="large"
             on_dismiss="close_delete_domain"
           >
             <:trigger :let={attrs}>
-              <.button label="Delete domain" variant="destructive" size="medium" {attrs} />
+              <.button
+                label={dgettext("dashboard_domains", "Delete domain")}
+                variant="destructive"
+                size="medium"
+                {attrs}
+              />
             </:trigger>
             <.line_divider />
             <.alert
               status="warning"
               type="secondary"
               size="small"
-              title="Deleting the domain will permanently remove all of its data"
+              title={
+                dgettext("dashboard_domains", "Deleting the domain will permanently remove all of its data")
+              }
             />
             <.text_input
-              label="Enter this domain's name to confirm"
+              label={dgettext("dashboard_domains", "Enter this domain's name to confirm")}
               field={@delete_domain_form[:name]}
               type="basic"
               placeholder={@domain.name}
@@ -207,7 +222,7 @@ defmodule HiveWeb.DomainComponents do
                 <:action>
                   <.button
                     type="reset"
-                    label="Cancel"
+                    label={dgettext("dashboard_domains", "Cancel")}
                     variant="secondary"
                     size="medium"
                     phx-click="close_delete_domain"
@@ -217,7 +232,7 @@ defmodule HiveWeb.DomainComponents do
                   <.button
                     type="submit"
                     form="delete-domain-form"
-                    label="Delete"
+                    label={dgettext("dashboard_domains", "Delete")}
                     variant="destructive"
                     size="medium"
                   />
@@ -237,12 +252,12 @@ defmodule HiveWeb.DomainComponents do
     ~H"""
     <dl data-part="domain-readonly">
       <div data-part="row">
-        <dt>Projects</dt>
+        <dt>{dgettext("dashboard_domains", "Projects")}</dt>
         <dd>
           <div data-part="project-cell">
             <.badge
               :if={domain_projects(@domain) == []}
-              label="No project"
+              label={dgettext("dashboard_domains", "No project")}
               color="neutral"
               style="light-fill"
               size="large"
@@ -264,10 +279,10 @@ defmodule HiveWeb.DomainComponents do
   end
 
   defp domain_empty_subtitle(true),
-    do: "Create the first domain to give Hive a domain boundary."
+    do: dgettext("dashboard_domains", "Create the first domain to give Hive a domain boundary.")
 
   defp domain_empty_subtitle(false),
-    do: "Organization members will populate this list."
+    do: dgettext("dashboard_domains", "Organization members will populate this list.")
 
   defp domain_projects(%{projects: %Ecto.Association.NotLoaded{}}), do: []
   defp domain_projects(%{projects: projects}) when is_list(projects), do: projects
@@ -279,14 +294,14 @@ defmodule HiveWeb.DomainComponents do
     ~H"""
     <.modal
       id="new-domain-modal"
-      title="New domain"
-      description="Create a reusable domain the team can link to projects."
+      title={dgettext("dashboard_domains", "New domain")}
+      description={dgettext("dashboard_domains", "Create a reusable domain the team can link to projects.")}
       header_type="icon"
       header_size="large"
       on_dismiss="close_new_domain"
     >
       <:trigger :let={attrs}>
-        <.button label="Add domain" size="medium" variant="primary" {attrs}>
+        <.button label={dgettext("dashboard_domains", "Add domain")} size="medium" variant="primary" {attrs}>
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -296,15 +311,17 @@ defmodule HiveWeb.DomainComponents do
       <.form id="new-domain-form" for={@form} phx-submit="save" data-part="form">
         <.text_input
           field={@form[:name]}
-          label="Name"
+          label={dgettext("dashboard_domains", "Name")}
           placeholder="Hive"
           required={true}
           show_required={true}
         />
         <.text_area
           field={@form[:description]}
-          label="Description"
-          placeholder="What this domain covers inside the organization."
+          label={dgettext("dashboard_domains", "Description")}
+          placeholder={
+            dgettext("dashboard_domains", "What this domain covers inside the organization.")
+          }
           max_length={500}
           rows={4}
         />
@@ -313,7 +330,7 @@ defmodule HiveWeb.DomainComponents do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_domains", "Cancel")}
               variant="secondary"
               size="medium"
               phx-click="close_new_domain"
@@ -321,7 +338,7 @@ defmodule HiveWeb.DomainComponents do
           </:action>
           <:action>
             <.button
-              label="Create domain"
+              label={dgettext("dashboard_domains", "Create domain")}
               size="medium"
               variant="primary"
               form="new-domain-form"
@@ -334,7 +351,7 @@ defmodule HiveWeb.DomainComponents do
   end
 
   defp domain_description(%{description: description}) when description in [nil, ""] do
-    "No description"
+    dgettext("dashboard_domains", "No description")
   end
 
   defp domain_description(%{description: description}), do: description

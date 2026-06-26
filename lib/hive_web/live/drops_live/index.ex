@@ -20,12 +20,19 @@ defmodule HiveWeb.DropsLive.Index do
   def open_graph do
     %{
       description:
-        "Shipped updates from GitHub releases and changelog feeds across every domain.",
-      section_label: "Drops",
-      highlights: ["GitHub releases", "RSS / Atom changelogs", "Subscribe per domain"],
+        dgettext(
+          "dashboard_drops",
+          "Shipped updates from GitHub releases and changelog feeds across every domain."
+        ),
+      section_label: dgettext("dashboard_drops", "Drops"),
+      highlights: [
+        dgettext("dashboard_drops", "GitHub releases"),
+        dgettext("dashboard_drops", "RSS / Atom changelogs"),
+        dgettext("dashboard_drops", "Subscribe per domain")
+      ],
       id: "drops",
       path: "/drops",
-      title: "Drops"
+      title: dgettext("dashboard_drops", "Drops")
     }
   end
 
@@ -33,7 +40,10 @@ defmodule HiveWeb.DropsLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Drops · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_drops", "Drops · %{product}", product: socket.assigns.product_name)
+     )
      |> assign(:available_filters, [])
      |> assign(:active_filters, [])
      |> assign(:drops, [])
@@ -49,7 +59,7 @@ defmodule HiveWeb.DropsLive.Index do
      |> assign(:search_form, to_form(%{"query" => ""}, as: :search))
      |> assign(:uri, URI.parse("/drops"))
      |> assign(:atom_feed, %{
-       title: "Hive · Drops",
+       title: dgettext("dashboard_drops", "Hive · Drops"),
        atom_href: "/drops/atom.xml",
        rss_href: "/drops/rss.xml"
      })
@@ -143,24 +153,29 @@ defmodule HiveWeb.DropsLive.Index do
       <section id="drops">
         <div data-part="header">
           <div data-part="title-group">
-            <h1>Drops</h1>
-            <p>Shipped updates from GitHub releases and changelog feeds across every domain.</p>
+            <h1>{dgettext("dashboard_drops", "Drops")}</h1>
+            <p>
+              {dgettext(
+                "dashboard_drops",
+                "Shipped updates from GitHub releases and changelog feeds across every domain."
+              )}
+            </p>
           </div>
           <div data-part="header-actions">
             <.link navigate={~p"/drops/subscribe"}>
-              <.button label="Subscribe" size="medium" variant="secondary">
+              <.button label={dgettext("dashboard_drops", "Subscribe")} size="medium" variant="secondary">
                 <:icon_left><.icon name="rss" /></:icon_left>
               </.button>
             </.link>
           </div>
         </div>
 
-        <.card title="Activity" icon="package">
+        <.card title={dgettext("dashboard_drops", "Activity")} icon="package">
           <.card_section>
             <div data-part="table-toolbar">
               <.filter_dropdown
                 id="drops-filter"
-                label="Filter"
+                label={dgettext("dashboard_drops", "Filter")}
                 available_filters={@available_filters}
                 active_filters={@active_filters}
                 on_select="add_filter"
@@ -178,7 +193,7 @@ defmodule HiveWeb.DropsLive.Index do
                     field={@search_form[:query]}
                     type="search"
                     show_suffix={false}
-                    placeholder="Search title or body..."
+                    placeholder={dgettext("dashboard_drops", "Search title or body...")}
                   />
                 </.form>
               </div>
@@ -190,13 +205,13 @@ defmodule HiveWeb.DropsLive.Index do
 
             <div data-part="table-scroll">
               <.table id="drops-table" rows={@drops}>
-                <:col :let={drop} label="Published">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Published")}>
                   <time data-part="published-cell" datetime={published_iso8601(drop.published_at)}>
                     <span data-part="published-date">{format_date(drop.published_at)}</span>
                     <span data-part="published-time">{format_time(drop.published_at)}</span>
                   </time>
                 </:col>
-                <:col :let={drop} label="Title">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Title")}>
                   <.link navigate={~p"/drops/#{drop.id}"} data-part="title-link">
                     <.text_and_description_cell
                       label={Markdown.inline(drop.title)}
@@ -204,17 +219,17 @@ defmodule HiveWeb.DropsLive.Index do
                     />
                   </.link>
                 </:col>
-                <:col :let={drop} label="Project">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Project")}>
                   <.text_cell label={project_chips(drop)} />
                 </:col>
-                <:col :let={drop} label="Domains">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Domains")}>
                   <.text_cell label={domain_chips(drop.domains)} />
                 </:col>
-                <:col :let={drop} label="Version">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Version")}>
                   <.text_cell :if={drop.version} label={drop.version} />
                   <.text_cell :if={is_nil(drop.version)} label="—" />
                 </:col>
-                <:col :let={drop} label="Source">
+                <:col :let={drop} label={dgettext("dashboard_drops", "Source")}>
                   <.badge_cell
                     label={Drops.source_type_label(drop.source_type)}
                     color={source_badge_color(drop.source_type)}
@@ -224,8 +239,13 @@ defmodule HiveWeb.DropsLive.Index do
                 <:empty_state>
                   <.table_empty_state
                     icon="package"
-                    title="No drops yet"
-                    subtitle="Once a release is published or a changelog updates, drops will surface here."
+                    title={dgettext("dashboard_drops", "No drops yet")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_drops",
+                        "Once a release is published or a changelog updates, drops will surface here."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -234,7 +254,7 @@ defmodule HiveWeb.DropsLive.Index do
             <div :if={@drops_meta.total_pages > 1} data-part="pagination">
               <.button
                 variant="secondary"
-                label="Prev"
+                label={dgettext("dashboard_drops", "Prev")}
                 disabled={@drops_meta.current_page <= 1}
                 patch={page_link(@uri, max(1, @drops_meta.current_page - 1))}
               >
@@ -242,7 +262,7 @@ defmodule HiveWeb.DropsLive.Index do
               </.button>
               <.button
                 variant="secondary"
-                label="Next"
+                label={dgettext("dashboard_drops", "Next")}
                 disabled={@drops_meta.current_page >= @drops_meta.total_pages}
                 patch={
                   page_link(
@@ -267,7 +287,7 @@ defmodule HiveWeb.DropsLive.Index do
     query = drops_filter_query(project_ids, domain_ids)
 
     %{
-      title: "Hive · Drops",
+      title: dgettext("dashboard_drops", "Hive · Drops"),
       atom_href: "/drops/atom.xml" <> query,
       rss_href: "/drops/rss.xml" <> query
     }
@@ -357,7 +377,7 @@ defmodule HiveWeb.DropsLive.Index do
     [
       %Filter.Filter{
         id: "project",
-        display_name: "Project",
+        display_name: dgettext("dashboard_drops", "Project"),
         type: :option,
         options: project_options,
         options_display_names: project_display_names,
@@ -367,7 +387,7 @@ defmodule HiveWeb.DropsLive.Index do
       },
       %Filter.Filter{
         id: "domain",
-        display_name: "Domain",
+        display_name: dgettext("dashboard_drops", "Domain"),
         type: :option,
         options: domain_options,
         options_display_names: domain_display_names,
@@ -377,12 +397,12 @@ defmodule HiveWeb.DropsLive.Index do
       },
       %Filter.Filter{
         id: "source_type",
-        display_name: "Source",
+        display_name: dgettext("dashboard_drops", "Source"),
         type: :option,
         options: ["github_release", "rss"],
         options_display_names: %{
-          "github_release" => "GitHub",
-          "rss" => "RSS"
+          "github_release" => dgettext("dashboard_drops", "GitHub"),
+          "rss" => dgettext("dashboard_drops", "RSS")
         },
         operator: :==,
         searchable: false,
@@ -408,8 +428,8 @@ defmodule HiveWeb.DropsLive.Index do
   defp truncate(nil), do: nil
   defp truncate(body) when is_binary(body), do: Markdown.preview(body, 140)
 
-  defp domain_chips([]), do: "Unclassified"
-  defp domain_chips(nil), do: "Unclassified"
+  defp domain_chips([]), do: dgettext("dashboard_drops", "Unclassified")
+  defp domain_chips(nil), do: dgettext("dashboard_drops", "Unclassified")
   defp domain_chips(domains), do: Enum.map_join(domains, ", ", & &1.name)
 
   defp project_chips(drop) do

@@ -19,12 +19,19 @@ defmodule HiveWeb.AuditLive do
   def open_graph do
     %{
       description:
-        "Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths.",
-      section_label: "Audit",
-      highlights: ["Dashboard", "Webhooks", "Workers"],
+        dgettext(
+          "dashboard_audit",
+          "Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths."
+        ),
+      section_label: dgettext("dashboard_audit", "Audit"),
+      highlights: [
+        dgettext("dashboard_audit", "Dashboard"),
+        dgettext("dashboard_audit", "Webhooks"),
+        dgettext("dashboard_audit", "Workers")
+      ],
       id: "audit",
       path: "/ops/audit",
-      title: "Audit"
+      title: dgettext("dashboard_audit", "Audit")
     }
   end
 
@@ -34,13 +41,19 @@ defmodule HiveWeb.AuditLive do
     if Policy.authorize?(:audit_activity_read, user, nil) do
       {:ok,
        socket
-       |> assign(:page_title, "Audit · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_audit", "Audit · %{product}", product: socket.assigns.product_name)
+       )
        |> assign(:available_filters, [])
        |> assign(OpenGraph.assigns(open_graph()))}
     else
       {:ok,
        socket
-       |> put_flash(:error, "You do not have access to the audit trail.")
+       |> put_flash(
+         :error,
+         dgettext("dashboard_audit", "You do not have access to the audit trail.")
+       )
        |> push_navigate(to: ~p"/")}
     end
   end
@@ -121,17 +134,22 @@ defmodule HiveWeb.AuditLive do
       <section id="audit">
         <div data-part="header">
           <div data-part="title-group">
-            <h1>Audit</h1>
-            <p>Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths.</p>
+            <h1>{dgettext("dashboard_audit", "Audit")}</h1>
+            <p>
+              {dgettext(
+                "dashboard_audit",
+                "Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths."
+              )}
+            </p>
           </div>
         </div>
 
-        <.card title="Activity" icon="history">
+        <.card title={dgettext("dashboard_audit", "Activity")} icon="history">
           <.card_section>
             <div data-part="table-toolbar">
               <.filter_dropdown
                 id="audit-filter"
-                label="Filter"
+                label={dgettext("dashboard_audit", "Filter")}
                 available_filters={@available_filters}
                 active_filters={@active_filters}
                 on_select="add_filter"
@@ -149,7 +167,7 @@ defmodule HiveWeb.AuditLive do
                     field={@search_form[:query]}
                     type="search"
                     show_suffix={false}
-                    placeholder="Search actor, action, target, or metadata..."
+                    placeholder={dgettext("dashboard_audit", "Search actor, action, target, or metadata...")}
                   />
                 </.form>
               </div>
@@ -160,36 +178,36 @@ defmodule HiveWeb.AuditLive do
             </div>
 
             <.table id="audit-table" rows={@activities}>
-              <:col :let={activity} label="Time">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Time")}>
                 <.text_cell
                   label={format_datetime(activity.occurred_at)}
                   sublabel={format_date(activity.occurred_at)}
                 />
               </:col>
-              <:col :let={activity} label="Actor">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Actor")}>
                 <.text_and_description_cell
                   label={Audit.actor_label(activity)}
                   description={actor_description(activity)}
                 />
               </:col>
-              <:col :let={activity} label="Kind">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Kind")}>
                 <.badge_cell
                   label={actor_kind_label(activity.actor_kind)}
                   color={actor_kind_badge_color(activity.actor_kind)}
                   style="light-fill"
                 />
               </:col>
-              <:col :let={activity} label="Interface">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Interface")}>
                 <.badge_cell
                   label={interface_label(activity.interface)}
                   color={interface_badge_color(activity.interface)}
                   style="light-fill"
                 />
               </:col>
-              <:col :let={activity} label="Action">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Action")}>
                 <.text_cell label={action_label(activity.action)} sublabel={activity.action} />
               </:col>
-              <:col :let={activity} label="Target">
+              <:col :let={activity} label={dgettext("dashboard_audit", "Target")}>
                 <.link
                   :if={activity_path(activity)}
                   navigate={activity_path(activity)}
@@ -209,8 +227,13 @@ defmodule HiveWeb.AuditLive do
               <:empty_state>
                 <.table_empty_state
                   icon="history"
-                  title="No activity found"
-                  subtitle="Adjust the filters or wait for new activity to be recorded."
+                  title={dgettext("dashboard_audit", "No activity found")}
+                  subtitle={
+                    dgettext(
+                      "dashboard_audit",
+                      "Adjust the filters or wait for new activity to be recorded."
+                    )
+                  }
                 />
               </:empty_state>
             </.table>
@@ -218,7 +241,7 @@ defmodule HiveWeb.AuditLive do
             <div :if={@activities_meta.total_pages > 1} data-part="pagination">
               <.button
                 variant="secondary"
-                label="Prev"
+                label={dgettext("dashboard_audit", "Prev")}
                 disabled={@activities_meta.current_page <= 1}
                 patch={page_link(@uri, max(1, @activities_meta.current_page - 1))}
               >
@@ -226,7 +249,7 @@ defmodule HiveWeb.AuditLive do
               </.button>
               <.button
                 variant="secondary"
-                label="Next"
+                label={dgettext("dashboard_audit", "Next")}
                 disabled={@activities_meta.current_page >= @activities_meta.total_pages}
                 patch={
                   page_link(
@@ -291,14 +314,32 @@ defmodule HiveWeb.AuditLive do
     options = Audit.filter_options()
 
     [
-      option_filter("interface", "Interface", options.interfaces, &interface_label/1,
+      option_filter(
+        "interface",
+        dgettext("dashboard_audit", "Interface"),
+        options.interfaces,
+        &interface_label/1,
         searchable: true
       ),
-      option_filter("actor_kind", "Actor kind", options.actor_kinds, &actor_kind_label/1,
+      option_filter(
+        "actor_kind",
+        dgettext("dashboard_audit", "Actor kind"),
+        options.actor_kinds,
+        &actor_kind_label/1,
         searchable: false
       ),
-      option_filter("action", "Action", options.actions, &action_label/1, searchable: true),
-      option_filter("target_type", "Target", options.target_types, &target_label/1,
+      option_filter(
+        "action",
+        dgettext("dashboard_audit", "Action"),
+        options.actions,
+        &action_label/1,
+        searchable: true
+      ),
+      option_filter(
+        "target_type",
+        dgettext("dashboard_audit", "Target"),
+        options.target_types,
+        &target_label/1,
         searchable: true
       )
     ]
@@ -334,9 +375,10 @@ defmodule HiveWeb.AuditLive do
        when is_binary(model) and model != "",
        do: model
 
-  defp actor_description(%Activity{actor_kind: "agent"}), do: "Agent"
+  defp actor_description(%Activity{actor_kind: "agent"}), do: dgettext("dashboard_audit", "Agent")
 
-  defp actor_description(%Activity{actor_kind: "system"}), do: "Automated"
+  defp actor_description(%Activity{actor_kind: "system"}),
+    do: dgettext("dashboard_audit", "Automated")
 
   defp actor_description(%Activity{actor_email: email}) when is_binary(email) and email != "",
     do: email
@@ -344,11 +386,11 @@ defmodule HiveWeb.AuditLive do
   defp actor_description(%Activity{actor_role: role}) when is_binary(role) and role != "",
     do: interface_label(role)
 
-  defp actor_description(_activity), do: "No actor"
+  defp actor_description(_activity), do: dgettext("dashboard_audit", "No actor")
 
-  defp actor_kind_label("user"), do: "User"
-  defp actor_kind_label("agent"), do: "Agent"
-  defp actor_kind_label("system"), do: "System"
+  defp actor_kind_label("user"), do: dgettext("dashboard_audit", "User")
+  defp actor_kind_label("agent"), do: dgettext("dashboard_audit", "Agent")
+  defp actor_kind_label("system"), do: dgettext("dashboard_audit", "System")
   defp actor_kind_label(_kind), do: "-"
 
   defp actor_kind_badge_color("user"), do: "information"
@@ -384,7 +426,7 @@ defmodule HiveWeb.AuditLive do
 
   defp target_label(_target), do: "-"
 
-  defp interface_label("mcp"), do: "MCP"
+  defp interface_label("mcp"), do: dgettext("dashboard_audit", "MCP")
 
   defp interface_label(interface) when is_binary(interface) do
     interface

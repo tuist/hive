@@ -32,7 +32,7 @@ defmodule HiveWeb.SlackInstallController do
 
   defp require_admin_login(conn) do
     conn
-    |> put_flash(:error, "Log in to manage Slack workspaces.")
+    |> put_flash(:error, dgettext("dashboard_slack", "Log in to manage Slack workspaces."))
     |> redirect(to: ~p"/login")
   end
 
@@ -41,7 +41,10 @@ defmodule HiveWeb.SlackInstallController do
       callback.(conn, user)
     else
       conn
-      |> put_flash(:error, "Only instance admins can manage Slack workspaces.")
+      |> put_flash(
+        :error,
+        dgettext("dashboard_slack", "Only instance admins can manage Slack workspaces.")
+      )
       |> redirect(to: ~p"/")
     end
   end
@@ -69,7 +72,10 @@ defmodule HiveWeb.SlackInstallController do
 
   defp slack_not_configured(conn) do
     conn
-    |> put_flash(:error, "Slack isn't configured on this Hive instance.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_slack", "Slack isn't configured on this Hive instance.")
+    )
     |> redirect(to: ~p"/ops/slack")
   end
 
@@ -86,16 +92,24 @@ defmodule HiveWeb.SlackInstallController do
         conn
         |> put_flash(
           :info,
-          "Connected #{installation.team_name || installation.team_id} to Hive."
+          dgettext("dashboard_slack", "Connected %{workspace} to Hive.",
+            workspace: installation.team_name || installation.team_id
+          )
         )
         |> redirect(to: ~p"/ops/slack")
 
       {:error, :workspace_not_allowed} ->
-        bail(conn, "That Slack workspace is not allowed on this Hive instance.")
+        bail(
+          conn,
+          dgettext(
+            "dashboard_slack",
+            "That Slack workspace is not allowed on this Hive instance."
+          )
+        )
 
       {:error, reason} ->
         Logger.warning("[SlackInstall] OAuth exchange failed: #{inspect(reason)}")
-        bail(conn, "Slack rejected the install. Try again.")
+        bail(conn, dgettext("dashboard_slack", "Slack rejected the install. Try again."))
     end
   end
 
@@ -112,20 +126,22 @@ defmodule HiveWeb.SlackInstallController do
         conn
         |> put_flash(
           :info,
-          "Disconnected #{updated.team_name || updated.team_id} from Hive."
+          dgettext("dashboard_slack", "Disconnected %{workspace} from Hive.",
+            workspace: updated.team_name || updated.team_id
+          )
         )
         |> redirect(to: ~p"/ops/slack")
 
       {:error, _} ->
         conn
-        |> put_flash(:error, "Could not disconnect that workspace.")
+        |> put_flash(:error, dgettext("dashboard_slack", "Could not disconnect that workspace."))
         |> redirect(to: ~p"/ops/slack")
     end
   end
 
   defp missing_installation(conn) do
     conn
-    |> put_flash(:error, "That Slack workspace is not connected.")
+    |> put_flash(:error, dgettext("dashboard_slack", "That Slack workspace is not connected."))
     |> redirect(to: ~p"/ops/slack")
   end
 
@@ -142,27 +158,36 @@ defmodule HiveWeb.SlackInstallController do
         :ok
 
       {:ok, _payload} ->
-        {:error, "The Slack install link was created for a different Hive session. Try again."}
+        {:error,
+         dgettext(
+           "dashboard_slack",
+           "The Slack install link was created for a different Hive session. Try again."
+         )}
 
       {:error, _reason} ->
-        {:error, "The Slack install link expired. Try again."}
+        {:error, dgettext("dashboard_slack", "The Slack install link expired. Try again.")}
     end
   end
 
   defp validate_state(_conn, _user, _state),
-    do: {:error, "The Slack install link expired. Try again."}
+    do: {:error, dgettext("dashboard_slack", "The Slack install link expired. Try again.")}
 
   defp validate_slack_response(error) when error in [nil, ""], do: :ok
 
   defp validate_slack_response("access_denied"),
-    do: {:error, "Slack install was cancelled."}
+    do: {:error, dgettext("dashboard_slack", "Slack install was cancelled.")}
 
   defp validate_slack_response(error) when is_binary(error),
-    do: {:error, "Slack rejected the install: #{format_slack_error(error)}."}
+    do:
+      {:error,
+       dgettext("dashboard_slack", "Slack rejected the install: %{reason}.",
+         reason: format_slack_error(error)
+       )}
 
   defp validate_code(code) when is_binary(code) and code != "", do: {:ok, code}
 
-  defp validate_code(_code), do: {:error, "Slack didn't return an authorization code."}
+  defp validate_code(_code),
+    do: {:error, dgettext("dashboard_slack", "Slack didn't return an authorization code.")}
 
   defp bail(conn, message) do
     conn

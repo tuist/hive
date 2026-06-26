@@ -18,9 +18,16 @@ defmodule HiveWeb.OpsLive.InferenceToken do
 
   def open_graph(%Token{} = token, %ModelBinding{} = profile) do
     %{
-      description: "Review usage for the #{token.name} inference token.",
-      section_label: "Ops",
-      highlights: ["Token usage", "Input and output tokens", "Estimated cost"],
+      description:
+        dgettext("dashboard_inference", "Review usage for the %{token} inference token.",
+          token: token.name
+        ),
+      section_label: dgettext("dashboard_inference", "Ops"),
+      highlights: [
+        dgettext("dashboard_inference", "Token usage"),
+        dgettext("dashboard_inference", "Input and output tokens"),
+        dgettext("dashboard_inference", "Estimated cost")
+      ],
       id: "ops-inference-token",
       path: "/ops/inference/tokens/#{token.id}",
       title: token.name,
@@ -36,13 +43,19 @@ defmodule HiveWeb.OpsLive.InferenceToken do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to manage inference tokens.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Log in to manage inference tokens.")
+         )
          |> redirect(to: ~p"/login?#{[return_to: "/ops/inference/tokens/#{id}"]}")}
 
       not Policy.authorize?(:inference_profile_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only instance admins can manage inference tokens.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Only instance admins can manage inference tokens.")
+         )
          |> push_navigate(to: ~p"/")}
 
       true ->
@@ -83,12 +96,13 @@ defmodule HiveWeb.OpsLive.InferenceToken do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Token revoked.")
+         |> put_flash(:info, dgettext("dashboard_inference", "Token revoked."))
          |> push_event("close-modal", %{id: "revoke-inference-token-modal"})
          |> assign_token(token.id)}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to revoke token.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_inference", "Failed to revoke token."))}
     end
   end
 
@@ -114,12 +128,13 @@ defmodule HiveWeb.OpsLive.InferenceToken do
           <div data-part="title-group">
             <h1>{@token.name}</h1>
             <p>
-              Token bound to <a href={~p"/ops/inference/profiles/#{@profile.id}"}>{@profile.name}</a>.
+              {dgettext("dashboard_inference", "Token bound to")}
+              <a href={~p"/ops/inference/profiles/#{@profile.id}"}>{@profile.name}</a>.
             </p>
           </div>
         </div>
 
-        <.card title="Usage" icon="chart_column" data-part="usage-card">
+        <.card title={dgettext("dashboard_inference", "Usage")} icon="chart_column" data-part="usage-card">
           <:actions>
             <.usage_period_picker
               id="inference-token-usage-date-range-picker"
@@ -140,12 +155,16 @@ defmodule HiveWeb.OpsLive.InferenceToken do
               series={@usage_series}
               preset={@usage_preset}
               bucket={@usage_bucket}
-              label={"Input and output token usage for #{@token.name}"}
+              label={
+                dgettext("dashboard_inference", "Input and output token usage for %{token}",
+                  token: @token.name
+                )
+              }
             />
           </.card_section>
           <.empty_card_section
             :if={!usage_chart_has_usage?(@usage_series)}
-            title="No usage yet"
+            title={dgettext("dashboard_inference", "No usage yet")}
             data-part="empty-usage-chart-card-section"
           >
             <:image>
@@ -155,26 +174,30 @@ defmodule HiveWeb.OpsLive.InferenceToken do
           </.empty_card_section>
         </.card>
 
-        <.card title="Configuration" icon="lock_password" data-part="configuration-card">
+        <.card
+          title={dgettext("dashboard_inference", "Configuration")}
+          icon="lock_password"
+          data-part="configuration-card"
+        >
           <.card_section>
             <div data-part="definition-grid">
               <div data-part="definition-item">
-                <span>Status</span>
+                <span>{dgettext("dashboard_inference", "Status")}</span>
                 <% status = token_status(@token) %>
                 <.badge label={status.label} color={status.color} style="light-fill" />
               </div>
               <div data-part="definition-item">
-                <span>Profile</span>
+                <span>{dgettext("dashboard_inference", "Profile")}</span>
                 <a data-part="definition-link" href={~p"/ops/inference/profiles/#{@profile.id}"}>
                   {@profile.name}
                 </a>
               </div>
               <div data-part="definition-item">
-                <span>Expires</span>
+                <span>{dgettext("dashboard_inference", "Expires")}</span>
                 <strong>{token_expiry_table_label(@token.expires_at)}</strong>
               </div>
               <div data-part="definition-item">
-                <span>Last used</span>
+                <span>{dgettext("dashboard_inference", "Last used")}</span>
                 <strong>{last_used_label(@token.last_used_at)}</strong>
               </div>
             </div>
@@ -183,27 +206,43 @@ defmodule HiveWeb.OpsLive.InferenceToken do
 
         <.card_section :if={@token.enabled} data-part="revoke-token-card-section">
           <div data-part="header">
-            <span data-part="title">Revoke token</span>
-            <span data-part="subtitle">Repositories using this token will stop being able to use its profile.</span>
+            <span data-part="title">{dgettext("dashboard_inference", "Revoke token")}</span>
+            <span data-part="subtitle">
+              {dgettext(
+                "dashboard_inference",
+                "Repositories using this token will stop being able to use its profile."
+              )}
+            </span>
           </div>
           <div data-part="content">
             <.modal
               id="revoke-inference-token-modal"
-              title="Revoke this token?"
-              description="This action cannot be undone."
+              title={dgettext("dashboard_inference", "Revoke this token?")}
+              description={dgettext("dashboard_inference", "This action cannot be undone.")}
               header_type="warning"
               header_size="large"
               on_dismiss="close_revoke_token"
             >
               <:trigger :let={attrs}>
-                <.button label="Revoke token" variant="destructive" size="medium" {attrs} />
+                <.button
+                  label={dgettext("dashboard_inference", "Revoke token")}
+                  variant="destructive"
+                  size="medium"
+                  {attrs}
+                />
               </:trigger>
               <.line_divider />
               <.alert
                 status="warning"
                 type="secondary"
                 size="small"
-                title={"Revoking #{@token.name} will immediately reject future requests using this token."}
+                title={
+                  dgettext(
+                    "dashboard_inference",
+                    "Revoking %{token} will immediately reject future requests using this token.",
+                    token: @token.name
+                  )
+                }
               />
               <.line_divider />
               <:footer>
@@ -211,7 +250,7 @@ defmodule HiveWeb.OpsLive.InferenceToken do
                   <:action>
                     <.button
                       type="button"
-                      label="Cancel"
+                      label={dgettext("dashboard_inference", "Cancel")}
                       variant="secondary"
                       size="medium"
                       phx-click="close_revoke_token"
@@ -220,7 +259,7 @@ defmodule HiveWeb.OpsLive.InferenceToken do
                   <:action>
                     <.button
                       type="button"
-                      label="Revoke token"
+                      label={dgettext("dashboard_inference", "Revoke token")}
                       variant="destructive"
                       size="medium"
                       phx-click="revoke_token"
@@ -241,7 +280,13 @@ defmodule HiveWeb.OpsLive.InferenceToken do
     profile = token.model_binding
 
     socket
-    |> assign(:page_title, "#{token.name} · Inference · #{socket.assigns.product_name}")
+    |> assign(
+      :page_title,
+      dgettext("dashboard_inference", "%{token} · Inference · %{product}",
+        token: token.name,
+        product: socket.assigns.product_name
+      )
+    )
     |> assign(OpenGraph.assigns(open_graph(token, profile)))
     |> assign(:token, token)
     |> assign(:profile, profile)

@@ -8,6 +8,8 @@ defmodule Hive.Slack.Interactions do
   HTTP response body is ignored by Slack for shortcuts).
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   require Logger
 
   alias Hive.Accounts
@@ -68,24 +70,36 @@ defmodule Hive.Slack.Interactions do
 
             respond(
               response_url,
-              "Captured as a feature request in Hive: <#{hive_url("/forage?filter_type_op=%3D%3D&filter_type_val=feature_request")}|view forage>."
+              dgettext("dashboard_slack", "Captured as a feature request in Hive: %{link}.",
+                link:
+                  "<#{hive_url("/forage?filter_type_op=%3D%3D&filter_type_val=feature_request")}|#{dgettext("dashboard_slack", "view forage")}>"
+              )
             )
 
           {:error, _changeset} ->
             respond(
               response_url,
-              "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
+              dgettext(
+                "dashboard_slack",
+                "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
+              )
             )
         end
 
       {:error, :no_match} ->
         respond(
           response_url,
-          "I couldn't match your Slack account to a Hive user. Sign in to Hive with your work email and try again."
+          dgettext(
+            "dashboard_slack",
+            "I couldn't match your Slack account to a Hive user. Sign in to Hive with your work email and try again."
+          )
         )
 
       {:error, _other} ->
-        respond(response_url, "Something went wrong looking up your Hive account.")
+        respond(
+          response_url,
+          dgettext("dashboard_slack", "Something went wrong looking up your Hive account.")
+        )
     end
   end
 
@@ -115,7 +129,7 @@ defmodule Hive.Slack.Interactions do
     |> Kernel.||("")
     |> String.trim()
     |> case do
-      "" -> "Captured from Slack"
+      "" -> dgettext("dashboard_slack", "Captured from Slack")
       first -> String.slice(first, 0, 160)
     end
   end
@@ -124,14 +138,18 @@ defmodule Hive.Slack.Interactions do
     text
     |> String.trim()
     |> case do
-      "" -> "(no message text)"
+      "" -> dgettext("dashboard_slack", "(no message text)")
       trimmed -> String.slice(trimmed, 0, 2000)
     end
     |> ensure_min_length()
   end
 
   defp ensure_min_length(text) do
-    if String.length(text) < 10, do: text <> " (captured from Slack)", else: text
+    if String.length(text) < 10 do
+      dgettext("dashboard_slack", "%{text} (captured from Slack)", text: text)
+    else
+      text
+    end
   end
 
   defp respond(nil, _text), do: :ok

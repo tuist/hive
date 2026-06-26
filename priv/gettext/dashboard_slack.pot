@@ -1,0 +1,457 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:331
+#, elixir-autogen, elixir-format
+msgid "%{count} channels"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:356
+#: lib/hive_web/live/ops_live/slack.ex:359
+#, elixir-autogen, elixir-format
+msgid "%{count} events"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:344
+#, elixir-autogen, elixir-format
+msgid "%{count} routes"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:167
+#, elixir-autogen, elixir-format
+msgid "Channel"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:353
+#, elixir-autogen, elixir-format
+msgid "Configure notifications"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:13
+#, elixir-autogen, elixir-format
+msgid "Connect Slack workspaces to Hive."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:108
+#, elixir-autogen, elixir-format
+msgid "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as feature requests."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:401
+#, elixir-autogen, elixir-format
+msgid "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:126
+#, elixir-autogen, elixir-format
+msgid "Connect another workspace"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:125
+#, elixir-autogen, elixir-format
+msgid "Connect workspace"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:150
+#, elixir-autogen, elixir-format
+msgid "Connected"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:95
+#, elixir-autogen, elixir-format
+msgid "Connected %{workspace} to Hive."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:137
+#, elixir-autogen, elixir-format
+msgid "Could not disconnect that workspace."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:268
+#, elixir-autogen, elixir-format
+msgid "Disconnect"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:272
+#: lib/hive_web/live/ops_live/slack.ex:273
+#, elixir-autogen, elixir-format
+msgid "Disconnect workspace"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:156
+#, elixir-autogen, elixir-format
+msgid "Disconnected"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:129
+#, elixir-autogen, elixir-format
+msgid "Disconnected %{workspace} from Hive."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:185
+#, elixir-autogen, elixir-format
+msgid "Edit %{workspace} routes"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:200
+#: lib/hive_web/live/ops_live/slack.ex:204
+#: lib/hive_web/live/ops_live/slack.ex:205
+#, elixir-autogen, elixir-format
+msgid "Edit routes"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:322
+#, elixir-autogen, elixir-format
+msgid "Install date unknown"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:161
+#, elixir-autogen, elixir-format
+msgid "Installed"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:317
+#, elixir-autogen, elixir-format
+msgid "Installed on %{date}"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:35
+#: lib/hive_web/live/ops_live/slack.ex:34
+#, elixir-autogen, elixir-format
+msgid "Log in to manage Slack workspaces."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:18
+#, elixir-autogen, elixir-format
+msgid "Message shortcuts"
+msgstr ""
+
+#: lib/hive/slack.ex:118
+#, elixir-autogen, elixir-format
+msgid "New spec comments"
+msgstr ""
+
+#: lib/hive/slack.ex:115
+#, elixir-autogen, elixir-format
+msgid "New specs"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:325
+#, elixir-autogen, elixir-format
+msgid "No channel"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:338
+#: lib/hive_web/live/ops_live/slack.ex:342
+#, elixir-autogen, elixir-format
+msgid "No routes"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:391
+#, elixir-autogen, elixir-format
+msgid "No workspaces connected"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:329
+#, elixir-autogen, elixir-format
+msgid "Not routed"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:173
+#, elixir-autogen, elixir-format
+msgid "Notifications"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:46
+#: lib/hive_web/live/ops_live/slack.ex:42
+#, elixir-autogen, elixir-format
+msgid "Only instance admins can manage Slack workspaces."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:14
+#, elixir-autogen, elixir-format
+msgid "Ops"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:190
+#, elixir-autogen, elixir-format
+msgid "Route Hive notifications to Slack channel identifiers."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:249
+#, elixir-autogen, elixir-format
+msgid "Save routes"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:394
+#, elixir-autogen, elixir-format
+msgid "Set Slack credentials in the environment to enable workspace installs."
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:265
+#: lib/hive_web/live/ops_live/slack.ex:22
+#: lib/hive_web/live/ops_live/slack.ex:106
+#, elixir-autogen, elixir-format
+msgid "Slack"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:16
+#, elixir-autogen, elixir-format
+msgid "Slack OAuth"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:237
+#, elixir-autogen, elixir-format
+msgid "Slack channel"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:190
+#, elixir-autogen, elixir-format
+msgid "Slack didn't return an authorization code."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:178
+#, elixir-autogen, elixir-format
+msgid "Slack install was cancelled."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:390
+#, elixir-autogen, elixir-format
+msgid "Slack is not configured"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:77
+#, elixir-autogen, elixir-format
+msgid "Slack isn't configured on this Hive instance."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:84
+#, elixir-autogen, elixir-format
+msgid "Slack notification routes could not be updated."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:74
+#, elixir-autogen, elixir-format
+msgid "Slack notification routes updated."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:112
+#, elixir-autogen, elixir-format
+msgid "Slack rejected the install. Try again."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:183
+#, elixir-autogen, elixir-format
+msgid "Slack rejected the install: %{reason}."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:65
+#, elixir-autogen, elixir-format
+msgid "Slack workspace not found."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:51
+#, elixir-autogen, elixir-format
+msgid "Slack · %{product}"
+msgstr ""
+
+#: lib/hive/slack.ex:128
+#, elixir-autogen, elixir-format
+msgid "Spec creations, comments, and review requests"
+msgstr ""
+
+#: lib/hive/slack.ex:121
+#, elixir-autogen, elixir-format
+msgid "Spec review requests"
+msgstr ""
+
+#: lib/hive/slack.ex:125
+#, elixir-autogen, elixir-format
+msgid "Specs"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:147
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:104
+#, elixir-autogen, elixir-format
+msgid "That Slack workspace is not allowed on this Hive instance."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:144
+#, elixir-autogen, elixir-format
+msgid "That Slack workspace is not connected."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:168
+#: lib/hive_web/controllers/slack_install_controller.ex:173
+#, elixir-autogen, elixir-format
+msgid "The Slack install link expired. Try again."
+msgstr ""
+
+#: lib/hive_web/controllers/slack_install_controller.ex:162
+#, elixir-autogen, elixir-format
+msgid "The Slack install link was created for a different Hive session. Try again."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:314
+#, elixir-autogen, elixir-format
+msgid "Unknown installer"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:140
+#: lib/hive_web/live/ops_live/slack.ex:309
+#, elixir-autogen, elixir-format
+msgid "Workspace"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:306
+#, elixir-autogen, elixir-format
+msgid "Workspace %{team_id}"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:17
+#, elixir-autogen, elixir-format
+msgid "Workspace installs"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/slack.ex:118
+#, elixir-autogen, elixir-format
+msgid "Workspaces"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:149
+#, elixir-autogen, elixir-format
+msgid "%{text} (captured from Slack)"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:141
+#, elixir-autogen, elixir-format
+msgid "(no message text)"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:165
+#, elixir-autogen, elixir-format
+msgid "*New comment on spec:* %{link}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:137
+#, elixir-autogen, elixir-format
+msgid "*New spec:* %{link}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:235
+#, elixir-autogen, elixir-format
+msgid "*Review focus:*\n%{focus}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:188
+#, elixir-autogen, elixir-format
+msgid "*Review requested:* %{link}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:228
+#, elixir-autogen, elixir-format
+msgid "*Reviewers:* %{reviewers}"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:73
+#, elixir-autogen, elixir-format
+msgid "Captured as a feature request in Hive: %{link}."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:132
+#, elixir-autogen, elixir-format
+msgid "Captured from Slack"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:310
+#: lib/hive/slack/workers/send_notification.ex:313
+#, elixir-autogen, elixir-format
+msgid "Comment by %{user}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:302
+#, elixir-autogen, elixir-format
+msgid "Created by"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:305
+#, elixir-autogen, elixir-format
+msgid "Created by %{user}"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:82
+#, elixir-autogen, elixir-format
+msgid "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:92
+#, elixir-autogen, elixir-format
+msgid "I couldn't match your Slack account to a Hive user. Sign in to Hive with your work email and try again."
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:162
+#, elixir-autogen, elixir-format
+msgid "New spec comment: %{title}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:134
+#, elixir-autogen, elixir-format
+msgid "New spec: %{title}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:207
+#, elixir-autogen, elixir-format
+msgid "Open spec"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:193
+#, elixir-autogen, elixir-format
+msgid "Requested by %{user}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:217
+#, elixir-autogen, elixir-format
+msgid "Review requested for spec #%{number}: %{title}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:270
+#: lib/hive/slack/workers/send_notification.ex:274
+#: lib/hive/slack/workers/send_notification.ex:282
+#, elixir-autogen, elixir-format
+msgid "Revision %{revision}"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:101
+#, elixir-autogen, elixir-format
+msgid "Something went wrong looking up your Hive account."
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:143
+#: lib/hive/slack/workers/send_notification.ex:196
+#, elixir-autogen, elixir-format
+msgid "Status: %{status}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:317
+#, elixir-autogen, elixir-format
+msgid "someone"
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:75
+#, elixir-autogen, elixir-format
+msgid "view forage"
+msgstr ""

@@ -15,6 +15,8 @@ defmodule Hive.Drops do
   `Hive.Drops.DropSource`.
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   import Ecto.Query
 
   alias Hive.Auth
@@ -318,10 +320,10 @@ defmodule Hive.Drops do
     end
   end
 
-  def source_type_label(:github_release), do: "GitHub"
-  def source_type_label(:rss), do: "RSS"
+  def source_type_label(:github_release), do: dgettext("dashboard_drops", "GitHub")
+  def source_type_label(:rss), do: dgettext("dashboard_drops", "RSS")
   def source_type_label(value) when is_atom(value), do: value |> Atom.to_string()
-  def source_type_label(_value), do: "Drop"
+  def source_type_label(_value), do: dgettext("dashboard_drops", "Drop")
 
   defp drop_preloads do
     [

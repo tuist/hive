@@ -10,12 +10,16 @@ defmodule HiveWeb.OpsLive.Slack do
 
   def open_graph do
     %{
-      description: "Connect Slack workspaces to Hive.",
-      section_label: "Ops",
-      highlights: ["Slack OAuth", "Workspace installs", "Message shortcuts"],
+      description: dgettext("dashboard_slack", "Connect Slack workspaces to Hive."),
+      section_label: dgettext("dashboard_slack", "Ops"),
+      highlights: [
+        dgettext("dashboard_slack", "Slack OAuth"),
+        dgettext("dashboard_slack", "Workspace installs"),
+        dgettext("dashboard_slack", "Message shortcuts")
+      ],
       id: "ops-slack",
       path: "/ops/slack",
-      title: "Slack"
+      title: dgettext("dashboard_slack", "Slack")
     }
   end
 
@@ -27,19 +31,25 @@ defmodule HiveWeb.OpsLive.Slack do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to manage Slack workspaces.")
+         |> put_flash(:error, dgettext("dashboard_slack", "Log in to manage Slack workspaces."))
          |> redirect(to: ~p"/login?return_to=/ops/slack")}
 
       not Policy.authorize?(:slack_workspace_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only instance admins can manage Slack workspaces.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_slack", "Only instance admins can manage Slack workspaces.")
+         )
          |> push_navigate(to: ~p"/")}
 
       true ->
         {:ok,
          socket
-         |> assign(:page_title, "Slack · #{socket.assigns.product_name}")
+         |> assign(
+           :page_title,
+           dgettext("dashboard_slack", "Slack · %{product}", product: socket.assigns.product_name)
+         )
          |> assign(OpenGraph.assigns(open_graph()))
          |> assign(:slack_enabled?, Slack.enabled?())
          |> assign(:notification_routes, Slack.notification_routes())
@@ -51,20 +61,28 @@ defmodule HiveWeb.OpsLive.Slack do
   def handle_event("save_notification_routes", %{"id" => id, "installation" => params}, socket) do
     case Enum.find(socket.assigns.installations, &(&1.id == id)) do
       nil ->
-        {:noreply, put_flash(socket, :error, "Slack workspace not found.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_slack", "Slack workspace not found."))}
 
       installation ->
         case Slack.update_notification_routes(installation, params) do
           {:ok, _installation} ->
             {:noreply,
              socket
-             |> put_flash(:info, "Slack notification routes updated.")
+             |> put_flash(
+               :info,
+               dgettext("dashboard_slack", "Slack notification routes updated.")
+             )
              |> push_event("close-modal", %{id: "slack-routes-modal-#{installation.id}"})
              |> assign(:installations, Slack.list_installations())}
 
           {:error, _changeset} ->
             {:noreply,
-             put_flash(socket, :error, "Slack notification routes could not be updated.")}
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_slack", "Slack notification routes could not be updated.")
+             )}
         end
     end
   end
@@ -85,18 +103,28 @@ defmodule HiveWeb.OpsLive.Slack do
       <section id="ops-slack">
         <div data-part="page-header">
           <div data-part="title-group">
-            <h1>Slack</h1>
+            <h1>{dgettext("dashboard_slack", "Slack")}</h1>
             <p>
-              Connect Slack workspaces to Hive. Once installed, the bot can reply in threads
-              and capture messages as feature requests.
+              {dgettext(
+                "dashboard_slack",
+                "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as feature requests."
+              )}
             </p>
           </div>
         </div>
 
-        <.card icon="brand_slack" title="Workspaces" data-part="workspaces-card">
+        <.card
+          icon="brand_slack"
+          title={dgettext("dashboard_slack", "Workspaces")}
+          data-part="workspaces-card"
+        >
           <:actions :if={@slack_enabled?}>
             <.button
-              label={if @installations == [], do: "Connect workspace", else: "Connect another workspace"}
+              label={
+                if @installations == [],
+                  do: dgettext("dashboard_slack", "Connect workspace"),
+                  else: dgettext("dashboard_slack", "Connect another workspace")
+              }
               href={~p"/slack/install"}
               variant="secondary"
               size="small"
@@ -109,40 +137,40 @@ defmodule HiveWeb.OpsLive.Slack do
                 rows={if @slack_enabled?, do: @installations, else: []}
                 row_key={fn installation -> "slack-installation-#{installation.id}" end}
               >
-                <:col :let={installation} label="Workspace">
+                <:col :let={installation} label={dgettext("dashboard_slack", "Workspace")}>
                   <.text_and_description_cell
                     icon="brand_slack"
                     label={installation.team_name || installation.team_id}
                     description={workspace_description(installation)}
                   />
                 </:col>
-                <:col :let={installation} label="Status">
+                <:col :let={installation} label={dgettext("dashboard_slack", "Status")}>
                   <.badge_cell
                     :if={is_nil(installation.disconnected_at)}
-                    label="Connected"
+                    label={dgettext("dashboard_slack", "Connected")}
                     color="success"
                     style="light-fill"
                   />
                   <.badge_cell
                     :if={installation.disconnected_at}
-                    label="Disconnected"
+                    label={dgettext("dashboard_slack", "Disconnected")}
                     color="neutral"
                     style="light-fill"
                   />
                 </:col>
-                <:col :let={installation} label="Installed">
+                <:col :let={installation} label={dgettext("dashboard_slack", "Installed")}>
                   <.text_cell
                     label={installed_by_label(installation)}
                     sublabel={installed_on_label(installation)}
                   />
                 </:col>
-                <:col :let={installation} label="Channel">
+                <:col :let={installation} label={dgettext("dashboard_slack", "Channel")}>
                   <.text_cell
                     label={notification_channel_label(installation, @notification_routes)}
                     sublabel={notification_channel_sublabel(installation, @notification_routes)}
                   />
                 </:col>
-                <:col :let={installation} label="Notifications">
+                <:col :let={installation} label={dgettext("dashboard_slack", "Notifications")}>
                   <.text_cell
                     label={notification_summary_label(installation, @notification_routes)}
                     sublabel={notification_summary_sublabel(installation, @notification_routes)}
@@ -153,19 +181,28 @@ defmodule HiveWeb.OpsLive.Slack do
                     <:button :if={is_nil(installation.disconnected_at)}>
                       <.modal
                         id={"slack-routes-modal-#{installation.id}"}
-                        title={"Edit #{installation.team_name || installation.team_id} routes"}
-                        description="Route Hive notifications to Slack channel identifiers."
+                        title={
+                          dgettext("dashboard_slack", "Edit %{workspace} routes",
+                            workspace: installation.team_name || installation.team_id
+                          )
+                        }
+                        description={
+                          dgettext(
+                            "dashboard_slack",
+                            "Route Hive notifications to Slack channel identifiers."
+                          )
+                        }
                         header_type="icon"
                         header_size="large"
                       >
                         <:trigger :let={attrs}>
                           <.button
-                            label="Edit routes"
+                            label={dgettext("dashboard_slack", "Edit routes")}
                             variant="secondary"
                             size="small"
                             icon_only={true}
-                            title="Edit routes"
-                            aria-label="Edit routes"
+                            title={dgettext("dashboard_slack", "Edit routes")}
+                            aria-label={dgettext("dashboard_slack", "Edit routes")}
                             {attrs}
                           >
                             <.pencil />
@@ -197,7 +234,7 @@ defmodule HiveWeb.OpsLive.Slack do
                                 id={"notification-route-#{installation.id}-#{route.object_type}"}
                                 name={"installation[notification_routes][#{route.object_type}][slack_channel_id]"}
                                 value={notification_channel_value(installation, route)}
-                                label="Slack channel"
+                                label={dgettext("dashboard_slack", "Slack channel")}
                                 placeholder="C0123456789"
                                 show_suffix={false}
                               />
@@ -209,7 +246,7 @@ defmodule HiveWeb.OpsLive.Slack do
                           <.modal_footer>
                             <:action>
                               <.button
-                                label="Save routes"
+                                label={dgettext("dashboard_slack", "Save routes")}
                                 variant="primary"
                                 size="medium"
                                 type="submit"
@@ -228,12 +265,12 @@ defmodule HiveWeb.OpsLive.Slack do
                       >
                         <input type="hidden" name="_csrf_token" value={@csrf_token} />
                         <.button
-                          label="Disconnect"
+                          label={dgettext("dashboard_slack", "Disconnect")}
                           variant="destructive"
                           size="small"
                           icon_only={true}
-                          title="Disconnect workspace"
-                          aria-label="Disconnect workspace"
+                          title={dgettext("dashboard_slack", "Disconnect workspace")}
+                          aria-label={dgettext("dashboard_slack", "Disconnect workspace")}
                         >
                           <.trash />
                         </.button>
@@ -265,39 +302,46 @@ defmodule HiveWeb.OpsLive.Slack do
 
   defp workspace_description(installation) do
     case installation.team_id do
-      team_id when is_binary(team_id) and team_id != "" -> "Workspace #{team_id}"
-      _team_id -> "Workspace"
+      team_id when is_binary(team_id) and team_id != "" ->
+        dgettext("dashboard_slack", "Workspace %{team_id}", team_id: team_id)
+
+      _team_id ->
+        dgettext("dashboard_slack", "Workspace")
     end
   end
 
   defp installed_by_label(%{installed_by_user: %{email: email}}) when is_binary(email), do: email
-  defp installed_by_label(_installation), do: "Unknown installer"
+  defp installed_by_label(_installation), do: dgettext("dashboard_slack", "Unknown installer")
 
   defp installed_on_label(%{installed_at: %DateTime{} = installed_at}) do
-    "Installed on #{Calendar.strftime(installed_at, "%Y-%m-%d")}"
+    dgettext("dashboard_slack", "Installed on %{date}",
+      date: Calendar.strftime(installed_at, "%Y-%m-%d")
+    )
   end
 
-  defp installed_on_label(_installation), do: "Install date unknown"
+  defp installed_on_label(_installation), do: dgettext("dashboard_slack", "Install date unknown")
 
-  defp notification_channel_label(%{disconnected_at: %DateTime{}}, _routes), do: "No channel"
+  defp notification_channel_label(%{disconnected_at: %DateTime{}}, _routes),
+    do: dgettext("dashboard_slack", "No channel")
 
   defp notification_channel_label(installation, routes) do
     case configured_routes(installation, routes) do
-      [] -> "Not routed"
+      [] -> dgettext("dashboard_slack", "Not routed")
       [route] -> route.slack_channel_id
-      routes -> "#{length(routes)} channels"
+      routes -> dgettext("dashboard_slack", "%{count} channels", count: length(routes))
     end
   end
 
   defp notification_channel_sublabel(_installation, _routes), do: nil
 
-  defp notification_summary_label(%{disconnected_at: %DateTime{}}, _routes), do: "No routes"
+  defp notification_summary_label(%{disconnected_at: %DateTime{}}, _routes),
+    do: dgettext("dashboard_slack", "No routes")
 
   defp notification_summary_label(installation, routes) do
     case configured_routes(installation, routes) do
-      [] -> "No routes"
+      [] -> dgettext("dashboard_slack", "No routes")
       [route] -> route.label
-      routes -> "#{length(routes)} routes"
+      routes -> dgettext("dashboard_slack", "%{count} routes", count: length(routes))
     end
   end
 
@@ -305,9 +349,14 @@ defmodule HiveWeb.OpsLive.Slack do
 
   defp notification_summary_sublabel(installation, routes) do
     case configured_routes(installation, routes) do
-      [] -> "Configure notifications"
-      [route] -> "#{length(route.events)} events"
-      routes -> "#{configured_event_count(routes)} events"
+      [] ->
+        dgettext("dashboard_slack", "Configure notifications")
+
+      [route] ->
+        dgettext("dashboard_slack", "%{count} events", count: length(route.events))
+
+      routes ->
+        dgettext("dashboard_slack", "%{count} events", count: configured_event_count(routes))
     end
   end
 
@@ -338,14 +387,20 @@ defmodule HiveWeb.OpsLive.Slack do
     Enum.map_join(route.events, ", ", &Slack.notification_event_label/1)
   end
 
-  defp slack_empty_title(false), do: "Slack is not configured"
-  defp slack_empty_title(true), do: "No workspaces connected"
+  defp slack_empty_title(false), do: dgettext("dashboard_slack", "Slack is not configured")
+  defp slack_empty_title(true), do: dgettext("dashboard_slack", "No workspaces connected")
 
   defp slack_empty_subtitle(false) do
-    "Set Slack credentials in the environment to enable workspace installs."
+    dgettext(
+      "dashboard_slack",
+      "Set Slack credentials in the environment to enable workspace installs."
+    )
   end
 
   defp slack_empty_subtitle(true) do
-    "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+    dgettext(
+      "dashboard_slack",
+      "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+    )
   end
 end

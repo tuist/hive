@@ -12,8 +12,8 @@ defmodule HiveWeb.AuthController do
     |> html(Phoenix.HTML.Safe.to_iodata(PageHTML.login_page(conn, error: nil)))
   end
 
-  # Ueberauth's plug normally handles the redirect to the IdP before this
-  # action runs. Keep a fallback here so a configured provider still starts
+  # Ueberauth's plug normally handles the redirect to the identity provider before
+  # this action runs. Keep a fallback here so a configured provider still starts
   # when the plug route table falls through.
   def request(conn, %{"provider" => provider_key}) do
     with key when is_atom(key) <- safe_atom(provider_key),
@@ -22,12 +22,13 @@ defmodule HiveWeb.AuthController do
            Auth.ueberauth_provider(key) do
       Ueberauth.run_request(conn, provider_key, ueberauth_provider)
     else
-      _ -> unauthorized(conn, "The login attempt could not be started.")
+      _ ->
+        unauthorized(conn, dgettext("dashboard_auth", "The login attempt could not be started."))
     end
   end
 
   def callback(%{assigns: %{ueberauth_failure: _failure}} = conn, _params) do
-    unauthorized(conn, "The login attempt could not be completed.")
+    unauthorized(conn, dgettext("dashboard_auth", "The login attempt could not be completed."))
   end
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, %{"provider" => provider_key}) do
@@ -49,15 +50,24 @@ defmodule HiveWeb.AuthController do
       end
     else
       {:error, :domain_not_allowed} ->
-        unauthorized(conn, "Your account isn't from an allowed domain for this instance.")
+        unauthorized(
+          conn,
+          dgettext(
+            "dashboard_auth",
+            "Your account isn't from an allowed domain for this instance."
+          )
+        )
 
       _ ->
-        unauthorized(conn, "Unknown identity provider.")
+        unauthorized(conn, dgettext("dashboard_auth", "Unknown identity provider."))
     end
   end
 
   def callback(conn, _params) do
-    unauthorized(conn, "The login callback was missing required parameters.")
+    unauthorized(
+      conn,
+      dgettext("dashboard_auth", "The login callback was missing required parameters.")
+    )
   end
 
   def dev_login(conn, _params) do
@@ -156,7 +166,10 @@ defmodule HiveWeb.AuthController do
         sign_in(conn, user)
 
       {:error, %Ecto.Changeset{}} ->
-        unauthorized(conn, "We couldn't read a usable email from your account.")
+        unauthorized(
+          conn,
+          dgettext("dashboard_auth", "We couldn't read a usable email from your account.")
+        )
     end
   end
 
@@ -166,16 +179,29 @@ defmodule HiveWeb.AuthController do
         conn
         |> configure_session(renew: true)
         |> put_session(:user_id, user.id)
-        |> put_flash(:info, "#{provider_name} is connected to your account.")
+        |> put_flash(
+          :info,
+          dgettext("dashboard_auth", "%{provider} is connected to your account.",
+            provider: provider_name
+          )
+        )
         |> redirect(to: ~p"/account/identities")
 
       {:error, :identity_already_linked} ->
         conn
-        |> put_flash(:error, "#{provider_name} is already connected to another account.")
+        |> put_flash(
+          :error,
+          dgettext("dashboard_auth", "%{provider} is already connected to another account.",
+            provider: provider_name
+          )
+        )
         |> redirect(to: ~p"/account/identities")
 
       {:error, %Ecto.Changeset{}} ->
-        unauthorized(conn, "We couldn't connect that identity to your account.")
+        unauthorized(
+          conn,
+          dgettext("dashboard_auth", "We couldn't connect that identity to your account.")
+        )
     end
   end
 

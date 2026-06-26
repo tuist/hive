@@ -18,9 +18,18 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
 
   def open_graph(%ModelBinding{} = profile) do
     %{
-      description: "Manage the #{profile.name} inference profile and its repository tokens.",
-      section_label: "Ops",
-      highlights: ["Profile configuration", "Repository tokens", "Upstream model routing"],
+      description:
+        dgettext(
+          "dashboard_inference",
+          "Manage the %{profile} inference profile and its repository tokens.",
+          profile: profile.name
+        ),
+      section_label: dgettext("dashboard_inference", "Ops"),
+      highlights: [
+        dgettext("dashboard_inference", "Profile configuration"),
+        dgettext("dashboard_inference", "Repository tokens"),
+        dgettext("dashboard_inference", "Upstream model routing")
+      ],
       id: "ops-inference-profile",
       path: "/ops/inference/profiles/#{profile.id}",
       title: profile.name
@@ -35,13 +44,19 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to manage inference profiles.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Log in to manage inference profiles.")
+         )
          |> redirect(to: ~p"/login?#{[return_to: "/ops/inference/profiles/#{id}"]}")}
 
       not Policy.authorize?(:inference_profile_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only instance admins can manage inference profiles.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Only instance admins can manage inference profiles.")
+         )
          |> push_navigate(to: ~p"/")}
 
       true ->
@@ -103,7 +118,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Profile updated.")
+         |> put_flash(:info, dgettext("dashboard_inference", "Profile updated."))
          |> assign(:generated_token, nil)
          |> assign_profile(profile.id)
          |> push_event("close-modal", %{id: "edit-inference-profile-modal"})}
@@ -124,13 +139,17 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
          socket
          |> put_flash(
            :info,
-           if(profile.enabled, do: "Profile enabled.", else: "Profile disabled.")
+           if(profile.enabled,
+             do: dgettext("dashboard_inference", "Profile enabled."),
+             else: dgettext("dashboard_inference", "Profile disabled.")
+           )
          )
          |> assign(:generated_token, nil)
          |> assign_profile(profile.id)}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to update profile.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_inference", "Failed to update profile."))}
     end
   end
 
@@ -148,7 +167,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Token created.")
+         |> put_flash(:info, dgettext("dashboard_inference", "Token created."))
          |> assign_profile(profile.id)
          |> assign(:generated_token, generated_token)
          |> push_event("close-modal", %{id: "new-inference-token-modal"})}
@@ -207,15 +226,25 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <div data-part="page-header">
           <div data-part="title-group">
             <h1>{@profile.name}</h1>
-            <p>{@profile.description || "Stable model profile routed through Hive."}</p>
+            <p>
+              {@profile.description ||
+                dgettext("dashboard_inference", "Stable model profile routed through Hive.")}
+            </p>
           </div>
         </div>
 
         <section :if={@generated_token} data-part="generated-token">
           <div data-part="generated-copy">
-            <h2>Token created for {@profile.name}</h2>
+            <h2>
+              {dgettext("dashboard_inference", "Token created for %{profile}",
+                profile: @profile.name
+              )}
+            </h2>
             <p>
-              Store this token now. Hive stores only its hash and cannot show it again.
+              {dgettext(
+                "dashboard_inference",
+                "Store this token now. Hive stores only its hash and cannot show it again."
+              )}
             </p>
             <div data-part="read-only-value">
               <code>{@generated_token.value}</code>
@@ -227,21 +256,21 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
                 type="button"
                 phx-hook="Clipboard"
                 data-clipboard-value={@generated_token.value}
-                aria-label="Copy token"
+                aria-label={dgettext("dashboard_inference", "Copy token")}
               >
                 <.copy />
               </.button>
             </div>
           </div>
           <.button
-            label="Dismiss"
+            label={dgettext("dashboard_inference", "Dismiss")}
             variant="secondary"
             size="small"
             phx-click="dismiss_generated_token"
           />
         </section>
 
-        <.card title="Usage" icon="chart_column" data-part="usage-card">
+        <.card title={dgettext("dashboard_inference", "Usage")} icon="chart_column" data-part="usage-card">
           <:actions>
             <.usage_period_picker
               id="inference-profile-usage-date-range-picker"
@@ -262,12 +291,16 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
               series={@usage_series}
               preset={@usage_preset}
               bucket={@usage_bucket}
-              label={"Input and output token usage for #{@profile.name}"}
+              label={
+                dgettext("dashboard_inference", "Input and output token usage for %{profile}",
+                  profile: @profile.name
+                )
+              }
             />
           </.card_section>
           <.empty_card_section
             :if={!usage_chart_has_usage?(@usage_series)}
-            title="No usage yet"
+            title={dgettext("dashboard_inference", "No usage yet")}
             data-part="empty-usage-chart-card-section"
           >
             <:image>
@@ -277,14 +310,22 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           </.empty_card_section>
         </.card>
 
-        <.card title="Configuration" icon="lock" data-part="configuration-card">
+        <.card
+          title={dgettext("dashboard_inference", "Configuration")}
+          icon="lock"
+          data-part="configuration-card"
+        >
           <:actions>
             <.edit_profile_modal
               profile_form={@profile_form}
               provider_options={@provider_options}
             />
             <.button
-              label={if @profile.enabled, do: "Disable", else: "Enable"}
+              label={
+                if @profile.enabled,
+                  do: dgettext("dashboard_inference", "Disable"),
+                  else: dgettext("dashboard_inference", "Enable")
+              }
               variant="secondary"
               size="medium"
               phx-click="toggle_profile"
@@ -293,78 +334,88 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           <.card_section>
             <div data-part="definition-grid">
               <div data-part="definition-item">
-                <span>Status</span>
+                <span>{dgettext("dashboard_inference", "Status")}</span>
                 <% status = profile_status(@profile) %>
                 <.badge label={status.label} color={status.color} style="light-fill" />
               </div>
               <div data-part="definition-item">
-                <span>Upstream provider</span>
+                <span>{dgettext("dashboard_inference", "Upstream provider")}</span>
                 <strong>{@profile.upstream_provider}</strong>
               </div>
               <div data-part="definition-item">
-                <span>Upstream model</span>
+                <span>{dgettext("dashboard_inference", "Upstream model")}</span>
                 <code>{@profile.upstream_model}</code>
               </div>
               <div data-part="definition-item">
-                <span>Input cost</span>
+                <span>{dgettext("dashboard_inference", "Input cost")}</span>
                 <strong>{format_cost_per_million(@profile.input_cost_per_million)}</strong>
               </div>
               <div data-part="definition-item">
-                <span>Output cost</span>
+                <span>{dgettext("dashboard_inference", "Output cost")}</span>
                 <strong>{format_cost_per_million(@profile.output_cost_per_million)}</strong>
               </div>
               <div data-part="definition-item">
-                <span>Last used</span>
+                <span>{dgettext("dashboard_inference", "Last used")}</span>
                 <strong>{last_used_label(@profile.last_used_at)}</strong>
               </div>
             </div>
           </.card_section>
         </.card>
 
-        <.card title="Client configuration" icon="external_link" data-part="client-configuration-card">
+        <.card
+          title={dgettext("dashboard_inference", "Client configuration")}
+          icon="external_link"
+          data-part="client-configuration-card"
+        >
           <.card_section>
             <p data-part="card-intro">
-              Use a profile token as the authorization secret. Create one below and store it as
+              {dgettext(
+                "dashboard_inference",
+                "Use a profile token as the authorization secret. Create one below and store it as"
+              )}
               <code>HIVE_INFERENCE_TOKEN</code>.
             </p>
             <div data-part="client-configuration-grid">
               <div data-part="definition-item">
-                <span>Base address</span>
+                <span>{dgettext("dashboard_inference", "Base address")}</span>
                 <code>{@client_base_url}</code>
               </div>
               <div data-part="definition-item">
-                <span>OpenAI-compatible model</span>
+                <span>{dgettext("dashboard_inference", "OpenAI-compatible model")}</span>
                 <code>{@profile.name}</code>
               </div>
               <div data-part="definition-item">
-                <span>Blick model</span>
+                <span>{dgettext("dashboard_inference", "Blick model")}</span>
                 <code>hive/{@profile.name}</code>
               </div>
               <div data-part="definition-item">
-                <span>Authorization header</span>
+                <span>{dgettext("dashboard_inference", "Authorization header")}</span>
                 <code>Bearer $HIVE_INFERENCE_TOKEN</code>
               </div>
             </div>
           </.card_section>
           <.card_section data-part="client-snippets-card-section">
             <div data-part="client-snippet">
-              <span>opencode provider</span>
+              <span>{dgettext("dashboard_inference", "opencode provider")}</span>
               <pre><code>{opencode_provider_snippet(@client_base_url, @profile)}</code></pre>
             </div>
             <div data-part="client-snippet">
-              <span>blick.toml</span>
+              <span>{dgettext("dashboard_inference", "blick.toml")}</span>
               <pre><code>{blick_snippet(@profile)}</code></pre>
             </div>
           </.card_section>
         </.card>
 
-        <.card title="Tokens" icon="lock_password" data-part="tokens-card">
+        <.card title={dgettext("dashboard_inference", "Tokens")} icon="lock_password" data-part="tokens-card">
           <:actions>
             <.new_token_modal profile={@profile} token_form={@token_form} />
           </:actions>
           <.card_section>
             <p data-part="card-intro">
-              Tokens are bound to this profile and can be revoked independently.
+              {dgettext(
+                "dashboard_inference",
+                "Tokens are bound to this profile and can be revoked independently."
+              )}
             </p>
 
             <div data-part="table-scroll">
@@ -373,38 +424,51 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
                 rows={@tokens}
                 row_navigate={fn token -> ~p"/ops/inference/tokens/#{token.id}" end}
               >
-                <:col :let={token} label="Token">
+                <:col :let={token} label={dgettext("dashboard_inference", "Token")}>
                   <.text_cell label={token.name} />
                 </:col>
-                <:col :let={token} label="Status">
+                <:col :let={token} label={dgettext("dashboard_inference", "Status")}>
                   <% status = token_status(token) %>
                   <.badge_cell label={status.label} color={status.color} style="light-fill" />
                 </:col>
-                <:col :let={token} label="Created">
+                <:col :let={token} label={dgettext("dashboard_inference", "Created")}>
                   <.text_cell label={format_compact_datetime(token.inserted_at)} />
                 </:col>
-                <:col :let={token} label="Expires">
+                <:col :let={token} label={dgettext("dashboard_inference", "Expires")}>
                   <.text_cell label={token_expiry_table_label(token.expires_at)} />
                 </:col>
-                <:col :let={token} label="Last used">
+                <:col :let={token} label={dgettext("dashboard_inference", "Last used")}>
                   <.text_cell label={last_used_label(token.last_used_at)} />
                 </:col>
-                <:col :let={token} label="Usage">
+                <:col :let={token} label={dgettext("dashboard_inference", "Usage")}>
                   <div data-part="token-usage-cell">
                     <% usage = token_usage(@token_usage_summaries, token) %>
-                    <span>{format_count(usage.input_tokens)} in</span>
-                    <small>{format_count(usage.output_tokens)} out</small>
+                    <span>
+                      {dgettext("dashboard_inference", "%{count} in",
+                        count: format_count(usage.input_tokens)
+                      )}
+                    </span>
+                    <small>
+                      {dgettext("dashboard_inference", "%{count} out",
+                        count: format_count(usage.output_tokens)
+                      )}
+                    </small>
                   </div>
                 </:col>
-                <:col :let={token} label="Cost">
+                <:col :let={token} label={dgettext("dashboard_inference", "Cost")}>
                   <% usage = token_usage(@token_usage_summaries, token) %>
                   <.text_cell label={format_cost(usage.cost_usd)} />
                 </:col>
                 <:empty_state>
                   <.table_empty_state
                     icon="lock_password"
-                    title="No tokens"
-                    subtitle="Create a token when repositories are ready to use this profile."
+                    title={dgettext("dashboard_inference", "No tokens")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_inference",
+                        "Create a token when repositories are ready to use this profile."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -423,15 +487,20 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     ~H"""
     <.modal
       id="edit-inference-profile-modal"
-      title="Edit profile"
-      description="Update the upstream provider or model behind this stable profile."
+      title={dgettext("dashboard_inference", "Edit profile")}
+      description={
+        dgettext(
+          "dashboard_inference",
+          "Update the upstream provider or model behind this stable profile."
+        )
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="close_edit_profile"
     >
       <:trigger :let={attrs}>
         <.button
-          label="Edit profile"
+          label={dgettext("dashboard_inference", "Edit profile")}
           variant="secondary"
           size="medium"
           phx-click="open_edit_profile"
@@ -454,15 +523,15 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.text_input
           id="edit-inference-profile-name"
           field={@profile_form[:name]}
-          label="Profile name"
+          label={dgettext("dashboard_inference", "Profile name")}
         />
         <.text_area
           id="edit-inference-profile-description"
           field={@profile_form[:description]}
-          label="Description"
+          label={dgettext("dashboard_inference", "Description")}
         />
         <div data-part="select-field">
-          <span>Upstream provider</span>
+          <span>{dgettext("dashboard_inference", "Upstream provider")}</span>
           <.select
             id="edit-inference-profile-provider"
             name={@profile_form[:upstream_provider].name}
@@ -473,7 +542,11 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
                 @profile_form[:upstream_provider].value
               )
             }
-            label={if @provider_options == [], do: "No providers available", else: "Choose provider"}
+            label={
+              if @provider_options == [],
+                do: dgettext("dashboard_inference", "No providers available"),
+                else: dgettext("dashboard_inference", "Choose provider")
+            }
             disabled={@provider_options == []}
           >
             <:item :for={provider <- @provider_options} value={provider.value} label={provider.label} />
@@ -482,13 +555,13 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.text_input
           id="edit-inference-profile-model"
           field={@profile_form[:upstream_model]}
-          label="Upstream model"
+          label={dgettext("dashboard_inference", "Upstream model")}
           placeholder={model_identifier_placeholder(@profile_form[:upstream_provider].value)}
         />
         <.text_input
           id="edit-inference-profile-input-cost"
           field={@profile_form[:input_cost_per_million]}
-          label="Input cost per million tokens"
+          label={dgettext("dashboard_inference", "Input cost per million tokens")}
           input_type="number"
           min="0"
           step="0.000001"
@@ -496,7 +569,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.text_input
           id="edit-inference-profile-output-cost"
           field={@profile_form[:output_cost_per_million]}
-          label="Output cost per million tokens"
+          label={dgettext("dashboard_inference", "Output cost per million tokens")}
           input_type="number"
           min="0"
           step="0.000001"
@@ -507,7 +580,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_inference", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -516,7 +589,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           </:action>
           <:action>
             <.button
-              label="Save"
+              label={dgettext("dashboard_inference", "Save")}
               size="medium"
               variant="primary"
               type="submit"
@@ -536,15 +609,19 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     ~H"""
     <.modal
       id="new-inference-token-modal"
-      title="Create token"
-      description={"Create a token that can only request #{@profile.name}."}
+      title={dgettext("dashboard_inference", "Create token")}
+      description={
+        dgettext("dashboard_inference", "Create a token that can only request %{profile}.",
+          profile: @profile.name
+        )
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="close_new_token"
     >
       <:trigger :let={attrs}>
         <.button
-          label="Create token"
+          label={dgettext("dashboard_inference", "Create token")}
           size="medium"
           variant="primary"
           phx-click="open_new_token"
@@ -566,13 +643,13 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.text_input
           id="new-inference-token-name"
           field={@token_form[:name]}
-          label="Token name"
-          placeholder="Repository automation"
+          label={dgettext("dashboard_inference", "Token name")}
+          placeholder={dgettext("dashboard_inference", "Repository automation")}
         />
         <.text_input
           id="new-inference-token-expires-at"
           field={@token_form[:expires_at]}
-          label="Expires at"
+          label={dgettext("dashboard_inference", "Expires at")}
           placeholder="2026-07-01T12:00:00Z"
         />
       </.form>
@@ -581,7 +658,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_inference", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -590,7 +667,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           </:action>
           <:action>
             <.button
-              label="Create"
+              label={dgettext("dashboard_inference", "Create")}
               size="medium"
               variant="primary"
               type="submit"
@@ -607,7 +684,13 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     profile = Inference.get_profile!(id)
 
     socket
-    |> assign(:page_title, "#{profile.name} · Inference · #{socket.assigns.product_name}")
+    |> assign(
+      :page_title,
+      dgettext("dashboard_inference", "%{profile} · Inference · %{product}",
+        profile: profile.name,
+        product: socket.assigns.product_name
+      )
+    )
     |> assign(OpenGraph.assigns(open_graph(profile)))
     |> assign(:profile, profile)
     |> assign(:tokens, profile.tokens)
