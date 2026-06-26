@@ -141,16 +141,21 @@ defmodule HiveWeb.DropsLive.Show do
   end
 
   defp description(drop) do
-    case drop.body do
-      nil -> "Shipped update from the #{domain_name(drop)} domain."
-      body -> Markdown.preview(body, 180)
+    if present?(drop.body) do
+      Markdown.preview(drop.body, 180)
+    else
+      case primary_context(drop) do
+        nil -> "Shipped update from #{source_card_label(drop.source_type)}."
+        context -> "Shipped update for #{context} from #{source_card_label(drop.source_type)}."
+      end
     end
   end
 
   defp section_label(drop) do
     parts =
       [
-        Drops.source_type_label(drop.source_type),
+        "Drop",
+        source_card_label(drop.source_type),
         drop.version
       ]
       |> Enum.reject(&(is_nil(&1) or &1 == ""))
@@ -160,15 +165,67 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp highlights(drop) do
     [
-      domain_name(drop),
-      drop.version,
-      Drops.source_type_label(drop.source_type)
+      project_context(drop),
+      domain_context(drop),
+      published_context(drop.published_at)
     ]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> case do
+      [] -> [source_card_label(drop.source_type)]
+      highlights -> highlights
+    end
+  end
+
+  defp source_card_label(:github_release), do: "GitHub release"
+  defp source_card_label(:rss), do: "Changelog feed"
+  defp source_card_label(_source_type), do: "Drop"
+
+  defp primary_context(drop) do
+    case project_names(drop) do
+      [name | _] -> name
+      [] -> drop |> domain_names() |> List.first()
+    end
+  end
+
+  defp project_context(drop) do
+    drop
+    |> project_names()
+    |> context_label("Project", "Projects")
+  end
+
+  defp domain_context(drop) do
+    drop
+    |> domain_names()
+    |> context_label("Domain", "Domains")
+  end
+
+  defp context_label([], _singular, _plural), do: nil
+  defp context_label([name], singular, _plural), do: "#{singular}: #{name}"
+
+  defp context_label(names, _singular, plural) do
+    "#{plural}: #{names |> Enum.take(2) |> Enum.join(", ")}"
+  end
+
+  defp project_names(drop) do
+    drop
+    |> Drops.projects_for_drop()
+    |> Enum.map(& &1.name)
     |> Enum.reject(&(is_nil(&1) or &1 == ""))
   end
 
-  defp domain_name(%{domains: [%{name: name} | _]}), do: name
-  defp domain_name(_drop), do: "Unclassified"
+  defp domain_names(%{domains: domains}) when is_list(domains) do
+    domains
+    |> Enum.map(& &1.name)
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+  end
+
+  defp domain_names(_drop), do: []
+
+  defp published_context(%DateTime{} = datetime) do
+    Calendar.strftime(datetime, "%b %d, %Y")
+  end
+
+  defp published_context(_datetime), do: nil
 
   defp drop_domains(%{domains: domains}) when is_list(domains), do: domains
   defp drop_domains(_drop), do: []
