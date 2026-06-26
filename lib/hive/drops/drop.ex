@@ -16,6 +16,7 @@ defmodule Hive.Drops.Drop do
   @foreign_key_type :binary_id
 
   schema "drops" do
+    field :number, :integer
     field :source_type, Ecto.Enum, values: @source_types
     field :external_id, :string
     field :title, :string
@@ -61,6 +62,7 @@ defmodule Hive.Drops.Drop do
     |> validate_length(:url, max: 2000)
     |> validate_length(:external_id, max: 500)
     |> validate_length(:version, max: 80)
+    |> unique_constraint(:number)
     |> unique_constraint([:source_type, :external_id],
       name: :drops_source_type_external_id_index
     )

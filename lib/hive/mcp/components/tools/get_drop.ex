@@ -8,7 +8,10 @@ defmodule Hive.MCP.Components.Tools.GetDrop do
       "type" => "object",
       "required" => ["id"],
       "properties" => %{
-        "id" => %{"type" => "string", "description" => "Drop UUID."}
+        "id" => %{
+          "oneOf" => [%{"type" => "integer"}, %{"type" => "string"}],
+          "description" => "Drop public number or /drops/:number URL."
+        }
       }
     }
 

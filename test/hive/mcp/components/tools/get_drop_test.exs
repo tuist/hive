@@ -36,10 +36,33 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
         url: "https://example.com/changelog/1"
       })
 
-    response = GetDrop.call(mcp_conn(user), %{"id" => drop.id}) |> response_json()
+    response = GetDrop.call(mcp_conn(user), %{"id" => drop.number}) |> response_json()
 
-    assert response["drop"]["id"] == drop.id
+    assert response["drop"]["id"] == drop.number
+    assert response["drop"]["number"] == drop.number
+    assert response["drop"]["hive_url"] == "/drops/#{drop.number}"
     assert response["drop"]["title"] == "Changelog v1"
+  end
+
+  test "accepts a shared drop URL" do
+    user = mcp_user()
+    domain = create_domain!(%{name: "Hive", visibility: "public"})
+
+    drop =
+      insert_drop!(domain, %{
+        source_type: :rss,
+        external_id: "ext-url-1",
+        title: "Changelog URL",
+        body: "Body",
+        url: "https://example.com/changelog/url-1"
+      })
+
+    response =
+      GetDrop.call(mcp_conn(user), %{"id" => "https://hive.test/drops/#{drop.number}"})
+      |> response_json()
+
+    assert response["drop"]["id"] == drop.number
+    assert response["drop"]["title"] == "Changelog URL"
   end
 
   test "returns linked GitHub issue forage items" do
@@ -75,7 +98,7 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
 
     Drops.replace_drop_github_issues(drop, [issue.id])
 
-    response = GetDrop.call(mcp_conn(user), %{"id" => drop.id}) |> response_json()
+    response = GetDrop.call(mcp_conn(user), %{"id" => to_string(drop.number)}) |> response_json()
 
     assert [
              %{
@@ -101,7 +124,7 @@ defmodule Hive.MCP.Components.Tools.GetDropTest do
         url: "https://example.com/hidden"
       })
 
-    response = GetDrop.call(mcp_conn(user), %{"id" => drop.id}) |> response_json()
+    response = GetDrop.call(mcp_conn(user), %{"id" => to_string(drop.number)}) |> response_json()
 
     assert response["error"] == "not_found"
   end

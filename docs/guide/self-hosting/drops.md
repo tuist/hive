@@ -7,6 +7,10 @@ tagged with a version (`v0.25.0`, `4.7.0`). Drops are read-only from
 the dashboard: the entries are produced by ingestion, not by humans
 typing into a form.
 
+Each drop gets a public number. Hive uses `/drops/:number` for the
+shareable drop page instead of exposing the internal database
+identifier.
+
 ## Sources
 
 Two source types feed drops:
