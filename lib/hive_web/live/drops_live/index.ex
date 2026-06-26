@@ -17,12 +17,13 @@ defmodule HiveWeb.DropsLive.Index do
 
   @page_size 10
 
-  def open_graph do
+  def open_graph(drops \\ [], meta \\ nil) do
+    total_entries = total_entries(drops, meta)
+
     %{
-      description:
-        "Shipped updates from GitHub releases and changelog feeds across every domain.",
+      description: "Shipped updates from connected project releases and changelog feeds.",
       section_label: "Drops",
-      highlights: ["GitHub releases", "RSS / Atom changelogs", "Subscribe per domain"],
+      highlights: drops_highlights(drops, total_entries),
       id: "drops",
       path: "/drops",
       title: "Drops"
@@ -83,6 +84,7 @@ defmodule HiveWeb.DropsLive.Index do
       |> assign(:query, query)
       |> assign(:atom_feed, atom_feed(params))
       |> assign(:search_form, to_form(%{"query" => query}, as: :search))
+      |> assign(OpenGraph.assigns(open_graph(drops, meta)))
 
     {:noreply, socket}
   end
@@ -435,4 +437,36 @@ defmodule HiveWeb.DropsLive.Index do
 
   defp maybe_put_csv(params, _key, []), do: params
   defp maybe_put_csv(params, key, values), do: Map.put(params, key, Enum.join(values, ","))
+
+  defp total_entries(_drops, %{total_entries: total}) when is_integer(total), do: total
+  defp total_entries(drops, _meta), do: length(drops)
+
+  defp drops_highlights(drops, total_entries) do
+    [
+      count_label(total_entries, "drop", "drops")
+      | source_highlights(drops)
+    ]
+    |> Kernel.++(["Subscribe per domain"])
+    |> Enum.uniq()
+    |> Enum.take(3)
+  end
+
+  defp source_highlights(drops) do
+    drops
+    |> Enum.map(& &1.source_type)
+    |> Enum.uniq()
+    |> Enum.flat_map(fn
+      :github_release -> ["GitHub releases"]
+      :rss -> ["Changelog feeds"]
+      _other -> []
+    end)
+    |> case do
+      [] -> ["Connected releases", "Changelog feeds"]
+      highlights -> highlights
+    end
+  end
+
+  defp count_label(1, singular, _plural), do: "1 #{singular}"
+  defp count_label(count, _singular, plural) when is_integer(count), do: "#{count} #{plural}"
+  defp count_label(_count, _singular, plural), do: "0 #{plural}"
 end
