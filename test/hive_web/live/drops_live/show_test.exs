@@ -102,10 +102,10 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
     drop = insert_drop!(domain)
 
-    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
 
     assert {:ok, data} = advertised_open_graph_data(html)
-    assert data.id == "drop-#{drop.id}"
+    assert data.id == "drop-#{drop.number}"
     assert data.section_label == "Drop · GitHub release · v0.25.0"
     assert data.highlights == ["Project: Hive", "Domain: Slack", "Jun 18, 2026"]
   end

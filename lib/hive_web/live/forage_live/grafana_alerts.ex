@@ -13,12 +13,17 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
 
   def open_graph do
     %{
-      description: "Operational signals visible only to organization members.",
-      section_label: "Forage",
-      highlights: ["Organization visible", "Read-only signals", "Forage source"],
+      description:
+        dgettext("dashboard_forage", "Operational signals visible only to organization members."),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Organization visible"),
+        dgettext("dashboard_forage", "Read-only signals"),
+        dgettext("dashboard_forage", "Forage source")
+      ],
       id: "forage-grafana-alerts",
       path: "/forage/grafana-alerts",
-      title: "Grafana alerts"
+      title: dgettext("dashboard_forage", "Grafana alerts")
     }
   end
 
@@ -31,10 +36,15 @@ defmodule HiveWeb.ForageLive.GrafanaAlerts do
 
       {:ok,
        socket
-       |> assign(:page_title, "Grafana alerts · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_forage", "Grafana alerts · %{product}",
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph()))
        |> assign(:atom_feed, %{
-         title: "Hive · Grafana alerts",
+         title: dgettext("dashboard_forage", "Hive · Grafana alerts"),
          atom_href: "/forage/grafana-alerts/atom.xml",
          rss_href: "/forage/grafana-alerts/rss.xml"
        })

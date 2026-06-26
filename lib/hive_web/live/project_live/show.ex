@@ -18,12 +18,18 @@ defmodule HiveWeb.ProjectLive.Show do
     %{
       description:
         project.description ||
-          "Repositories, domains, and drop sources tracked under the #{project.name} project.",
-      section_label: "Project",
+          dgettext(
+            "dashboard_projects",
+            "Repositories, domains, and drop sources tracked under the %{project} project.",
+            project: project.name
+          ),
+      section_label: dgettext("dashboard_projects", "Project"),
       highlights: [
         project.name,
-        "#{length(project.domains)} domains",
-        "#{length(project.github_repositories)} repositories"
+        dgettext("dashboard_projects", "%{count} domains", count: length(project.domains)),
+        dgettext("dashboard_projects", "%{count} repositories",
+          count: length(project.github_repositories)
+        )
       ],
       id: "project-#{project.id}",
       path: "/projects/#{project.id}",
@@ -40,10 +46,17 @@ defmodule HiveWeb.ProjectLive.Show do
       {:ok, project} ->
         {:ok,
          socket
-         |> assign(:page_title, "#{project.name} · Projects · #{socket.assigns.product_name}")
+         |> assign(
+           :page_title,
+           dgettext("dashboard_projects", "%{project} · Projects · %{product}",
+             project: project.name,
+             product: socket.assigns.product_name
+           )
+         )
          |> assign(:editable?, editable?)
          |> assign(:atom_feed, %{
-           title: "Hive · #{project.name} drops",
+           title:
+             dgettext("dashboard_projects", "Hive · %{project} drops", project: project.name),
            atom_href: "/projects/#{project.id}/drops/atom.xml",
            rss_href: "/projects/#{project.id}/drops/rss.xml"
          })
@@ -57,7 +70,7 @@ defmodule HiveWeb.ProjectLive.Show do
       {:error, :not_found} ->
         {:ok,
          socket
-         |> put_flash(:error, "Project not found.")
+         |> put_flash(:error, dgettext("dashboard_projects", "Project not found."))
          |> redirect(to: ~p"/projects")}
     end
   end
@@ -76,7 +89,12 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       update_project(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can edit projects.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can edit projects.")
+       )}
     end
   end
 
@@ -94,7 +112,12 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       link_repository(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can link repositories.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can link repositories.")
+       )}
     end
   end
 
@@ -125,7 +148,12 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       link_domain(socket, domain_id)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can link domains.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can link domains.")
+       )}
     end
   end
 
@@ -147,7 +175,12 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       do_create_webhook(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can manage webhooks.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can manage webhooks.")
+       )}
     end
   end
 
@@ -185,21 +218,31 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       do_delete_webhook(socket, id)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can manage webhooks.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can manage webhooks.")
+       )}
     end
   end
 
   def handle_event("delete_project", %{"name" => name}, socket) do
     cond do
       not socket.assigns.editable? ->
-        {:noreply, put_flash(socket, :error, "Only organization members can delete projects.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_projects", "Only organization members can delete projects.")
+         )}
 
       name == socket.assigns.project.name ->
         {:ok, _project} = Projects.delete_project(socket.assigns.project)
 
         {:noreply,
          socket
-         |> put_flash(:info, "Project deleted.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Project deleted."))
          |> push_event("close-modal", %{id: "delete-project-modal"})
          |> push_navigate(to: ~p"/projects")}
 
@@ -212,7 +255,12 @@ defmodule HiveWeb.ProjectLive.Show do
     if socket.assigns.editable? do
       remove_repository(socket, repository_id)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can remove repositories.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can remove repositories.")
+       )}
     end
   end
 
@@ -222,10 +270,15 @@ defmodule HiveWeb.ProjectLive.Show do
 
       {:noreply,
        socket
-       |> put_flash(:info, "Domain removed from project.")
+       |> put_flash(:info, dgettext("dashboard_projects", "Domain removed from project."))
        |> reload_project()}
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can remove domains.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can remove domains.")
+       )}
     end
   end
 
@@ -260,7 +313,7 @@ defmodule HiveWeb.ProjectLive.Show do
           </div>
         </div>
 
-        <.card :if={@editable?} title="Settings" icon="apps">
+        <.card :if={@editable?} title={dgettext("dashboard_projects", "Settings")} icon="apps">
           <.card_section>
             <.form
               id="edit-project-form"
@@ -272,37 +325,41 @@ defmodule HiveWeb.ProjectLive.Show do
               <.text_input
                 id="project-name"
                 field={@project_form[:name]}
-                label="Name"
+                label={dgettext("dashboard_projects", "Name")}
                 required={true}
                 show_required={true}
               />
               <.text_area
                 id="project-description"
                 field={@project_form[:description]}
-                label="Description"
+                label={dgettext("dashboard_projects", "Description")}
                 max_length={500}
                 rows={4}
               />
               <div data-part="select-field">
-                <span>Visibility</span>
+                <span>{dgettext("dashboard_projects", "Visibility")}</span>
                 <.select
                   id="project-visibility"
                   name={@project_form[:visibility].name}
                   value={Phoenix.HTML.Form.normalize_value("select", @project_form[:visibility].value)}
-                  label="Choose visibility"
+                  label={dgettext("dashboard_projects", "Choose visibility")}
                 >
-                  <:item value="public" label="Public" icon="world" />
-                  <:item value="private" label="Private" icon="lock" />
+                  <:item value="public" label={dgettext("dashboard_projects", "Public")} icon="world" />
+                  <:item value="private" label={dgettext("dashboard_projects", "Private")} icon="lock" />
                 </.select>
               </div>
               <div data-part="form-actions">
-                <.button label="Save project" size="medium" variant="primary" />
+                <.button
+                  label={dgettext("dashboard_projects", "Save project")}
+                  size="medium"
+                  variant="primary"
+                />
               </div>
             </.form>
           </.card_section>
         </.card>
 
-        <.card title="Repositories" icon="brand_github">
+        <.card title={dgettext("dashboard_projects", "Repositories")} icon="brand_github">
           <:actions :if={@editable?}>
             <.link_repository_modal
               form={@repository_form}
@@ -319,10 +376,10 @@ defmodule HiveWeb.ProjectLive.Show do
                 rows={@project.github_repositories}
                 row_key={fn repository -> "repository-#{repository.id}" end}
               >
-                <:col :let={repository} label="Repository">
+                <:col :let={repository} label={dgettext("dashboard_projects", "Repository")}>
                   <.text_and_description_cell
                     label={repository_full_name(repository)}
-                    description="Linked repository"
+                    description={dgettext("dashboard_projects", "Linked repository")}
                     icon="brand_github"
                   />
                 </:col>
@@ -330,17 +387,21 @@ defmodule HiveWeb.ProjectLive.Show do
                   <.button_cell>
                     <:button>
                       <.button
-                        label="Remove repository"
+                        label={dgettext("dashboard_projects", "Remove repository")}
                         size="large"
                         variant="secondary"
                         icon_only={true}
                         phx-click="remove_repository"
                         phx-value-id={repository.id}
                         data-confirm={
-                          "Remove #{repository_full_name(repository)} from this project?"
+                          dgettext(
+                            "dashboard_projects",
+                            "Remove %{repository} from this project?",
+                            repository: repository_full_name(repository)
+                          )
                         }
-                        title="Remove repository"
-                        aria-label="Remove repository"
+                        title={dgettext("dashboard_projects", "Remove repository")}
+                        aria-label={dgettext("dashboard_projects", "Remove repository")}
                       >
                         <.trash />
                       </.button>
@@ -350,8 +411,8 @@ defmodule HiveWeb.ProjectLive.Show do
                 <:empty_state>
                   <.table_empty_state
                     icon="brand_github"
-                    title="No repositories linked yet"
-                    subtitle="Linked repositories appear here."
+                    title={dgettext("dashboard_projects", "No repositories linked yet")}
+                    subtitle={dgettext("dashboard_projects", "Linked repositories appear here.")}
                   />
                 </:empty_state>
               </.table>
@@ -359,7 +420,7 @@ defmodule HiveWeb.ProjectLive.Show do
           </.card_section>
         </.card>
 
-        <.card title="Domains" icon="treemap">
+        <.card title={dgettext("dashboard_projects", "Domains")} icon="treemap">
           <:actions :if={@editable?}>
             <.link_domain_modal
               form={@link_domain_form}
@@ -374,13 +435,15 @@ defmodule HiveWeb.ProjectLive.Show do
                 rows={@project.domains}
                 row_key={fn domain -> "domain-#{domain.id}" end}
               >
-                <:col :let={domain} label="Domain">
+                <:col :let={domain} label={dgettext("dashboard_projects", "Domain")}>
                   <div data-part="cell" data-type="text_and_description">
                     <div data-part="column">
                       <.link navigate={~p"/domains/#{domain.id}"} data-part="domain-title-link">
                         <span data-part="label">{domain.name}</span>
                       </.link>
-                      <span data-part="description">{domain.description || "No description yet."}</span>
+                      <span data-part="description">
+                        {domain.description || dgettext("dashboard_projects", "No description yet.")}
+                      </span>
                     </div>
                   </div>
                 </:col>
@@ -388,15 +451,19 @@ defmodule HiveWeb.ProjectLive.Show do
                   <.button_cell>
                     <:button>
                       <.button
-                        label="Remove domain"
+                        label={dgettext("dashboard_projects", "Remove domain")}
                         size="large"
                         variant="secondary"
                         icon_only={true}
                         phx-click="remove_domain"
                         phx-value-id={domain.id}
-                        data-confirm={"Remove #{domain.name} from this project?"}
-                        title="Remove domain"
-                        aria-label="Remove domain"
+                        data-confirm={
+                          dgettext("dashboard_projects", "Remove %{domain} from this project?",
+                            domain: domain.name
+                          )
+                        }
+                        title={dgettext("dashboard_projects", "Remove domain")}
+                        aria-label={dgettext("dashboard_projects", "Remove domain")}
                       >
                         <.trash />
                       </.button>
@@ -406,8 +473,13 @@ defmodule HiveWeb.ProjectLive.Show do
                 <:empty_state>
                   <.table_empty_state
                     icon="treemap"
-                    title="No domains defined"
-                    subtitle="Drops from this project will appear as Unclassified."
+                    title={dgettext("dashboard_projects", "No domains defined")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_projects",
+                        "Drops from this project will appear as Unclassified."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -443,15 +515,20 @@ defmodule HiveWeb.ProjectLive.Show do
     ~H"""
     <.modal
       id="link-repository-modal"
-      title="Link repository"
-      description="Add a GitHub repository that belongs to this project."
+      title={dgettext("dashboard_projects", "Link repository")}
+      description={dgettext("dashboard_projects", "Add a GitHub repository that belongs to this project.")}
       header_type="icon"
       header_size="large"
       on_dismiss="close_link_repository"
       on_open_change="link_repository_modal_open_change"
     >
       <:trigger :let={attrs}>
-        <.button label="Link repository" size="medium" variant="secondary" {attrs}>
+        <.button
+          label={dgettext("dashboard_projects", "Link repository")}
+          size="medium"
+          variant="secondary"
+          {attrs}
+        >
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -477,7 +554,9 @@ defmodule HiveWeb.ProjectLive.Show do
         />
 
         <div data-part="repository-selector">
-          <label data-part="field-label" for="link-repository-search">GitHub repository</label>
+          <label data-part="field-label" for="link-repository-search">
+            {dgettext("dashboard_projects", "GitHub repository")}
+          </label>
           <.dropdown
             id="link-repository-dropdown"
             label={selected_repository_label(@selected_repository)}
@@ -490,7 +569,7 @@ defmodule HiveWeb.ProjectLive.Show do
               <input
                 id="link-repository-search"
                 type="search"
-                placeholder="Search repositories..."
+                placeholder={dgettext("dashboard_projects", "Search repositories...")}
                 data-part="search-input"
               />
             </:search>
@@ -520,7 +599,7 @@ defmodule HiveWeb.ProjectLive.Show do
             :if={@repository_load_error == nil and @repository_options == []}
             data-part="repository-message"
           >
-            No repositories available.
+            {dgettext("dashboard_projects", "No repositories available.")}
           </div>
         </div>
       </.form>
@@ -529,7 +608,7 @@ defmodule HiveWeb.ProjectLive.Show do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_projects", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -538,7 +617,7 @@ defmodule HiveWeb.ProjectLive.Show do
           </:action>
           <:action>
             <.button
-              label="Link repository"
+              label={dgettext("dashboard_projects", "Link repository")}
               size="medium"
               variant="primary"
               type="submit"
@@ -559,14 +638,19 @@ defmodule HiveWeb.ProjectLive.Show do
     ~H"""
     <.modal
       id="link-domain-modal"
-      title="Link domain"
-      description="Attach an existing reusable domain to this project."
+      title={dgettext("dashboard_projects", "Link domain")}
+      description={dgettext("dashboard_projects", "Attach an existing reusable domain to this project.")}
       header_type="icon"
       header_size="large"
       on_dismiss="close_link_domain"
     >
       <:trigger :let={attrs}>
-        <.button label="Link domain" size="medium" variant="secondary" {attrs}>
+        <.button
+          label={dgettext("dashboard_projects", "Link domain")}
+          size="medium"
+          variant="secondary"
+          {attrs}
+        >
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -576,16 +660,18 @@ defmodule HiveWeb.ProjectLive.Show do
 
       <.form id="link-domain-form" for={@form} phx-submit="link_domain" data-part="form">
         <div :if={@available_domains == []} data-part="empty-link-options">
-          <p>Every existing domain is already linked to this project.</p>
+          <p>
+            {dgettext("dashboard_projects", "Every existing domain is already linked to this project.")}
+          </p>
         </div>
 
         <div :if={@available_domains != []} data-part="select-field">
-          <span>Domain</span>
+          <span>{dgettext("dashboard_projects", "Domain")}</span>
           <.select
             id="link-project-domain"
             name={@form[:domain_id].name}
             value={Phoenix.HTML.Form.normalize_value("select", @form[:domain_id].value)}
-            label="Choose domain"
+            label={dgettext("dashboard_projects", "Choose domain")}
           >
             <:item :for={domain <- @available_domains} value={domain.id} label={domain.name} />
           </.select>
@@ -596,7 +682,7 @@ defmodule HiveWeb.ProjectLive.Show do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_projects", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -605,7 +691,7 @@ defmodule HiveWeb.ProjectLive.Show do
           </:action>
           <:action :if={@available_domains != []}>
             <.button
-              label="Link domain"
+              label={dgettext("dashboard_projects", "Link domain")}
               size="medium"
               variant="primary"
               type="submit"
@@ -626,7 +712,7 @@ defmodule HiveWeb.ProjectLive.Show do
 
   defp webhooks_card(assigns) do
     ~H"""
-    <.card title="Webhooks" icon="webhook">
+    <.card title={dgettext("dashboard_projects", "Webhooks")} icon="webhook">
       <:actions>
         <.new_webhook_modal
           webhook_form={@webhook_form}
@@ -640,14 +726,14 @@ defmodule HiveWeb.ProjectLive.Show do
           :if={@created_webhook_url}
           status="success"
           size="large"
-          title="Webhook URL"
+          title={dgettext("dashboard_projects", "Webhook URL")}
           data-part="created-webhook"
         >
-          <p>Copy this now. It is shown only once.</p>
+          <p>{dgettext("dashboard_projects", "Copy this now. It is shown only once.")}</p>
           <code data-part="created-webhook-url">{@created_webhook_url}</code>
           <:action>
             <.button
-              label="Dismiss"
+              label={dgettext("dashboard_projects", "Dismiss")}
               size="small"
               variant="secondary"
               phx-click="dismiss_created_webhook"
@@ -661,13 +747,17 @@ defmodule HiveWeb.ProjectLive.Show do
             rows={@webhooks}
             row_key={fn webhook -> "webhook-#{webhook.id}" end}
           >
-            <:col :let={webhook} label="Name">
+            <:col :let={webhook} label={dgettext("dashboard_projects", "Name")}>
               <.text_and_description_cell
                 label={webhook.name}
-                description={"Created " <> format_short_datetime(webhook.inserted_at)}
+                description={
+                  dgettext("dashboard_projects", "Created %{date}",
+                    date: format_short_datetime(webhook.inserted_at)
+                  )
+                }
               />
             </:col>
-            <:col :let={webhook} label="Source">
+            <:col :let={webhook} label={dgettext("dashboard_projects", "Source")}>
               <div data-part="cell" data-type="badge">
                 <.badge
                   label={Webhook.source_label(webhook.source)}
@@ -679,22 +769,27 @@ defmodule HiveWeb.ProjectLive.Show do
                 </.badge>
               </div>
             </:col>
-            <:col :let={webhook} label="Last used">
+            <:col :let={webhook} label={dgettext("dashboard_projects", "Last used")}>
               <.text_cell label={last_used_label(webhook.last_used_at)} />
             </:col>
             <:col :let={webhook} label="">
               <.button_cell>
                 <:button>
                   <.button
-                    label="Delete webhook"
+                    label={dgettext("dashboard_projects", "Delete webhook")}
                     size="large"
                     variant="secondary"
                     icon_only={true}
                     phx-click="delete_webhook"
                     phx-value-id={webhook.id}
-                    data-confirm="Delete this webhook? The URL will stop working immediately."
-                    title="Delete webhook"
-                    aria-label="Delete webhook"
+                    data-confirm={
+                      dgettext(
+                        "dashboard_projects",
+                        "Delete this webhook? The URL will stop working immediately."
+                      )
+                    }
+                    title={dgettext("dashboard_projects", "Delete webhook")}
+                    aria-label={dgettext("dashboard_projects", "Delete webhook")}
                   >
                     <.trash />
                   </.button>
@@ -704,8 +799,10 @@ defmodule HiveWeb.ProjectLive.Show do
             <:empty_state>
               <.table_empty_state
                 icon="webhook"
-                title="No webhooks yet"
-                subtitle="Generate a webhook to ingest alerts for this project."
+                title={dgettext("dashboard_projects", "No webhooks yet")}
+                subtitle={
+                  dgettext("dashboard_projects", "Generate a webhook to ingest alerts for this project.")
+                }
               />
             </:empty_state>
           </.table>
@@ -723,15 +820,22 @@ defmodule HiveWeb.ProjectLive.Show do
     ~H"""
     <.modal
       id="new-webhook-modal"
-      title="New webhook"
-      description="Generate a URL an external source can POST alerts to."
+      title={dgettext("dashboard_projects", "New webhook")}
+      description={
+        dgettext("dashboard_projects", "Generate a URL an external source can post alerts to.")
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="close_new_webhook"
       on_open_change="new_webhook_modal_open_change"
     >
       <:trigger :let={attrs}>
-        <.button label="New webhook" size="medium" variant="secondary" {attrs}>
+        <.button
+          label={dgettext("dashboard_projects", "New webhook")}
+          size="medium"
+          variant="secondary"
+          {attrs}
+        >
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -746,14 +850,14 @@ defmodule HiveWeb.ProjectLive.Show do
       >
         <.text_input
           field={@webhook_form[:name]}
-          label="Name"
+          label={dgettext("dashboard_projects", "Name")}
           placeholder="Grafana production"
           required={true}
           show_required={true}
         />
 
         <div data-part="select-field">
-          <span>Source</span>
+          <span>{dgettext("dashboard_projects", "Source")}</span>
           <.select
             id="webhook-source"
             name={@webhook_form[:source].name}
@@ -773,7 +877,7 @@ defmodule HiveWeb.ProjectLive.Show do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_projects", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -782,7 +886,7 @@ defmodule HiveWeb.ProjectLive.Show do
           </:action>
           <:action>
             <.button
-              label="Generate webhook"
+              label={dgettext("dashboard_projects", "Generate webhook")}
               size="medium"
               variant="primary"
               type="button"
@@ -802,8 +906,10 @@ defmodule HiveWeb.ProjectLive.Show do
     ~H"""
     <.card_section data-part="delete-project-card-section">
       <div data-part="header">
-        <span data-part="title">Delete project</span>
-        <span data-part="subtitle">This action cannot be undone.</span>
+        <span data-part="title">{dgettext("dashboard_projects", "Delete project")}</span>
+        <span data-part="subtitle">
+          {dgettext("dashboard_projects", "This action cannot be undone.")}
+        </span>
       </div>
       <div data-part="content">
         <.form
@@ -814,22 +920,32 @@ defmodule HiveWeb.ProjectLive.Show do
         >
           <.modal
             id="delete-project-modal"
-            title="Are you sure you want to delete this?"
+            title={dgettext("dashboard_projects", "Are you sure you want to delete this?")}
             header_size="large"
             on_dismiss="close_delete_project"
           >
             <:trigger :let={attrs}>
-              <.button label="Delete project" variant="destructive" size="medium" {attrs} />
+              <.button
+                label={dgettext("dashboard_projects", "Delete project")}
+                variant="destructive"
+                size="medium"
+                {attrs}
+              />
             </:trigger>
             <.line_divider />
             <.alert
               status="warning"
               type="secondary"
               size="small"
-              title="Deleting the project will permanently remove its project links and sources"
+              title={
+                dgettext(
+                  "dashboard_projects",
+                  "Deleting the project will permanently remove its project links and sources"
+                )
+              }
             />
             <.text_input
-              label="Enter this project's name to confirm"
+              label={dgettext("dashboard_projects", "Enter this project's name to confirm")}
               field={@delete_project_form[:name]}
               type="basic"
               placeholder={@project.name}
@@ -840,7 +956,7 @@ defmodule HiveWeb.ProjectLive.Show do
                 <:action>
                   <.button
                     type="reset"
-                    label="Cancel"
+                    label={dgettext("dashboard_projects", "Cancel")}
                     variant="secondary"
                     size="medium"
                     phx-click="close_delete_project"
@@ -850,7 +966,7 @@ defmodule HiveWeb.ProjectLive.Show do
                   <.button
                     type="submit"
                     form="delete-project-form"
-                    label="Delete"
+                    label={dgettext("dashboard_projects", "Delete")}
                     variant="destructive"
                     size="medium"
                   />
@@ -871,7 +987,10 @@ defmodule HiveWeb.ProjectLive.Show do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Webhook created. Copy the URL. It is shown only once.")
+         |> put_flash(
+           :info,
+           dgettext("dashboard_projects", "Webhook created. Copy the URL. It is shown only once.")
+         )
          |> assign(:webhooks, Webhooks.list_for_project(socket.assigns.project))
          |> assign(:webhook_form, webhook_form())
          |> assign(:selected_source, default_webhook_source())
@@ -879,7 +998,8 @@ defmodule HiveWeb.ProjectLive.Show do
          |> push_event("close-modal", %{id: "new-webhook-modal"})}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Couldn't create the webhook.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_projects", "Couldn't create the webhook."))}
     end
   end
 
@@ -893,7 +1013,7 @@ defmodule HiveWeb.ProjectLive.Show do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Webhook deleted.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Webhook deleted."))
          |> assign(:webhooks, Webhooks.list_for_project(socket.assigns.project))}
     end
   end
@@ -905,10 +1025,17 @@ defmodule HiveWeb.ProjectLive.Show do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Project updated.")
-         |> assign(:page_title, "#{project.name} · Projects · #{socket.assigns.product_name}")
+         |> put_flash(:info, dgettext("dashboard_projects", "Project updated."))
+         |> assign(
+           :page_title,
+           dgettext("dashboard_projects", "%{project} · Projects · %{product}",
+             project: project.name,
+             product: socket.assigns.product_name
+           )
+         )
          |> assign(:atom_feed, %{
-           title: "Hive · #{project.name} drops",
+           title:
+             dgettext("dashboard_projects", "Hive · %{project} drops", project: project.name),
            atom_href: "/projects/#{project.id}/drops/atom.xml",
            rss_href: "/projects/#{project.id}/drops/rss.xml"
          })
@@ -943,15 +1070,20 @@ defmodule HiveWeb.ProjectLive.Show do
   end
 
   defp repository_load_error({:not_configured, _missing}) do
-    "GitHub App is not configured."
+    dgettext("dashboard_projects", "GitHub App is not configured.")
   end
 
   defp repository_load_error({:unexpected_status, status, _body}) do
-    "GitHub returned #{status} while loading repositories."
+    dgettext("dashboard_projects", "GitHub returned %{status} while loading repositories.",
+      status: status
+    )
   end
 
-  defp repository_load_error(:invalid_private_key), do: "GitHub App private key is invalid."
-  defp repository_load_error(_reason), do: "GitHub repositories could not be loaded."
+  defp repository_load_error(:invalid_private_key),
+    do: dgettext("dashboard_projects", "GitHub App private key is invalid.")
+
+  defp repository_load_error(_reason),
+    do: dgettext("dashboard_projects", "GitHub repositories could not be loaded.")
 
   defp available_repository_options(repositories) do
     linked_repositories = Projects.list_linked_repository_full_names()
@@ -1009,8 +1141,10 @@ defmodule HiveWeb.ProjectLive.Show do
     Endpoint.url() <> "/webhooks/projects/#{project_id}/#{source}/#{token}"
   end
 
-  defp last_used_label(nil), do: "never used"
-  defp last_used_label(%DateTime{} = at), do: "last used #{format_short_datetime(at)}"
+  defp last_used_label(nil), do: dgettext("dashboard_projects", "never used")
+
+  defp last_used_label(%DateTime{} = at),
+    do: dgettext("dashboard_projects", "last used %{date}", date: format_short_datetime(at))
 
   defp format_short_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%Y-%m-%d %H:%M UTC")
 
@@ -1024,7 +1158,7 @@ defmodule HiveWeb.ProjectLive.Show do
       {:ok, _repository} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Repository linked.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Repository linked."))
          |> reload_project()
          |> push_event("close-modal", %{id: "link-repository-modal"})}
 
@@ -1038,12 +1172,12 @@ defmodule HiveWeb.ProjectLive.Show do
       {:ok, _domain} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Domain linked.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Domain linked."))
          |> reload_project()
          |> push_event("close-modal", %{id: "link-domain-modal"})}
 
       {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Domain not found.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_projects", "Domain not found."))}
     end
   end
 
@@ -1052,11 +1186,12 @@ defmodule HiveWeb.ProjectLive.Show do
       {:ok, _repository} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Repository removed from project.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Repository removed from project."))
          |> reload_project()}
 
       {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, "Repository not found.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_projects", "Repository not found."))}
     end
   end
 
@@ -1075,7 +1210,7 @@ defmodule HiveWeb.ProjectLive.Show do
 
   defp repository_full_name(repository), do: "#{repository.owner}/#{repository.name}"
 
-  defp selected_repository_label(nil), do: "Choose a repository"
+  defp selected_repository_label(nil), do: dgettext("dashboard_projects", "Choose a repository")
   defp selected_repository_label(repository), do: RepositoryOption.full_name(repository)
 
   defp sorted_repository_options(repositories) do

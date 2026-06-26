@@ -9,6 +9,7 @@ defmodule Hive.Projects.Webhook do
   """
 
   use Ecto.Schema
+  use Gettext, backend: HiveWeb.Gettext
 
   import Ecto.Changeset
 
@@ -30,7 +31,7 @@ defmodule Hive.Projects.Webhook do
 
   def sources, do: @sources
 
-  def source_label(:grafana), do: "Grafana"
+  def source_label(:grafana), do: dgettext("dashboard_projects", "Grafana")
 
   @doc false
   def changeset(webhook, attrs) do

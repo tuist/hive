@@ -1,0 +1,224 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:22
+#: lib/hive_web/live/domain_live/show.ex:109
+#, elixir-autogen, elixir-format
+msgid "%{domain} · Domains · %{product}"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:304
+#, elixir-autogen, elixir-format
+msgid "Add domain"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:192
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete this?"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:73
+#, elixir-autogen, elixir-format
+msgid "Atom"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:225
+#: lib/hive_web/components/domain_components.ex:333
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:298
+#, elixir-autogen, elixir-format
+msgid "Create a reusable domain the team can link to projects."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:341
+#, elixir-autogen, elixir-format
+msgid "Create domain"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:282
+#, elixir-autogen, elixir-format
+msgid "Create the first domain to give Hive a domain boundary."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:235
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:178
+#: lib/hive_web/components/domain_components.ex:198
+#, elixir-autogen, elixir-format
+msgid "Delete domain"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:210
+#, elixir-autogen, elixir-format
+msgid "Deleting the domain will permanently remove all of its data"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:141
+#: lib/hive_web/components/domain_components.ex:321
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:38
+#: lib/hive_web/components/domain_components.ex:122
+#, elixir-autogen, elixir-format
+msgid "Domain"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:64
+#, elixir-autogen, elixir-format
+msgid "Domain created."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:90
+#, elixir-autogen, elixir-format
+msgid "Domain deleted."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:40
+#, elixir-autogen, elixir-format
+msgid "Domain not found."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:106
+#, elixir-autogen, elixir-format
+msgid "Domain updated."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:19
+#: lib/hive_web/components/domain_components.ex:24
+#: lib/hive_web/components/layouts.ex:164
+#, elixir-autogen, elixir-format
+msgid "Domains"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:21
+#, elixir-autogen, elixir-format
+msgid "Domains · %{product}"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:214
+#, elixir-autogen, elixir-format
+msgid "Enter this domain's name to confirm"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:66
+#, elixir-autogen, elixir-format
+msgid "Feed"
+msgstr ""
+
+#: lib/hive_web/controllers/feed_controller.ex:158
+#: lib/hive_web/live/domain_live/show.ex:28
+#, elixir-autogen, elixir-format
+msgid "Hive · %{domain}"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:134
+#: lib/hive_web/components/domain_components.ex:314
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:297
+#, elixir-autogen, elixir-format
+msgid "New domain"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:354
+#, elixir-autogen, elixir-format
+msgid "No description"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:87
+#, elixir-autogen, elixir-format
+msgid "No domains yet"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:49
+#: lib/hive_web/components/domain_components.ex:260
+#, elixir-autogen, elixir-format
+msgid "No project"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:54
+#, elixir-autogen, elixir-format
+msgid "Only organization members can create domains."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:82
+#, elixir-autogen, elixir-format
+msgid "Only organization members can delete domains."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:63
+#, elixir-autogen, elixir-format
+msgid "Only organization members can edit domains."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:285
+#, elixir-autogen, elixir-format
+msgid "Organization members will populate this list."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:44
+#: lib/hive_web/components/domain_components.ex:255
+#, elixir-autogen, elixir-format
+msgid "Projects"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:80
+#, elixir-autogen, elixir-format
+msgid "RSS"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Save domain"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:71
+#, elixir-autogen, elixir-format
+msgid "Subscribe via Atom"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:78
+#, elixir-autogen, elixir-format
+msgid "Subscribe via RSS"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:20
+#, elixir-autogen, elixir-format
+msgid "The domains this Hive instance plans and routes work for."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:180
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone."
+msgstr ""
+
+#: lib/hive_web/controllers/feed_controller.ex:161
+#, elixir-autogen, elixir-format
+msgid "Updates belonging to the %{domain} domain."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:143
+#: lib/hive_web/components/domain_components.ex:323
+#, elixir-autogen, elixir-format
+msgid "What this domain covers inside the organization."
+msgstr ""

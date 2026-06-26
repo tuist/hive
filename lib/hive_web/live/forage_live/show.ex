@@ -44,7 +44,12 @@ defmodule HiveWeb.ForageLive.Show do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Forage item · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_forage", "Forage item · %{product}",
+         product: socket.assigns.product_name
+       )
+     )
      |> assign(:item, nil)
      |> assign(:can_create_spec?, Specs.can_create?(socket.assigns.current_user))
      |> assign(:can_edit_item?, false)
@@ -55,7 +60,7 @@ defmodule HiveWeb.ForageLive.Show do
      |> assign(:editing_comment_id, nil)
      |> assign_edit_comment_form(Forage.change_comment())
      |> assign(:atom_feed, %{
-       title: "Hive · Forage",
+       title: dgettext("dashboard_forage", "Hive · Forage"),
        atom_href: "/forage/atom.xml",
        rss_href: "/forage/rss.xml"
      })}
@@ -73,13 +78,13 @@ defmodule HiveWeb.ForageLive.Show do
       {:error, :unauthorized} ->
         {:noreply,
          socket
-         |> put_flash(:error, "You cannot view that forage item.")
+         |> put_flash(:error, dgettext("dashboard_forage", "You cannot view that forage item."))
          |> push_navigate(to: ~p"/forage")}
 
       _error ->
         {:noreply,
          socket
-         |> put_flash(:error, "Forage item not found.")
+         |> put_flash(:error, dgettext("dashboard_forage", "Forage item not found."))
          |> push_navigate(to: ~p"/forage")}
     end
   end
@@ -94,7 +99,12 @@ defmodule HiveWeb.ForageLive.Show do
        |> assign(:editing_item?, true)
        |> assign_item_edit_form(item_edit_changeset(item))}
     else
-      {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_forage", "Only the item author can edit this item.")
+       )}
     end
   end
 
@@ -113,7 +123,12 @@ defmodule HiveWeb.ForageLive.Show do
        |> assign(:editing_item?, true)
        |> assign_item_edit_form(changeset)}
     else
-      {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_forage", "Only the item author can edit this item.")
+       )}
     end
   end
 
@@ -129,11 +144,16 @@ defmodule HiveWeb.ForageLive.Show do
       {:ok, _item} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Forage item updated.")
+         |> put_flash(:info, dgettext("dashboard_forage", "Forage item updated."))
          |> refresh_item()}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the item author can edit this item.")
+         )}
 
       {:error, changeset} ->
         {:noreply,
@@ -159,11 +179,11 @@ defmodule HiveWeb.ForageLive.Show do
       {:ok, _comment} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Comment added.")
+         |> put_flash(:info, dgettext("dashboard_forage", "Comment added."))
          |> refresh_item()}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Sign in to comment.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_forage", "Sign in to comment."))}
 
       {:error, changeset} ->
         {:noreply, assign_comment_form(socket, Map.put(changeset, :action, :validate))}
@@ -180,7 +200,12 @@ defmodule HiveWeb.ForageLive.Show do
        |> assign_edit_comment_form(Forage.change_comment(comment))}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -203,7 +228,12 @@ defmodule HiveWeb.ForageLive.Show do
        |> assign_edit_comment_form(changeset)}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -217,11 +247,16 @@ defmodule HiveWeb.ForageLive.Show do
          {:ok, _comment} <- Forage.update_comment(comment, params, socket.assigns.current_user) do
       {:noreply,
        socket
-       |> put_flash(:info, "Comment updated.")
+       |> put_flash(:info, dgettext("dashboard_forage", "Comment updated."))
        |> refresh_item()}
     else
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
 
       {:error, changeset} ->
         {:noreply,
@@ -230,7 +265,7 @@ defmodule HiveWeb.ForageLive.Show do
          |> assign_edit_comment_form(Map.put(changeset, :action, :validate))}
 
       _error ->
-        {:noreply, put_flash(socket, :error, "Comment not found.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_forage", "Comment not found."))}
     end
   end
 
@@ -241,7 +276,13 @@ defmodule HiveWeb.ForageLive.Show do
 
   defp assign_item(socket, item) do
     socket
-    |> assign(:page_title, "#{item.title} · #{socket.assigns.product_name}")
+    |> assign(
+      :page_title,
+      dgettext("dashboard_forage", "%{title} · %{product}",
+        title: item.title,
+        product: socket.assigns.product_name
+      )
+    )
     |> assign(OpenGraph.assigns(open_graph(item)))
     |> assign(:item, item)
     |> assign(
@@ -331,12 +372,20 @@ defmodule HiveWeb.ForageLive.Show do
   end
 
   defp item_description(item) do
-    "#{Forage.item_type_label(item.type)} from #{item.source_label || "Hive"}."
+    dgettext("dashboard_forage", "%{type} from %{source}.",
+      type: Forage.item_type_label(item.type),
+      source: item.source_label || "Hive"
+    )
   end
 
   defp comments_highlight(%{comments: comments}) when is_list(comments) do
     count = length(comments)
-    "#{count} #{if count == 1, do: "comment", else: "comments"}"
+
+    if count == 1 do
+      dgettext("dashboard_forage", "1 comment")
+    else
+      dgettext("dashboard_forage", "%{count} comments", count: count)
+    end
   end
 
   defp comments_highlight(_item), do: nil

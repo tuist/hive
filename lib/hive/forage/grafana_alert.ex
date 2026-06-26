@@ -8,6 +8,7 @@ defmodule Hive.Forage.GrafanaAlert do
   """
 
   use Ecto.Schema
+  use Gettext, backend: HiveWeb.Gettext
 
   import Ecto.Changeset
 
@@ -36,8 +37,8 @@ defmodule Hive.Forage.GrafanaAlert do
 
   def statuses, do: @statuses
 
-  def status_label(:firing), do: "Firing"
-  def status_label(:resolved), do: "Resolved"
+  def status_label(:firing), do: dgettext("dashboard_forage", "Firing")
+  def status_label(:resolved), do: dgettext("dashboard_forage", "Resolved")
 
   def status_color(:firing), do: "attention"
   def status_color(:resolved), do: "success"

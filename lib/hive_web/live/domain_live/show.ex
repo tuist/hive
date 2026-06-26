@@ -5,8 +5,8 @@ defmodule HiveWeb.DomainLive.Show do
 
   alias Hive.Auth
   alias Hive.Domains
-  alias HiveWeb.Layouts
   alias HiveWeb.DomainComponents
+  alias HiveWeb.Layouts
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -17,9 +17,15 @@ defmodule HiveWeb.DomainLive.Show do
       {:ok, domain} ->
         {:ok,
          socket
-         |> assign(:page_title, "#{domain.name} · Domains · #{socket.assigns.product_name}")
+         |> assign(
+           :page_title,
+           dgettext("dashboard_domains", "%{domain} · Domains · %{product}",
+             domain: domain.name,
+             product: socket.assigns.product_name
+           )
+         )
          |> assign(:atom_feed, %{
-           title: "Hive · #{domain.name}",
+           title: dgettext("dashboard_domains", "Hive · %{domain}", domain: domain.name),
            atom_href: "/domains/#{domain.id}/atom.xml",
            rss_href: "/domains/#{domain.id}/rss.xml"
          })
@@ -31,7 +37,7 @@ defmodule HiveWeb.DomainLive.Show do
       {:error, :not_found} ->
         {:ok,
          socket
-         |> put_flash(:error, "Domain not found.")
+         |> put_flash(:error, dgettext("dashboard_domains", "Domain not found."))
          |> redirect(to: ~p"/domains")}
     end
   end
@@ -50,7 +56,12 @@ defmodule HiveWeb.DomainLive.Show do
     if socket.assigns.editable? do
       update_domain(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can edit domains.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_domains", "Only organization members can edit domains.")
+       )}
     end
   end
 
@@ -64,14 +75,19 @@ defmodule HiveWeb.DomainLive.Show do
   def handle_event("delete_domain", %{"name" => name}, socket) do
     cond do
       not socket.assigns.editable? ->
-        {:noreply, put_flash(socket, :error, "Only organization members can delete domains.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_domains", "Only organization members can delete domains.")
+         )}
 
       name == socket.assigns.domain.name ->
         {:ok, _domain} = Domains.delete_domain(socket.assigns.domain)
 
         {:noreply,
          socket
-         |> put_flash(:info, "Domain deleted.")
+         |> put_flash(:info, dgettext("dashboard_domains", "Domain deleted."))
          |> push_event("close-modal", %{id: "delete-domain-modal"})
          |> push_navigate(to: ~p"/domains")}
 
@@ -87,8 +103,14 @@ defmodule HiveWeb.DomainLive.Show do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Domain updated.")
-         |> assign(:page_title, "#{domain.name} · Domains · #{socket.assigns.product_name}")
+         |> put_flash(:info, dgettext("dashboard_domains", "Domain updated."))
+         |> assign(
+           :page_title,
+           dgettext("dashboard_domains", "%{domain} · Domains · %{product}",
+             domain: domain.name,
+             product: socket.assigns.product_name
+           )
+         )
          |> assign(:domain, domain)
          |> assign_form(Domains.change_domain(domain))}
 

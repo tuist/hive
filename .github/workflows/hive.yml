@@ -103,6 +103,42 @@ jobs:
 
       - run: mix credo
 
+  gettext:
+    name: Gettext
+    runs-on: tuist-linux
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+
+      - name: Cache deps
+        uses: actions/cache@v5
+        with:
+          path: deps
+          key: deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: deps-${{ runner.os }}-
+
+      - name: Cache build
+        uses: actions/cache@v5
+        with:
+          path: _build
+          key: build-${{ runner.os }}-${{ env.MIX_ENV }}-${{ hashFiles('mix.lock') }}
+          restore-keys: build-${{ runner.os }}-${{ env.MIX_ENV }}-
+
+      - run: mix deps.get
+
+      - name: Check gettext templates
+        run: |
+          mix gettext.extract
+          if [ -n "$(git status --porcelain -- priv/gettext)" ]; then
+            git status --short -- priv/gettext
+            git diff -- priv/gettext
+            echo "::error title=Gettext templates out of sync::Run 'mix gettext.extract' and commit the generated priv/gettext files."
+            exit 1
+          fi
+
   test:
     name: Test
     runs-on: tuist-linux

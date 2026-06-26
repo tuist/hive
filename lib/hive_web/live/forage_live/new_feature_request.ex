@@ -11,12 +11,20 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
 
   def open_graph do
     %{
-      description: "Capture a public feature request, bug report, or feedback item.",
-      section_label: "Forage",
-      highlights: ["Public items", "Actionable context", "Contributor signal"],
+      description:
+        dgettext(
+          "dashboard_forage",
+          "Capture a public feature request, bug report, or feedback item."
+        ),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Public items"),
+        dgettext("dashboard_forage", "Actionable context"),
+        dgettext("dashboard_forage", "Contributor signal")
+      ],
       id: "forage-new",
       path: "/forage/new",
-      title: "New forage item"
+      title: dgettext("dashboard_forage", "New forage item")
     }
   end
 
@@ -27,13 +35,18 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
     if Forage.can_create?(source, socket.assigns.current_user) do
       {:ok,
        socket
-       |> assign(:page_title, "New forage item · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_forage", "New forage item · %{product}",
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph()))
        |> assign_form(Forage.change_forage_item())}
     else
       {:ok,
        socket
-       |> put_flash(:error, "Log in to submit forage items.")
+       |> put_flash(:error, dgettext("dashboard_forage", "Log in to submit forage items."))
        |> redirect(to: ~p"/login")}
     end
   end
@@ -53,7 +66,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
       {:ok, _item} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Forage item submitted.")
+         |> put_flash(:info, dgettext("dashboard_forage", "Forage item submitted."))
          |> push_navigate(to: ~p"/forage")}
 
       {:error, changeset} ->

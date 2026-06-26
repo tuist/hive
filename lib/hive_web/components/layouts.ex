@@ -66,7 +66,7 @@ defmodule HiveWeb.Layouts do
       class="flash-region"
       role="status"
       aria-live="polite"
-      aria-label="Status messages"
+      aria-label={dgettext("dashboard", "Status messages")}
     >
       <.alert
         :for={message <- @messages}
@@ -90,10 +90,10 @@ defmodule HiveWeb.Layouts do
     <div class="feeds-dropdown">
       <.dropdown id={@id} size="medium" icon_only={true}>
         <:icon><.icon name="rss" /></:icon>
-        <.dropdown_item value="atom" label="Atom" href={@atom_href}>
+        <.dropdown_item value="atom" label={dgettext("dashboard", "Atom")} href={@atom_href}>
           <:left_icon><.icon name="rss" /></:left_icon>
         </.dropdown_item>
-        <.dropdown_item value="rss" label="RSS" href={@rss_href}>
+        <.dropdown_item value="rss" label={dgettext("dashboard", "RSS")} href={@rss_href}>
           <:left_icon><.icon name="rss" /></:left_icon>
         </.dropdown_item>
       </.dropdown>
@@ -155,32 +155,32 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
-            label="Projects"
+            label={dgettext("dashboard_projects", "Projects")}
             icon="apps"
             href={~p"/projects"}
             selected={String.starts_with?(@current_path, ~p"/projects")}
           />
           <.sidebar_item
-            label="Domains"
+            label={dgettext("dashboard_domains", "Domains")}
             icon="treemap"
             href={~p"/domains"}
             selected={String.starts_with?(@current_path, ~p"/domains")}
           />
           <.sidebar_item
-            label="Forage"
+            label={dgettext("dashboard_forage", "Forage")}
             icon="rss"
             href={~p"/forage"}
             selected={String.starts_with?(@current_path, ~p"/forage")}
           />
           <.sidebar_item
-            label="Specs"
+            label={dgettext("dashboard_specs", "Specs")}
             icon="file_text"
             href={~p"/specs"}
             selected={String.starts_with?(@current_path, "/specs")}
             data-new-activity={if @specs_have_new_activity?, do: "true"}
           />
           <.sidebar_item
-            label="Drops"
+            label={dgettext("dashboard_drops", "Drops")}
             icon="package"
             href={~p"/drops"}
             selected={String.starts_with?(@current_path, ~p"/drops")}
@@ -221,7 +221,7 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
-            label="Identities"
+            label={dgettext("dashboard_account", "Identities")}
             icon="user"
             href={~p"/account/identities"}
             selected={String.starts_with?(@current_path, ~p"/account/identities")}
@@ -262,13 +262,13 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
-            label="Slack"
+            label={dgettext("dashboard_slack", "Slack")}
             icon="brand_slack"
             href={~p"/ops/slack"}
             selected={String.starts_with?(@current_path, ~p"/ops/slack")}
           />
           <.sidebar_item
-            label="Drops"
+            label={dgettext("dashboard_drops", "Drops")}
             icon="package"
             href={~p"/ops/drops"}
             selected={String.starts_with?(@current_path, ~p"/ops/drops")}
@@ -276,7 +276,10 @@ defmodule HiveWeb.Layouts do
           <% inference_selected? = String.starts_with?(@current_path, ~p"/ops/inference") %>
           <details data-part="inference" open={inference_selected?}>
             <summary>
-              <.tab_menu_vertical label="Inference" data-selected={inference_selected?}>
+              <.tab_menu_vertical
+                label={dgettext("dashboard_inference", "Inference")}
+                data-selected={inference_selected?}
+              >
                 <:icon_left><.icon name="lock" /></:icon_left>
                 <:icon_right>
                   <span data-part="indicator"><.chevron_down /></span>
@@ -285,13 +288,13 @@ defmodule HiveWeb.Layouts do
             </summary>
             <div data-part="content">
               <.sidebar_item
-                label="Profiles"
+                label={dgettext("dashboard_inference", "Profiles")}
                 icon="list_tree"
                 href={~p"/ops/inference/profiles"}
                 selected={inference_profiles_path?(@current_path)}
               />
               <.sidebar_item
-                label="Providers"
+                label={dgettext("dashboard_inference", "Providers")}
                 icon="server"
                 href={~p"/ops/inference/providers"}
                 selected={@current_path == ~p"/ops/inference/providers"}
@@ -299,7 +302,7 @@ defmodule HiveWeb.Layouts do
             </div>
           </details>
           <.sidebar_item
-            label="Audit"
+            label={dgettext("dashboard_audit", "Audit")}
             icon="history"
             href={~p"/ops/audit"}
             selected={String.starts_with?(@current_path, ~p"/ops/audit")}
@@ -364,7 +367,7 @@ defmodule HiveWeb.Layouts do
               <div data-part="actions">
                 <a href={~p"/account/identities"}>
                   <.user />
-                  <span>Account</span>
+                  <span>{dgettext("dashboard_account", "Account")}</span>
                 </a>
               </div>
               <form method="post" action="/logout" data-part="actions">
@@ -372,7 +375,7 @@ defmodule HiveWeb.Layouts do
                 <input type="hidden" name="return_to" value={@current_path} />
                 <button type="submit">
                   <.logout />
-                  <span>Log out</span>
+                  <span>{dgettext("dashboard_account", "Log out")}</span>
                 </button>
               </form>
             </div>
@@ -380,7 +383,7 @@ defmodule HiveWeb.Layouts do
         </div>
         <.button
           :if={!@signed_in?}
-          label="Sign in"
+          label={dgettext("dashboard_auth", "Sign in")}
           href={~p"/login?#{[return_to: @current_path]}"}
           variant="primary"
           size="medium"

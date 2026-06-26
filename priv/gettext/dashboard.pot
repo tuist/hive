@@ -1,0 +1,57 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:93
+#, elixir-autogen, elixir-format
+msgid "Atom"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:96
+#, elixir-autogen, elixir-format
+msgid "RSS"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:69
+#, elixir-autogen, elixir-format
+msgid "Status messages"
+msgstr ""
+
+#: lib/hive/url.ex:42
+#, elixir-autogen, elixir-format
+msgid "Credentials in URLs are not supported."
+msgstr ""
+
+#: lib/hive/url.ex:36
+#, elixir-autogen, elixir-format
+msgid "Only http and https URLs are supported."
+msgstr ""
+
+#: lib/hive/url.ex:45
+#, elixir-autogen, elixir-format
+msgid "Only standard web ports are supported."
+msgstr ""
+
+#: lib/hive/url.ex:60
+#, elixir-autogen, elixir-format
+msgid "Provide a valid http or https URL."
+msgstr ""
+
+#: lib/hive/url.ex:39
+#, elixir-autogen, elixir-format
+msgid "The URL must include a hostname."
+msgstr ""
+
+#: lib/hive/url.ex:49
+#, elixir-autogen, elixir-format
+msgid "This URL points to a local or private network host, which Hive will not fetch."
+msgstr ""

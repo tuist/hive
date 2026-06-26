@@ -12,12 +12,20 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
 
   def open_graph do
     %{
-      description: "Manage upstream inference providers configured for the relay.",
-      section_label: "Ops",
-      highlights: ["Provider endpoints", "Credential status", "Profile references"],
+      description:
+        dgettext(
+          "dashboard_inference",
+          "Manage upstream inference providers configured for the relay."
+        ),
+      section_label: dgettext("dashboard_inference", "Ops"),
+      highlights: [
+        dgettext("dashboard_inference", "Provider endpoints"),
+        dgettext("dashboard_inference", "Credential status"),
+        dgettext("dashboard_inference", "Profile references")
+      ],
       id: "ops-inference-providers",
       path: "/ops/inference/providers",
-      title: "Inference providers"
+      title: dgettext("dashboard_inference", "Inference providers")
     }
   end
 
@@ -29,19 +37,30 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to review inference providers.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Log in to review inference providers.")
+         )
          |> redirect(to: ~p"/login?return_to=/ops/inference/providers")}
 
       not Policy.authorize?(:inference_profile_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only instance admins can review inference providers.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_inference", "Only instance admins can review inference providers.")
+         )
          |> push_navigate(to: ~p"/")}
 
       true ->
         {:ok,
          socket
-         |> assign(:page_title, "Inference providers · #{socket.assigns.product_name}")
+         |> assign(
+           :page_title,
+           dgettext("dashboard_inference", "Inference providers · %{product}",
+             product: socket.assigns.product_name
+           )
+         )
          |> assign(OpenGraph.assigns(open_graph()))
          |> assign_provider_form(Inference.change_provider(%Provider{}, %{timeout: 300_000}))
          |> assign_providers()}
@@ -65,7 +84,7 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Provider created.")
+         |> put_flash(:info, dgettext("dashboard_inference", "Provider created."))
          |> assign_provider_form(Inference.change_provider(%Provider{}, %{timeout: 300_000}))
          |> assign_providers()
          |> push_event("close-modal", %{id: "new-inference-provider-modal"})}
@@ -105,56 +124,66 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
       <section id="ops-inference-providers">
         <div data-part="page-header">
           <div data-part="title-group">
-            <h1>Providers</h1>
+            <h1>{dgettext("dashboard_inference", "Providers")}</h1>
             <p>
-              Create upstream endpoints that profiles can target. Credentials are encrypted and
-              are never shown after saving.
+              {dgettext(
+                "dashboard_inference",
+                "Create upstream endpoints that profiles can target. Credentials are encrypted and are never shown after saving."
+              )}
             </p>
           </div>
         </div>
 
-        <.card title="Providers" icon="server" data-part="providers-card">
+        <.card title={dgettext("dashboard_inference", "Providers")} icon="server" data-part="providers-card">
           <:actions>
             <.new_provider_modal provider_form={@provider_form} />
           </:actions>
           <.card_section>
             <p data-part="card-intro">
-              Runtime-managed and environment-backed endpoints with profile references.
+              {dgettext(
+                "dashboard_inference",
+                "Runtime-managed and environment-backed endpoints with profile references."
+              )}
             </p>
 
             <div data-part="table-scroll">
               <.table id="inference-providers-table" rows={@providers}>
-                <:col :let={provider} label="Provider">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Provider")}>
                   <.text_and_description_cell
                     icon="server"
                     label={provider.id}
                     description={provider_description(provider)}
                   />
                 </:col>
-                <:col :let={provider} label="Status">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Status")}>
                   <% status = provider_status(provider) %>
                   <.badge_cell label={status.label} color={status.color} style="light-fill" />
                 </:col>
-                <:col :let={provider} label="Endpoint">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Endpoint")}>
                   <div data-part="route-cell">
                     <code :if={provider.base_url}>{provider.base_url}</code>
-                    <span :if={!provider.base_url}>Not configured</span>
+                    <span :if={!provider.base_url}>{dgettext("dashboard_inference", "Not configured")}</span>
                   </div>
                 </:col>
-                <:col :let={provider} label="Credential">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Credential")}>
                   <.text_cell label={credential_label(provider)} />
                 </:col>
-                <:col :let={provider} label="Timeout">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Timeout")}>
                   <.text_cell label={timeout_label(provider.timeout)} />
                 </:col>
-                <:col :let={provider} label="Profiles">
+                <:col :let={provider} label={dgettext("dashboard_inference", "Profiles")}>
                   <.text_cell label={profile_count_label(provider.profile_count)} />
                 </:col>
                 <:empty_state>
                   <.table_empty_state
                     icon="server"
-                    title="No inference providers"
-                    subtitle="Create a provider before creating profiles that route to it."
+                    title={dgettext("dashboard_inference", "No inference providers")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_inference",
+                        "Create a provider before creating profiles that route to it."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -172,15 +201,20 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
     ~H"""
     <.modal
       id="new-inference-provider-modal"
-      title="Create provider"
-      description="Add an upstream endpoint that profiles can route requests to."
+      title={dgettext("dashboard_inference", "Create provider")}
+      description={
+        dgettext(
+          "dashboard_inference",
+          "Add an upstream endpoint that profiles can route requests to."
+        )
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="close_new_provider"
     >
       <:trigger :let={attrs}>
         <.button
-          label="Create provider"
+          label={dgettext("dashboard_inference", "Create provider")}
           size="medium"
           variant="primary"
           phx-click="open_new_provider"
@@ -203,27 +237,27 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
         <.text_input
           id="new-inference-provider-key"
           field={@provider_form[:key]}
-          label="Provider key"
+          label={dgettext("dashboard_inference", "Provider key")}
           placeholder="fireworks"
         />
         <.text_input
           id="new-inference-provider-endpoint"
           field={@provider_form[:base_url]}
-          label="Endpoint"
+          label={dgettext("dashboard_inference", "Endpoint")}
           input_type="url"
           placeholder="https://api.fireworks.ai/inference/v1"
         />
         <.text_input
           id="new-inference-provider-credential"
           field={@provider_form[:api_key]}
-          label="Credential"
+          label={dgettext("dashboard_inference", "Credential")}
           input_type="password"
           placeholder="provider-token"
         />
         <.text_input
           id="new-inference-provider-timeout"
           field={@provider_form[:timeout]}
-          label="Timeout in milliseconds"
+          label={dgettext("dashboard_inference", "Timeout in milliseconds")}
           input_type="number"
           min="1"
           step="1"
@@ -235,7 +269,7 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_inference", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -244,7 +278,7 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
           </:action>
           <:action>
             <.button
-              label="Create"
+              label={dgettext("dashboard_inference", "Create")}
               size="medium"
               variant="primary"
               type="submit"
@@ -257,37 +291,56 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
     """
   end
 
-  defp provider_status(%{configured?: false}), do: %{label: "Missing", color: "warning"}
+  defp provider_status(%{configured?: false}),
+    do: %{label: dgettext("dashboard_inference", "Missing"), color: "warning"}
 
   defp provider_status(%{endpoint_configured?: false}),
-    do: %{label: "No endpoint", color: "destructive"}
+    do: %{label: dgettext("dashboard_inference", "No endpoint"), color: "destructive"}
 
   defp provider_status(%{credential_configured?: false}),
-    do: %{label: "No credential", color: "warning"}
+    do: %{label: dgettext("dashboard_inference", "No credential"), color: "warning"}
 
-  defp provider_status(_provider), do: %{label: "Ready", color: "success"}
+  defp provider_status(_provider),
+    do: %{label: dgettext("dashboard_inference", "Ready"), color: "success"}
 
-  defp provider_description(%{source: :database}), do: "Managed in Hive"
-  defp provider_description(%{source: :environment}), do: "Configured from the environment"
-  defp provider_description(_provider), do: "Referenced by profiles but not configured"
+  defp provider_description(%{source: :database}),
+    do: dgettext("dashboard_inference", "Managed in Hive")
 
-  defp credential_label(%{credential_configured?: true}), do: "Configured"
-  defp credential_label(_provider), do: "Missing"
+  defp provider_description(%{source: :environment}),
+    do: dgettext("dashboard_inference", "Configured from the environment")
 
-  defp timeout_label(nil), do: "Not configured"
+  defp provider_description(_provider),
+    do: dgettext("dashboard_inference", "Referenced by profiles but not configured")
+
+  defp credential_label(%{credential_configured?: true}),
+    do: dgettext("dashboard_inference", "Configured")
+
+  defp credential_label(_provider), do: dgettext("dashboard_inference", "Missing")
+
+  defp timeout_label(nil), do: dgettext("dashboard_inference", "Not configured")
 
   defp timeout_label(timeout) when is_integer(timeout) and rem(timeout, 1_000) == 0 do
-    "#{div(timeout, 1_000)} #{pluralize("second", div(timeout, 1_000))}"
+    seconds = div(timeout, 1_000)
+
+    if seconds == 1 do
+      dgettext("dashboard_inference", "1 second")
+    else
+      dgettext("dashboard_inference", "%{count} seconds", count: seconds)
+    end
   end
 
   defp timeout_label(timeout) when is_integer(timeout) do
-    "#{timeout} #{pluralize("millisecond", timeout)}"
+    if timeout == 1 do
+      dgettext("dashboard_inference", "1 millisecond")
+    else
+      dgettext("dashboard_inference", "%{count} milliseconds", count: timeout)
+    end
   end
 
-  defp profile_count_label(count), do: "#{count} #{pluralize("profile", count)}"
+  defp profile_count_label(1), do: dgettext("dashboard_inference", "1 profile")
 
-  defp pluralize(word, 1), do: word
-  defp pluralize(word, _count), do: word <> "s"
+  defp profile_count_label(count),
+    do: dgettext("dashboard_inference", "%{count} profiles", count: count)
 
   defp assign_providers(socket) do
     assign(socket, :providers, Inference.list_provider_configs())

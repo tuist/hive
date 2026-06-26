@@ -13,10 +13,10 @@ defmodule HiveWeb.SpecLive.Show do
     %{
       author: author_data(spec),
       description: spec_summary(spec),
-      section_label: "Spec #{spec_number(spec)}",
+      section_label: dgettext("dashboard_specs", "Spec %{number}", number: spec_number(spec)),
       highlights: [
         spec_number(spec),
-        "#{length(spec.comments)} comments",
+        dgettext("dashboard_specs", "%{count} comments", count: length(spec.comments)),
         visibility_label(Specs.effective_visibility(spec)),
         status_label(spec.status)
       ],
@@ -37,10 +37,16 @@ defmodule HiveWeb.SpecLive.Show do
       {:ok,
        socket
        |> maybe_subscribe_to_spec(spec)
-       |> assign(:page_title, "#{spec.title} · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_specs", "%{title} · %{product}",
+           title: spec.title,
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph(spec)))
        |> assign(:atom_feed, %{
-         title: "Hive · Specs",
+         title: dgettext("dashboard_specs", "Hive · Specs"),
          atom_href: "/specs/atom.xml",
          rss_href: "/specs/rss.xml"
        })
@@ -59,7 +65,10 @@ defmodule HiveWeb.SpecLive.Show do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Only organization members can view this private spec.")
+       |> put_flash(
+         :error,
+         dgettext("dashboard_specs", "Only organization members can view this private spec.")
+       )
        |> redirect(to: ~p"/specs")}
     end
   end
@@ -78,21 +87,35 @@ defmodule HiveWeb.SpecLive.Show do
   def handle_event("request_review", _params, socket) do
     case Specs.request_review(socket.assigns.spec, socket.assigns.current_user) do
       {:ok, _spec} ->
-        {:noreply, put_flash(socket, :info, "Review request posted to Slack.")}
+        {:noreply,
+         put_flash(socket, :info, dgettext("dashboard_specs", "Review request posted to Slack."))}
 
       {:error, :slack_notifications_not_configured} ->
         {:noreply,
          put_flash(
            socket,
            :error,
-           "Configure a Slack notification channel with spec review requests enabled first."
+           dgettext(
+             "dashboard_specs",
+             "Configure a Slack notification channel with spec review requests enabled first."
+           )
          )}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only organization members can request review.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only organization members can request review.")
+         )}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Couldn't request review for this spec.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Couldn't request review for this spec.")
+         )}
     end
   end
 
@@ -116,7 +139,12 @@ defmodule HiveWeb.SpecLive.Show do
 
     cond do
       not socket.assigns.can_edit? ->
-        {:noreply, put_flash(socket, :error, "Only organization members can change spec status.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only organization members can change spec status.")
+         )}
 
       to_string(spec.status) == status ->
         {:noreply, socket}
@@ -130,16 +158,30 @@ defmodule HiveWeb.SpecLive.Show do
 
             {:noreply,
              socket
-             |> put_flash(:info, "Spec marked as #{status_label(spec.status)}.")
+             |> put_flash(
+               :info,
+               dgettext("dashboard_specs", "Spec marked as %{status}.",
+                 status: status_label(spec.status)
+               )
+             )
              |> assign_spec(spec)
              |> assign(OpenGraph.assigns(open_graph(spec)))}
 
           {:error, :unauthorized} ->
             {:noreply,
-             put_flash(socket, :error, "Only organization members can change spec status.")}
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_specs", "Only organization members can change spec status.")
+             )}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Couldn't update the spec status.")}
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_specs", "Couldn't update the spec status.")
+             )}
         end
     end
   end
@@ -152,13 +194,13 @@ defmodule HiveWeb.SpecLive.Show do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Comment added.")
+         |> put_flash(:info, dgettext("dashboard_specs", "Comment added."))
          |> assign_spec(spec)
          |> assign(OpenGraph.assigns(open_graph(spec)))
          |> assign_comment_form(Specs.change_comment())}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Sign in to comment.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_specs", "Sign in to comment."))}
 
       {:error, changeset} ->
         {:noreply, assign_comment_form(socket, Map.put(changeset, :action, :validate))}
@@ -175,7 +217,12 @@ defmodule HiveWeb.SpecLive.Show do
        |> assign_edit_comment_form(Specs.change_comment(comment))}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -198,7 +245,12 @@ defmodule HiveWeb.SpecLive.Show do
        |> assign_edit_comment_form(changeset)}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -214,13 +266,18 @@ defmodule HiveWeb.SpecLive.Show do
 
       {:noreply,
        socket
-       |> put_flash(:info, "Comment updated.")
+       |> put_flash(:info, dgettext("dashboard_specs", "Comment updated."))
        |> assign_spec(spec)
        |> assign(OpenGraph.assigns(open_graph(spec)))
        |> clear_comment_edit()}
     else
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only the comment author can edit this comment.")
+         )}
 
       {:error, changeset} ->
         {:noreply,
@@ -229,7 +286,7 @@ defmodule HiveWeb.SpecLive.Show do
          |> assign_edit_comment_form(Map.put(changeset, :action, :validate))}
 
       _error ->
-        {:noreply, put_flash(socket, :error, "Comment not found.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_specs", "Comment not found."))}
     end
   end
 
@@ -251,17 +308,22 @@ defmodule HiveWeb.SpecLive.Show do
 
       {:noreply,
        socket
-       |> put_flash(:info, "Comment deleted.")
+       |> put_flash(:info, dgettext("dashboard_specs", "Comment deleted."))
        |> push_event("close-modal", %{id: delete_comment_modal_id(comment_id)})
        |> assign_spec(spec)
        |> assign(OpenGraph.assigns(open_graph(spec)))
        |> clear_comment_edit()}
     else
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can delete this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only the comment author can delete this comment.")
+         )}
 
       _error ->
-        {:noreply, put_flash(socket, :error, "Comment not found.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_specs", "Comment not found."))}
     end
   end
 
@@ -362,14 +424,25 @@ defmodule HiveWeb.SpecLive.Show do
     {field, {interpolated, opts}}
   end
 
+  defp status_label(:draft), do: dgettext("dashboard_specs", "Draft")
+  defp status_label(:proposed), do: dgettext("dashboard_specs", "Proposed")
+  defp status_label(:approved), do: dgettext("dashboard_specs", "Approved")
+  defp status_label(:paused), do: dgettext("dashboard_specs", "Paused")
+  defp status_label(:rejected), do: dgettext("dashboard_specs", "Rejected")
+  defp status_label(:in_progress), do: dgettext("dashboard_specs", "In progress")
+  defp status_label(:shipped), do: dgettext("dashboard_specs", "Shipped")
+  defp status_label(:archived), do: dgettext("dashboard_specs", "Archived")
+
   defp status_label(status),
     do: status |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
-  defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
-  defp source_label(_spec), do: "Created directly"
+  defp source_label(%{source_feature_request: %{title: title}}),
+    do: dgettext("dashboard_specs", "Source: %{title}", title: title)
 
-  defp visibility_label(:private), do: "Private"
-  defp visibility_label(_visibility), do: "Public"
+  defp source_label(_spec), do: dgettext("dashboard_specs", "Created directly")
+
+  defp visibility_label(:private), do: dgettext("dashboard_specs", "Private")
+  defp visibility_label(_visibility), do: dgettext("dashboard_specs", "Public")
 
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
   defp spec_number(_spec), do: "#?"

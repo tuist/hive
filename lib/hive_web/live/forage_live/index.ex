@@ -3,9 +3,9 @@ defmodule HiveWeb.ForageLive.Index do
 
   use HiveWeb, :live_view
 
-  alias Hive.Forage.FeatureRequest
-  alias Hive.Forage
   alias Hive.Domains.GitHubRepository
+  alias Hive.Forage
+  alias Hive.Forage.FeatureRequest
   alias Hive.Specs
   alias HiveWeb.ForageComponents
   alias HiveWeb.ForageLive.Show
@@ -20,16 +20,19 @@ defmodule HiveWeb.ForageLive.Index do
   def open_graph(stats) do
     %{
       description:
-        "A unified queue for feature requests, bug reports, feedback, GitHub issues, and Grafana alerts.",
-      section_label: "Forage",
+        dgettext(
+          "dashboard_forage",
+          "A unified queue for feature requests, bug reports, feedback, GitHub issues, and Grafana alerts."
+        ),
+      section_label: dgettext("dashboard_forage", "Forage"),
       highlights: [
-        "#{stats.total} items",
-        "#{stats.open} open signals",
-        "#{stats.domains} domains"
+        dgettext("dashboard_forage", "%{count} items", count: stats.total),
+        dgettext("dashboard_forage", "%{count} open signals", count: stats.open),
+        dgettext("dashboard_forage", "%{count} domains", count: stats.domains)
       ],
       id: "forage",
       path: "/forage",
-      title: "Forage"
+      title: dgettext("dashboard_forage", "Forage")
     }
   end
 
@@ -37,7 +40,10 @@ defmodule HiveWeb.ForageLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Forage · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_forage", "Forage · %{product}", product: socket.assigns.product_name)
+     )
      |> assign(:available_filters, [])
      |> assign(:active_filters, [])
      |> assign(:items, [])
@@ -57,7 +63,7 @@ defmodule HiveWeb.ForageLive.Index do
      |> assign(:editing_comment_id, nil)
      |> assign_edit_comment_form(Forage.change_comment())
      |> assign(:atom_feed, %{
-       title: "Hive · Forage",
+       title: dgettext("dashboard_forage", "Hive · Forage"),
        atom_href: "/forage/atom.xml",
        rss_href: "/forage/rss.xml"
      })
@@ -129,7 +135,12 @@ defmodule HiveWeb.ForageLive.Index do
        |> assign(:editing_item?, true)
        |> assign_item_edit_form(item_edit_changeset(item))}
     else
-      {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_forage", "Only the item author can edit this item.")
+       )}
     end
   end
 
@@ -148,7 +159,12 @@ defmodule HiveWeb.ForageLive.Index do
        |> assign(:editing_item?, true)
        |> assign_item_edit_form(changeset)}
     else
-      {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_forage", "Only the item author can edit this item.")
+       )}
     end
   end
 
@@ -164,11 +180,16 @@ defmodule HiveWeb.ForageLive.Index do
       {:ok, _item} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Forage item updated.")
+         |> put_flash(:info, dgettext("dashboard_forage", "Forage item updated."))
          |> refresh_from_current_params()}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the item author can edit this item.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the item author can edit this item.")
+         )}
 
       {:error, changeset} ->
         {:noreply,
@@ -194,11 +215,11 @@ defmodule HiveWeb.ForageLive.Index do
       {:ok, _comment} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Comment added.")
+         |> put_flash(:info, dgettext("dashboard_forage", "Comment added."))
          |> refresh_from_current_params()}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Sign in to comment.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_forage", "Sign in to comment."))}
 
       {:error, changeset} ->
         {:noreply, assign_comment_form(socket, Map.put(changeset, :action, :validate))}
@@ -215,7 +236,12 @@ defmodule HiveWeb.ForageLive.Index do
        |> assign_edit_comment_form(Forage.change_comment(comment))}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -238,7 +264,12 @@ defmodule HiveWeb.ForageLive.Index do
        |> assign_edit_comment_form(changeset)}
     else
       _error ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
     end
   end
 
@@ -252,11 +283,16 @@ defmodule HiveWeb.ForageLive.Index do
          {:ok, _comment} <- Forage.update_comment(comment, params, socket.assigns.current_user) do
       {:noreply,
        socket
-       |> put_flash(:info, "Comment updated.")
+       |> put_flash(:info, dgettext("dashboard_forage", "Comment updated."))
        |> refresh_from_current_params()}
     else
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only the comment author can edit this comment.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Only the comment author can edit this comment.")
+         )}
 
       {:error, changeset} ->
         {:noreply,
@@ -265,7 +301,7 @@ defmodule HiveWeb.ForageLive.Index do
          |> assign_edit_comment_form(Map.put(changeset, :action, :validate))}
 
       _error ->
-        {:noreply, put_flash(socket, :error, "Comment not found.")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_forage", "Comment not found."))}
     end
   end
 
@@ -469,8 +505,10 @@ defmodule HiveWeb.ForageLive.Index do
 
   defp find_selected_comment(_socket, _comment_id), do: :error
 
-  defp item_error_message(:unauthorized), do: "You cannot view that forage item."
-  defp item_error_message(_reason), do: "Forage item not found."
+  defp item_error_message(:unauthorized),
+    do: dgettext("dashboard_forage", "You cannot view that forage item.")
+
+  defp item_error_message(_reason), do: dgettext("dashboard_forage", "Forage item not found.")
 
   defp interpolate_errors(%Ecto.Changeset{} = changeset) do
     Map.update!(changeset, :errors, fn errors -> Enum.map(errors, &interpolate_error/1) end)
@@ -489,16 +527,26 @@ defmodule HiveWeb.ForageLive.Index do
     options = Forage.forage_item_filter_options(user)
 
     [
-      option_filter("type", "Type", options.item_types, &Forage.item_type_label/1,
+      option_filter(
+        "type",
+        dgettext("dashboard_forage", "Type"),
+        options.item_types,
+        &Forage.item_type_label/1,
         searchable: false
       ),
-      option_filter("status", "Status", options.statuses, &Forage.item_status_label/1,
+      option_filter(
+        "status",
+        dgettext("dashboard_forage", "Status"),
+        options.statuses,
+        &Forage.item_status_label/1,
         searchable: false
       ),
-      option_filter("domain", "Domain", options.domains, & &1.name, searchable: true),
+      option_filter("domain", dgettext("dashboard_forage", "Domain"), options.domains, & &1.name,
+        searchable: true
+      ),
       option_filter(
         "repository",
-        "Repository",
+        dgettext("dashboard_forage", "Repository"),
         options.repositories,
         &GitHubRepository.full_name/1,
         searchable: true

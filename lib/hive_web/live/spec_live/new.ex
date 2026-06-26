@@ -3,8 +3,8 @@ defmodule HiveWeb.SpecLive.New do
 
   use HiveWeb, :live_view
 
-  alias Hive.Forage
   alias Hive.Domains
+  alias Hive.Forage
   alias Hive.Specs
   alias Hive.Specs.Spec
   alias HiveWeb.Layouts
@@ -13,12 +13,16 @@ defmodule HiveWeb.SpecLive.New do
 
   def open_graph do
     %{
-      description: "Draft an editable proposal for buildable work.",
-      section_label: "Spec",
-      highlights: ["Editable proposal", "Forage source", "Bee-ready work"],
+      description: dgettext("dashboard_specs", "Draft an editable proposal for buildable work."),
+      section_label: dgettext("dashboard_specs", "Spec"),
+      highlights: [
+        dgettext("dashboard_specs", "Editable proposal"),
+        dgettext("dashboard_specs", "Forage source"),
+        dgettext("dashboard_specs", "Build-ready work")
+      ],
       id: "specs-new",
       path: "/specs/new",
-      title: "New spec"
+      title: dgettext("dashboard_specs", "New spec")
     }
   end
 
@@ -44,7 +48,12 @@ defmodule HiveWeb.SpecLive.New do
 
       {:ok,
        socket
-       |> assign(:page_title, "New spec · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_specs", "New spec · %{product}",
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph()))
        |> assign(:domains, Domains.list_domains())
        |> assign(:source, source)
@@ -52,7 +61,10 @@ defmodule HiveWeb.SpecLive.New do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Only organization members can create specs.")
+       |> put_flash(
+         :error,
+         dgettext("dashboard_specs", "Only organization members can create specs.")
+       )
        |> redirect(to: ~p"/specs")}
     end
   end
@@ -72,11 +84,16 @@ defmodule HiveWeb.SpecLive.New do
       {:ok, spec} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Spec created.")
+         |> put_flash(:info, dgettext("dashboard_specs", "Spec created."))
          |> push_navigate(to: ~p"/specs/#{spec.number}")}
 
       {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, "Only organization members can create specs.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "Only organization members can create specs.")
+         )}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -125,8 +142,8 @@ defmodule HiveWeb.SpecLive.New do
     >
       <SpecComponents.spec_form
         form={@form}
-        title="New spec"
-        action_label="Create spec"
+        title={dgettext("dashboard_specs", "New spec")}
+        action_label={dgettext("dashboard_specs", "Create spec")}
         domains={@domains}
         source={@source}
       />

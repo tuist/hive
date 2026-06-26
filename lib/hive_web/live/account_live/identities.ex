@@ -12,12 +12,17 @@ defmodule HiveWeb.AccountLive.Identities do
 
   def open_graph do
     %{
-      description: "Manage the sign-in providers connected to your Hive user.",
-      section_label: "Account",
-      highlights: ["Connected providers", "Google sign-in", "GitHub sign-in"],
+      description:
+        dgettext("dashboard_account", "Manage the sign-in providers connected to your Hive user."),
+      section_label: dgettext("dashboard_account", "Account"),
+      highlights: [
+        dgettext("dashboard_account", "Connected providers"),
+        dgettext("dashboard_account", "Google sign-in"),
+        dgettext("dashboard_account", "GitHub sign-in")
+      ],
       id: "account-identities",
       path: "/account/identities",
-      title: "Identities"
+      title: dgettext("dashboard_account", "Identities")
     }
   end
 
@@ -28,7 +33,12 @@ defmodule HiveWeb.AccountLive.Identities do
     if user do
       {:ok,
        socket
-       |> assign(:page_title, "Identities · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_account", "Identities · %{product}",
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph()))
        |> assign(:account_user, user)
        |> assign(:identities, Enum.sort_by(user.identities, & &1.provider))
@@ -38,7 +48,7 @@ defmodule HiveWeb.AccountLive.Identities do
     else
       {:ok,
        socket
-       |> put_flash(:error, "Log in to manage your account.")
+       |> put_flash(:error, dgettext("dashboard_account", "Log in to manage your account."))
        |> redirect(to: ~p"/login")}
     end
   end

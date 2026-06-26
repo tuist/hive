@@ -21,7 +21,10 @@ defmodule HiveWeb.SlackProfileController do
     case current_user(conn) do
       nil ->
         conn
-        |> put_flash(:error, "Log in to connect your Slack profile.")
+        |> put_flash(
+          :error,
+          dgettext("dashboard_account", "Log in to connect your Slack profile.")
+        )
         |> redirect(to: ~p"/login?return_to=/account/identities")
 
       user ->
@@ -47,7 +50,10 @@ defmodule HiveWeb.SlackProfileController do
 
   defp slack_not_configured(conn) do
     conn
-    |> put_flash(:error, "Slack isn't configured on this Hive instance.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_account", "Slack isn't configured on this Hive instance.")
+    )
     |> redirect(to: ~p"/account/identities")
   end
 
@@ -62,18 +68,32 @@ defmodule HiveWeb.SlackProfileController do
     case Slack.complete_profile_link(code, redirect_uri(conn), user) do
       {:ok, slack_user} ->
         conn
-        |> put_flash(:info, "Connected Slack profile #{slack_user.slack_user_id}.")
+        |> put_flash(
+          :info,
+          dgettext("dashboard_account", "Connected Slack profile %{profile}.",
+            profile: slack_user.slack_user_id
+          )
+        )
         |> redirect(to: ~p"/account/identities")
 
       {:error, :workspace_not_installed} ->
-        bail(conn, "That Slack workspace is not connected to Hive yet.")
+        bail(
+          conn,
+          dgettext("dashboard_account", "That Slack workspace is not connected to Hive yet.")
+        )
 
       {:error, :workspace_not_allowed} ->
-        bail(conn, "That Slack workspace is not allowed on this Hive instance.")
+        bail(
+          conn,
+          dgettext(
+            "dashboard_account",
+            "That Slack workspace is not allowed on this Hive instance."
+          )
+        )
 
       {:error, reason} ->
         Logger.warning("[SlackProfile] OAuth exchange failed: #{inspect(reason)}")
-        bail(conn, "Slack rejected the profile link. Try again.")
+        bail(conn, dgettext("dashboard_account", "Slack rejected the profile link. Try again."))
     end
   end
 
@@ -90,24 +110,36 @@ defmodule HiveWeb.SlackProfileController do
         :ok
 
       {:ok, _payload} ->
-        {:error, "The Slack profile link was created for a different Hive session. Try again."}
+        {:error,
+         dgettext(
+           "dashboard_account",
+           "The Slack profile link was created for a different Hive session. Try again."
+         )}
 
       {:error, _reason} ->
-        {:error, "The Slack profile link expired. Try again."}
+        {:error, dgettext("dashboard_account", "The Slack profile link expired. Try again.")}
     end
   end
 
   defp validate_state(_conn, _user, _state),
-    do: {:error, "The Slack profile link expired. Try again."}
+    do: {:error, dgettext("dashboard_account", "The Slack profile link expired. Try again.")}
 
   defp validate_slack_response(error) when error in [nil, ""], do: :ok
-  defp validate_slack_response("access_denied"), do: {:error, "Slack profile link was cancelled."}
+
+  defp validate_slack_response("access_denied"),
+    do: {:error, dgettext("dashboard_account", "Slack profile link was cancelled.")}
 
   defp validate_slack_response(error) when is_binary(error),
-    do: {:error, "Slack rejected the profile link: #{format_slack_error(error)}."}
+    do:
+      {:error,
+       dgettext("dashboard_account", "Slack rejected the profile link: %{reason}.",
+         reason: format_slack_error(error)
+       )}
 
   defp validate_code(code) when is_binary(code) and code != "", do: {:ok, code}
-  defp validate_code(_code), do: {:error, "Slack didn't return an authorization code."}
+
+  defp validate_code(_code),
+    do: {:error, dgettext("dashboard_account", "Slack didn't return an authorization code.")}
 
   defp bail(conn, message) do
     conn

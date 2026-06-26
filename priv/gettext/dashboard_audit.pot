@@ -1,0 +1,156 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:207
+#: lib/hive_web/live/audit_live.ex:333
+#, elixir-autogen, elixir-format
+msgid "Action"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:147
+#, elixir-autogen, elixir-format
+msgid "Activity"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Actor"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:326
+#, elixir-autogen, elixir-format
+msgid "Actor kind"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:232
+#, elixir-autogen, elixir-format
+msgid "Adjust the filters or wait for new activity to be recorded."
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:378
+#: lib/hive_web/live/audit_live.ex:392
+#, elixir-autogen, elixir-format
+msgid "Agent"
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:305
+#: lib/hive_web/live/audit_live.ex:26
+#: lib/hive_web/live/audit_live.ex:34
+#: lib/hive_web/live/audit_live.ex:137
+#, elixir-autogen, elixir-format
+msgid "Audit"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:46
+#, elixir-autogen, elixir-format
+msgid "Audit · %{product}"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:381
+#, elixir-autogen, elixir-format
+msgid "Automated"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:152
+#, elixir-autogen, elixir-format
+msgid "Filter"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:200
+#: lib/hive_web/live/audit_live.ex:319
+#, elixir-autogen, elixir-format
+msgid "Interface"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:193
+#, elixir-autogen, elixir-format
+msgid "Kind"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:429
+#, elixir-autogen, elixir-format
+msgid "MCP"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:252
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:230
+#, elixir-autogen, elixir-format
+msgid "No activity found"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:389
+#, elixir-autogen, elixir-format
+msgid "No actor"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:244
+#, elixir-autogen, elixir-format
+msgid "Prev"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:170
+#, elixir-autogen, elixir-format
+msgid "Search actor, action, target, or metadata..."
+msgstr ""
+
+#: lib/hive/audit.ex:189
+#: lib/hive_web/live/audit_live.ex:393
+#, elixir-autogen, elixir-format
+msgid "System"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:210
+#: lib/hive_web/live/audit_live.ex:340
+#, elixir-autogen, elixir-format
+msgid "Target"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:181
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:22
+#: lib/hive_web/live/audit_live.ex:139
+#, elixir-autogen, elixir-format
+msgid "Trace Hive activity across the dashboard, MCP, webhooks, jobs, and system paths."
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:391
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:29
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:30
+#, elixir-autogen, elixir-format
+msgid "Workers"
+msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:55
+#, elixir-autogen, elixir-format
+msgid "You do not have access to the audit trail."
+msgstr ""

@@ -15,12 +15,19 @@ defmodule HiveWeb.DropsLive.Subscribe do
   def open_graph do
     %{
       description:
-        "Subscribe to Hive drops via Atom or RSS. Pick the projects and domains you want updates from and copy the matching feed URL.",
-      section_label: "Drops",
-      highlights: ["Atom 1.0", "RSS 2.0", "Project and domain filtering"],
+        dgettext(
+          "dashboard_drops",
+          "Subscribe to Hive drops via Atom or RSS. Pick the projects and domains you want updates from and copy the matching feed URL."
+        ),
+      section_label: dgettext("dashboard_drops", "Drops"),
+      highlights: [
+        dgettext("dashboard_drops", "Atom 1.0"),
+        dgettext("dashboard_drops", "RSS 2.0"),
+        dgettext("dashboard_drops", "Project and domain filtering")
+      ],
       id: "drops-subscribe",
       path: "/drops/subscribe",
-      title: "Subscribe to drops"
+      title: dgettext("dashboard_drops", "Subscribe to drops")
     }
   end
 
@@ -32,13 +39,18 @@ defmodule HiveWeb.DropsLive.Subscribe do
 
     {:ok,
      socket
-     |> assign(:page_title, "Subscribe to drops · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_drops", "Subscribe to drops · %{product}",
+         product: socket.assigns.product_name
+       )
+     )
      |> assign(:domains, domains)
      |> assign(:projects, projects)
      |> assign(:selected_domain_ids, MapSet.new())
      |> assign(:selected_project_ids, MapSet.new())
      |> assign(:atom_feed, %{
-       title: "Hive · Drops",
+       title: dgettext("dashboard_drops", "Hive · Drops"),
        atom_href: "/drops/atom.xml",
        rss_href: "/drops/rss.xml"
      })
@@ -119,19 +131,21 @@ defmodule HiveWeb.DropsLive.Subscribe do
       <section id="drops-subscribe">
         <div data-part="page-header">
           <div data-part="title-group">
-            <h1>Subscribe to drops</h1>
+            <h1>{dgettext("dashboard_drops", "Subscribe to drops")}</h1>
             <p>
-              Pick projects, domains, or both and copy the matching Atom or RSS URL into your
-              reader. Leave the picker empty to subscribe to every visible drop on this instance.
+              {dgettext(
+                "dashboard_drops",
+                "Pick projects, domains, or both and copy the matching Atom or RSS URL into your reader. Leave the picker empty to subscribe to every visible drop on this instance."
+              )}
             </p>
           </div>
         </div>
 
-        <.card title="Feed URLs" icon="external_link">
+        <.card title={dgettext("dashboard_drops", "Feed URLs")} icon="external_link">
           <.card_section>
             <div data-part="feed-urls">
               <div data-part="feed-url-row">
-                <span data-part="feed-url-label">Atom</span>
+                <span data-part="feed-url-label">{dgettext("dashboard_drops", "Atom")}</span>
                 <div data-part="read-only-value">
                   <code>{@atom_url}</code>
                   <.button
@@ -142,7 +156,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
                     type="button"
                     phx-hook="Clipboard"
                     data-clipboard-value={@atom_url}
-                    aria-label="Copy Atom feed URL"
+                    aria-label={dgettext("dashboard_drops", "Copy Atom feed URL")}
                     data-part="copy-button"
                   >
                     <span data-part="copy-icon"><.icon name="copy" /></span>
@@ -151,7 +165,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
                 </div>
               </div>
               <div data-part="feed-url-row">
-                <span data-part="feed-url-label">RSS</span>
+                <span data-part="feed-url-label">{dgettext("dashboard_drops", "RSS")}</span>
                 <div data-part="read-only-value">
                   <code>{@rss_url}</code>
                   <.button
@@ -162,7 +176,7 @@ defmodule HiveWeb.DropsLive.Subscribe do
                     type="button"
                     phx-hook="Clipboard"
                     data-clipboard-value={@rss_url}
-                    aria-label="Copy RSS feed URL"
+                    aria-label={dgettext("dashboard_drops", "Copy RSS feed URL")}
                     data-part="copy-button"
                   >
                     <span data-part="copy-icon"><.icon name="copy" /></span>
@@ -174,10 +188,10 @@ defmodule HiveWeb.DropsLive.Subscribe do
           </.card_section>
         </.card>
 
-        <.card title="Projects" icon="package">
+        <.card title={dgettext("dashboard_drops", "Projects")} icon="package">
           <:actions :if={selected_count(@selected_project_ids, @selected_domain_ids) > 0}>
             <.button
-              label="Clear"
+              label={dgettext("dashboard_drops", "Clear")}
               variant="secondary"
               size="medium"
               phx-click="clear"
@@ -187,15 +201,21 @@ defmodule HiveWeb.DropsLive.Subscribe do
           <.card_section>
             <div data-part="domains-card-body">
               <p data-part="picker-help">
-                Tick projects to subscribe to drops from their repositories, feeds, and associated domains.
+                {dgettext(
+                  "dashboard_drops",
+                  "Tick projects to subscribe to drops from their repositories, feeds, and associated domains."
+                )}
               </p>
 
               <p :if={@projects == []} data-part="empty">
-                No projects yet. Create one to start filtering subscriptions.
+                {dgettext(
+                  "dashboard_drops",
+                  "No projects yet. Create one to start filtering subscriptions."
+                )}
               </p>
 
               <.table :if={@projects != []} id="subscribe-projects-table" rows={@projects}>
-                <:col :let={project} label="Project">
+                <:col :let={project} label={dgettext("dashboard_drops", "Project")}>
                   <label
                     id={"subscribe-project-row-#{project.id}"}
                     data-part="domain-row"
@@ -214,10 +234,10 @@ defmodule HiveWeb.DropsLive.Subscribe do
           </.card_section>
         </.card>
 
-        <.card title="Domains" icon="treemap">
+        <.card title={dgettext("dashboard_drops", "Domains")} icon="treemap">
           <:actions :if={selected_count(@selected_project_ids, @selected_domain_ids) > 0}>
             <.button
-              label="Clear"
+              label={dgettext("dashboard_drops", "Clear")}
               variant="secondary"
               size="medium"
               phx-click="clear"
@@ -227,15 +247,21 @@ defmodule HiveWeb.DropsLive.Subscribe do
           <.card_section>
             <div data-part="domains-card-body">
               <p data-part="picker-help">
-                Tick domains to narrow the feed to classified drops in those areas. Combined with projects, this returns the intersection.
+                {dgettext(
+                  "dashboard_drops",
+                  "Tick domains to narrow the feed to classified drops in those areas. Combined with projects, this returns the intersection."
+                )}
               </p>
 
               <p :if={@domains == []} data-part="empty">
-                No domains yet. Create one to start filtering subscriptions.
+                {dgettext(
+                  "dashboard_drops",
+                  "No domains yet. Create one to start filtering subscriptions."
+                )}
               </p>
 
               <.table :if={@domains != []} id="subscribe-domains-table" rows={@domains}>
-              <:col :let={domain} label="Domain">
+              <:col :let={domain} label={dgettext("dashboard_drops", "Domain")}>
                 <label
                   id={"subscribe-domain-row-#{domain.id}"}
                   data-part="domain-row"

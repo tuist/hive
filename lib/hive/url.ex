@@ -10,6 +10,8 @@ defmodule Hive.URL do
   to Req or any other network client.
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   @blocked_hosts MapSet.new([
                    "localhost",
                    "metadata.google.internal"
@@ -31,26 +33,31 @@ defmodule Hive.URL do
 
     cond do
       uri.scheme not in ["http", "https"] ->
-        {:error, "Only http and https URLs are supported."}
+        {:error, dgettext("dashboard", "Only http and https URLs are supported.")}
 
       not is_binary(uri.host) or uri.host == "" ->
-        {:error, "The URL must include a hostname."}
+        {:error, dgettext("dashboard", "The URL must include a hostname.")}
 
       uri.userinfo not in [nil, ""] ->
-        {:error, "Credentials in URLs are not supported."}
+        {:error, dgettext("dashboard", "Credentials in URLs are not supported.")}
 
       not allowed_port?(uri) ->
-        {:error, "Only standard web ports are supported."}
+        {:error, dgettext("dashboard", "Only standard web ports are supported.")}
 
       not public_host?(uri.host) ->
-        {:error, "This URL points to a local or private network host, which Hive will not fetch."}
+        {:error,
+         dgettext(
+           "dashboard",
+           "This URL points to a local or private network host, which Hive will not fetch."
+         )}
 
       true ->
         {:ok, uri}
     end
   end
 
-  def validate_public(_url), do: {:error, "Provide a valid http or https URL."}
+  def validate_public(_url),
+    do: {:error, dgettext("dashboard", "Provide a valid http or https URL.")}
 
   defp allowed_port?(%URI{port: nil}), do: true
   defp allowed_port?(%URI{scheme: "http", port: 80}), do: true

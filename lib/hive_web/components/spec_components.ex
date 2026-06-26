@@ -19,8 +19,8 @@ defmodule HiveWeb.SpecComponents do
     <section id="specs">
       <div data-part="header">
         <div data-part="title-group">
-          <h1>Specs</h1>
-          <p>Editable proposals that shape forage into buildable work.</p>
+          <h1>{dgettext("dashboard_specs", "Specs")}</h1>
+          <p>{dgettext("dashboard_specs", "Editable proposals that shape forage into buildable work.")}</p>
         </div>
         <div data-part="header-actions">
           <Layouts.feeds_dropdown
@@ -30,7 +30,7 @@ defmodule HiveWeb.SpecComponents do
           />
           <.button
             :if={@can_create?}
-            label="New spec"
+            label={dgettext("dashboard_specs", "New spec")}
             href={~p"/specs/new"}
             size="medium"
             variant="primary"
@@ -40,12 +40,12 @@ defmodule HiveWeb.SpecComponents do
         </div>
       </div>
 
-      <.card icon="file_text" title="Specs">
+      <.card icon="file_text" title={dgettext("dashboard_specs", "Specs")}>
         <.card_section>
           <div data-part="table-toolbar">
             <.filter_dropdown
               id="specs-filter"
-              label="Filter"
+              label={dgettext("dashboard_specs", "Filter")}
               available_filters={@available_filters}
               active_filters={@active_filters}
               on_select="add_filter"
@@ -57,8 +57,8 @@ defmodule HiveWeb.SpecComponents do
 
           <div :if={@specs == []} data-part="empty-state">
             <div data-part="empty-icon"><.icon name="file_text" /></div>
-            <h2>No specs yet</h2>
-            <p>Specs that match the active filters will appear here.</p>
+            <h2>{dgettext("dashboard_specs", "No specs yet")}</h2>
+            <p>{dgettext("dashboard_specs", "Specs that match the active filters will appear here.")}</p>
           </div>
 
           <.table
@@ -67,7 +67,7 @@ defmodule HiveWeb.SpecComponents do
             rows={@specs}
             row_navigate={fn spec -> ~p"/specs/#{spec.number}" end}
           >
-            <:col :let={spec} label="Spec">
+            <:col :let={spec} label={dgettext("dashboard_specs", "Spec")}>
               <div data-part="spec-table-cell">
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
@@ -75,7 +75,7 @@ defmodule HiveWeb.SpecComponents do
                     <strong>{spec_number(spec)} {spec.title}</strong>
                     <.badge
                       :if={spec.has_new_activity}
-                      label="New activity"
+                      label={dgettext("dashboard_specs", "New activity")}
                       color="information"
                       style="light-fill"
                     />
@@ -84,10 +84,10 @@ defmodule HiveWeb.SpecComponents do
                 </div>
               </div>
             </:col>
-            <:col :let={spec} label="Source">
+            <:col :let={spec} label={dgettext("dashboard_specs", "Source")}>
               <span data-part="spec-table-source">{source_label(spec)}</span>
             </:col>
-            <:col :let={spec} label="Domains">
+            <:col :let={spec} label={dgettext("dashboard_specs", "Domains")}>
               <div data-part="spec-table-domains">
                 <.badge
                   :for={domain <- spec_domains(spec)}
@@ -97,18 +97,18 @@ defmodule HiveWeb.SpecComponents do
                   size="large"
                 />
                 <span :if={spec_domains(spec) == []} data-part="empty-domains">
-                  No domains
+                  {dgettext("dashboard_specs", "No domains")}
                 </span>
               </div>
             </:col>
-            <:col :let={spec} label="Status">
+            <:col :let={spec} label={dgettext("dashboard_specs", "Status")}>
               <.badge_cell
                 label={status_label(spec.status)}
                 color={status_color(spec.status)}
                 style="light-fill"
               />
             </:col>
-            <:col :let={spec} label="Updated">
+            <:col :let={spec} label={dgettext("dashboard_specs", "Updated")}>
               <.time_cell time={spec.updated_at} />
             </:col>
           </.table>
@@ -142,7 +142,9 @@ defmodule HiveWeb.SpecComponents do
             <h1>{@spec.title}</h1>
             <p>
               {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
-              <span :if={@new_activity_since_visit?}> · New activity</span>
+              <span :if={@new_activity_since_visit?}>
+                · {dgettext("dashboard_specs", "New activity")}
+              </span>
             </p>
             <div :if={spec_domains(@spec) != []} data-part="domain-list">
               <.badge
@@ -161,7 +163,7 @@ defmodule HiveWeb.SpecComponents do
           />
           <.button
             :if={@can_request_review?}
-            label="Ask for review"
+            label={dgettext("dashboard_specs", "Ask for review")}
             size="medium"
             variant="secondary"
             phx-click="request_review"
@@ -178,7 +180,7 @@ defmodule HiveWeb.SpecComponents do
           />
           <.button
             :if={@can_edit?}
-            label="Edit"
+            label={dgettext("dashboard_specs", "Edit")}
             href={~p"/specs/#{@spec.number}/edit"}
             size="medium"
             variant="primary"
@@ -189,7 +191,7 @@ defmodule HiveWeb.SpecComponents do
       </div>
 
       <div data-part="detail-stack">
-        <.card icon="file_text" title="Proposal">
+        <.card icon="file_text" title={dgettext("dashboard_specs", "Proposal")}>
           <.card_section>
             <div data-part="spec-body">
               {Markdown.render(@spec.body)}
@@ -197,7 +199,7 @@ defmodule HiveWeb.SpecComponents do
           </.card_section>
         </.card>
 
-        <.card icon="git_branch" title="Draft history">
+        <.card icon="git_branch" title={dgettext("dashboard_specs", "Draft history")}>
           <.card_section>
             <.table
               id="spec-revisions-table"
@@ -206,21 +208,25 @@ defmodule HiveWeb.SpecComponents do
               row_expandable={fn _revision -> true end}
               expanded_rows={@expanded_revision_rows}
             >
-              <:col :let={revision} label="Revision">
+              <:col :let={revision} label={dgettext("dashboard_specs", "Revision")}>
                 <.text_cell
-                  label={"Revision #{revision.revision}"}
+                  label={
+                    dgettext("dashboard_specs", "Revision %{revision}",
+                      revision: revision.revision
+                    )
+                  }
                   sublabel={revision_author(revision)}
                   icon="git_commit"
                 />
               </:col>
-              <:col :let={revision} label="Status">
+              <:col :let={revision} label={dgettext("dashboard_specs", "Status")}>
                 <.badge_cell
                   label={status_label(revision.status)}
                   color={status_color(revision.status)}
                   style="light-fill"
                 />
               </:col>
-              <:col :let={revision} label="Edited">
+              <:col :let={revision} label={dgettext("dashboard_specs", "Edited")}>
                 <.time_cell time={revision.inserted_at} />
               </:col>
               <:expanded_content :let={revision}>
@@ -243,11 +249,16 @@ defmodule HiveWeb.SpecComponents do
           </.card_section>
         </.card>
 
-        <.card icon="message_circle" title="Comments">
+        <.card icon="message_circle" title={dgettext("dashboard_specs", "Comments")}>
           <.card_section>
             <div :if={@spec.comments == []} data-part="empty-state">
-              <h2>No comments yet</h2>
-              <p>Comments from contributors and members will appear here.</p>
+              <h2>{dgettext("dashboard_specs", "No comments yet")}</h2>
+              <p>
+                {dgettext(
+                  "dashboard_specs",
+                  "Comments from contributors and members will appear here."
+                )}
+              </p>
             </div>
 
             <div :if={@spec.comments != []} data-part="comment-list">
@@ -270,7 +281,7 @@ defmodule HiveWeb.SpecComponents do
                       <span>{Calendar.strftime(comment.inserted_at, "%b %-d, %Y")}</span>
                       <.badge
                         :if={comment_new?(comment, @viewer_last_viewed_at)}
-                        label="New"
+                        label={dgettext("dashboard_specs", "New")}
                         color="information"
                         style="light-fill"
                       />
@@ -282,21 +293,26 @@ defmodule HiveWeb.SpecComponents do
                         data-part="comment-action-button"
                         phx-click="edit_comment"
                         phx-value-id={comment.id}
-                        aria-label="Edit comment"
-                        title="Edit comment"
+                        aria-label={dgettext("dashboard_specs", "Edit comment")}
+                        title={dgettext("dashboard_specs", "Edit comment")}
                       >
                         <.pencil />
                       </button>
                       <.modal
                         :if={Specs.can_edit_comment?(comment, @current_user)}
                         id={delete_comment_modal_id(comment.id)}
-                        title="Delete comment?"
-                        description="This action cannot be undone."
+                        title={dgettext("dashboard_specs", "Delete comment?")}
+                        description={dgettext("dashboard_specs", "This action cannot be undone.")}
                         header_type="warning"
                         header_size="large"
                       >
                         <:trigger :let={attrs}>
-                          <button type="button" aria-label="Delete comment" title="Delete comment" {attrs}>
+                          <button
+                            type="button"
+                            aria-label={dgettext("dashboard_specs", "Delete comment")}
+                            title={dgettext("dashboard_specs", "Delete comment")}
+                            {attrs}
+                          >
                             <.trash />
                           </button>
                         </:trigger>
@@ -305,7 +321,12 @@ defmodule HiveWeb.SpecComponents do
                           status="warning"
                           type="secondary"
                           size="small"
-                          title="Deleting this comment will permanently remove it from the spec discussion"
+                          title={
+                            dgettext(
+                              "dashboard_specs",
+                              "Deleting this comment will permanently remove it from the spec discussion"
+                            )
+                          }
                         />
                         <.line_divider />
                         <:footer>
@@ -313,7 +334,7 @@ defmodule HiveWeb.SpecComponents do
                             <:action>
                               <.button
                                 type="button"
-                                label="Cancel"
+                                label={dgettext("dashboard_specs", "Cancel")}
                                 variant="secondary"
                                 size="medium"
                                 phx-click="close_delete_comment"
@@ -323,7 +344,7 @@ defmodule HiveWeb.SpecComponents do
                             <:action>
                               <.button
                                 type="button"
-                                label="Delete"
+                                label={dgettext("dashboard_specs", "Delete")}
                                 variant="destructive"
                                 size="medium"
                                 phx-click="delete_comment"
@@ -336,8 +357,8 @@ defmodule HiveWeb.SpecComponents do
                       <a
                         href={"#comment-#{comment.id}"}
                         data-part="comment-permalink"
-                        aria-label="Permalink to comment"
-                        title="Permalink to comment"
+                        aria-label={dgettext("dashboard_specs", "Permalink to comment")}
+                        title={dgettext("dashboard_specs", "Permalink to comment")}
                       >
                         <.icon name="link_icon" />
                       </a>
@@ -354,8 +375,8 @@ defmodule HiveWeb.SpecComponents do
                     <MentionComponents.mention_text_area
                       field={@edit_comment_form[:body]}
                       mention_suggestions={@mention_suggestions}
-                      label="Edit comment"
-                      placeholder="Update your comment with Markdown"
+                      label={dgettext("dashboard_specs", "Edit comment")}
+                      placeholder={dgettext("dashboard_specs", "Update your comment with Markdown")}
                       max_length={20_000}
                       rows={5}
                       required={true}
@@ -363,13 +384,17 @@ defmodule HiveWeb.SpecComponents do
                     />
                     <div data-part="form-actions">
                       <.button
-                        label="Cancel"
+                        label={dgettext("dashboard_specs", "Cancel")}
                         size="medium"
                         variant="secondary"
                         type="button"
                         phx-click="cancel_comment_edit"
                       />
-                      <.button label="Save comment" size="medium" variant="primary" />
+                      <.button
+                        label={dgettext("dashboard_specs", "Save comment")}
+                        size="medium"
+                        variant="primary"
+                      />
                     </div>
                   </.form>
                   <div :if={@editing_comment_id != comment.id} data-part="comment-body">
@@ -384,13 +409,13 @@ defmodule HiveWeb.SpecComponents do
               status="information"
               type="secondary"
               size="large"
-              title="Sign in to comment"
+              title={dgettext("dashboard_specs", "Sign in to comment")}
               data-part="comment-auth-required"
             >
-              <p>Comments are available to authenticated users.</p>
+              <p>{dgettext("dashboard_specs", "Comments are available to authenticated users.")}</p>
               <:action>
                 <.button
-                  label="Sign in"
+                  label={dgettext("dashboard_specs", "Sign in")}
                   href={~p"/login?#{[return_to: @current_path]}"}
                   size="medium"
                   variant="secondary"
@@ -407,15 +432,15 @@ defmodule HiveWeb.SpecComponents do
               <MentionComponents.mention_text_area
                 field={@comment_form[:body]}
                 mention_suggestions={@mention_suggestions}
-                label="Comment"
-                placeholder="Add context or feedback with Markdown"
+                label={dgettext("dashboard_specs", "Comment")}
+                placeholder={dgettext("dashboard_specs", "Add context or feedback with Markdown")}
                 max_length={20_000}
                 rows={5}
                 required={true}
                 show_required={true}
               />
               <div data-part="form-actions">
-                <.button label="Comment" size="medium" variant="primary" />
+                <.button label={dgettext("dashboard_specs", "Comment")} size="medium" variant="primary" />
               </div>
             </.form>
           </.card_section>
@@ -437,27 +462,41 @@ defmodule HiveWeb.SpecComponents do
       <div data-part="header">
         <div data-part="title-group">
           <h1>{@title}</h1>
-          <p>{if @source, do: "Source: #{@source.title}", else: "Write a proposal directly."}</p>
+          <p>
+            {if @source,
+              do: dgettext("dashboard_specs", "Source: %{title}", title: @source.title),
+              else: dgettext("dashboard_specs", "Write a proposal directly.")}
+          </p>
         </div>
-        <.button label="Back" href={~p"/specs"} size="medium" variant="secondary">
+        <.button
+          label={dgettext("dashboard_specs", "Back")}
+          href={~p"/specs"}
+          size="medium"
+          variant="secondary"
+        >
           <:icon_left><.arrow_left /></:icon_left>
         </.button>
       </div>
 
-      <.card icon="file_text" title="Proposal">
+      <.card icon="file_text" title={dgettext("dashboard_specs", "Proposal")}>
         <.card_section>
           <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
             <.text_input
               field={@form[:title]}
-              label="Title"
-              placeholder="Describe the proposal in one sentence"
+              label={dgettext("dashboard_specs", "Title")}
+              placeholder={dgettext("dashboard_specs", "Describe the proposal in one sentence")}
               required={true}
               show_required={true}
             />
             <.text_area
               field={@form[:body]}
-              label="Body"
-              placeholder="Describe the problem, proposal, tradeoffs, and acceptance criteria with Markdown."
+              label={dgettext("dashboard_specs", "Body")}
+              placeholder={
+                dgettext(
+                  "dashboard_specs",
+                  "Describe the problem, proposal, tradeoffs, and acceptance criteria with Markdown."
+                )
+              }
               max_length={20_000}
               rows={14}
               required={true}
@@ -466,7 +505,7 @@ defmodule HiveWeb.SpecComponents do
             <.status_select form={@form} id="spec-status" />
             <.visibility_select form={@form} id="spec-visibility" />
             <fieldset data-part="checkbox-group">
-              <legend>Domains</legend>
+              <legend>{dgettext("dashboard_specs", "Domains")}</legend>
               <input type="hidden" name="spec[domain_ids][]" value="" />
               <label :for={domain <- @domains} data-part="checkbox-option">
                 <input
@@ -477,7 +516,9 @@ defmodule HiveWeb.SpecComponents do
                 />
                 <span>{domain.name}</span>
               </label>
-              <p :if={@domains == []}>Create domains in Settings before linking them to specs.</p>
+              <p :if={@domains == []}>
+                {dgettext("dashboard_specs", "Create domains before linking them to specs.")}
+              </p>
             </fieldset>
             <input
               :if={@form[:source_feature_request_id].value}
@@ -501,8 +542,10 @@ defmodule HiveWeb.SpecComponents do
     """
   end
 
-  defp source_label(%{source_feature_request: %{title: title}}), do: "Source: #{title}"
-  defp source_label(_spec), do: "Created directly"
+  defp source_label(%{source_feature_request: %{title: title}}),
+    do: dgettext("dashboard_specs", "Source: %{title}", title: title)
+
+  defp source_label(_spec), do: dgettext("dashboard_specs", "Created directly")
 
   defp new_activity_since_visit?(%{viewer_last_viewed_at: nil}), do: false
 
@@ -564,8 +607,13 @@ defmodule HiveWeb.SpecComponents do
 
     ~H"""
     <div data-part="select-field">
-      <span>Status</span>
-      <.select id={@id} name={@form[:status].name} value={@value} label="Choose status">
+      <span>{dgettext("dashboard_specs", "Status")}</span>
+      <.select
+        id={@id}
+        name={@form[:status].name}
+        value={@value}
+        label={dgettext("dashboard_specs", "Choose status")}
+      >
         <:item
           :for={status <- Spec.statuses()}
           value={Atom.to_string(status)}
@@ -589,8 +637,13 @@ defmodule HiveWeb.SpecComponents do
 
     ~H"""
     <div data-part="select-field">
-      <span>Visibility</span>
-      <.select id={@id} name={@form[:visibility].name} value={@value} label="Choose visibility">
+      <span>{dgettext("dashboard_specs", "Visibility")}</span>
+      <.select
+        id={@id}
+        name={@form[:visibility].name}
+        value={@value}
+        label={dgettext("dashboard_specs", "Choose visibility")}
+      >
         <:item
           :for={visibility <- Spec.visibilities()}
           value={Atom.to_string(visibility)}
@@ -602,8 +655,8 @@ defmodule HiveWeb.SpecComponents do
     """
   end
 
-  defp visibility_label(:private), do: "Private"
-  defp visibility_label(_visibility), do: "Public"
+  defp visibility_label(:private), do: dgettext("dashboard_specs", "Private")
+  defp visibility_label(_visibility), do: dgettext("dashboard_specs", "Public")
 
   defp visibility_icon(:private), do: "lock"
   defp visibility_icon(_visibility), do: "world"
@@ -622,6 +675,15 @@ defmodule HiveWeb.SpecComponents do
   defp spec_number(%{number: number}) when is_integer(number), do: "##{number}"
   defp spec_number(_spec), do: "#?"
 
+  defp status_label(:draft), do: dgettext("dashboard_specs", "Draft")
+  defp status_label(:proposed), do: dgettext("dashboard_specs", "Proposed")
+  defp status_label(:approved), do: dgettext("dashboard_specs", "Approved")
+  defp status_label(:paused), do: dgettext("dashboard_specs", "Paused")
+  defp status_label(:rejected), do: dgettext("dashboard_specs", "Rejected")
+  defp status_label(:in_progress), do: dgettext("dashboard_specs", "In progress")
+  defp status_label(:shipped), do: dgettext("dashboard_specs", "Shipped")
+  defp status_label(:archived), do: dgettext("dashboard_specs", "Archived")
+
   defp status_label(status),
     do: status |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
@@ -636,28 +698,34 @@ defmodule HiveWeb.SpecComponents do
 
   defp comment_author(%{user: %{email: email}}) when is_binary(email), do: email
   defp comment_author(%{author_name: name}) when is_binary(name), do: name
-  defp comment_author(_comment), do: "Anonymous"
+  defp comment_author(_comment), do: dgettext("dashboard_specs", "Anonymous")
 
   defp delete_comment_modal_id(comment_id), do: "delete-comment-modal-#{comment_id}"
 
-  defp revision_author(%{user: %{email: email}}) when is_binary(email), do: "Edited by #{email}"
-  defp revision_author(_revision), do: "Edited by an unknown user"
+  defp revision_author(%{user: %{email: email}}) when is_binary(email),
+    do: dgettext("dashboard_specs", "Edited by %{email}", email: email)
+
+  defp revision_author(_revision), do: dgettext("dashboard_specs", "Edited by an unknown user")
 
   defp revision_row_key(revision), do: "revision-#{revision.id}"
 
-  defp revision_summary_title(%{revision: 1}), do: "Initial draft"
-  defp revision_summary_title(revision), do: "Revision #{revision.revision} summary"
+  defp revision_summary_title(%{revision: 1}), do: dgettext("dashboard_specs", "Initial draft")
+
+  defp revision_summary_title(revision),
+    do: dgettext("dashboard_specs", "Revision %{revision} summary", revision: revision.revision)
 
   defp revision_summary(%{summary: summary}, _revisions, _summaries_enabled?)
        when is_binary(summary) and summary != "",
        do: summary
 
   defp revision_summary(%{revision: 1, status: status}, _revisions, _summaries_enabled?) do
-    "Created the initial #{String.downcase(status_label(status))} proposal."
+    dgettext("dashboard_specs", "Created the initial %{status} proposal.",
+      status: String.downcase(status_label(status))
+    )
   end
 
   defp revision_summary(_revision, _revisions, true) do
-    "The agent-written summary is not available yet."
+    dgettext("dashboard_specs", "The agent-written summary is not available yet.")
   end
 
   defp revision_summary(revision, revisions, false) do
@@ -672,20 +740,30 @@ defmodule HiveWeb.SpecComponents do
 
   defp revision_changes(revision, previous) do
     [
-      revision.title != previous.title && "renamed the spec",
+      revision.title != previous.title && dgettext("dashboard_specs", "renamed the spec"),
       revision.status != previous.status &&
-        "moved the status from #{status_label(previous.status)} to #{status_label(revision.status)}",
+        dgettext("dashboard_specs", "moved the status from %{previous} to %{current}",
+          previous: status_label(previous.status),
+          current: status_label(revision.status)
+        ),
       revision.body != previous.body && body_change_summary(previous.body, revision.body)
     ]
     |> Enum.reject(&(&1 in [false, nil]))
   end
 
-  defp humanize_revision_changes([]), do: "Saved the revision without changing the proposal text."
-  defp humanize_revision_changes([change]), do: "This revision #{change}."
+  defp humanize_revision_changes([]),
+    do: dgettext("dashboard_specs", "Saved the revision without changing the proposal text.")
+
+  defp humanize_revision_changes([change]),
+    do: dgettext("dashboard_specs", "This revision %{change}.", change: change)
 
   defp humanize_revision_changes(changes) do
     {last_change, previous_changes} = List.pop_at(changes, -1)
-    "This revision #{Enum.join(previous_changes, ", ")} and #{last_change}."
+
+    dgettext("dashboard_specs", "This revision %{changes} and %{last_change}.",
+      changes: Enum.join(previous_changes, ", "),
+      last_change: last_change
+    )
   end
 
   defp body_change_summary(previous_body, body) do
@@ -698,16 +776,25 @@ defmodule HiveWeb.SpecComponents do
 
     cond do
       added > 0 and removed > 0 ->
-        "updated the proposal body with #{change_count(added, "addition")} and #{change_count(removed, "removal")}"
+        dgettext(
+          "dashboard_specs",
+          "updated the proposal body with %{added} and %{removed}",
+          added: change_count(added, :addition),
+          removed: change_count(removed, :removal)
+        )
 
       added > 0 ->
-        "expanded the proposal body with #{change_count(added, "addition")}"
+        dgettext("dashboard_specs", "expanded the proposal body with %{count}",
+          count: change_count(added, :addition)
+        )
 
       removed > 0 ->
-        "trimmed the proposal body with #{change_count(removed, "removal")}"
+        dgettext("dashboard_specs", "trimmed the proposal body with %{count}",
+          count: change_count(removed, :removal)
+        )
 
       true ->
-        "updated the proposal body"
+        dgettext("dashboard_specs", "updated the proposal body")
     end
   end
 
@@ -720,8 +807,15 @@ defmodule HiveWeb.SpecComponents do
     |> Enum.reject(&(&1 == ""))
   end
 
-  defp change_count(1, singular), do: "1 #{singular}"
-  defp change_count(count, singular), do: "#{count} #{singular}s"
+  defp change_count(1, :addition), do: dgettext("dashboard_specs", "1 addition")
+
+  defp change_count(count, :addition),
+    do: dgettext("dashboard_specs", "%{count} additions", count: count)
+
+  defp change_count(1, :removal), do: dgettext("dashboard_specs", "1 removal")
+
+  defp change_count(count, :removal),
+    do: dgettext("dashboard_specs", "%{count} removals", count: count)
 
   defp avatar_url(%{email: email, identities: identities}) when is_list(identities) do
     github_avatar_url(identities) || gravatar_url(email)

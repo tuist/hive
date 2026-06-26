@@ -46,7 +46,7 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   def approve(conn, _params) do
     conn
     |> put_status(:forbidden)
-    |> html("OAuth authorization was denied.")
+    |> html(dgettext("dashboard_auth", "OAuth authorization was denied."))
   end
 
   @impl AuthorizeApplication
@@ -82,7 +82,10 @@ defmodule HiveWeb.OAuth.AuthorizeController do
 
   defp validate_state_length!(%{"state" => state}) when byte_size(state) > @max_state_length do
     raise Plug.BadRequestError,
-      message: "The state parameter must not exceed #{@max_state_length} characters."
+      message:
+        dgettext("dashboard_auth", "The state parameter must not exceed %{count} characters.",
+          count: @max_state_length
+        )
   end
 
   defp validate_state_length!(_params), do: :ok
@@ -90,24 +93,30 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   defp resource_owner(user), do: %ResourceOwner{sub: user.id, username: user.email}
 
   defp consent_page(conn, authorization) do
-    client_name = authorization.client.name || "OAuth client"
+    client_name = authorization.client.name || dgettext("dashboard_auth", "OAuth client")
     redirect_uri = authorization.redirect_uri || ""
     scope = authorization.scope || ""
+    title = dgettext("dashboard_auth", "Authorize %{client}", client: client_name)
+
+    description =
+      dgettext("dashboard_auth", "Allow this client to access Hive MCP as %{user}?",
+        user: authorization.resource_owner.username
+      )
 
     """
     <main id="oauth-consent">
-      <h1 data-part="title">Authorize #{html_escape(client_name)}</h1>
-      <p data-part="description">Allow this client to access Hive MCP as #{html_escape(authorization.resource_owner.username)}?</p>
+      <h1 data-part="title">#{html_escape(title)}</h1>
+      <p data-part="description">#{html_escape(description)}</p>
       <dl data-part="client-info">
-        <dt data-part="client-info-label">Redirect URI</dt>
+        <dt data-part="client-info-label">#{html_escape(dgettext("dashboard_auth", "Redirect URI"))}</dt>
         <dd data-part="client-info-value">#{html_escape(redirect_uri)}</dd>
-        <dt data-part="client-info-label">Scopes</dt>
+        <dt data-part="client-info-label">#{html_escape(dgettext("dashboard_auth", "Scopes"))}</dt>
         <dd data-part="client-info-value">#{html_escape(scope)}</dd>
       </dl>
       <form data-part="form" method="post" action="#{html_escape(current_path(conn))}">
         <input type="hidden" name="_csrf_token" value="#{html_escape(Plug.CSRFProtection.get_csrf_token())}" />
-        <button data-part="approve-button" type="submit" name="decision" value="approve">Allow</button>
-        <button data-part="deny-button" type="submit" name="decision" value="deny">Deny</button>
+        <button data-part="approve-button" type="submit" name="decision" value="approve">#{html_escape(dgettext("dashboard_auth", "Allow"))}</button>
+        <button data-part="deny-button" type="submit" name="decision" value="deny">#{html_escape(dgettext("dashboard_auth", "Deny"))}</button>
       </form>
     </main>
     """

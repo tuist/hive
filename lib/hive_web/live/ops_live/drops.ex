@@ -16,12 +16,19 @@ defmodule HiveWeb.OpsLive.Drops do
   def open_graph do
     %{
       description:
-        "Register RSS/Atom changelog sources for each domain. GitHub Releases is implicit.",
-      section_label: "Ops",
-      highlights: ["RSS / Atom sources", "Per-domain registration", "Polled every 15 minutes"],
+        dgettext(
+          "dashboard_drops",
+          "Register RSS/Atom changelog sources for each domain. GitHub Releases is implicit."
+        ),
+      section_label: dgettext("dashboard_drops", "Ops"),
+      highlights: [
+        dgettext("dashboard_drops", "RSS / Atom sources"),
+        dgettext("dashboard_drops", "Per-domain registration"),
+        dgettext("dashboard_drops", "Polled every 15 minutes")
+      ],
       id: "ops-drops",
       path: "/ops/drops",
-      title: "Drops"
+      title: dgettext("dashboard_drops", "Drops")
     }
   end
 
@@ -33,19 +40,25 @@ defmodule HiveWeb.OpsLive.Drops do
       is_nil(user) ->
         {:ok,
          socket
-         |> put_flash(:error, "Log in to manage drop sources.")
+         |> put_flash(:error, dgettext("dashboard_drops", "Log in to manage drop sources."))
          |> redirect(to: ~p"/login?return_to=/ops/drops")}
 
       not Policy.authorize?(:drop_source_manage, user, nil) ->
         {:ok,
          socket
-         |> put_flash(:error, "Only instance admins can manage drop sources.")
+         |> put_flash(
+           :error,
+           dgettext("dashboard_drops", "Only instance admins can manage drop sources.")
+         )
          |> push_navigate(to: ~p"/")}
 
       true ->
         {:ok,
          socket
-         |> assign(:page_title, "Drops · #{socket.assigns.product_name}")
+         |> assign(
+           :page_title,
+           dgettext("dashboard_drops", "Drops · %{product}", product: socket.assigns.product_name)
+         )
          |> assign(OpenGraph.assigns(open_graph()))
          |> assign(:sources, Drops.list_drop_sources())
          |> assign(:projects, Projects.list_projects())
@@ -70,7 +83,7 @@ defmodule HiveWeb.OpsLive.Drops do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Source added.")
+         |> put_flash(:info, dgettext("dashboard_drops", "Source added."))
          |> assign(:sources, Drops.list_drop_sources())
          |> assign_source_form(Drops.change_drop_source(%DropSource{}, %{}))
          |> push_event("close-modal", %{id: "new-drop-source-modal"})}
@@ -91,12 +104,16 @@ defmodule HiveWeb.OpsLive.Drops do
          socket
          |> put_flash(
            :info,
-           if(updated.enabled, do: "Source enabled.", else: "Source disabled.")
+           if(updated.enabled,
+             do: dgettext("dashboard_drops", "Source enabled."),
+             else: dgettext("dashboard_drops", "Source disabled.")
+           )
          )
          |> assign(:sources, Drops.list_drop_sources())}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to update source.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_drops", "Failed to update source."))}
     end
   end
 
@@ -109,11 +126,12 @@ defmodule HiveWeb.OpsLive.Drops do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Source removed.")
+         |> put_flash(:info, dgettext("dashboard_drops", "Source removed."))
          |> assign(:sources, Drops.list_drop_sources())}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to remove source.")}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_drops", "Failed to remove source."))}
     end
   end
 
@@ -124,7 +142,7 @@ defmodule HiveWeb.OpsLive.Drops do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Sync started for #{source.url}.")}
+     |> put_flash(:info, dgettext("dashboard_drops", "Sync started for %{url}.", url: source.url))}
   end
 
   def handle_event("cancel_new_source", _params, socket) do
@@ -150,16 +168,17 @@ defmodule HiveWeb.OpsLive.Drops do
       <section id="ops-drops">
         <div data-part="page-header">
           <div data-part="title-group">
-            <h1>Drops</h1>
+            <h1>{dgettext("dashboard_drops", "Drops")}</h1>
             <p>
-              Register RSS/Atom changelog feeds. Each ingested entry is routed to one or
-              more domains by the classifier. GitHub Releases for any linked repository
-              are ingested automatically and don't need a source here.
+              {dgettext(
+                "dashboard_drops",
+                "Register RSS/Atom changelog feeds. Each ingested entry is routed to one or more domains by the classifier. GitHub Releases for any linked repository are ingested automatically and don't need a source here."
+              )}
             </p>
           </div>
         </div>
 
-        <.card icon="rss" title="RSS sources" data-part="sources-card">
+        <.card icon="rss" title={dgettext("dashboard_drops", "RSS sources")} data-part="sources-card">
           <:actions>
             <.new_drop_source_modal source_form={@source_form} projects={@projects} />
           </:actions>
@@ -171,21 +190,21 @@ defmodule HiveWeb.OpsLive.Drops do
                 rows={@sources}
                 row_key={fn source -> "drop-source-#{source.id}" end}
               >
-                <:col :let={source} label="Source">
+                <:col :let={source} label={dgettext("dashboard_drops", "Source")}>
                   <.text_and_description_cell
                     icon="rss"
                     label={source_label(source)}
                     description={source.url}
                   />
                 </:col>
-                <:col :let={source} label="Status">
+                <:col :let={source} label={dgettext("dashboard_drops", "Status")}>
                   <.badge_cell
                     label={source_status_label(source)}
                     color={source_status_color(source)}
                     style="light-fill"
                   />
                 </:col>
-                <:col :let={source} label="Last poll">
+                <:col :let={source} label={dgettext("dashboard_drops", "Last poll")}>
                   <.text_cell
                     :if={source.last_error}
                     label={source_poll_label(source)}
@@ -199,7 +218,7 @@ defmodule HiveWeb.OpsLive.Drops do
                       <.dropdown id={"drop-source-actions-#{source.id}"} icon_only>
                         <:icon><.dots_vertical /></:icon>
                         <.dropdown_item
-                          label="Sync now"
+                          label={dgettext("dashboard_drops", "Sync now")}
                           value="sync"
                           on_click="sync"
                           phx-value-id={source.id}
@@ -207,17 +226,25 @@ defmodule HiveWeb.OpsLive.Drops do
                           <:left_icon><.reload /></:left_icon>
                         </.dropdown_item>
                         <.dropdown_item
-                          label={if source.enabled, do: "Disable", else: "Enable"}
+                          label={
+                            if source.enabled,
+                              do: dgettext("dashboard_drops", "Disable"),
+                              else: dgettext("dashboard_drops", "Enable")
+                          }
                           value="toggle_enabled"
                           on_click="toggle_enabled"
                           phx-value-id={source.id}
                         />
                         <.dropdown_item
-                          label="Remove"
+                          label={dgettext("dashboard_drops", "Remove")}
                           value="remove"
                           on_click="delete"
                           phx-value-id={source.id}
-                          data-confirm={"Remove the source #{source_label(source)}?"}
+                          data-confirm={
+                            dgettext("dashboard_drops", "Remove the source %{source}?",
+                              source: source_label(source)
+                            )
+                          }
                         >
                           <:left_icon><.trash /></:left_icon>
                         </.dropdown_item>
@@ -228,8 +255,13 @@ defmodule HiveWeb.OpsLive.Drops do
                 <:empty_state>
                   <.table_empty_state
                     icon="rss"
-                    title="No RSS sources registered"
-                    subtitle="Add a source to start ingesting changelog feed entries."
+                    title={dgettext("dashboard_drops", "No RSS sources registered")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_drops",
+                        "Add a source to start ingesting changelog feed entries."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -243,13 +275,16 @@ defmodule HiveWeb.OpsLive.Drops do
 
   defp source_label(source), do: source.label || source.url
 
-  defp source_status_label(%DropSource{enabled: true}), do: "Enabled"
-  defp source_status_label(%DropSource{enabled: false}), do: "Disabled"
+  defp source_status_label(%DropSource{enabled: true}), do: dgettext("dashboard_drops", "Enabled")
+
+  defp source_status_label(%DropSource{enabled: false}),
+    do: dgettext("dashboard_drops", "Disabled")
 
   defp source_status_color(%DropSource{enabled: true}), do: "success"
   defp source_status_color(%DropSource{enabled: false}), do: "neutral"
 
-  defp source_poll_label(%DropSource{last_polled_at: nil}), do: "Never"
+  defp source_poll_label(%DropSource{last_polled_at: nil}),
+    do: dgettext("dashboard_drops", "Never")
 
   defp source_poll_label(%DropSource{last_polled_at: last_polled_at}) do
     Calendar.strftime(last_polled_at, "%Y-%m-%d %H:%M UTC")
@@ -262,14 +297,19 @@ defmodule HiveWeb.OpsLive.Drops do
     ~H"""
     <.modal
       id="new-drop-source-modal"
-      title="Add an RSS source"
-      description="Register an RSS or Atom changelog feed. Hive routes each ingested entry to one or more domains automatically."
+      title={dgettext("dashboard_drops", "Add an RSS source")}
+      description={
+        dgettext(
+          "dashboard_drops",
+          "Register an RSS or Atom changelog feed. Hive routes each ingested entry to one or more domains automatically."
+        )
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="cancel_new_source"
     >
       <:trigger :let={attrs}>
-        <.button label="Add source" size="medium" variant="primary" {attrs}>
+        <.button label={dgettext("dashboard_drops", "Add source")} size="medium" variant="primary" {attrs}>
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -285,16 +325,18 @@ defmodule HiveWeb.OpsLive.Drops do
         data-part="form"
       >
         <div :if={@projects == []} data-part="empty-projects">
-          <p>Create a project first; sources are routed into a project's domains.</p>
+          <p>
+            {dgettext("dashboard_drops", "Create a project first; sources are routed into a project's domains.")}
+          </p>
         </div>
 
         <div :if={@projects != []} data-part="select-field">
-          <span>Project</span>
+          <span>{dgettext("dashboard_drops", "Project")}</span>
           <.select
             id="new-drop-source-project"
             name={@source_form[:project_id].name}
             value={Phoenix.HTML.Form.normalize_value("select", @source_form[:project_id].value)}
-            label="Choose project"
+            label={dgettext("dashboard_drops", "Choose project")}
           >
             <:item :for={project <- @projects} value={project.id} label={project.name} />
           </.select>
@@ -303,14 +345,14 @@ defmodule HiveWeb.OpsLive.Drops do
         <.text_input
           id="new-drop-source-url"
           field={@source_form[:url]}
-          label="Feed URL"
+          label={dgettext("dashboard_drops", "Feed URL")}
           placeholder="https://example.com/changelog.atom"
         />
         <.text_input
           id="new-drop-source-label"
           field={@source_form[:label]}
-          label="Label (optional)"
-          placeholder="Example product changelog"
+          label={dgettext("dashboard_drops", "Label (optional)")}
+          placeholder={dgettext("dashboard_drops", "Example product changelog")}
         />
       </.form>
 
@@ -318,7 +360,7 @@ defmodule HiveWeb.OpsLive.Drops do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_drops", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -327,7 +369,7 @@ defmodule HiveWeb.OpsLive.Drops do
           </:action>
           <:action>
             <.button
-              label="Add"
+              label={dgettext("dashboard_drops", "Add")}
               size="medium"
               variant="primary"
               type="submit"

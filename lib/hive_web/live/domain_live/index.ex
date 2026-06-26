@@ -6,8 +6,8 @@ defmodule HiveWeb.DomainLive.Index do
   alias Hive.Auth
   alias Hive.Domains
   alias Hive.Domains.Domain
-  alias HiveWeb.Layouts
   alias HiveWeb.DomainComponents
+  alias HiveWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,7 +16,10 @@ defmodule HiveWeb.DomainLive.Index do
 
     {:ok,
      socket
-     |> assign(:page_title, "Domains · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_domains", "Domains · %{product}", product: socket.assigns.product_name)
+     )
      |> assign(:domains, Domains.list_visible_domains(user))
      |> assign(:editable?, editable?)
      |> assign_form(Domains.change_domain())}
@@ -44,7 +47,12 @@ defmodule HiveWeb.DomainLive.Index do
     if socket.assigns.editable? do
       create_domain(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can create domains.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_domains", "Only organization members can create domains.")
+       )}
     end
   end
 
@@ -53,7 +61,7 @@ defmodule HiveWeb.DomainLive.Index do
       {:ok, _domain} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Domain created.")
+         |> put_flash(:info, dgettext("dashboard_domains", "Domain created."))
          |> assign(:domains, Domains.list_visible_domains(socket.assigns.current_user))
          |> reset_new_domain()
          |> push_event("close-modal", %{id: "new-domain-modal"})

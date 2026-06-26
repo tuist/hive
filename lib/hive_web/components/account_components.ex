@@ -19,14 +19,22 @@ defmodule HiveWeb.AccountComponents do
     <section id="account-identities">
       <div data-part="page-header">
         <div data-part="title-group">
-          <h1>Identities</h1>
+          <h1>{dgettext("dashboard_account", "Identities")}</h1>
           <p>
-            Manage the sign-in providers connected to {@user.email}. Any connected provider can be used to access this account.
+            {dgettext(
+              "dashboard_account",
+              "Manage the sign-in providers connected to %{email}. Any connected provider can be used to access this account.",
+              email: @user.email
+            )}
           </p>
         </div>
       </div>
 
-      <.card icon="user" title="Sign-in providers" data-part="providers-card">
+      <.card
+        icon="user"
+        title={dgettext("dashboard_account", "Sign-in providers")}
+        data-part="providers-card"
+      >
         <.card_section data-part="providers-section">
           <div data-part="providers-table">
             <.table
@@ -34,7 +42,7 @@ defmodule HiveWeb.AccountComponents do
               rows={@provider_options}
               row_key={fn option -> "provider-#{option.key}" end}
             >
-              <:col :let={option} label="Provider">
+              <:col :let={option} label={dgettext("dashboard_account", "Provider")}>
                 <.text_and_description_cell
                   icon={provider_icon(option.key)}
                   label={option.display_name}
@@ -42,20 +50,24 @@ defmodule HiveWeb.AccountComponents do
                   data-state={provider_state(option)}
                 />
               </:col>
-              <:col :let={option} label="Account">
+              <:col :let={option} label={dgettext("dashboard_account", "Account")}>
                 <.text_cell label={if option.connected?, do: option.uid, else: "—"} data-provider-uid />
               </:col>
-              <:col :let={option} label="Status">
+              <:col :let={option} label={dgettext("dashboard_account", "Status")}>
                 <.badge_cell
                   :if={option.connected?}
-                  label="Connected"
+                  label={dgettext("dashboard_account", "Connected")}
                   color="success"
                   style="light-fill"
                 />
                 <.button_cell :if={option.configured? and not option.connected?}>
                   <:button>
                     <.button
-                      label={"Connect #{option.display_name}"}
+                      label={
+                        dgettext("dashboard_account", "Connect %{provider}",
+                          provider: option.display_name
+                        )
+                      }
                       href={~p"/auth/#{option.key}"}
                       variant="secondary"
                       size="medium"
@@ -66,7 +78,7 @@ defmodule HiveWeb.AccountComponents do
                 </.button_cell>
                 <.badge_cell
                   :if={not option.configured? and not option.connected?}
-                  label="Not configured"
+                  label={dgettext("dashboard_account", "Not configured")}
                   color="neutral"
                   style="light-fill"
                 />
@@ -76,11 +88,15 @@ defmodule HiveWeb.AccountComponents do
         </.card_section>
       </.card>
 
-      <.card icon="brand_slack" title="Slack profile" data-part="slack-card">
+      <.card
+        icon="brand_slack"
+        title={dgettext("dashboard_account", "Slack profile")}
+        data-part="slack-card"
+      >
         <:actions>
           <.button
             :if={@slack_enabled?}
-            label="Connect Slack profile"
+            label={dgettext("dashboard_account", "Connect Slack profile")}
             href={~p"/account/slack/new"}
             variant="secondary"
             size="medium"
@@ -89,7 +105,7 @@ defmodule HiveWeb.AccountComponents do
           </.button>
           <.badge
             :if={not @slack_enabled?}
-            label="Slack not configured"
+            label={dgettext("dashboard_account", "Slack not configured")}
             color="neutral"
             style="light-fill"
           />
@@ -97,7 +113,10 @@ defmodule HiveWeb.AccountComponents do
         <.card_section data-part="slack-section">
           <div data-part="slack-copy">
             <p>
-              Connect your Slack profile so Hive can send targeted notifications instead of posting every update to a channel.
+              {dgettext(
+                "dashboard_account",
+                "Connect your Slack profile so Hive can send targeted notifications instead of posting every update to a channel."
+              )}
             </p>
           </div>
 
@@ -107,20 +126,24 @@ defmodule HiveWeb.AccountComponents do
               rows={@slack_profiles}
               row_key={fn profile -> "slack-profile-#{profile.id}" end}
             >
-              <:col :let={profile} label="Workspace">
+              <:col :let={profile} label={dgettext("dashboard_account", "Workspace")}>
                 <.text_and_description_cell
                   icon="brand_slack"
                   label={profile.installation.team_name || profile.installation.team_id}
                   description={slack_profile_label(profile)}
                 />
               </:col>
-              <:col :let={_profile} label="Status">
-                <.badge_cell label="Connected" color="success" style="light-fill" />
+              <:col :let={_profile} label={dgettext("dashboard_account", "Status")}>
+                <.badge_cell
+                  label={dgettext("dashboard_account", "Connected")}
+                  color="success"
+                  style="light-fill"
+                />
               </:col>
               <:empty_state>
                 <.table_empty_state
                   icon="brand_slack"
-                  title="No Slack profile connected"
+                  title={dgettext("dashboard_account", "No Slack profile connected")}
                   subtitle={slack_empty_subtitle(@slack_enabled?)}
                 />
               </:empty_state>
@@ -146,10 +169,18 @@ defmodule HiveWeb.AccountComponents do
   end
 
   defp slack_empty_subtitle(true),
-    do: "Connect your Slack profile to receive targeted notifications."
+    do:
+      dgettext(
+        "dashboard_account",
+        "Connect your Slack profile to receive targeted notifications."
+      )
 
   defp slack_empty_subtitle(false),
-    do: "Slack profile linking is not enabled for this Hive instance."
+    do:
+      dgettext(
+        "dashboard_account",
+        "Slack profile linking is not enabled for this Hive instance."
+      )
 
   defp provider_options(providers, identities) do
     uids = Map.new(identities, &{&1.provider, &1.provider_uid})
@@ -186,15 +217,20 @@ defmodule HiveWeb.AccountComponents do
   defp provider_state(%{configured?: true}), do: "available"
   defp provider_state(_option), do: "unconfigured"
 
-  defp provider_description(%{connected?: true}), do: "Connected to this account"
+  defp provider_description(%{connected?: true}),
+    do: dgettext("dashboard_account", "Connected to this account")
 
   defp provider_description(%{configured?: true} = option),
-    do: "Use your #{option.display_name} account to sign in to Hive"
+    do:
+      dgettext("dashboard_account", "Use your %{provider} account to sign in to Hive",
+        provider: option.display_name
+      )
 
   defp provider_description(%{key: "github"}),
-    do: "GitHub sign-in is not enabled for this Hive instance"
+    do: dgettext("dashboard_account", "GitHub sign-in is not enabled for this Hive instance")
 
-  defp provider_description(_option), do: "Not enabled for this Hive instance"
+  defp provider_description(_option),
+    do: dgettext("dashboard_account", "Not enabled for this Hive instance")
 
   defp default_provider_name("github"), do: "GitHub"
   defp default_provider_name("google"), do: "Google"

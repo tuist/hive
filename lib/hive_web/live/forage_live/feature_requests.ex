@@ -13,16 +13,17 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
     stats = feature_request_stats(feature_requests)
 
     %{
-      description: "Public domain ideas submitted by authenticated users.",
-      section_label: "Forage",
+      description:
+        dgettext("dashboard_forage", "Public domain ideas submitted by authenticated users."),
+      section_label: dgettext("dashboard_forage", "Forage"),
       highlights: [
-        "#{stats.total} total requests",
-        "#{stats.open} open",
-        "#{stats.contributors} contributors"
+        dgettext("dashboard_forage", "%{count} total requests", count: stats.total),
+        dgettext("dashboard_forage", "%{count} open", count: stats.open),
+        dgettext("dashboard_forage", "%{count} contributors", count: stats.contributors)
       ],
       id: "forage-feature-requests",
       path: "/forage/feature-requests",
-      title: "Feature requests"
+      title: dgettext("dashboard_forage", "Feature requests")
     }
   end
 
@@ -33,10 +34,15 @@ defmodule HiveWeb.ForageLive.FeatureRequests do
 
     {:ok,
      socket
-     |> assign(:page_title, "Feature requests · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_forage", "Feature requests · %{product}",
+         product: socket.assigns.product_name
+       )
+     )
      |> assign(OpenGraph.assigns(open_graph(feature_requests)))
      |> assign(:atom_feed, %{
-       title: "Hive · Feature requests",
+       title: dgettext("dashboard_forage", "Hive · Feature requests"),
        atom_href: "/forage/feature-requests/atom.xml",
        rss_href: "/forage/feature-requests/rss.xml"
      })

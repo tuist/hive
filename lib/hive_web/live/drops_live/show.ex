@@ -29,10 +29,16 @@ defmodule HiveWeb.DropsLive.Show do
         if reference == to_string(drop.number) do
           {:ok,
            socket
-           |> assign(:page_title, "#{drop.title} · #{socket.assigns.product_name}")
+           |> assign(
+             :page_title,
+             dgettext("dashboard_drops", "%{title} · %{product}",
+               title: drop.title,
+               product: socket.assigns.product_name
+             )
+           )
            |> assign(:drop, drop)
            |> assign(:atom_feed, %{
-             title: "Hive · Drops",
+             title: dgettext("dashboard_drops", "Hive · Drops"),
              atom_href: "/drops/atom.xml",
              rss_href: "/drops/rss.xml"
            })
@@ -44,7 +50,7 @@ defmodule HiveWeb.DropsLive.Show do
       {:error, :not_found} ->
         {:ok,
          socket
-         |> put_flash(:error, "Drop not found.")
+         |> put_flash(:error, dgettext("dashboard_drops", "Drop not found."))
          |> redirect(to: ~p"/drops")}
     end
   end
@@ -73,7 +79,7 @@ defmodule HiveWeb.DropsLive.Show do
           <div data-part="header-actions">
             <.button
               :if={@drop.url}
-              label="Open original"
+              label={dgettext("dashboard_drops", "Open original")}
               variant="secondary"
               href={@drop.url}
               target="_blank"
@@ -84,20 +90,20 @@ defmodule HiveWeb.DropsLive.Show do
           </div>
         </div>
 
-        <.card title="Metadata" icon="package" data-part="metadata-card">
+        <.card title={dgettext("dashboard_drops", "Metadata")} icon="package" data-part="metadata-card">
           <.card_section data-part="metadata-card-section">
             <div data-part="metadata-grid">
               <div data-part="metadata-row">
                 <div data-part="metadata">
-                  <div data-part="title">Source</div>
+                  <div data-part="title">{dgettext("dashboard_drops", "Source")}</div>
                   <span data-part="label">{Drops.source_type_label(@drop.source_type)}</span>
                 </div>
                 <div :if={@drop.version} data-part="metadata">
-                  <div data-part="title">Version</div>
+                  <div data-part="title">{dgettext("dashboard_drops", "Version")}</div>
                   <span data-part="version">{@drop.version}</span>
                 </div>
                 <div data-part="metadata">
-                  <div data-part="title">Domains</div>
+                  <div data-part="title">{dgettext("dashboard_drops", "Domains")}</div>
                   <div :if={drop_domains(@drop) != []} data-part="metadata-badges">
                     <.link
                       :for={domain <- drop_domains(@drop)}
@@ -107,19 +113,21 @@ defmodule HiveWeb.DropsLive.Show do
                       {domain.name}
                     </.link>
                   </div>
-                  <span :if={drop_domains(@drop) == []} data-part="label">Unclassified</span>
+                  <span :if={drop_domains(@drop) == []} data-part="label">
+                    {dgettext("dashboard_drops", "Unclassified")}
+                  </span>
                 </div>
               </div>
 
               <div data-part="metadata-row">
                 <div :if={@drop.published_at} data-part="metadata">
-                  <div data-part="title">Published</div>
+                  <div data-part="title">{dgettext("dashboard_drops", "Published")}</div>
                   <span data-part="label">
                     {Calendar.strftime(@drop.published_at, "%b %d, %Y · %H:%M UTC")}
                   </span>
                 </div>
                 <div :if={@drop.github_repository} data-part="metadata">
-                  <div data-part="title">Repository</div>
+                  <div data-part="title">{dgettext("dashboard_drops", "Repository")}</div>
                   <span data-part="label">
                     {@drop.github_repository.owner}/{@drop.github_repository.name}
                   </span>
@@ -129,13 +137,18 @@ defmodule HiveWeb.DropsLive.Show do
           </.card_section>
         </.card>
 
-        <.card title="Update" icon="package">
+        <.card title={dgettext("dashboard_drops", "Update")} icon="package">
           <.card_section>
             <article :if={present?(@drop.body)} data-part="body">
               {Markdown.render(@drop.body)}
             </article>
             <div :if={!present?(@drop.body)} data-part="empty-body">
-              <p>No body for this drop. Use the “Open original” link to read the source.</p>
+              <p>
+                {dgettext(
+                  "dashboard_drops",
+                  "No body for this drop. Use the Open original link to read the source."
+                )}
+              </p>
             </div>
           </.card_section>
         </.card>
@@ -149,8 +162,16 @@ defmodule HiveWeb.DropsLive.Show do
       Markdown.preview(drop.body, 180)
     else
       case primary_context(drop) do
-        nil -> "Shipped update from #{source_card_label(drop.source_type)}."
-        context -> "Shipped update for #{context} from #{source_card_label(drop.source_type)}."
+        nil ->
+          dgettext("dashboard_drops", "Shipped update from %{source}.",
+            source: source_card_label(drop.source_type)
+          )
+
+        context ->
+          dgettext("dashboard_drops", "Shipped update for %{context} from %{source}.",
+            context: context,
+            source: source_card_label(drop.source_type)
+          )
       end
     end
   end
@@ -158,7 +179,7 @@ defmodule HiveWeb.DropsLive.Show do
   defp section_label(drop) do
     parts =
       [
-        "Drop",
+        dgettext("dashboard_drops", "Drop"),
         source_card_label(drop.source_type),
         drop.version
       ]
@@ -180,9 +201,9 @@ defmodule HiveWeb.DropsLive.Show do
     end
   end
 
-  defp source_card_label(:github_release), do: "GitHub release"
-  defp source_card_label(:rss), do: "Changelog feed"
-  defp source_card_label(_source_type), do: "Drop"
+  defp source_card_label(:github_release), do: dgettext("dashboard_drops", "GitHub release")
+  defp source_card_label(:rss), do: dgettext("dashboard_drops", "Changelog feed")
+  defp source_card_label(_source_type), do: dgettext("dashboard_drops", "Drop")
 
   defp primary_context(drop) do
     case project_names(drop) do
@@ -194,20 +215,31 @@ defmodule HiveWeb.DropsLive.Show do
   defp project_context(drop) do
     drop
     |> project_names()
-    |> context_label("Project", "Projects")
+    |> context_label(
+      dgettext("dashboard_drops", "Project"),
+      dgettext("dashboard_drops", "Projects")
+    )
   end
 
   defp domain_context(drop) do
     drop
     |> domain_names()
-    |> context_label("Domain", "Domains")
+    |> context_label(
+      dgettext("dashboard_drops", "Domain"),
+      dgettext("dashboard_drops", "Domains")
+    )
   end
 
   defp context_label([], _singular, _plural), do: nil
-  defp context_label([name], singular, _plural), do: "#{singular}: #{name}"
+
+  defp context_label([name], singular, _plural),
+    do: dgettext("dashboard_drops", "%{label}: %{name}", label: singular, name: name)
 
   defp context_label(names, _singular, plural) do
-    "#{plural}: #{names |> Enum.take(2) |> Enum.join(", ")}"
+    dgettext("dashboard_drops", "%{label}: %{names}",
+      label: plural,
+      names: names |> Enum.take(2) |> Enum.join(", ")
+    )
   end
 
   defp project_names(drop) do

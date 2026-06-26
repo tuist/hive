@@ -12,16 +12,21 @@ defmodule HiveWeb.SpecLive.Index do
 
   def open_graph(specs) do
     %{
-      description: "Editable proposals that shape forage into buildable work.",
-      section_label: "Specs",
+      description:
+        dgettext("dashboard_specs", "Editable proposals that shape forage into buildable work."),
+      section_label: dgettext("dashboard_specs", "Specs"),
       highlights: [
-        "#{length(specs)} specs",
-        "#{Enum.count(specs, &(&1.status == :draft))} drafts",
-        "#{Enum.count(specs, &(&1.status == :shipped))} shipped"
+        dgettext("dashboard_specs", "%{count} specs", count: length(specs)),
+        dgettext("dashboard_specs", "%{count} drafts",
+          count: Enum.count(specs, &(&1.status == :draft))
+        ),
+        dgettext("dashboard_specs", "%{count} shipped",
+          count: Enum.count(specs, &(&1.status == :shipped))
+        )
       ],
       id: "specs",
       path: "/specs",
-      title: "Specs"
+      title: dgettext("dashboard_specs", "Specs")
     }
   end
 
@@ -29,13 +34,16 @@ defmodule HiveWeb.SpecLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Specs · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_specs", "Specs · %{product}", product: socket.assigns.product_name)
+     )
      |> assign(:available_filters, available_filters())
      |> assign(:active_filters, [])
      |> assign(:uri, URI.parse("/specs"))
      |> assign(OpenGraph.assigns(open_graph([])))
      |> assign(:atom_feed, %{
-       title: "Hive · Specs",
+       title: dgettext("dashboard_specs", "Hive · Specs"),
        atom_href: "/specs/atom.xml",
        rss_href: "/specs/rss.xml"
      })
@@ -81,7 +89,7 @@ defmodule HiveWeb.SpecLive.Index do
       %Noora.Filter.Filter{
         id: "status",
         field: :status,
-        display_name: "Status",
+        display_name: dgettext("dashboard_specs", "Status"),
         type: :option,
         options: Spec.statuses(),
         options_display_names: Map.new(Spec.statuses(), &{&1, status_label(&1)}),
@@ -100,6 +108,15 @@ defmodule HiveWeb.SpecLive.Index do
       _filter -> nil
     end
   end
+
+  defp status_label(:draft), do: dgettext("dashboard_specs", "Draft")
+  defp status_label(:proposed), do: dgettext("dashboard_specs", "Proposed")
+  defp status_label(:approved), do: dgettext("dashboard_specs", "Approved")
+  defp status_label(:paused), do: dgettext("dashboard_specs", "Paused")
+  defp status_label(:rejected), do: dgettext("dashboard_specs", "Rejected")
+  defp status_label(:in_progress), do: dgettext("dashboard_specs", "In progress")
+  defp status_label(:shipped), do: dgettext("dashboard_specs", "Shipped")
+  defp status_label(:archived), do: dgettext("dashboard_specs", "Archived")
 
   defp status_label(status),
     do: status |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()

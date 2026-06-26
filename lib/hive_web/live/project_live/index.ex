@@ -13,12 +13,19 @@ defmodule HiveWeb.ProjectLive.Index do
   def open_graph do
     %{
       description:
-        "Projects are the products, codebases, and services this Hive tracks. Each project owns repositories and sources, and links to reusable domains.",
-      section_label: "Projects",
-      highlights: ["Top-level grouping", "Owns repositories", "Reusable domains"],
+        dgettext(
+          "dashboard_projects",
+          "Projects are the products, codebases, and services this Hive tracks. Each project owns repositories and sources, and links to reusable domains."
+        ),
+      section_label: dgettext("dashboard_projects", "Projects"),
+      highlights: [
+        dgettext("dashboard_projects", "Top-level grouping"),
+        dgettext("dashboard_projects", "Owns repositories"),
+        dgettext("dashboard_projects", "Reusable domains")
+      ],
       id: "projects",
       path: "/projects",
-      title: "Projects"
+      title: dgettext("dashboard_projects", "Projects")
     }
   end
 
@@ -29,7 +36,12 @@ defmodule HiveWeb.ProjectLive.Index do
 
     {:ok,
      socket
-     |> assign(:page_title, "Projects · #{socket.assigns.product_name}")
+     |> assign(
+       :page_title,
+       dgettext("dashboard_projects", "Projects · %{product}",
+         product: socket.assigns.product_name
+       )
+     )
      |> assign(:editable?, editable?)
      |> assign(:projects, list_projects(user))
      |> assign_project_form(Projects.change_project())
@@ -50,7 +62,12 @@ defmodule HiveWeb.ProjectLive.Index do
     if socket.assigns.editable? do
       create_project(socket, params)
     else
-      {:noreply, put_flash(socket, :error, "Only organization members can create projects.")}
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only organization members can create projects.")
+       )}
     end
   end
 
@@ -81,10 +98,12 @@ defmodule HiveWeb.ProjectLive.Index do
       <section id="projects">
         <div data-part="header">
           <div data-part="title-group">
-            <h1>Projects</h1>
+            <h1>{dgettext("dashboard_projects", "Projects")}</h1>
             <p>
-              The products, codebases, and services this Hive instance tracks. Each project owns
-              its linked GitHub repositories and can link to the domains the team slices by.
+              {dgettext(
+                "dashboard_projects",
+                "The products, codebases, and services this Hive instance tracks. Each project owns its linked GitHub repositories and can link to the domains the team slices by."
+              )}
             </p>
           </div>
           <div :if={@editable?} data-part="header-actions">
@@ -92,7 +111,7 @@ defmodule HiveWeb.ProjectLive.Index do
           </div>
         </div>
 
-        <.card title="All projects" icon="apps">
+        <.card title={dgettext("dashboard_projects", "All projects")} icon="apps">
           <.card_section>
             <div data-part="projects-table">
               <.table
@@ -100,19 +119,19 @@ defmodule HiveWeb.ProjectLive.Index do
                 rows={@projects}
                 row_key={fn project -> "project-#{project.id || project.name}" end}
               >
-                <:col :let={project} label="Project">
+                <:col :let={project} label={dgettext("dashboard_projects", "Project")}>
                   <div data-part="cell" data-type="text_and_description">
                     <div data-part="column">
                       <.link navigate={~p"/projects/#{project.id}"} data-part="project-title-link">
                         <span data-part="label">{project.name}</span>
                       </.link>
                       <span data-part="description">
-                        {project.description || "No description yet."}
+                        {project.description || dgettext("dashboard_projects", "No description yet.")}
                       </span>
                     </div>
                   </div>
                 </:col>
-                <:col :let={project} label="Visibility">
+                <:col :let={project} label={dgettext("dashboard_projects", "Visibility")}>
                   <div data-part="cell" data-type="badge">
                     <.badge
                       label={visibility_label(project.visibility)}
@@ -127,29 +146,34 @@ defmodule HiveWeb.ProjectLive.Index do
                     </.badge>
                   </div>
                 </:col>
-                <:col :let={project} label="Feed">
+                <:col :let={project} label={dgettext("dashboard_projects", "Feed")}>
                   <div :if={project.id} data-part="cell" data-type="feed">
                     <a
                       href={"/projects/#{project.id}/drops/atom.xml"}
                       data-part="feed-link"
-                      title="Subscribe via Atom"
+                      title={dgettext("dashboard_projects", "Subscribe via Atom")}
                     >
-                      <.icon name="rss" /><span>Atom</span>
+                      <.icon name="rss" /><span>{dgettext("dashboard_projects", "Atom")}</span>
                     </a>
                     <a
                       href={"/projects/#{project.id}/drops/rss.xml"}
                       data-part="feed-link"
-                      title="Subscribe via RSS"
+                      title={dgettext("dashboard_projects", "Subscribe via RSS")}
                     >
-                      <.icon name="rss" /><span>RSS</span>
+                      <.icon name="rss" /><span>{dgettext("dashboard_projects", "RSS")}</span>
                     </a>
                   </div>
                 </:col>
                 <:empty_state>
                   <.table_empty_state
                     icon="apps"
-                    title="No projects yet"
-                    subtitle="Create one to start tracking releases and changelog updates."
+                    title={dgettext("dashboard_projects", "No projects yet")}
+                    subtitle={
+                      dgettext(
+                        "dashboard_projects",
+                        "Create one to start tracking releases and changelog updates."
+                      )
+                    }
                   />
                 </:empty_state>
               </.table>
@@ -161,8 +185,8 @@ defmodule HiveWeb.ProjectLive.Index do
     """
   end
 
-  defp visibility_label(:public), do: "Public"
-  defp visibility_label(:private), do: "Private"
+  defp visibility_label(:public), do: dgettext("dashboard_projects", "Public")
+  defp visibility_label(:private), do: dgettext("dashboard_projects", "Private")
   defp visibility_label(_), do: "—"
 
   defp visibility_color(:public), do: "success"
@@ -174,7 +198,7 @@ defmodule HiveWeb.ProjectLive.Index do
       {:ok, _project} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Project created.")
+         |> put_flash(:info, dgettext("dashboard_projects", "Project created."))
          |> assign(:projects, list_projects(socket.assigns[:current_user]))
          |> assign_project_form(Projects.change_project())
          |> push_event("close-modal", %{id: "new-project-modal"})
@@ -223,14 +247,19 @@ defmodule HiveWeb.ProjectLive.Index do
     ~H"""
     <.modal
       id="new-project-modal"
-      title="New project"
-      description="Create a product, codebase, or service that can own domains and sources."
+      title={dgettext("dashboard_projects", "New project")}
+      description={
+        dgettext(
+          "dashboard_projects",
+          "Create a product, codebase, or service that can own domains and sources."
+        )
+      }
       header_type="icon"
       header_size="large"
       on_dismiss="cancel_new_project"
     >
       <:trigger :let={attrs}>
-        <.button label="Add project" size="medium" variant="primary" {attrs}>
+        <.button label={dgettext("dashboard_projects", "Add project")} size="medium" variant="primary" {attrs}>
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
       </:trigger>
@@ -248,7 +277,7 @@ defmodule HiveWeb.ProjectLive.Index do
         <.text_input
           id="new-project-name"
           field={@form[:name]}
-          label="Name"
+          label={dgettext("dashboard_projects", "Name")}
           placeholder="Noora"
           required={true}
           show_required={true}
@@ -256,21 +285,21 @@ defmodule HiveWeb.ProjectLive.Index do
         <.text_area
           id="new-project-description"
           field={@form[:description]}
-          label="Description"
-          placeholder="What this project covers."
+          label={dgettext("dashboard_projects", "Description")}
+          placeholder={dgettext("dashboard_projects", "What this project covers.")}
           max_length={500}
           rows={4}
         />
         <div data-part="select-field">
-          <span>Visibility</span>
+          <span>{dgettext("dashboard_projects", "Visibility")}</span>
           <.select
             id="new-project-visibility"
             name={@form[:visibility].name}
             value={Phoenix.HTML.Form.normalize_value("select", @form[:visibility].value)}
-            label="Choose visibility"
+            label={dgettext("dashboard_projects", "Choose visibility")}
           >
-            <:item value="public" label="Public" icon="world" />
-            <:item value="private" label="Private" icon="lock" />
+            <:item value="public" label={dgettext("dashboard_projects", "Public")} icon="world" />
+            <:item value="private" label={dgettext("dashboard_projects", "Private")} icon="lock" />
           </.select>
         </div>
       </.form>
@@ -279,7 +308,7 @@ defmodule HiveWeb.ProjectLive.Index do
         <.modal_footer>
           <:action>
             <.button
-              label="Cancel"
+              label={dgettext("dashboard_projects", "Cancel")}
               variant="secondary"
               size="medium"
               type="button"
@@ -288,7 +317,7 @@ defmodule HiveWeb.ProjectLive.Index do
           </:action>
           <:action>
             <.button
-              label="Create project"
+              label={dgettext("dashboard_projects", "Create project")}
               size="medium"
               variant="primary"
               type="submit"

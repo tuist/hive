@@ -15,6 +15,8 @@ defmodule Hive.Slack do
   the install flow is hidden.
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   import Ecto.Query
 
   alias Hive.Accounts
@@ -46,15 +48,13 @@ defmodule Hive.Slack do
     "users:read.email"
   ]
   @spec_notification_events ["spec.created", "spec.comment.created", "spec.review.requested"]
-  @notification_routes [
+  @notification_route_specs [
     %{
       object_type: "specs",
-      label: "Specs",
-      description: "Spec creations, comments, and review requests",
       events: @spec_notification_events
     }
   ]
-  @notification_events Enum.flat_map(@notification_routes, & &1.events)
+  @notification_events Enum.flat_map(@notification_route_specs, & &1.events)
   @profile_scopes ["openid", "profile", "email"]
 
   @doc """
@@ -104,12 +104,28 @@ defmodule Hive.Slack do
 
   def default_notification_events, do: @notification_events
 
-  def notification_routes, do: @notification_routes
+  def notification_routes do
+    Enum.map(@notification_route_specs, fn route ->
+      route
+      |> Map.put(:label, notification_route_label(route.object_type))
+      |> Map.put(:description, notification_route_description(route.object_type))
+    end)
+  end
 
-  def notification_event_label("spec.created"), do: "New specs"
-  def notification_event_label("spec.comment.created"), do: "New spec comments"
-  def notification_event_label("spec.review.requested"), do: "Spec review requests"
+  def notification_event_label("spec.created"), do: dgettext("dashboard_slack", "New specs")
+
+  def notification_event_label("spec.comment.created"),
+    do: dgettext("dashboard_slack", "New spec comments")
+
+  def notification_event_label("spec.review.requested"),
+    do: dgettext("dashboard_slack", "Spec review requests")
+
   def notification_event_label(event), do: event
+
+  defp notification_route_label("specs"), do: dgettext("dashboard_slack", "Specs")
+
+  defp notification_route_description("specs"),
+    do: dgettext("dashboard_slack", "Spec creations, comments, and review requests")
 
   def notification_targets_for(event) when is_binary(event) do
     case notification_route_for_event(event) do

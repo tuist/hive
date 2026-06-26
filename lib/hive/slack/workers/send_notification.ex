@@ -8,6 +8,8 @@ defmodule Hive.Slack.Workers.SendNotification do
     max_attempts: 3,
     unique: [fields: [:worker, :queue, :args], period: 60, states: :incomplete]
 
+  use Gettext, backend: HiveWeb.Gettext
+
   require Logger
 
   alias Hive.Repo
@@ -129,12 +131,16 @@ defmodule Hive.Slack.Workers.SendNotification do
 
         {:ok,
          %{
-           "text" => "New spec: #{spec.title}",
+           "text" => dgettext("dashboard_slack", "New spec: %{title}", title: spec.title),
            "blocks" => [
-             section("*New spec:* <#{url}|##{spec.number} #{escape(spec.title)}>"),
+             section(
+               dgettext("dashboard_slack", "*New spec:* %{link}",
+                 link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
+               )
+             ),
              context([
-               author_text("Created by", spec.created_by_user_id),
-               "Status: #{status_label(spec.status)}"
+               author_text(spec.created_by_user_id),
+               dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status))
              ]),
              section(summary_text(spec))
            ]
@@ -153,9 +159,13 @@ defmodule Hive.Slack.Workers.SendNotification do
 
         {:ok,
          %{
-           "text" => "New spec comment: #{spec.title}",
+           "text" => dgettext("dashboard_slack", "New spec comment: %{title}", title: spec.title),
            "blocks" => [
-             section("*New comment on spec:* <#{url}|##{spec.number} #{escape(spec.title)}>"),
+             section(
+               dgettext("dashboard_slack", "*New comment on spec:* %{link}",
+                 link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
+               )
+             ),
              context([comment_author_text(comment)]),
              section(comment.body)
            ]
@@ -174,10 +184,16 @@ defmodule Hive.Slack.Workers.SendNotification do
 
     blocks =
       [
-        section("*Review requested:* <#{url}|##{spec.number} #{escape(spec.title)}>"),
+        section(
+          dgettext("dashboard_slack", "*Review requested:* %{link}",
+            link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
+          )
+        ),
         context([
-          "Requested by #{user_or_slack_label(installation, requester)}",
-          "Status: #{status_label(spec.status)}",
+          dgettext("dashboard_slack", "Requested by %{user}",
+            user: user_or_slack_label(installation, requester)
+          ),
+          dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status)),
           revision_context(revision, spec)
         ]),
         section(escape(summary)),
@@ -186,7 +202,10 @@ defmodule Hive.Slack.Workers.SendNotification do
         actions([
           %{
             "type" => "button",
-            "text" => %{"type" => "plain_text", "text" => "Open spec"},
+            "text" => %{
+              "type" => "plain_text",
+              "text" => dgettext("dashboard_slack", "Open spec")
+            },
             "url" => url
           }
         ])
@@ -194,20 +213,26 @@ defmodule Hive.Slack.Workers.SendNotification do
       |> Enum.reject(&is_nil/1)
 
     %{
-      "text" => "Review requested for spec ##{spec.number}: #{spec.title}",
+      "text" =>
+        dgettext("dashboard_slack", "Review requested for spec #%{number}: %{title}",
+          number: spec.number,
+          title: spec.title
+        ),
       "blocks" => blocks
     }
   end
 
   defp maybe_reviewers_section(""), do: nil
-  defp maybe_reviewers_section(text), do: section("*Reviewers:* #{text}")
+
+  defp maybe_reviewers_section(text),
+    do: section(dgettext("dashboard_slack", "*Reviewers:* %{reviewers}", reviewers: text))
 
   defp maybe_review_focus_section([]), do: nil
 
   defp maybe_review_focus_section(review_focus) do
     text = Enum.map_join(review_focus, "\n", &"- #{escape(&1)}")
 
-    section("*Review focus:*\n#{text}")
+    section(dgettext("dashboard_slack", "*Review focus:*\n%{focus}", focus: text))
   end
 
   defp reviewers_text(%Installation{} = installation, reviewers) do
@@ -241,15 +266,20 @@ defmodule Hive.Slack.Workers.SendNotification do
     end
   end
 
-  defp revision_context(nil, %Spec{lock_version: lock_version}), do: "Revision #{lock_version}"
+  defp revision_context(nil, %Spec{lock_version: lock_version}),
+    do: dgettext("dashboard_slack", "Revision %{revision}", revision: lock_version)
 
   defp revision_context(%{revision: revision, inserted_at: inserted_at}, _spec) do
-    ["Revision #{revision}", date_label(inserted_at)]
+    [
+      dgettext("dashboard_slack", "Revision %{revision}", revision: revision),
+      date_label(inserted_at)
+    ]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" - ")
   end
 
-  defp revision_context(%{revision: revision}, _spec), do: "Revision #{revision}"
+  defp revision_context(%{revision: revision}, _spec),
+    do: dgettext("dashboard_slack", "Revision %{revision}", revision: revision)
 
   defp actions(elements), do: %{"type" => "actions", "elements" => elements}
 
@@ -264,23 +294,27 @@ defmodule Hive.Slack.Workers.SendNotification do
 
   defp mrkdwn(text), do: %{"type" => "mrkdwn", "text" => truncate(text, 3_000)}
 
-  defp author_text(prefix, user_id) do
+  defp author_text(user_id) do
     user_id
     |> Hive.Accounts.get_user()
     |> case do
-      nil -> prefix
-      user -> "#{prefix} #{user_label(user)}"
+      nil ->
+        dgettext("dashboard_slack", "Created by")
+
+      user ->
+        dgettext("dashboard_slack", "Created by %{user}", user: user_label(user))
     end
   end
 
   defp comment_author_text(%Comment{user: nil, author_name: name}) when is_binary(name),
-    do: "Comment by #{name}"
+    do: dgettext("dashboard_slack", "Comment by %{user}", user: name)
 
-  defp comment_author_text(%Comment{user: user}), do: "Comment by #{user_label(user)}"
+  defp comment_author_text(%Comment{user: user}),
+    do: dgettext("dashboard_slack", "Comment by %{user}", user: user_label(user))
 
   defp user_label(%{name: name}) when is_binary(name), do: name
   defp user_label(%{email: email}) when is_binary(email), do: email
-  defp user_label(_user), do: "someone"
+  defp user_label(_user), do: dgettext("dashboard_slack", "someone")
 
   defp status_label(status) when is_atom(status),
     do: status |> Atom.to_string() |> String.replace("_", " ")

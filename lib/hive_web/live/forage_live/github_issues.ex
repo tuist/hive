@@ -18,11 +18,14 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
   def open_graph(source, stats) do
     %{
       description: source.description,
-      section_label: "Forage",
+      section_label: dgettext("dashboard_forage", "Forage"),
       highlights: [
-        "#{stats.total} #{stats.state_label}",
-        "#{stats.repositories} #{pluralize(stats.repositories, "repository", "repositories")}",
-        "#{stats.domains} #{pluralize(stats.domains, "domain", "domains")}"
+        dgettext("dashboard_forage", "%{count} %{state}",
+          count: stats.total,
+          state: stats.state_label
+        ),
+        repository_highlight(stats.repositories),
+        domain_highlight(stats.domains)
       ],
       id: "forage-github-issues",
       path: source.path,
@@ -40,16 +43,22 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
 
       {:ok,
        socket
-       |> assign(:page_title, "#{source.label} · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_forage", "%{source} · %{product}",
+           source: source.label,
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(:source, source)
        |> assign(:pairs, pairs)
        |> assign(:available_filters, available_filters)
        |> assign(:active_filters, [])
        |> assign(:uri, URI.parse(source.path))
        |> assign(:entries, [])
-       |> assign(:stats, %{total: 0, repositories: 0, domains: 0, state_label: "open issues"})
+       |> assign(:stats, blank_stats())
        |> assign(:atom_feed, %{
-         title: "Hive · GitHub issues",
+         title: dgettext("dashboard_forage", "Hive · GitHub issues"),
          atom_href: "/forage/github-issues/atom.xml",
          rss_href: "/forage/github-issues/rss.xml"
        })
@@ -151,7 +160,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       %Noora.Filter.Filter{
         id: "state",
         field: :state,
-        display_name: "State",
+        display_name: dgettext("dashboard_forage", "State"),
         type: :option,
         options: GitHubIssue.states(),
         options_display_names: Map.new(GitHubIssue.states(), &{&1, state_label(&1)}),
@@ -161,7 +170,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       %Noora.Filter.Filter{
         id: "domain",
         field: :domain_id,
-        display_name: "Domain",
+        display_name: dgettext("dashboard_forage", "Domain"),
         type: :option,
         options: Enum.map(domains, & &1.id),
         options_display_names: Map.new(domains, &{&1.id, &1.name}),
@@ -171,7 +180,7 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
       %Noora.Filter.Filter{
         id: "repository",
         field: :repository_id,
-        display_name: "Repository",
+        display_name: dgettext("dashboard_forage", "Repository"),
         type: :option,
         options: Enum.map(repositories, & &1.id),
         options_display_names: Map.new(repositories, &{&1.id, GitHubRepository.full_name(&1)}),
@@ -213,14 +222,25 @@ defmodule HiveWeb.ForageLive.GitHubIssues do
     }
   end
 
-  defp blank_stats, do: %{total: 0, repositories: 0, domains: 0, state_label: "open issues"}
+  defp blank_stats,
+    do: %{
+      total: 0,
+      repositories: 0,
+      domains: 0,
+      state_label: dgettext("dashboard_forage", "open issues")
+    }
 
-  defp state_label(:open), do: "Open"
-  defp state_label(:closed), do: "Closed"
+  defp state_label(:open), do: dgettext("dashboard_forage", "Open")
+  defp state_label(:closed), do: dgettext("dashboard_forage", "Closed")
 
-  defp state_label_plural(:open), do: "open issues"
-  defp state_label_plural(:closed), do: "closed issues"
+  defp state_label_plural(:open), do: dgettext("dashboard_forage", "open issues")
+  defp state_label_plural(:closed), do: dgettext("dashboard_forage", "closed issues")
 
-  defp pluralize(1, singular, _plural), do: singular
-  defp pluralize(_count, _singular, plural), do: plural
+  defp repository_highlight(1), do: dgettext("dashboard_forage", "1 repository")
+
+  defp repository_highlight(count),
+    do: dgettext("dashboard_forage", "%{count} repositories", count: count)
+
+  defp domain_highlight(1), do: dgettext("dashboard_forage", "1 domain")
+  defp domain_highlight(count), do: dgettext("dashboard_forage", "%{count} domains", count: count)
 end

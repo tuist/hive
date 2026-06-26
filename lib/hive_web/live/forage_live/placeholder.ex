@@ -16,7 +16,7 @@ defmodule HiveWeb.ForageLive.Placeholder do
   def open_graph(source) do
     %{
       description: source.description,
-      section_label: "Forage",
+      section_label: dgettext("dashboard_forage", "Forage"),
       highlights: source_highlights(source),
       id: "forage-#{open_graph_slug(source)}",
       path: source.path,
@@ -40,7 +40,13 @@ defmodule HiveWeb.ForageLive.Placeholder do
     if Forage.can_access?(source, socket.assigns.current_user) do
       {:noreply,
        socket
-       |> assign(:page_title, "#{source.label} · #{socket.assigns.product_name}")
+       |> assign(
+         :page_title,
+         dgettext("dashboard_forage", "%{source} · %{product}",
+           source: source.label,
+           product: socket.assigns.product_name
+         )
+       )
        |> assign(OpenGraph.assigns(open_graph(source)))
        |> assign(:source, source)}
     else
@@ -73,11 +79,14 @@ defmodule HiveWeb.ForageLive.Placeholder do
   defp source_highlights(source) do
     [
       source_visibility(source.visibility),
-      if(source.creatable?, do: "Contributor submissions", else: "Read-only signals"),
-      "Forage source"
+      if(source.creatable?,
+        do: dgettext("dashboard_forage", "Contributor submissions"),
+        else: dgettext("dashboard_forage", "Read-only signals")
+      ),
+      dgettext("dashboard_forage", "Forage source")
     ]
   end
 
-  defp source_visibility(:organization), do: "Organization visible"
-  defp source_visibility(_visibility), do: "Public source"
+  defp source_visibility(:organization), do: dgettext("dashboard_forage", "Organization visible")
+  defp source_visibility(_visibility), do: dgettext("dashboard_forage", "Public source")
 end

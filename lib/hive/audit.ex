@@ -14,6 +14,8 @@ defmodule Hive.Audit do
   block), and call `record/3` from wherever the event happens.
   """
 
+  use Gettext, backend: HiveWeb.Gettext
+
   import Ecto.Query
 
   alias Hive.Accounts.User
@@ -184,7 +186,7 @@ defmodule Hive.Audit do
 
   def actor_label(%Activity{actor_name: name}) when is_binary(name) and name != "", do: name
   def actor_label(%Activity{actor_email: email}) when is_binary(email) and email != "", do: email
-  def actor_label(%Activity{}), do: "System"
+  def actor_label(%Activity{}), do: dgettext("dashboard_audit", "System")
 
   def serialize(%Activity{} = activity) do
     %{
