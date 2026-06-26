@@ -58,28 +58,16 @@ defmodule Hive.Inference.ModelBinding do
   end
 
   defp validate_model_identifier(value, selected_provider) do
-    case ModelIdentifier.parse(value) do
-      {:ok, %{provider: provider}} ->
-        validate_model_provider(provider, selected_provider)
+    value
+    |> ModelIdentifier.upstream_model(selected_provider)
+    |> ModelIdentifier.model_path?()
+    |> case do
+      true ->
+        []
 
-      :error ->
-        [
-          upstream_model:
-            "must use the models.dev provider/model format, for example openai/gpt-4o-mini"
-        ]
+      false ->
+        [upstream_model: "must be a provider model identifier, for example gpt-4o-mini"]
     end
-  end
-
-  defp validate_model_provider(_provider, selected_provider) when selected_provider in [nil, ""],
-    do: []
-
-  defp validate_model_provider(provider, provider), do: []
-
-  defp validate_model_provider(_provider, selected_provider) do
-    [
-      upstream_model:
-        "must start with the selected provider, for example #{selected_provider}/model-id"
-    ]
   end
 
   defp normalize_strings(changeset, fields) do

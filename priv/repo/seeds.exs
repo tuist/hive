@@ -549,7 +549,7 @@ end)
 
 [
   %{
-    key: "fireworks-ai",
+    key: "fireworks",
     base_url: "https://api.fireworks.ai/inference/v1",
     api_key: "development-fireworks-placeholder",
     timeout: 300_000
@@ -570,8 +570,8 @@ inference_profiles = [
       name: "blick-code-review",
       description:
         "Repository code review profile used by Blick through opencode. Repositories keep this stable name while Hive can retarget the upstream model.",
-      upstream_provider: "fireworks-ai",
-      upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5",
+      upstream_provider: "fireworks",
+      upstream_model: "accounts/fireworks/models/kimi-k2p5",
       input_cost_per_million: "0.15",
       output_cost_per_million: "0.60",
       enabled: true
@@ -604,7 +604,7 @@ inference_profiles = [
       description:
         "Disabled sample profile for experimenting with repository-local spec drafting without changing production tokens.",
       upstream_provider: "openai",
-      upstream_model: "openai/gpt-4o-mini",
+      upstream_model: "gpt-4o-mini",
       input_cost_per_million: "0.15",
       output_cost_per_million: "0.60",
       enabled: false

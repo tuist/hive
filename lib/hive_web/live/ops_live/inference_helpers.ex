@@ -127,10 +127,17 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
 
   def model_identifier_placeholder(provider) do
     case normalize_provider(provider) do
-      "fireworks-ai" -> "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
-      "openai" -> "openai/gpt-4o-mini"
-      provider when provider != "" -> "#{provider}/model-id"
-      _provider -> "openai/gpt-4o-mini"
+      provider when provider in ["fireworks", "fireworks-ai", "fireworks_ai"] ->
+        "accounts/fireworks/models/kimi-k2p5"
+
+      "openai" ->
+        "gpt-4o-mini"
+
+      provider when provider != "" ->
+        "model-id"
+
+      _provider ->
+        "gpt-4o-mini"
     end
   end
 

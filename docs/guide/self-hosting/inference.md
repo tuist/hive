@@ -16,8 +16,7 @@ Open **Ops → Inference → Providers** as an instance admin and create a
 provider with:
 
 - **Provider key**: the stable key profiles will reference, such as
-  `fireworks-ai`. Use the provider identifier from
-  [models.dev](https://models.dev).
+  `fireworks` or `openai`.
 - **Endpoint**: the upstream base address, such as
   `https://api.fireworks.ai/inference/v1`.
 - **Credential**: the provider token. Hive encrypts this value and never shows
@@ -33,7 +32,7 @@ that prefer immutable runtime configuration. For a single upstream provider,
 set:
 
 ```bash
-HIVE_INFERENCE_UPSTREAM_ID=fireworks-ai
+HIVE_INFERENCE_UPSTREAM_ID=fireworks
 HIVE_INFERENCE_UPSTREAM_BASE_URL=https://api.fireworks.ai/inference/v1
 HIVE_INFERENCE_UPSTREAM_API_KEY=provider-token
 ```
@@ -43,7 +42,7 @@ JavaScript Object Notation ([JSON](https://www.json.org/json-en.html)) object:
 
 ```bash
 HIVE_INFERENCE_PROVIDERS='{
-  "fireworks-ai": {
+  "fireworks": {
     "base_url": "https://api.fireworks.ai/inference/v1",
     "api_key": "provider-token"
   },
@@ -85,12 +84,9 @@ Create a profile with:
 - **Profile name**: the stable model name repositories will request, such as
   `repository-review`.
 - **Upstream provider**: the provider key from **Ops → Inference → Providers**
-  or the environment configuration, such as `fireworks-ai`.
-- **Upstream model**: the models.dev `provider/model` identifier, such as
-  `fireworks-ai/accounts/fireworks/models/kimi-k2p5` or
-  `openai/gpt-4o-mini`. The provider prefix must match the selected upstream
-  provider. Hive strips that prefix before forwarding the request to the
-  upstream provider.
+  or the environment configuration, such as `fireworks`.
+- **Upstream model**: the model identifier the upstream endpoint expects, such
+  as `accounts/fireworks/models/kimi-k2p5` or `gpt-4o-mini`.
 - **Input cost per million tokens** and **Output cost per million tokens**:
   optional United States dollar prices for the upstream model. Hive uses these
   values to estimate cost after each relay response reports usage.
