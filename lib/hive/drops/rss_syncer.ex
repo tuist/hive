@@ -128,7 +128,8 @@ defmodule Hive.Drops.RssSyncer do
         metadata: %{
           source_type: "rss",
           source_url: source.url,
-          path: "/drops"
+          number: to_string(drop.number),
+          path: Drops.public_path(drop)
         }
       })
     end

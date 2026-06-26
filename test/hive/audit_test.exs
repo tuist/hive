@@ -161,6 +161,10 @@ defmodule Hive.AuditTest do
       assert Audit.resource_path("spec", "spec-id", %{"number" => "12"}) == "/specs/12"
     end
 
+    test "uses the drop number from metadata when present" do
+      assert Audit.resource_path("drop", "drop-id", %{"number" => "34"}) == "/drops/34"
+    end
+
     test "returns nil for a spec without a number (no detail route to land on)" do
       assert Audit.resource_path("spec", "spec-id", %{}) == nil
     end

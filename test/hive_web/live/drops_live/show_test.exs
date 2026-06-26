@@ -51,7 +51,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
     drop = insert_drop!(domain)
 
-    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
 
     assert html =~ "Slack workspace management moved to Ops"
     assert html =~ ~s(data-part="metadata-card")
@@ -63,12 +63,21 @@ defmodule HiveWeb.DropsLive.ShowTest do
     assert html =~ "Open original"
   end
 
+  test "redirects old internal id URLs to the public number URL", %{conn: conn} do
+    domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "public"})
+
+    drop = insert_drop!(domain)
+    expected_path = "/drops/#{drop.number}"
+
+    assert {:error, {:redirect, %{to: ^expected_path}}} = live(conn, ~p"/drops/#{drop.id}")
+  end
+
   test "redirects anonymous visitors away from drops in a private domain", %{conn: conn} do
     domain = create_domain!(%{"name" => unique_domain_name("Hive"), "visibility" => "private"})
 
     drop = insert_drop!(domain)
 
-    assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.id}")
+    assert {:error, {:redirect, %{to: "/drops"}}} = live(conn, ~p"/drops/#{drop.number}")
   end
 
   test "shows the version chip when present", %{conn: conn} do
@@ -76,7 +85,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
     drop = insert_drop!(domain, %{version: "v4.7.0"})
 
-    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.id}")
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
 
     assert html =~ "v4.7.0"
   end
@@ -103,7 +112,7 @@ defmodule HiveWeb.DropsLive.ShowTest do
 
   test "redirects when the drop does not exist", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/drops"}}} =
-             live(conn, ~p"/drops/00000000-0000-0000-0000-000000000000")
+             live(conn, ~p"/drops/999999999")
   end
 
   defp advertised_open_graph_data(html) do

@@ -780,18 +780,7 @@ Enum.each(drop_fixtures, fn fixture ->
       published_at: fixture.published_at
     }
 
-    {:ok, drop} =
-      Hive.Drops.Drop
-      |> Repo.get_by(
-        source_type: fixture.source_type,
-        external_id: fixture.external_id
-      )
-      |> case do
-        nil -> %Hive.Drops.Drop{}
-        existing -> existing
-      end
-      |> Hive.Drops.Drop.changeset(attrs)
-      |> Repo.insert_or_update()
+    {:ok, drop} = Hive.Drops.upsert_drop(attrs)
 
     Hive.Drops.replace_drop_domains(drop, [domain.id])
   end

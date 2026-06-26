@@ -14,28 +14,32 @@ defmodule HiveWeb.DropsLive.Show do
       description: description(drop),
       section_label: section_label(drop),
       highlights: highlights(drop),
-      id: "drop-#{drop.id}",
-      path: "/drops/#{drop.id}",
+      id: "drop-#{drop.number}",
+      path: Drops.public_path(drop),
       title: drop.title
     }
   end
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"number" => reference}, _session, socket) do
     user = socket.assigns[:current_user]
 
-    case Drops.fetch_visible_drop(id, user) do
+    case Drops.fetch_visible_drop(reference, user) do
       {:ok, drop} ->
-        {:ok,
-         socket
-         |> assign(:page_title, "#{drop.title} · #{socket.assigns.product_name}")
-         |> assign(:drop, drop)
-         |> assign(:atom_feed, %{
-           title: "Hive · Drops",
-           atom_href: "/drops/atom.xml",
-           rss_href: "/drops/rss.xml"
-         })
-         |> assign(OpenGraph.assigns(open_graph(drop)))}
+        if reference == to_string(drop.number) do
+          {:ok,
+           socket
+           |> assign(:page_title, "#{drop.title} · #{socket.assigns.product_name}")
+           |> assign(:drop, drop)
+           |> assign(:atom_feed, %{
+             title: "Hive · Drops",
+             atom_href: "/drops/atom.xml",
+             rss_href: "/drops/rss.xml"
+           })
+           |> assign(OpenGraph.assigns(open_graph(drop)))}
+        else
+          {:ok, redirect(socket, to: Drops.public_path(drop))}
+        end
 
       {:error, :not_found} ->
         {:ok,

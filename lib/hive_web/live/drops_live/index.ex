@@ -199,7 +199,7 @@ defmodule HiveWeb.DropsLive.Index do
                   </time>
                 </:col>
                 <:col :let={drop} label="Title">
-                  <.link navigate={~p"/drops/#{drop.id}"} data-part="title-link">
+                  <.link navigate={~p"/drops/#{drop.number}"} data-part="title-link">
                     <.text_and_description_cell
                       label={Markdown.inline(drop.title)}
                       description={truncate(drop.body)}

@@ -239,10 +239,10 @@ defmodule HiveWeb.FeedController do
         _other -> ""
       end
 
-    url = source_url(drop) || page_url(conn, "/drops/#{drop.id}")
+    url = source_url(drop) || page_url(conn, Drops.public_path(drop))
 
     %{
-      id: "urn:hive:drop:#{drop.id}",
+      id: "urn:hive:drop:#{drop.number}",
       title: repo_prefix <> drop.title,
       updated: drop.published_at || drop.updated_at,
       url: url,

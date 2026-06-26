@@ -17,11 +17,12 @@ defmodule HiveWeb.DropsLive.IndexTest do
         visibility: "public"
       })
 
-    insert_drop!(domain, %{
-      title: "Generated project paths stay stable",
-      body: "Generated projects now preserve path casing across machines.",
-      version: "4.201.0-canary.19"
-    })
+    drop =
+      insert_drop!(domain, %{
+        title: "Generated project paths stay stable",
+        body: "Generated projects now preserve path casing across machines.",
+        version: "4.201.0-canary.19"
+      })
 
     {:ok, _view, html} = live(conn, ~p"/drops")
     table = table_fragment(html)
@@ -33,6 +34,7 @@ defmodule HiveWeb.DropsLive.IndexTest do
     assert label_index(table, "Version") < label_index(table, "Source")
     assert html =~ "Tuist"
     assert html =~ "Generated projects"
+    assert html =~ ~s(href="/drops/#{drop.number}")
   end
 
   test "renders the source project when a drop has no domains yet", %{conn: conn} do
