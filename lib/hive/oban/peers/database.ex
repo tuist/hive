@@ -1,6 +1,6 @@
 defmodule Hive.Oban.Peers.Database do
   @moduledoc """
-  Database-backed Oban peer that preserves leadership through transient connection failures.
+  Database-backed Oban peer that survives transient connection failures.
 
   This intentionally mirrors `Oban.Peers.Database` from Oban 2.23, with the smallest local
   difference needed to avoid terminating the peer process when an election transaction exhausts
@@ -99,7 +99,9 @@ defmodule Hive.Oban.Peers.Database do
             {state, %{meta | leader: state.leader?, was_leader: meta.leader}}
 
           {:error, _reason} ->
-            {state, %{meta | was_leader: meta.leader}}
+            state = %{state | leader?: false}
+
+            {state, %{meta | leader: false, was_leader: meta.leader}}
         end
       end)
 
