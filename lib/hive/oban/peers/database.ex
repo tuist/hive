@@ -1,6 +1,13 @@
 defmodule Hive.Oban.Peers.Database do
   @moduledoc """
   Database-backed Oban peer that preserves leadership through transient connection failures.
+
+  This intentionally mirrors `Oban.Peers.Database` from Oban 2.23, with the smallest local
+  difference needed to avoid terminating the peer process when an election transaction exhausts
+  its retry budget after a transient connection failure.
+
+  Remove this module and return to the built-in Oban peer once Oban handles exhausted database
+  peer election retries without terminating the peer process.
   """
 
   @behaviour Oban.Peer
