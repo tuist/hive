@@ -14,6 +14,7 @@ Ecto.Adapters.SQL.Sandbox.mode(Hive.Repo, :manual)
 # (process-local), keeping parallelism safe.
 Mimic.copy(Hive.Agents)
 Mimic.copy(Hive.Drops.Agents.ReleaseDropItemAgent)
+Mimic.copy(Hive.Forage.GitHubIssueClassification)
 Mimic.copy(Hive.Forage.Agents.GitHubIssueClassifierAgent)
 Mimic.copy(Hive.Specs.Agents.RevisionSummaryAgent)
 Mimic.copy(Hive.Specs.Agents.ReviewRequestAgent)
