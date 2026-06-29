@@ -116,7 +116,9 @@ Hive currently uses agents for:
   classification, not from the repository's domain membership. A
   scheduled sweeper also re-classifies any cached issue still missing a
   classification, so rows that existed before classification shipped or
-  that hit a transient model-provider failure recover on the next tick.
+  that hit a transient model-provider failure recover later. Billing,
+  quota, suspension, and rate-limit provider responses keep the worker
+  scheduled with a backoff instead of producing repeated failure events.
   When no model provider is configured, each issue is linked to every
   domain attached to its repository.
 - Drop item generation: each GitHub release body is treated as an

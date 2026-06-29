@@ -12,7 +12,10 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
 
   require Logger
 
+  alias Hive.Agents.Errors
   alias Hive.Forage.GitHubIssueClassification
+
+  @model_provider_unavailable_snooze_seconds 3_600
 
   @doc """
   Enqueues a classification job for the given issue id. Returns
@@ -33,7 +36,16 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"issue_id" => issue_id}}) do
-    case GitHubIssueClassification.classify(issue_id) do
+    issue_id
+    |> GitHubIssueClassification.classify()
+    |> handle_classification_result(issue_id)
+  rescue
+    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
+      handle_classification_result({:error, error}, issue_id)
+  end
+
+  defp handle_classification_result(result, issue_id) do
+    case result do
       {:ok, _domain_ids} ->
         Hive.Domains.schedule_evolution()
         :ok
@@ -44,7 +56,25 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
         :ok
 
       {:error, reason} ->
-        {:error, reason}
+        handle_classification_error(issue_id, reason)
+    end
+  end
+
+  defp handle_classification_error(issue_id, reason) do
+    sanitized_reason = Errors.sanitize_reason(reason)
+
+    if Errors.provider_unavailable?(reason) do
+      Logger.warning(
+        "[Forage.GitHubIssueClassificationWorker] Model provider unavailable while classifying issue #{issue_id}: #{inspect(sanitized_reason)}"
+      )
+
+      {:snooze, @model_provider_unavailable_snooze_seconds}
+    else
+      Logger.warning(
+        "[Forage.GitHubIssueClassificationWorker] Classification failed for issue #{issue_id}: #{inspect(sanitized_reason)}"
+      )
+
+      {:error, sanitized_reason}
     end
   end
 end
