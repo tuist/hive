@@ -66,7 +66,7 @@ defmodule Hive.Oban.Peers.Database do
       end
 
       try do
-        state.repo.transaction(state.conf, fun, on_exhausted: :log)
+        state.repo.transaction(state.conf, fun, retry: 1, on_exhausted: :log)
       catch
         :exit, _reason -> :ok
       end
@@ -94,7 +94,7 @@ defmodule Hive.Oban.Peers.Database do
           |> attempt_leadership()
         end
 
-        case state.repo.transaction(state.conf, fun, on_exhausted: :log) do
+        case state.repo.transaction(state.conf, fun, retry: 1, on_exhausted: :log) do
           {:ok, state} ->
             {state, %{meta | leader: state.leader?, was_leader: meta.leader}}
 

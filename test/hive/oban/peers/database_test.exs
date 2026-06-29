@@ -41,6 +41,7 @@ defmodule Hive.Oban.Peers.DatabaseTest do
                Database.handle_info(:election, state)
 
       assert_receive {:transaction_opts, opts}
+      assert opts[:retry] == 1
       assert opts[:on_exhausted] == :log
 
       assert_receive :delete_all
@@ -61,6 +62,7 @@ defmodule Hive.Oban.Peers.DatabaseTest do
                Database.handle_info(:election, state)
 
       assert_receive {:transaction_opts, opts}
+      assert opts[:retry] == 1
       assert opts[:on_exhausted] == :log
 
       Process.cancel_timer(updated_state.timer)
