@@ -3,6 +3,7 @@ export const site = {
     "Hive is Tuist's agentic domain orchestration platform: spec-driven planning, forage ingestion, and self-hostable deployment.",
   nav: [
     { text: "Docs", link: "/" },
+    { text: "Blog", link: "/blog/" },
     {
       text: "Links",
       items: [
@@ -22,7 +23,7 @@ export const site = {
     },
   ],
   sidebar: {
-    "/": [
+    "/guide/": [
       { text: "Overview", link: "/guide/self-hosting/" },
       { text: "Authentication", link: "/guide/self-hosting/authentication" },
       { text: "Authorization", link: "/guide/self-hosting/authorization" },
