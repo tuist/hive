@@ -1,4 +1,4 @@
-## Slack
+# Slack
 
 Hive can be installed into one or more Slack workspaces. With Public
 Distribution enabled on the Slack app, any workspace can install Hive
@@ -8,7 +8,7 @@ through the OAuth v2 flow without going through the Slack App Directory
 Once a workspace is installed, Hive can:
 
 - Reply in threads where the bot is `@`-mentioned, using the configured
-  LLM.
+  model provider.
 - Capture any Slack message as a Hive feature request via a message
   shortcut (right-click a message, "More message shortcuts", pick the
   shortcut).
@@ -25,20 +25,25 @@ Once a workspace is installed, Hive can:
 - Record Slack installs, disconnects, app mentions, and captured feature
   requests in the audit trail.
 
-## Environment variables
+## Configuration
 
 Set these on the Hive deployment:
 
-- `HIVE_SLACK_CLIENT_ID`: the Slack app's client ID.
-- `HIVE_SLACK_CLIENT_SECRET`: the Slack app's client secret.
-- `HIVE_SLACK_SIGNING_SECRET`: the Slack app's signing secret (used to
-  verify Events and Interactivity requests).
-- `HIVE_SLACK_BOT_SCOPES`: optional, comma-separated list of bot OAuth
-  scopes to request at install time. Defaults to:
+- [`HIVE_SLACK_CLIENT_ID`](/reference/configuration#hive_slack_client_id): the
+  Slack app's client ID.
+- [`HIVE_SLACK_CLIENT_SECRET`](/reference/configuration#hive_slack_client_secret):
+  the Slack app's client secret.
+- [`HIVE_SLACK_SIGNING_SECRET`](/reference/configuration#hive_slack_signing_secret):
+  the Slack app's signing secret, used to verify Events and
+  Interactivity requests.
+- [`HIVE_SLACK_BOT_SCOPES`](/reference/configuration#hive_slack_bot_scopes):
+  optional, comma-separated list of bot OAuth scopes to request at
+  install time. Defaults to:
   `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,links:read,links:write,mpim:history,mpim:read,users:read,users:read.email`.
-- `HIVE_SLACK_ALLOWED_TEAM_IDS`: optional, comma-separated list of Slack
-  workspace identifiers allowed to install Hive or link Slack profiles.
-  Slack calls a workspace a `team` in its
+- [`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids):
+  optional, comma-separated list of Slack workspace identifiers allowed
+  to install Hive or link Slack profiles. Slack calls a workspace a
+  `team` in its
   [authorization flow](https://docs.slack.dev/authentication/installing-with-oauth/).
   When exactly one workspace identifier is configured, Hive passes it to
   Slack so the workspace picker is preselected. Hive still validates the
@@ -51,8 +56,9 @@ shows an inert state.
 
 The fastest path is to create the app from a manifest. Go to
 <https://api.slack.com/apps>, select **Create New App → From an app
-manifest**, choose JSON, replace `<your-host>` with your Hive host, and
-paste:
+manifest**, choose JavaScript Object Notation
+([JSON](https://www.json.org/json-en.html)), replace `<your-host>` with
+your Hive host, and paste:
 
 ```json
 {
@@ -139,22 +145,23 @@ To configure it manually instead:
 2. In **Basic Information**, copy the Client ID, Client Secret, and
    Signing Secret into the environment variables above.
 3. In **OAuth & Permissions**:
-   - Add the bot scopes listed under `HIVE_SLACK_BOT_SCOPES`.
-   - Add the redirect URLs: `https://<your-host>/slack/install/callback`
+   - Add the bot scopes listed under
+     [`HIVE_SLACK_BOT_SCOPES`](/reference/configuration#hive_slack_bot_scopes).
+   - Add the redirect addresses: `https://<your-host>/slack/install/callback`
      and `https://<your-host>/account/slack/callback`.
    - Add the user scopes `openid`, `profile`, and `email` for Slack
      profile linking.
 4. In **Event Subscriptions**:
    - Enable events.
-   - Request URL: `https://<your-host>/api/slack/events`. Slack verifies
-     the URL once with a challenge; Hive responds automatically.
+   - Request address: `https://<your-host>/api/slack/events`. Slack verifies
+     the address once with a challenge; Hive responds automatically.
    - Subscribe to bot events: `app_mention`, `link_shared`,
      `message.channels`, `message.groups`, `message.im`, `message.mpim`.
    - Under **App unfurl domains**, add `<your-host>` so Slack delivers
      `link_shared` events for Hive links.
 5. In **Interactivity & Shortcuts**:
    - Turn on Interactivity.
-   - Request URL: `https://<your-host>/api/slack/interactions`.
+   - Request address: `https://<your-host>/api/slack/interactions`.
    - Add a **message shortcut** with name "Capture as feature request"
      and callback ID `capture_feature_request`.
 6. In **Manage Distribution**:
@@ -163,7 +170,7 @@ To configure it manually instead:
 
 ## Installing into a workspace
 
-Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
+Once the Slack configuration variables are set and the deploy is rolled out:
 
 1. Sign in to Hive as an instance admin and open **Ops → Slack** at
    `/ops/slack`.
@@ -176,10 +183,11 @@ Once `HIVE_SLACK_*` variables are set and the deploy is rolled out:
    table on the workspace row. Each row maps a Hive object type to the
    Slack channel that should receive its notifications.
 
-If `HIVE_SLACK_ALLOWED_TEAM_IDS` is set, Hive rejects installs from any
-workspace outside that list. With a single configured workspace, Slack
-usually preselects it in the prompt for users who are already signed in
-there.
+If
+[`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids)
+is set, Hive rejects installs from any workspace outside that list. With
+a single configured workspace, Slack usually preselects it in the prompt
+for users who are already signed in there.
 
 ## Linking a Slack profile
 
@@ -190,8 +198,9 @@ Slack workspace and user IDs on the matching workspace install. This
 explicit link is used even when the user's Slack email differs from
 their Hive email.
 
-Profile linking uses the same `HIVE_SLACK_ALLOWED_TEAM_IDS` allowlist as
-workspace installs.
+Profile linking uses the same
+[`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids)
+allowlist as workspace installs.
 
 ## What gets captured
 
@@ -207,8 +216,8 @@ Installs and disconnects are recorded too.
 ## Link unfurling
 
 When the Slack app registers your Hive host as an **app unfurl domain**,
-Slack delivers a `link_shared` event for every Hive URL pasted in a
-connected channel. Hive looks each URL up, builds a preview, and posts
+Slack delivers a `link_shared` event for every Hive link pasted in a
+connected channel. Hive looks each link up, builds a preview, and posts
 the preview back via `chat.unfurl`. Supported surfaces:
 
 - `/specs/:number`: title, summary or first body line, and status.
