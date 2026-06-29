@@ -57,6 +57,7 @@ config :boruta, Boruta.Oauth,
 
 config :hive, Oban,
   repo: Hive.Repo,
+  peer: Hive.Oban.Peers.Database,
   queues: [default: 5, agents: 2],
   plugins: [
     {Oban.Plugins.Cron,

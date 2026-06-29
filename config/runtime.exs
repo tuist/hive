@@ -324,6 +324,19 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
+  linux_keepalive_opts =
+    case :os.type() do
+      {:unix, :linux} ->
+        [
+          {:raw, 6, 4, <<60::native-32>>},
+          {:raw, 6, 5, <<15::native-32>>},
+          {:raw, 6, 6, <<4::native-32>>}
+        ]
+
+      _ ->
+        []
+    end
+
   database_ssl_opts =
     case System.get_env("DATABASE_SSL_CA_CERT_FILE") do
       nil -> [verify: :verify_none]
@@ -334,15 +347,14 @@ if config_env() == :prod do
   config :hive, Hive.Repo,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    socket_options: maybe_ipv6,
+    socket_options: maybe_ipv6 ++ [{:keepalive, true} | linux_keepalive_opts],
     ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
     ssl_opts: database_ssl_opts,
     # Hive connects directly to Postgres (no transaction pooler), so bound how
-    # long a stuck or severed connection can hold a row lock — otherwise a write
-    # whose row is locked by an abandoned transaction waits forever. TCP
-    # keepalives let Postgres notice a dead client and release its locks, and
-    # idle_in_transaction_session_timeout rolls back a writer abandoned
-    # mid-transaction so it can't wedge the next writer.
+    # long a stuck or severed connection can hold a row lock. Keepalive probes
+    # let Postgres notice a dead client and release its locks, and
+    # idle_in_transaction_session_timeout rolls back an abandoned writer so it
+    # can't wedge the next writer.
     parameters: [
       tcp_keepalives_idle: "60",
       tcp_keepalives_interval: "30",
