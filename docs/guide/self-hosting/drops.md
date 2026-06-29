@@ -1,4 +1,4 @@
-## Drops
+# Drops
 
 Drops aggregate shipped updates so people can follow what each domain
 has actually released. A drop is a single user-facing update, for
@@ -33,12 +33,13 @@ compares them against the description of each candidate domain, and
 links the drop to the domains whose substance it actually matches. A
 single entry can end up linked to zero, one, or several domains.
 
-When an LLM is configured (see [Agents](./agents)) the classifier asks
-the agent to pick the right subset. When no LLM is configured, the
-classifier falls back to linking the entry to every domain so the
-dashboard still has something to show; this matches the fallback used
-for GitHub issue classification. A sweeper retries any drop still
-missing a classification, so transient LLM failures and drops created
+When a model provider is configured (see
+[Model gateway](./inference#agentic-workflows)) the classifier asks the
+agent to pick the right subset. When no model provider is configured,
+the classifier falls back to linking the entry to every domain so the
+dashboard still has something to show; this matches the fallback used for
+GitHub issue classification. A sweeper retries any drop still missing a
+classification, so transient model-provider failures and drops created
 before classification shipped recover on the next tick.
 
 ## Rewriting GitHub releases
@@ -46,15 +47,15 @@ before classification shipped recover on the next tick.
 GitHub release notes are written for contributors. They tend to
 reference pull-request numbers, author handles, internal labels, and
 process artefacts that are not useful to someone trying to find out
-what changed for them. When an LLM is configured, Hive rewrites each
-release into a user-facing markdown changelog before it surfaces as a
-drop, following the linked issues and pull requests to ground every
-bullet in what those pages actually say.
+what changed for them. When a model provider is configured, Hive
+rewrites each release into a user-facing markdown changelog before it
+surfaces as a drop, following the linked issues and pull requests to
+ground every bullet in what those pages actually say.
 
 The original release body is preserved. If the upstream release notes
 change later, the rewrite is invalidated and re-runs on the next sync.
-When no LLM is configured, drops keep showing the raw release notes
-unchanged, so deploying without an LLM is fine.
+When no model provider is configured, drops keep showing the raw release
+notes unchanged, so deploying without a model provider is fine.
 
 Each generated release drop is also linked to any GitHub issue or pull
 request that grounded it when that repository is connected to Hive. The
@@ -84,16 +85,16 @@ is enforced the same way as the HTML page: anonymous subscribers only
 see drops linked to a public domain.
 
 The `Subscribe` button on `/drops` opens a picker that lets visitors
-choose projects, domains, or both, generates the matching URL with the
-right query parameters, and exposes a copy button so the URL can go
-straight into a reader.
+choose projects, domains, or both, generates the matching feed address
+with the right query parameters, and exposes a copy button so the feed
+address can go straight into a reader.
 
 ## Managing RSS sources
 
 Admins (users with the `admin` role; see [Authorization](./authorization))
 manage RSS sources from `/ops/drops`. From the ops page admins can:
 
-- Add a new source (URL + optional label).
+- Add a new source (feed address + optional label).
 - Enable or disable a source. Disabled sources stay in the database
   but are skipped by the syncer.
 - Trigger an immediate sync against a single source.

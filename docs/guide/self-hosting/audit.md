@@ -1,9 +1,11 @@
-## Audit
+# Audit
 
 Hive keeps an append-only audit trail of who did what across every
-surface: the dashboard, MCP, webhooks, background jobs, and system
-paths. The trail lives in PostgreSQL alongside the rest of the
-application data, so nothing extra needs to be wired up to enable it.
+surface: the dashboard, Model Context Protocol
+([MCP](https://modelcontextprotocol.io/)) tools, webhooks, background
+jobs, and system paths. The trail lives in PostgreSQL alongside the rest
+of the application data, so nothing extra needs to be wired up to enable
+it.
 
 ## What gets recorded
 
@@ -18,9 +20,11 @@ Each entry captures:
   `user.signed_in`, `spec.created`, or `spec.updated`.
 - **Target**: the resource the action acted on, with its type, id,
   and a human-readable label.
-- **Metadata**: a JSON blob with any extra context the action chose
-  to record.
-- **Time**: when the action occurred, in UTC.
+- **Metadata**: a JavaScript Object Notation
+  ([JSON](https://www.json.org/json-en.html)) blob with any extra
+  context the action chose to record.
+- **Time**: when the action occurred, in Coordinated Universal Time
+  ([UTC](https://www.timeanddate.com/time/aboututc.html)).
 
 User sign-ins, sign-outs, and spec creation and updates are
 recorded out of the box. Agent-run workflows attribute their
@@ -32,8 +36,9 @@ trace which model produced the side effect.
 
 Access to the audit trail is gated by the `admin` role on the user
 record. See [Authorization](./authorization) for the three roles,
-how they are derived from `HIVE_ORG_DOMAINS`, and how to promote a
-user to `admin`.
+how they are derived from
+[`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains), and how
+to promote a user to `admin`.
 
 ## MCP tools
 

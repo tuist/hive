@@ -1,27 +1,31 @@
-## Authentication
+# Authentication
 
 Hive's login is available regardless of visibility so administrators can
-sign in to a public instance. Authentication is delegated to
-[Ueberauth] + [ueberauth_oidcc]; any number of providers can be enabled
+sign in to a public instance. Authentication is delegated to the
+configured identity providers; any number of providers can be enabled
 simultaneously and will appear as buttons on the login screen.
 
-[Ueberauth]: https://github.com/ueberauth/ueberauth
-[ueberauth_oidcc]: https://github.com/erlef/ueberauth_oidcc
+Hive supports two provider paths out of the box. Use Google when your
+team signs in with Google Workspace. Use generic OpenID Connect
+([OIDC](https://openid.net/developers/how-connect-works/)) when your
+identity provider publishes a discovery document.
 
 ## Google
 
-Set these environment variables:
+Configure Google when you want Hive to use the same accounts your team
+already uses for Google Workspace. Set these environment variables:
 
-- `HIVE_GOOGLE_CLIENT_ID`
-- `HIVE_GOOGLE_CLIENT_SECRET`
-- `HIVE_GOOGLE_ALLOWED_DOMAINS` (optional, comma-separated list of email
-  domains to accept; for example `tuist.dev`).
+- [`HIVE_GOOGLE_CLIENT_ID`](/reference/configuration#hive_google_client_id)
+- [`HIVE_GOOGLE_CLIENT_SECRET`](/reference/configuration#hive_google_client_secret)
+- [`HIVE_GOOGLE_ALLOWED_DOMAINS`](/reference/configuration#hive_google_allowed_domains)
+  (optional, comma-separated list of email domains to accept; for
+  example `tuist.dev`).
 
 When a single domain is set, the authorize redirect also includes
 Google's `hd=` hint to pre-filter the account picker. The allowlist is
 enforced on the callback regardless.
 
-Callback URL: `/auth/google/callback` on the deployed host.
+Callback address: `/auth/google/callback` on the deployed host.
 
 ### Setting up Google OAuth
 
@@ -33,20 +37,26 @@ Callback URL: `/auth/google/callback` on the deployed host.
 3. **Create Credentials → OAuth client ID → Web application**.
 4. Add the **Authorized redirect URI** for each environment, e.g.
    `https://hive.example.com/auth/google/callback`.
-5. Copy the Client ID and Client Secret into `HIVE_GOOGLE_CLIENT_ID`
-   and `HIVE_GOOGLE_CLIENT_SECRET`.
+5. Copy the Client ID and Client Secret into
+   [`HIVE_GOOGLE_CLIENT_ID`](/reference/configuration#hive_google_client_id) and
+   [`HIVE_GOOGLE_CLIENT_SECRET`](/reference/configuration#hive_google_client_secret).
 
 ## Generic OpenID Connect
 
-Any OIDC provider with a `.well-known/openid-configuration` endpoint:
+Configure generic OpenID Connect when your identity provider is not
+Google but exposes a `.well-known/openid-configuration` endpoint. Set
+these environment variables:
 
-- `HIVE_OIDC_ISSUER`: the issuer base URL. Hive's auth client discovers
-  authorize/token/userinfo endpoints from
+- [`HIVE_OIDC_ISSUER`](/reference/configuration#hive_oidc_issuer): the issuer
+  base address. Hive's auth client discovers authorize/token/userinfo
+  endpoints from
   `<issuer>/.well-known/openid-configuration`.
-- `HIVE_OIDC_CLIENT_ID`
-- `HIVE_OIDC_CLIENT_SECRET` (optional)
-- `HIVE_OIDC_DISPLAY_NAME` (optional, label on the login button;
-  defaults to "Identity provider")
-- `HIVE_OIDC_ALLOWED_DOMAINS` (optional, comma-separated allowlist)
+- [`HIVE_OIDC_CLIENT_ID`](/reference/configuration#hive_oidc_client_id)
+- [`HIVE_OIDC_CLIENT_SECRET`](/reference/configuration#hive_oidc_client_secret)
+  (optional)
+- [`HIVE_OIDC_DISPLAY_NAME`](/reference/configuration#hive_oidc_display_name)
+  (optional, label on the login button; defaults to "Identity provider")
+- [`HIVE_OIDC_ALLOWED_DOMAINS`](/reference/configuration#hive_oidc_allowed_domains)
+  (optional, comma-separated allowlist)
 
-Callback URL: `/auth/oidc/callback` on the deployed host.
+Callback address: `/auth/oidc/callback` on the deployed host.

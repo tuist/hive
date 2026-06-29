@@ -1,4 +1,4 @@
-## Overview
+# Overview
 
 The way product teams shape work has not kept up with how the work
 itself is done. Tickets, plans, and operational alerts each live in a
@@ -16,7 +16,12 @@ Hive is a single web service that holds the shape of product work in
 one place:
 
 - **Projects** group everything by product, codebase, or service the
-  instance tracks, such as Atlas, Hive, Tuist, Kura, Noora, or Once.
+  instance tracks, such as [Atlas](https://github.com/tuist/atlas),
+  [Hive](https://github.com/tuist/hive),
+  [Tuist](https://github.com/tuist/tuist),
+  [Kura](https://github.com/tuist/kura),
+  [Noora](https://github.com/tuist/Noora), or
+  [Once](https://github.com/tuist/once).
   A project owns its linked GitHub repositories and the Really Simple
   Syndication ([RSS](https://www.rssboard.org/rss-specification)) sources
   that feed it.
@@ -37,12 +42,17 @@ one place:
 The goal is a small, opinionated surface that a team can adopt without
 adopting an entire methodology.
 
+The rest of this guide is written for people who want to set up a Hive
+instance and understand how teams use the product day to day.
+
 ## How it ships
 
 Hive is licensed under the Mozilla Public License 2.0
 ([MPL-2.0](https://www.mozilla.org/en-US/MPL/2.0/)) and ships as a
 single image plus a generic Helm chart. The container image lives at
-`ghcr.io/tuist/hive` and the Helm chart at `oci://ghcr.io/tuist/charts/hive`.
+[`ghcr.io/tuist/hive`](https://github.com/orgs/tuist/packages/container/package/hive)
+and the Helm chart at
+[`oci://ghcr.io/tuist/charts/hive`](https://github.com/orgs/tuist/packages/container/package/charts%2Fhive).
 Both artifacts are released from the [tuist/hive](https://github.com/tuist/hive)
 repository on every push to `main`. Tuist runs the canonical instance
 at [hive.tuist.dev](https://hive.tuist.dev), but the same artifacts let
@@ -50,16 +60,17 @@ any team self-host.
 
 ## Next
 
+- [Configuration reference](/reference/configuration) lists the runtime
+  environment variables operators can set.
 - [Authentication](./authentication) explains how to wire up Google and
   generic OpenID Connect
   ([OIDC](https://openid.net/developers/how-connect-works/)) providers.
 - [Authorization](./authorization) covers the roles each user can hold
   and what they can see.
-- [Agents](./agents) covers the
+- [Model gateway](./inference) covers OpenAI-compatible automation
+  clients, model-bound tokens, and the
   [large language model](https://en.wikipedia.org/wiki/Large_language_model)-backed
   workflows that activate when a provider key is configured.
-- [Inference relay](./inference) explains how to expose model-bound
-  tokens for OpenAI-compatible automation clients.
 - [Drops](./drops) describes the shipped-updates surface and how
   releases and changelogs feed into it.
 - [Slack](./slack) covers connecting Slack workspaces so Hive can reply
