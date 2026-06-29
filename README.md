@@ -4,6 +4,10 @@
 
 <h1 align="center">Hive</h1>
 
+> [!WARNING]
+> Hive is a work in progress and is still changing quickly. Expect APIs,
+> behavior, and deployment details to change often.
+
 <p align="center">
   <a href="https://github.com/tuist/hive/actions/workflows/hive.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/tuist/hive/hive.yml?branch=main&label=ci&style=flat-square" alt="CI" />

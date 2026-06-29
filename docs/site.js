@@ -1,3 +1,25 @@
+const docsSidebar = [
+  {
+    text: "Guide",
+    items: [
+      { text: "Overview", link: "/guide/self-hosting/" },
+      { text: "Authentication", link: "/guide/self-hosting/authentication" },
+      { text: "Authorization", link: "/guide/self-hosting/authorization" },
+      { text: "Model gateway", link: "/guide/self-hosting/inference" },
+      { text: "Audit", link: "/guide/self-hosting/audit" },
+      { text: "Drops", link: "/guide/self-hosting/drops" },
+      { text: "Slack", link: "/guide/self-hosting/slack" },
+      { text: "Deployment", link: "/guide/self-hosting/deployment" },
+    ],
+  },
+  {
+    text: "References",
+    items: [
+      { text: "Configuration", link: "/reference/configuration" },
+    ],
+  },
+];
+
 export const site = {
   description:
     "Hive is Tuist's agentic domain orchestration platform: spec-driven planning, forage ingestion, and self-hostable deployment.",
@@ -23,17 +45,8 @@ export const site = {
     },
   ],
   sidebar: {
-    "/guide/": [
-      { text: "Overview", link: "/guide/self-hosting/" },
-      { text: "Authentication", link: "/guide/self-hosting/authentication" },
-      { text: "Authorization", link: "/guide/self-hosting/authorization" },
-      { text: "Agents", link: "/guide/self-hosting/agents" },
-      { text: "Inference relay", link: "/guide/self-hosting/inference" },
-      { text: "Audit", link: "/guide/self-hosting/audit" },
-      { text: "Drops", link: "/guide/self-hosting/drops" },
-      { text: "Slack", link: "/guide/self-hosting/slack" },
-      { text: "Deployment", link: "/guide/self-hosting/deployment" },
-    ],
+    "/guide/": docsSidebar,
+    "/reference/": docsSidebar,
   },
   footer: {
     message: "Released under the MPL-2.0 License.",

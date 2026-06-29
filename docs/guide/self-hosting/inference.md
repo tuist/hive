@@ -1,35 +1,42 @@
-## Inference relay
+# Model gateway
 
-Hive can expose an OpenAI-compatible inference relay for automation that
-already knows how to talk to that standard provider surface. Repositories and
-workflows point at Hive with a Hive token, and Hive decides which upstream
-provider and model should handle the request.
+Hive can act as a model gateway for automation and agentic workflows.
+Calling it a gateway is intentional: Hive is not only forwarding traffic.
+It authenticates Hive tokens, routes requests through profiles, hides
+upstream provider credentials from repositories, and records usage and
+cost.
+
+For client traffic, repositories and workflows point at Hive with a Hive
+token. Hive decides which upstream provider and model should handle the
+request. For agentic workflows inside Hive, the same deployment-wide
+model provider configuration decides whether those workflows run.
 
 This gives operators one place to retarget a model for cost, latency, or
-quality without changing every repository. It also gives them a more granular
-usage and cost view because every request is attributed to the profile and
-token that made it.
+quality without changing every repository or workflow. It also gives them
+a more granular usage and cost view because every client request is
+attributed to the profile and token that made it.
 
-## Configure upstream providers
+## Configure model providers
 
-Open **Ops → Inference → Providers** as an instance admin and create a
+Open **Ops -> Inference -> Providers** as an instance admin and create a
 provider with:
 
 - **Provider key**: the stable key profiles will reference, such as
   `fireworks` or `openai`.
 - **Endpoint**: the upstream base address, such as
   `https://api.fireworks.ai/inference/v1`.
-- **Credential**: the provider token. Hive encrypts this value and never shows
-  it again after saving.
+- **Credential**: the provider token. Hive encrypts this value and never
+  shows it again after saving.
 - **Timeout in milliseconds**: how long Hive should wait for upstream
   responses.
 
-Model pricing is configured on each profile in the dashboard so operators can
-update rates without redeploying Hive.
+Model pricing is configured on each profile in the dashboard so
+operators can update rates without redeploying Hive.
 
-Environment-backed providers are also supported for self-hosted deployments
-that prefer immutable runtime configuration. For a single upstream provider,
-set:
+Environment-backed providers are also supported for self-hosted
+deployments that prefer immutable runtime configuration. For a single
+upstream provider, set the single-provider variables from the
+[configuration reference](/reference/configuration#model-gateway):
 
 ```bash
 HIVE_INFERENCE_UPSTREAM_ID=fireworks
@@ -37,8 +44,10 @@ HIVE_INFERENCE_UPSTREAM_BASE_URL=https://api.fireworks.ai/inference/v1
 HIVE_INFERENCE_UPSTREAM_API_KEY=provider-token
 ```
 
-For multiple upstream providers, set `HIVE_INFERENCE_PROVIDERS` to a
-JavaScript Object Notation ([JSON](https://www.json.org/json-en.html)) object:
+For multiple upstream providers, set
+[`HIVE_INFERENCE_PROVIDERS`](/reference/configuration#hive_inference_providers)
+to a JavaScript Object Notation
+([JSON](https://www.json.org/json-en.html)) object:
 
 ```bash
 HIVE_INFERENCE_PROVIDERS='{
@@ -53,15 +62,103 @@ HIVE_INFERENCE_PROVIDERS='{
 }'
 ```
 
-The dashboard exposes **Ops → Inference → Providers** so instance admins can
-create runtime providers, review environment-backed providers, see whether a
-credential is present, and check which profiles reference each provider. Secret
-values are never shown.
+The dashboard exposes **Ops -> Inference -> Providers** so instance
+admins can create runtime providers, review environment-backed
+providers, see whether a credential is present, and check which profiles
+reference each provider. Secret values are never shown.
+
+## Agentic workflows
+
+Hive's agentic features call a
+[large language model](https://en.wikipedia.org/wiki/Large_language_model).
+They share a deployment-wide model provider configured through the
+[configuration reference](/reference/configuration#agent-model-provider).
+When no provider key is set, agentic features stay dormant and the rest
+of Hive runs normally.
+
+When model configuration is present, Hive starts the agentic workflows
+automatically. There is no separate feature flag for enabling agentic
+behavior.
+
+Hive currently uses agents for:
+
+- Domain evolution: when new forage items, specs, GitHub issues, or
+  Grafana alerts arrive, Hive queues a debounced evolution job. A
+  periodic job runs as well. The agent reviews recent work signals,
+  current projects, and current domains, then proposes only create or
+  update changes. New domains are linked to the projects named by the
+  supporting work items. Hive applies those changes through normal
+  validation and skips suggestions that are too generic, too specific,
+  or outside Tuist's business domains.
+- Spec revision summaries: whenever a spec is edited after its first
+  draft, Hive queues a job that asks the agent to describe what changed
+  between the previous and the new revision. The summary appears in the
+  draft history on the spec page. A scheduled sweeper also backfills
+  revisions whose summary is still missing, spawning one worker job per
+  revision so failures retry independently. When no model provider is
+  configured, the history falls back to a counts-based heuristic.
+- Spec review requests: when a spec author or editor asks for another
+  review, Hive asks an agent to turn the current spec and latest
+  revision into a concise Slack message with focused review prompts. The
+  Slack notification still posts with a deterministic fallback when no
+  model provider is configured.
+- Slack thread replies: when Hive's Slack bot is `@`-mentioned, Hive
+  queues a job that reads the thread context and asks the agent to draft
+  a short reply, posted back in the same thread. When no model provider
+  is configured, the bot stays silent. See [Slack](./slack) for the
+  workspace install flow.
+- GitHub issue domain classification: each time the syncer sees a new
+  issue in a connected project repository or notices that an issue's
+  title or body changed, Hive queues a job that asks the agent which
+  domains the issue actually belongs to. The candidates are the domains
+  attached to the issue's repository, so the answer is always a subset of
+  that set. The dashboard renders the domain badges from this
+  classification, not from the repository's domain membership. A
+  scheduled sweeper also re-classifies any cached issue still missing a
+  classification, so rows that existed before classification shipped or
+  that hit a transient model-provider failure recover on the next tick.
+  When no model provider is configured, each issue is linked to every
+  domain attached to its repository.
+- Drop item generation: each GitHub release body is treated as an
+  envelope, not as a drop. Hive asks an agent to traverse the release
+  body's referenced web addresses, collect enough context from linked
+  issues, pull requests, changelog entries, or docs, and return one drop
+  item per user-facing improvement that actually landed. When no model
+  provider is configured, GitHub release drop generation is skipped so
+  release envelopes do not pollute the drops timeline.
+- Drop domain classification: after a drop item exists, Hive queues a
+  job that asks the agent which domains the drop belongs to. When no
+  model provider is configured, each drop is linked to every domain
+  associated with the release repository's project.
+
+## Agent model provider
+
+- [`HIVE_LLM_API_KEY`](/reference/configuration#hive_llm_api_key): the
+  provider key. When unset, every agentic feature is disabled.
+- [`HIVE_LLM_MODEL`](/reference/configuration#hive_llm_model): the model
+  in `provider:model_id` form, for example
+  `anthropic:claude-haiku-4-5` or
+  `fireworks_ai:accounts/fireworks/models/kimi-k2p7-code`. Required when
+  [`HIVE_LLM_API_KEY`](/reference/configuration#hive_llm_api_key) is set.
+- [`HIVE_LLM_BASE_URL`](/reference/configuration#hive_llm_base_url):
+  optional endpoint override. Use it to point at a compatible provider
+  that is not reachable at its vendor's default address.
+
+Any provider supported by [ReqLLM](https://hexdocs.pm/req_llm) works.
+ReqLLM's catalog is sourced from [models.dev](https://models.dev), so
+the `provider:model_id` strings you can put in
+[`HIVE_LLM_MODEL`](/reference/configuration#hive_llm_model) are exactly
+the identifiers listed there.
+
+For other OpenAI-compatible gateways, set the provider prefix to
+`openai:`, the model identifier to whatever the gateway expects, and
+[`HIVE_LLM_BASE_URL`](/reference/configuration#hive_llm_base_url) to its
+endpoint.
 
 ## Track usage and cost
 
-Each successful relay response creates a usage record tied to both the profile
-and the token that made the request. Hive stores:
+Each successful gateway response creates a usage record tied to both the
+profile and the token that made the request. Hive stores:
 
 - input token count
 - output token count
@@ -69,52 +166,56 @@ and the token that made the request. Hive stores:
 - upstream status
 - estimated United States dollar cost
 
-The profile page aggregates those rows for the selected period and shows input
-tokens, output tokens, estimated cost, and a trend chart. Token rows also show
-their own usage and cost for the same period. Each token has a detail page with
-the same widgets and chart scoped to that token.
+The profile page aggregates those rows for the selected period and shows
+input tokens, output tokens, estimated cost, and a trend chart. Token
+rows also show their own usage and cost for the same period. Each token
+has a detail page with the same widgets and chart scoped to that token.
 
 ## Create a profile and token
 
-After migrations have run, open **Ops → Inference → Profiles** as an instance
-admin.
+After migrations have run, open **Ops -> Inference -> Profiles** as an
+instance admin.
 
 Create a profile with:
 
-- **Profile name**: the stable model name repositories will request, such as
-  `repository-review`.
-- **Upstream provider**: the provider key from **Ops → Inference → Providers**
-  or the environment configuration, such as `fireworks`.
-- **Upstream model**: the model identifier the upstream endpoint expects, such
-  as `accounts/fireworks/models/kimi-k2p5` or `gpt-4o-mini`.
-- **Input cost per million tokens** and **Output cost per million tokens**:
-  optional United States dollar prices for the upstream model. Hive uses these
-  values to estimate cost after each relay response reports usage.
+- **Profile name**: the stable model name repositories will request,
+  such as `repository-review`.
+- **Upstream provider**: the provider key from **Ops -> Inference ->
+  Providers** or the environment configuration, such as `fireworks`.
+- **Upstream model**: the model identifier the upstream endpoint
+  expects, such as `accounts/fireworks/models/kimi-k2p5` or
+  `gpt-4o-mini`.
+- **Input cost per million tokens** and **Output cost per million
+  tokens**: optional United States dollar prices for the upstream model.
+  Hive uses these values to estimate cost after each gateway response
+  reports usage.
 
-Then create a token under that profile. Hive prints the token once in the
-dashboard. Store it in the repository secret manager before dismissing it;
-Hive stores only a hash and cannot show the token again.
+Then create a token under that profile. Hive prints the token once in
+the dashboard. Store it in the repository secret manager before
+dismissing it; Hive stores only a hash and cannot show the token again.
 
 ::: tip Token attribution
-Tokens are the attribution boundary for relay usage. Create one token per
-repository, workflow, team, or automation boundary that should have its own
-usage and cost breakdown. The profile keeps the stable model routing, while
-each token gives operators a separate usage trail and revocation point.
+Tokens are the attribution boundary for gateway usage. Create one token
+per repository, workflow, team, or automation boundary that should have
+its own usage and cost breakdown. The profile keeps the stable model
+routing, while each token gives operators a separate usage trail and
+revocation point.
 :::
 
-To retarget repositories later, edit the profile's upstream provider or model.
-Existing tokens keep working because they are bound to the stable profile name.
-Disable a profile to stop all of its tokens, or open a token detail page to
-revoke that token.
+To retarget repositories later, edit the profile's upstream provider or
+model. Existing tokens keep working because they are bound to the stable
+profile name. Disable a profile to stop all of its tokens, or open a
+token detail page to revoke that token.
 
 ## Connect clients
 
-Open a profile detail page to copy the client configuration for that profile.
-Hive shows the base address, model name, authorization header shape, and a
-client snippet that can be adapted to any OpenAI-compatible client.
+Open a profile detail page to copy the client configuration for that
+profile. Hive shows the base address, model name, authorization header
+shape, and a client snippet that can be adapted to any OpenAI-compatible
+client.
 
-The relay exposes:
+The gateway exposes:
 
 - `GET /v1/models`: returns the one model allowed by the token.
-- `POST /v1/chat/completions`: validates the requested model, rewrites it to
-  the configured upstream model, and forwards the response.
+- `POST /v1/chat/completions`: validates the requested model, rewrites
+  it to the configured upstream model, and forwards the response.
