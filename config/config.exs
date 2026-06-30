@@ -60,6 +60,7 @@ config :hive, Oban,
   peer: Hive.Oban.Peers.Database,
   queues: [default: 5, agents: 2],
   plugins: [
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
     {Oban.Plugins.Cron,
      crontab: [
        {"*/30 * * * *", Hive.Domains.EvolutionWorker},
