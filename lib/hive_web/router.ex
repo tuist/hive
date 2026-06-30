@@ -215,7 +215,7 @@ defmodule HiveWeb.Router do
     forward "/mcp", EMCP.Transport.StreamableHTTP, server: Hive.MCP.Server
   end
 
-  scope "/v1", HiveWeb do
+  scope "/inference/v1", HiveWeb do
     pipe_through :inference
 
     get "/models", InferenceController, :models

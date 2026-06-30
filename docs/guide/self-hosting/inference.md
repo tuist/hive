@@ -218,6 +218,6 @@ client.
 
 The gateway exposes:
 
-- `GET /v1/models`: returns the one model allowed by the token.
-- `POST /v1/chat/completions`: validates the requested model, rewrites
+- `GET /inference/v1/models`: returns the one model allowed by the token.
+- `POST /inference/v1/chat/completions`: validates the requested model, rewrites
   it to the configured upstream model, and forwards the response.

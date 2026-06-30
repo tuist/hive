@@ -115,7 +115,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ "Tokens"
     assert html =~ "Edit profile"
     assert html =~ "Create token"
-    assert html =~ HiveWeb.Endpoint.url() <> "/v1"
+    assert html =~ HiveWeb.Endpoint.url() <> "/inference/v1"
     assert html =~ "OpenAI-compatible model"
     assert html =~ "Blick model"
     assert html =~ "hive/blick-code-review"
