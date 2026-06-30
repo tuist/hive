@@ -694,7 +694,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     |> assign(OpenGraph.assigns(open_graph(profile)))
     |> assign(:profile, profile)
     |> assign(:tokens, profile.tokens)
-    |> assign(:client_base_url, HiveWeb.Endpoint.url() <> "/v1")
+    |> assign(:client_base_url, HiveWeb.Endpoint.url() <> "/inference/v1")
     |> assign(:provider_options, provider_select_options(profile.upstream_provider))
     |> assign_profile_form(Inference.change_profile(profile))
     |> assign_token_form(Inference.change_token(profile))

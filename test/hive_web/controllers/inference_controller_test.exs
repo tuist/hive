@@ -7,13 +7,13 @@ defmodule HiveWeb.InferenceControllerTest do
     on_exit(fn -> Inference.delete_process_config() end)
   end
 
-  test "GET /v1/models lists the token-bound model", %{conn: conn} do
+  test "GET /inference/v1/models lists the token-bound model", %{conn: conn} do
     {_binding, token_value} = relay_token!()
 
     response =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
-      |> get(~p"/v1/models")
+      |> get(~p"/inference/v1/models")
       |> json_response(200)
 
     assert %{
@@ -22,7 +22,7 @@ defmodule HiveWeb.InferenceControllerTest do
            } = response
   end
 
-  test "POST /v1/chat/completions rewrites the model before forwarding", %{conn: conn} do
+  test "POST /inference/v1/chat/completions rewrites the model before forwarding", %{conn: conn} do
     parent = self()
 
     put_relay_config(fn request ->
@@ -41,7 +41,7 @@ defmodule HiveWeb.InferenceControllerTest do
     response =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
-      |> post(~p"/v1/chat/completions", %{
+      |> post(~p"/inference/v1/chat/completions", %{
         "model" => "blick-code-review",
         "messages" => [%{"role" => "user", "content" => "Review this change."}]
       })
@@ -55,7 +55,7 @@ defmodule HiveWeb.InferenceControllerTest do
     assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
   end
 
-  test "POST /v1/chat/completions persists token usage", %{conn: conn} do
+  test "POST /inference/v1/chat/completions persists token usage", %{conn: conn} do
     put_relay_config(fn _request ->
       {:ok,
        Req.Response.new(
@@ -76,7 +76,7 @@ defmodule HiveWeb.InferenceControllerTest do
 
     conn
     |> put_req_header("authorization", "Bearer #{token_value}")
-    |> post(~p"/v1/chat/completions", %{
+    |> post(~p"/inference/v1/chat/completions", %{
       "model" => "blick-code-review",
       "messages" => [%{"role" => "user", "content" => "Review this change."}]
     })
@@ -95,7 +95,9 @@ defmodule HiveWeb.InferenceControllerTest do
     assert Decimal.equal?(cost_usd, Decimal.new("0.005"))
   end
 
-  test "POST /v1/chat/completions rejects a model outside the token binding", %{conn: conn} do
+  test "POST /inference/v1/chat/completions rejects a model outside the token binding", %{
+    conn: conn
+  } do
     parent = self()
     put_relay_config(fn request -> send(parent, {:upstream_request, request}) end)
     {_binding, token_value} = relay_token!()
@@ -103,14 +105,14 @@ defmodule HiveWeb.InferenceControllerTest do
     response =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
-      |> post(~p"/v1/chat/completions", %{"model" => "other-model", "messages" => []})
+      |> post(~p"/inference/v1/chat/completions", %{"model" => "other-model", "messages" => []})
       |> json_response(403)
 
     assert response["error"]["message"] =~ "not allowed"
     refute_received {:upstream_request, _request}
   end
 
-  test "POST /v1/chat/completions streams upstream event data", %{conn: conn} do
+  test "POST /inference/v1/chat/completions streams upstream event data", %{conn: conn} do
     put_relay_config(fn request ->
       into = Keyword.fetch!(request, :into)
       response = Req.Response.new(status: 200, headers: [{"content-type", "text/event-stream"}])
@@ -126,7 +128,7 @@ defmodule HiveWeb.InferenceControllerTest do
     conn =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
-      |> post(~p"/v1/chat/completions", %{
+      |> post(~p"/inference/v1/chat/completions", %{
         "model" => "blick-code-review",
         "messages" => [],
         "stream" => true
@@ -138,7 +140,7 @@ defmodule HiveWeb.InferenceControllerTest do
   test "returns an OpenAI-compatible authorization error", %{conn: conn} do
     response =
       conn
-      |> get(~p"/v1/models")
+      |> get(~p"/inference/v1/models")
       |> json_response(401)
 
     assert response["error"]["code"] == "invalid_api_key"
