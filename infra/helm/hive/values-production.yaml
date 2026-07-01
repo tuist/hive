@@ -19,6 +19,18 @@ resources:
   limits:
     memory: 1Gi
 
+# hive.tuist.dev is non-critical and low-traffic, running on a single
+# worker node. One replica, no autoscaling, no PodDisruptionBudget: HA
+# isn't achievable (or needed) on a single node, and a PDB would block
+# node drains during cluster upgrades.
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+pdb:
+  enabled: false
+
 env:
   # Tuist's instance is public: anyone can browse it. Google login is
   # the team's path, restricted to @tuist.dev via HIVE_GOOGLE_ALLOWED_DOMAINS.
@@ -87,6 +99,10 @@ externalSecrets:
     field: "notesPlain"
 
 postgres:
+  # Single instance: continuous WAL archiving to object storage (below)
+  # is the recovery path, so a hot standby isn't worth a second node's
+  # worth of resources for a non-critical service.
+  instances: 1
   annotations:
     cnpg.io/skipEmptyWalArchiveCheck: enabled
   storageClass: hcloud-volumes
@@ -98,8 +114,12 @@ postgres:
       accessKeyRemoteRef: "hive-postgres-backup/username"
       secretKeyRemoteRef: "hive-postgres-backup/credential"
 
+# Log-shipping pipeline disabled to keep the workload on a single small
+# worker: it consumed 1 vCPU / 2Gi + a 50Gi cache volume. Errors are still
+# captured by Sentry and live logs via `kubectl logs`. Flip back to `true`
+# to restore long-term log archival to object storage.
 vector:
-  enabled: true
+  enabled: false
   resources:
     requests:
       cpu: "1"

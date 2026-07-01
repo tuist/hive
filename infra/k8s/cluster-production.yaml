@@ -22,7 +22,10 @@ spec:
       name: tuist-hcloud
     version: v1.34.6
     controlPlane:
-      replicas: 3
+      # hive.tuist.dev is a non-critical internal service; a single-node
+      # control plane is enough. A control-plane outage only pauses
+      # scheduling, it does not take the running app down.
+      replicas: 1
     variables:
       - name: region
         value: fsn1
@@ -37,7 +40,9 @@ spec:
       machineDeployments:
         - class: hcloud-worker
           name: md-0
-          replicas: 4
+          # One worker holds the whole workload (app + Postgres + ingress +
+          # operators). Scale up only if resource pressure appears.
+          replicas: 1
           failureDomain: fsn1
           metadata:
             labels:
