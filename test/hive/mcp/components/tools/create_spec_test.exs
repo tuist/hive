@@ -1,7 +1,9 @@
 defmodule Hive.MCP.Components.Tools.CreateSpecTest do
   use Hive.MCPToolCase
+  use Mimic
 
   alias Hive.MCP.Components.Tools.CreateSpec
+  alias Hive.Specs
 
   test "creates specs with default status and visibility" do
     user = mcp_user()
@@ -42,6 +44,21 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
     second = create_spec(user, "Second spec")
 
     assert second["spec"]["number"] == first["spec"]["number"] + 1
+  end
+
+  test "reports a locked error instead of crashing when a write is contended" do
+    user = mcp_user()
+    expect(Specs, :create_spec, fn _attrs, _user -> {:error, :locked} end)
+
+    response =
+      CreateSpec.call(mcp_conn(user), %{
+        "title" => "Contended spec",
+        "body" => "This create collides with an in-flight spec write."
+      })
+      |> response_json()
+
+    assert response["error"] == "locked"
+    assert is_binary(response["message"])
   end
 
   defp create_spec(user, title, attrs \\ %{}) do

@@ -175,6 +175,17 @@ defmodule HiveWeb.SpecLive.Show do
                dgettext("dashboard_specs", "Only organization members can change spec status.")
              )}
 
+          {:error, :locked} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext(
+                 "dashboard_specs",
+                 "This spec is being written by another request. Try again in a moment."
+               )
+             )}
+
           {:error, _changeset} ->
             {:noreply,
              put_flash(
