@@ -91,6 +91,17 @@ defmodule HiveWeb.SpecLive.Edit do
          )
          |> assign_form(Map.put(changeset, :action, :validate))}
 
+      {:error, :locked} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext(
+             "dashboard_specs",
+             "This spec is being written by another request. Try again in a moment."
+           )
+         )}
+
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end

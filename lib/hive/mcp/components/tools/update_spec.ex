@@ -73,6 +73,12 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
       {:error, :unauthorized} ->
         Tool.json_response(%{error: "unauthorized"})
 
+      {:error, :locked} ->
+        Tool.json_response(%{
+          error: "locked",
+          message: "This spec is being written by another request. Try again in a moment."
+        })
+
       {:error, changeset} ->
         Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end

@@ -95,6 +95,14 @@ defmodule HiveWeb.SpecLive.New do
            dgettext("dashboard_specs", "Only organization members can create specs.")
          )}
 
+      {:error, :locked} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_specs", "A spec write is in progress. Try again in a moment.")
+         )}
+
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
