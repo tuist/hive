@@ -16,6 +16,10 @@ quality without changing every repository or workflow. It also gives them
 a more granular usage and cost view because every client request is
 attributed to the profile and token that made it.
 
+The client-facing gateway supports chat completions and embeddings.
+Both use the same profile model rewriting, provider credential hiding,
+token attribution, and cost tracking.
+
 ## Configure model providers
 
 Open **Ops -> Inference -> Providers** as an instance admin and create a
@@ -162,11 +166,16 @@ endpoint.
 Each successful gateway response creates a usage record tied to both the
 profile and the token that made the request. Hive stores:
 
+- operation type
 - input token count
 - output token count
 - total token count
 - upstream status
 - estimated United States dollar cost
+
+For embedding responses, Hive records the provider-reported prompt or
+input tokens as input tokens, records zero output tokens, and estimates
+cost from the profile's input price.
 
 The profile page aggregates those rows for the selected period and shows
 input tokens, output tokens, estimated cost, and a trend chart. Token
@@ -186,7 +195,8 @@ Create a profile with:
   Providers** or the environment configuration, such as `fireworks`.
 - **Upstream model**: the model identifier the upstream endpoint
   expects, such as `accounts/fireworks/models/kimi-k2p5` or
-  `gpt-4o-mini`.
+  `gpt-4o-mini`. For an embedding profile, use the upstream embedding
+  model, such as `accounts/fireworks/models/qwen3-embedding-8b`.
 - **Input cost per million tokens** and **Output cost per million
   tokens**: optional United States dollar prices for the upstream model.
   Hive uses these values to estimate cost after each gateway response
@@ -221,3 +231,6 @@ The gateway exposes:
 - `GET /inference/v1/models`: returns the one model allowed by the token.
 - `POST /inference/v1/chat/completions`: validates the requested model, rewrites
   it to the configured upstream model, and forwards the response.
+- `POST /inference/v1/embeddings`: validates the requested model,
+  rewrites it to the configured upstream embedding model, forwards the
+  response, and records embedding usage.

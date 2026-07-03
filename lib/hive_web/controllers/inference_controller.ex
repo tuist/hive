@@ -61,10 +61,56 @@ defmodule HiveWeb.InferenceController do
     end
   end
 
-  defp proxy_upstream(conn, %ModelBinding{} = binding, %Token{} = token, request) do
+  def embeddings(
+        %Plug.Conn{
+          assigns: %{
+            inference_model_binding: %ModelBinding{} = binding,
+            inference_token: %Token{} = token
+          }
+        } = conn,
+        params
+      ) do
+    with {:ok, requested_model} <- fetch_requested_model(params),
+         true <- Inference.model_allowed?(binding, requested_model),
+         {:ok, request} <- Inference.relay_embedding_request(binding, params) do
+      proxy_upstream(conn, binding, token, request, :embedding)
+    else
+      {:error, :missing_model} ->
+        openai_error(
+          conn,
+          :bad_request,
+          "The request must include a model.",
+          "invalid_request_error"
+        )
+
+      false ->
+        openai_error(
+          conn,
+          :forbidden,
+          "This token is not allowed to use the requested model.",
+          "invalid_request_error"
+        )
+
+      {:error, :upstream_not_configured} ->
+        openai_error(
+          conn,
+          :bad_gateway,
+          "The requested model is not configured with an upstream provider.",
+          "server_error"
+        )
+    end
+  end
+
+  defp proxy_upstream(
+         conn,
+         %ModelBinding{} = binding,
+         %Token{} = token,
+         request,
+         operation \\ :chat_completion
+       ) do
     case Inference.request_fun().(request) do
       {:ok, response} ->
-        record_relay(binding, token, response)
+        record_relay(binding, token, response, nil, operation)
         send_upstream_response(conn, response, "application/json")
 
       {:error, _reason} ->
@@ -82,7 +128,14 @@ defmodule HiveWeb.InferenceController do
     response =
       case Inference.request_fun().(request) do
         {:ok, response} ->
-          record_relay(binding, token, response, Process.get(stream_usage_ref(conn_ref)))
+          record_relay(
+            binding,
+            token,
+            response,
+            Process.get(stream_usage_ref(conn_ref)),
+            :chat_completion
+          )
+
           response
 
         {:error, _reason} ->
@@ -157,15 +210,24 @@ defmodule HiveWeb.InferenceController do
 
   defp stream_usage_ref(conn_ref), do: {conn_ref, :inference_usage}
 
-  defp record_relay(%ModelBinding{} = binding, %Token{} = token, response, usage_payload \\ nil) do
+  defp record_relay(
+         %ModelBinding{} = binding,
+         %Token{} = token,
+         response,
+         usage_payload,
+         operation
+       ) do
     Inference.touch_model_binding(binding)
-    {:ok, usage} = Inference.record_usage(binding, token, response, usage_payload)
+
+    {:ok, usage} =
+      Inference.record_usage(binding, token, response, usage_payload, operation: operation)
 
     Audit.record(:"inference.relayed", %{
       target_type: "inference_model",
       target_id: binding.id,
       target_label: binding.name,
       metadata: %{
+        "operation" => usage.operation,
         "upstream_provider" => binding.upstream_provider,
         "upstream_model" => binding.upstream_model,
         "status" => response_status(response),

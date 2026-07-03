@@ -231,6 +231,36 @@ defmodule Hive.InferenceTest do
       assert {"authorization", "Bearer fw-test"} in Keyword.fetch!(request, :headers)
     end
 
+    test "builds embedding requests against the upstream provider" do
+      binding =
+        model_binding!(
+          name: "atlas-documents",
+          upstream_model: "accounts/fireworks/models/qwen3-embedding-8b"
+        )
+
+      assert {:ok, request} =
+               Inference.relay_embedding_request(
+                 binding,
+                 %{"model" => "atlas-documents", "input" => "hello"},
+                 config: [
+                   providers: %{
+                     "fireworks-ai" => %{
+                       "base_url" => "https://api.fireworks.ai/inference/v1/",
+                       "api_key" => "fw-test"
+                     }
+                   }
+                 ]
+               )
+
+      assert Keyword.fetch!(request, :url) == "https://api.fireworks.ai/inference/v1/embeddings"
+
+      assert Keyword.fetch!(request, :json)["model"] ==
+               "accounts/fireworks/models/qwen3-embedding-8b"
+
+      assert Keyword.fetch!(request, :json)["input"] == "hello"
+      assert {"accept", "application/json"} in Keyword.fetch!(request, :headers)
+    end
+
     test "strips a matching legacy provider prefix when rewriting the model" do
       binding = model_binding!()
 
@@ -325,6 +355,7 @@ defmodule Hive.InferenceTest do
       assert usage.input_tokens == 1_000
       assert usage.output_tokens == 2_000
       assert usage.total_tokens == 3_000
+      assert usage.operation == "chat_completion"
       assert Decimal.equal?(usage.cost_usd, Decimal.new("0.005"))
 
       period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
@@ -349,6 +380,34 @@ defmodule Hive.InferenceTest do
       assert series = [_entry | _entries] = Inference.usage_series(binding, period, :day)
       assert Enum.any?(series, &(&1.input_tokens == 1_000))
       assert Enum.all?(series, &match?(%DateTime{}, &1.bucket))
+    end
+
+    test "records embedding usage with input-token pricing" do
+      binding = model_binding!(input_cost_per_million: "1.00", output_cost_per_million: "2.00")
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      assert {:ok, usage} =
+               Inference.record_usage(
+                 binding,
+                 token,
+                 Req.Response.new(
+                   status: 200,
+                   body: %{
+                     "usage" => %{
+                       "prompt_tokens" => 4_000,
+                       "total_tokens" => 4_000
+                     }
+                   }
+                 ),
+                 nil,
+                 operation: :embedding
+               )
+
+      assert usage.operation == "embedding"
+      assert usage.input_tokens == 4_000
+      assert usage.output_tokens == 0
+      assert usage.total_tokens == 4_000
+      assert Decimal.equal?(usage.cost_usd, Decimal.new("0.004"))
     end
 
     test "usage changesets ignore caller supplied owner attrs" do
