@@ -5,13 +5,12 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
   import Ecto.Query
 
-  alias Hive.Agents
   alias Hive.Drops
   alias Hive.Drops.Drop
+  alias Hive.Drops.DomainClassificationWorker
   alias Hive.Drops.GitHubReleasesSyncer
   alias Hive.Domains
   alias Hive.Forage.GitHubIssue
-  alias Hive.Drops.DomainClassificationWorker
   alias Hive.GitHub.Client
   alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
@@ -40,35 +39,6 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     project
   end
 
-  defp start_syncer!(item_generator \\ fn _repository, _release, _opts -> {:ok, []} end) do
-    name = :"release_syncer_#{unique()}"
-
-    {:ok, pid} =
-      start_supervised(
-        {GitHubReleasesSyncer,
-         name: name,
-         sync_on_start: false,
-         interval_ms: :timer.minutes(60),
-         item_generator: item_generator}
-      )
-
-    Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), pid)
-    Mimic.allow(Agents, self(), pid)
-    Mimic.allow(Client, self(), pid)
-    Mimic.allow(Issues, self(), pid)
-    Mimic.allow(Releases, self(), pid)
-    {pid, name}
-  end
-
-  test "ignores stale Condukt operation submissions" do
-    {pid, _syncer_name} = start_syncer!()
-
-    send(pid, {make_ref(), :operation_submit, %{"items" => []}})
-
-    assert %{interval_ms: _interval_ms} = :sys.get_state(pid)
-    assert Process.alive?(pid)
-  end
-
   test "upserts one drop for each generated release item" do
     repository = setup_repository!()
     owner = repository.owner
@@ -93,8 +63,6 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
          }
        ]}
     end)
-
-    stub(Agents, :enabled?, fn -> false end)
 
     stub(Issues, :get_issue, fn
       %{owner: ^owner, name: ^name}, 41 ->
@@ -139,8 +107,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
        ]}
     end
 
-    {_pid, syncer_name} = start_syncer!(item_generator)
-    assert :ok = GitHubReleasesSyncer.sync_now(syncer_name)
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
     assert_received {:generated_release_items, body}
     assert body =~ "What's changed"
 
@@ -221,8 +188,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
        ]}
     end)
 
-    {_pid, syncer_name} = start_syncer!()
-    assert :ok = GitHubReleasesSyncer.sync_now(syncer_name)
+    assert :ok = GitHubReleasesSyncer.sync_now()
 
     assert Repo.aggregate(Drop, :count) == 0
     assert [] = all_enqueued(worker: DomainClassificationWorker)
@@ -246,10 +212,18 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
        ]}
     end)
 
-    {_pid, syncer_name} = start_syncer!(fn _repository, _release, _opts -> :skipped end)
-    assert :ok = GitHubReleasesSyncer.sync_now(syncer_name)
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, _release, _opts -> :skipped end
+             )
 
     assert Repo.aggregate(Drop, :count) == 0
     assert [] = all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  test "perform/1 maps skipped syncs to success" do
+    stub(Client, :config, fn -> {:error, {:not_configured, [:private_key]}} end)
+
+    assert :ok = GitHubReleasesSyncer.perform(%Oban.Job{})
   end
 end

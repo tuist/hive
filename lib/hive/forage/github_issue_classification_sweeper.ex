@@ -6,10 +6,9 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeper do
   rows whose repository was attached to its first domain after the issue
   was already cached.
 
-  Runs on the `:agents` queue, which only boots when an LLM is
-  configured. The sync-time backfill in
+  Runs on the `:agents` queue. The sync-time backfill in
   `Hive.Forage.reconcile_repository_github_issues/2` covers the same
-  ground when no LLM is available.
+  ground when agentic workflows are dormant.
   """
 
   use Oban.Worker,

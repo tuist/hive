@@ -25,8 +25,6 @@ config :hive, dev_routes: true
 config :hive, :og_images, start_browser_pool: false
 config :hive, Oban, testing: :manual
 
-config :hive, :drops, syncers_enabled: false
-
 config :boruta, Boruta.Oauth, issuer: "http://www.example.com"
 
 config :logger, level: :warning
