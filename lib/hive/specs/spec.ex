@@ -55,7 +55,7 @@ defmodule Hive.Specs.Spec do
     |> validate_required([:title, :body, :status, :visibility])
     |> validate_length(:title, max: 160)
     |> validate_length(:summary, max: 280)
-    |> validate_length(:body, min: 10, max: 20_000)
+    |> validate_length(:body, min: 10, max: 100_000)
     |> validate_inclusion(:status, @statuses)
     |> validate_inclusion(:visibility, @visibilities)
     |> unique_constraint(:number)
