@@ -497,7 +497,7 @@ defmodule HiveWeb.SpecComponents do
                   "Describe the problem, proposal, tradeoffs, and acceptance criteria with Markdown."
                 )
               }
-              max_length={20_000}
+              max_length={100_000}
               rows={14}
               required={true}
               show_required={true}
