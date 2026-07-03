@@ -12,8 +12,10 @@ defmodule Hive.Inference.Usage do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+  @operations ~w(chat_completion embedding)
 
   schema "inference_usages" do
+    field :operation, :string, default: "chat_completion"
     field :upstream_provider, :string
     field :upstream_model, :string
     field :status, :integer
@@ -31,6 +33,7 @@ defmodule Hive.Inference.Usage do
   def changeset(usage, attrs) do
     usage
     |> cast(attrs, [
+      :operation,
       :upstream_provider,
       :upstream_model,
       :status,
@@ -40,6 +43,7 @@ defmodule Hive.Inference.Usage do
       :cost_usd
     ])
     |> validate_required([
+      :operation,
       :upstream_provider,
       :upstream_model,
       :status,
@@ -48,6 +52,7 @@ defmodule Hive.Inference.Usage do
       :total_tokens,
       :cost_usd
     ])
+    |> validate_inclusion(:operation, @operations)
     |> validate_number(:status, greater_than_or_equal_to: 100)
     |> validate_number(:input_tokens, greater_than_or_equal_to: 0)
     |> validate_number(:output_tokens, greater_than_or_equal_to: 0)

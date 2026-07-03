@@ -220,5 +220,6 @@ defmodule HiveWeb.Router do
 
     get "/models", InferenceController, :models
     post "/chat/completions", InferenceController, :chat_completions
+    post "/embeddings", InferenceController, :embeddings
   end
 end

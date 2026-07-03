@@ -95,6 +95,92 @@ defmodule HiveWeb.InferenceControllerTest do
     assert Decimal.equal?(cost_usd, Decimal.new("0.005"))
   end
 
+  test "POST /inference/v1/embeddings rewrites the model before forwarding", %{conn: conn} do
+    parent = self()
+
+    put_relay_config(fn request ->
+      send(parent, {:upstream_request, request})
+
+      {:ok,
+       Req.Response.new(
+         status: 200,
+         headers: [{"content-type", "application/json"}],
+         body: %{
+           "object" => "list",
+           "data" => [%{"object" => "embedding", "embedding" => [0.1, 0.2, 0.3], "index" => 0}],
+           "usage" => %{"prompt_tokens" => 4, "total_tokens" => 4}
+         }
+       )}
+    end)
+
+    {_binding, token_value} =
+      relay_token!(
+        name: "atlas-documents",
+        upstream_model: "fireworks-ai/accounts/fireworks/models/qwen3-embedding-8b"
+      )
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/embeddings", %{
+        "model" => "atlas-documents",
+        "input" => "hello"
+      })
+      |> json_response(200)
+
+    assert [%{"embedding" => [0.1, 0.2, 0.3]}] = response["data"]
+
+    assert_received {:upstream_request, request}
+    assert Keyword.fetch!(request, :url) == "https://relay.example/v1/embeddings"
+
+    assert Keyword.fetch!(request, :json)["model"] ==
+             "accounts/fireworks/models/qwen3-embedding-8b"
+
+    assert Keyword.fetch!(request, :json)["input"] == "hello"
+    assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
+  end
+
+  test "POST /inference/v1/embeddings persists token usage", %{conn: conn} do
+    put_relay_config(fn _request ->
+      {:ok,
+       Req.Response.new(
+         status: 200,
+         headers: [{"content-type", "application/json"}],
+         body: %{
+           "object" => "list",
+           "data" => [%{"object" => "embedding", "embedding" => [0.1], "index" => 0}],
+           "usage" => %{"prompt_tokens" => 4_000, "total_tokens" => 4_000}
+         }
+       )}
+    end)
+
+    {binding, token_value} =
+      relay_token!(
+        name: "atlas-documents-usage",
+        upstream_model: "fireworks-ai/accounts/fireworks/models/qwen3-embedding-8b"
+      )
+
+    conn
+    |> put_req_header("authorization", "Bearer #{token_value}")
+    |> post(~p"/inference/v1/embeddings", %{
+      "model" => "atlas-documents-usage",
+      "input" => "hello"
+    })
+    |> json_response(200)
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 1,
+             input_tokens: 4_000,
+             output_tokens: 0,
+             total_tokens: 4_000,
+             cost_usd: cost_usd
+           } = Inference.usage_summary(binding, period)
+
+    assert Decimal.equal?(cost_usd, Decimal.new("0.004"))
+  end
+
   test "POST /inference/v1/chat/completions rejects a model outside the token binding", %{
     conn: conn
   } do
@@ -146,13 +232,18 @@ defmodule HiveWeb.InferenceControllerTest do
     assert response["error"]["code"] == "invalid_api_key"
   end
 
-  defp relay_token! do
+  defp relay_token!(attrs \\ %{}) do
     {:ok, binding} =
-      Inference.create_model_binding(%{
-        name: "blick-code-review",
-        upstream_provider: "fireworks-ai",
-        upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
-      })
+      Inference.create_model_binding(
+        Map.merge(
+          %{
+            name: "blick-code-review",
+            upstream_provider: "fireworks-ai",
+            upstream_model: "fireworks-ai/accounts/fireworks/models/kimi-k2p5"
+          },
+          Map.new(attrs)
+        )
+      )
 
     {:ok, {_token, token_value}} =
       Inference.create_token(binding, %{name: "Repository automation"})

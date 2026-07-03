@@ -277,12 +277,20 @@ defmodule Hive.Inference do
   def model_allowed?(_binding, _requested_model, _provider_id), do: false
 
   def relay_request(%ModelBinding{} = binding, body, opts \\ []) when is_map(body) do
+    relay_request_to(binding, "chat/completions", body, stream?(body), opts)
+  end
+
+  def relay_embedding_request(%ModelBinding{} = binding, body, opts \\ []) when is_map(body) do
+    relay_request_to(binding, "embeddings", body, false, opts)
+  end
+
+  defp relay_request_to(%ModelBinding{} = binding, path, body, streamed?, opts) do
     with {:ok, upstream} <- upstream_for(binding, opts) do
       {:ok,
        [
          method: :post,
-         url: upstream_url(upstream.base_url, "chat/completions"),
-         headers: upstream_headers(upstream, stream?(body)),
+         url: upstream_url(upstream.base_url, path),
+         headers: upstream_headers(upstream, streamed?),
          json:
            Map.put(
              body,
@@ -304,12 +312,19 @@ defmodule Hive.Inference do
     :ok
   end
 
-  def record_usage(%ModelBinding{} = binding, %Token{} = token, response, usage_payload \\ nil) do
+  def record_usage(
+        %ModelBinding{} = binding,
+        %Token{} = token,
+        response,
+        usage_payload \\ nil,
+        opts \\ []
+      ) do
     usage = response_usage(response, usage_payload)
     input_tokens = Map.fetch!(usage, :input_tokens)
     output_tokens = Map.fetch!(usage, :output_tokens)
 
     attrs = %{
+      operation: usage_operation(opts),
       upstream_provider: binding.upstream_provider,
       upstream_model: binding.upstream_model,
       status: response_status(response),
@@ -883,6 +898,14 @@ defmodule Hive.Inference do
   end
 
   defp normalize_usage(_usage), do: normalize_usage(%{})
+
+  defp usage_operation(opts) do
+    case Keyword.get(opts, :operation, :chat_completion) do
+      :embedding -> "embedding"
+      "embedding" -> "embedding"
+      _operation -> "chat_completion"
+    end
+  end
 
   defp usage_integer_value(usage, keys) do
     Enum.find_value(keys, 0, fn key ->
