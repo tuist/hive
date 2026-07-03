@@ -64,6 +64,12 @@ config :hive, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"*/30 * * * *", Hive.Domains.EvolutionWorker},
+       {"@reboot", Hive.Drops.GitHubReleasesSyncer},
+       {"*/15 * * * *", Hive.Drops.GitHubReleasesSyncer},
+       {"@reboot", Hive.Drops.RssSyncer},
+       {"*/15 * * * *", Hive.Drops.RssSyncer},
+       {"@reboot", Hive.Forage.GitHubIssueSyncer},
+       {"*/15 * * * *", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper},
        {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper},
        {"*/15 * * * *", Hive.Specs.RevisionSummarySweeper}

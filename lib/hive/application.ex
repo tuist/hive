@@ -17,13 +17,11 @@ defmodule Hive.Application do
         HiveWeb.Telemetry,
         Hive.Repo,
         {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Hive.PubSub},
-        HiveWeb.Endpoint,
-        Hive.Forage.GitHubIssueSyncer
+        {Phoenix.PubSub, name: Hive.PubSub}
       ]
-      |> maybe_add_drops_syncers()
-      |> maybe_add_open_graph_browser_pool()
       |> maybe_add_oban()
+      |> add_endpoint()
+      |> maybe_add_open_graph_browser_pool()
 
     opts = [strategy: :one_for_one, name: Hive.Supervisor]
     Supervisor.start_link(children, opts)
@@ -43,20 +41,10 @@ defmodule Hive.Application do
     end
   end
 
-  defp maybe_add_drops_syncers(children) do
-    if Application.get_env(:hive, :drops, [])[:syncers_enabled] == false do
-      children
-    else
-      children ++ [Hive.Drops.GitHubReleasesSyncer, Hive.Drops.RssSyncer]
-    end
-  end
+  defp add_endpoint(children), do: children ++ [HiveWeb.Endpoint]
 
   defp maybe_add_oban(children) do
-    if Hive.Agents.enabled?() do
-      children ++ [{Oban, Application.fetch_env!(:hive, Oban)}]
-    else
-      children
-    end
+    children ++ [{Oban, Application.fetch_env!(:hive, Oban)}]
   end
 
   defp ensure_mcp_session_store_started do

@@ -138,7 +138,7 @@ defmodule HiveWeb.OpsLive.Drops do
   def handle_event("sync", %{"id" => id}, socket) do
     source = Drops.get_drop_source!(id)
 
-    Task.start(fn -> RssSyncer.sync_source(source) end)
+    RssSyncer.enqueue_source(source)
 
     {:noreply,
      socket

@@ -280,6 +280,12 @@ defmodule Hive.Drops do
 
   def get_drop_source!(id), do: Repo.get!(DropSource, id)
 
+  def get_drop_source(id) when is_binary(id) do
+    Repo.get(DropSource, id)
+  rescue
+    Ecto.Query.CastError -> nil
+  end
+
   def change_drop_source(source \\ %DropSource{}, attrs \\ %{}),
     do: DropSource.changeset(source, attrs)
 

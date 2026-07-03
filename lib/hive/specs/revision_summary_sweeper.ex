@@ -3,9 +3,9 @@ defmodule Hive.Specs.RevisionSummarySweeper do
   Periodic Oban job that enqueues summary generation for spec revisions
   whose agent-written summary is still missing.
 
-  Runs on the `:agents` queue, which only boots when an LLM is
-  configured. Each backfill is delegated to `RevisionSummaryWorker` so
-  failures and retries stay scoped to a single revision.
+  Runs on the `:agents` queue. Each backfill is delegated to
+  `RevisionSummaryWorker` so failures and retries stay scoped to a
+  single revision.
   """
 
   use Oban.Worker,

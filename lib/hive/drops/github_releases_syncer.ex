@@ -4,12 +4,15 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   generated from the latest releases from every GitHub repository
   connected to a domain.
 
-  The syncer ticks on startup and then every `:interval_ms` (default 15
-  minutes). When the GitHub App is not configured it keeps running but
-  logs and skips, mirroring `Hive.Forage.GitHubIssueSyncer`.
+  The worker is scheduled from Oban's cron configuration. When the GitHub
+  App is not configured it logs and skips, mirroring
+  `Hive.Forage.GitHubIssueSyncer`.
   """
 
-  use GenServer
+  use Oban.Worker,
+    queue: :default,
+    max_attempts: 1,
+    unique: [fields: [:worker, :queue, :args], period: 60, states: :incomplete]
 
   require Logger
 
@@ -17,6 +20,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
   alias Hive.Audit
   alias Hive.Drops
+  alias Hive.Drops.DomainClassificationWorker
   alias Hive.Drops.ReleaseDropItems
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
@@ -27,78 +31,23 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.Domains.GitHubRepository
   alias Hive.Repo
 
-  @default_interval_ms :timer.minutes(15)
-
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
-  end
-
-  def child_spec(opts) do
-    %{id: Keyword.get(opts, :name, __MODULE__), start: {__MODULE__, :start_link, [opts]}}
-  end
-
-  @doc "Trigger a sync immediately. Returns once the run finishes."
-  def sync_now(server \\ __MODULE__), do: GenServer.call(server, :sync_now, :timer.seconds(60))
-
-  @impl true
-  def init(opts) do
-    interval_ms = Keyword.get(opts, :interval_ms, @default_interval_ms)
-    item_generator = Keyword.get(opts, :item_generator, &ReleaseDropItems.generate/3)
-    generator_opts = Keyword.get(opts, :generator_opts, [])
-
-    if Keyword.get(opts, :sync_on_start, true), do: Process.send_after(self(), :tick, 0)
-    schedule_tick(interval_ms)
-
-    {:ok,
-     %{
-       generator_opts: generator_opts,
-       interval_ms: interval_ms,
-       item_generator: item_generator
-     }}
-  end
-
-  @impl true
-  def handle_info(:tick, state) do
-    run_sync(state)
-    schedule_tick(state.interval_ms)
-    {:noreply, state}
-  end
-
-  def handle_info({ref, :operation_submit, _submitted}, state) when is_reference(ref) do
-    Logger.debug("[Drops.GitHubReleasesSyncer] Ignoring stale Condukt operation submission")
-
-    {:noreply, state}
-  end
-
-  def handle_info(message, state) do
-    Logger.debug(
-      "[Drops.GitHubReleasesSyncer] Ignoring unexpected message: " <> message_shape(message)
-    )
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call(:sync_now, _from, state) do
-    {:reply, run_sync(state), state}
-  end
-
-  defp schedule_tick(interval_ms), do: Process.send_after(self(), :tick, interval_ms)
-
-  defp message_shape(message) when is_atom(message), do: "atom #{inspect(message)}"
-
-  defp message_shape(message) when is_tuple(message) do
-    case elem(message, 0) do
-      first when is_atom(first) -> "tuple #{inspect(first)}/#{tuple_size(message)}"
-      _other -> "tuple/#{tuple_size(message)}"
+  @impl Oban.Worker
+  def perform(%Oban.Job{}) do
+    case sync_now() do
+      :skipped -> :ok
+      result -> result
     end
   end
 
-  defp message_shape(message) when is_list(message), do: "list/#{length(message)}"
-  defp message_shape(message) when is_map(message), do: "map/#{map_size(message)}"
-  defp message_shape(message) when is_pid(message), do: "pid"
-  defp message_shape(message) when is_reference(message), do: "reference"
-  defp message_shape(_message), do: "unknown"
+  @doc "Runs the GitHub releases sync immediately and returns when it finishes."
+  def sync_now(opts \\ []) do
+    state = %{
+      generator_opts: Keyword.get(opts, :generator_opts, []),
+      item_generator: Keyword.get(opts, :item_generator, &ReleaseDropItems.generate/3)
+    }
+
+    run_sync(state)
+  end
 
   defp run_sync(state) do
     case Client.config() do
@@ -183,7 +132,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
         record_audit(drop, domains, repository, release, item)
 
         if is_nil(drop.classified_at) do
-          Hive.Drops.DomainClassificationWorker.enqueue(drop.id)
+          DomainClassificationWorker.enqueue(drop.id)
         end
 
         :ok

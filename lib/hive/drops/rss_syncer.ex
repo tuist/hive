@@ -3,62 +3,47 @@ defmodule Hive.Drops.RssSyncer do
   Periodically polls every enabled RSS/Atom drop source registered
   through `/ops/drops` and upserts each entry into the `drops` table.
 
-  Mirrors `Hive.Drops.GitHubReleasesSyncer`: a single GenServer ticks on
-  startup and then every `:interval_ms` (default 15 minutes). Failures
-  per source are recorded on the source row (`last_error` /
-  `last_error_at`) so admins can spot broken feeds from the UI.
+  The worker is scheduled from Oban's cron configuration. Failures per
+  source are recorded on the source row (`last_error` / `last_error_at`)
+  so admins can spot broken feeds from the UI.
   """
 
-  use GenServer
+  use Oban.Worker,
+    queue: :default,
+    max_attempts: 1,
+    unique: [fields: [:worker, :queue, :args], period: 60, states: :incomplete]
 
   require Logger
 
   alias Hive.Audit
   alias Hive.Drops
+  alias Hive.Drops.DomainClassificationWorker
   alias Hive.Drops.DropSource
   alias Hive.Drops.Rss
 
-  @default_interval_ms :timer.minutes(15)
   @user_agent "hive-drops-rss/1.0"
   @timeout_ms :timer.seconds(15)
 
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: Keyword.get(opts, :name, __MODULE__))
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"drop_source_id" => source_id}}) do
+    sync_source_by_id(source_id)
   end
 
-  def child_spec(opts) do
-    %{id: Keyword.get(opts, :name, __MODULE__), start: {__MODULE__, :start_link, [opts]}}
+  def perform(%Oban.Job{}) do
+    sync_now()
   end
 
-  @doc "Trigger a sync immediately. Returns once the run finishes."
-  def sync_now(server \\ __MODULE__), do: GenServer.call(server, :sync_now, :timer.seconds(60))
+  def enqueue_source(%DropSource{id: source_id}) do
+    %{"drop_source_id" => source_id}
+    |> new()
+    |> Oban.insert()
+  end
+
+  @doc "Runs the feed sync immediately and returns when it finishes."
+  def sync_now, do: run_sync()
 
   @doc "Synchronously poll a single source. Used by the dashboard's manual sync action."
   def sync_source(%DropSource{} = source), do: poll_source(source)
-
-  @impl true
-  def init(opts) do
-    interval_ms = Keyword.get(opts, :interval_ms, @default_interval_ms)
-
-    if Keyword.get(opts, :sync_on_start, true), do: Process.send_after(self(), :tick, 0)
-    schedule_tick(interval_ms)
-
-    {:ok, %{interval_ms: interval_ms}}
-  end
-
-  @impl true
-  def handle_info(:tick, state) do
-    run_sync()
-    schedule_tick(state.interval_ms)
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call(:sync_now, _from, state) do
-    {:reply, run_sync(), state}
-  end
-
-  defp schedule_tick(interval_ms), do: Process.send_after(self(), :tick, interval_ms)
 
   defp run_sync do
     Audit.put_context(%{interface: "worker"})
@@ -67,6 +52,19 @@ defmodule Hive.Drops.RssSyncer do
     |> Enum.each(&poll_source/1)
 
     :ok
+  end
+
+  defp sync_source_by_id(source_id) do
+    case Drops.get_drop_source(source_id) do
+      %DropSource{} = source ->
+        case sync_source(source) do
+          :ok -> :ok
+          {:error, _reason} -> :ok
+        end
+
+      nil ->
+        :ok
+    end
   end
 
   defp poll_source(%DropSource{} = source) do
@@ -109,7 +107,7 @@ defmodule Hive.Drops.RssSyncer do
         record_audit(drop, source)
 
         if is_nil(drop.classified_at) do
-          Hive.Drops.DomainClassificationWorker.enqueue(drop.id)
+          DomainClassificationWorker.enqueue(drop.id)
         end
 
       {:error, reason} ->
