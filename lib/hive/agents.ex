@@ -84,15 +84,17 @@ defmodule Hive.Agents do
         {:error, :hive_profile_not_configured}
 
       profile ->
-        with {:ok, {_token, token_value}} <- Inference.ensure_hive_token(profile, role) do
-          {:ok,
-           [
-             model: "openai:#{profile.name}",
-             api_key: token_value,
-             base_url: HiveWeb.Endpoint.url() <> "/inference/v1"
-           ]}
-        else
-          {:error, _reason} -> {:error, :llm_not_configured}
+        case Inference.ensure_hive_token(profile, role) do
+          {:ok, {_token, token_value}} ->
+            {:ok,
+             [
+               model: "openai:#{profile.name}",
+               api_key: token_value,
+               base_url: HiveWeb.Endpoint.url() <> "/inference/v1"
+             ]}
+
+          {:error, _reason} ->
+            {:error, :llm_not_configured}
         end
     end
   end
