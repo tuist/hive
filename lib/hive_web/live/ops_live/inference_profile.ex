@@ -153,6 +153,40 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     end
   end
 
+  def handle_event("set_hive_role", %{"role" => role, "enabled" => enabled}, socket) do
+    profile = socket.assigns.profile
+
+    with {:ok, role, field} <- hive_role(role),
+         enabled? <- enabled == "true",
+         {:ok, profile} <- Inference.update_profile(profile, %{field => enabled?}),
+         {:ok, _token} <- maybe_ensure_hive_token(profile, role, enabled?) do
+      record_profile_audit(:"inference_profile.updated", profile)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, hive_role_flash(role, enabled?))
+       |> assign(:generated_token, nil)
+       |> assign_profile(profile.id)}
+    else
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_inference", "Failed to update profile."))}
+
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_inference", "Failed to prepare Hive profile token.")
+         )}
+    end
+  end
+
+  def handle_event("set_hive_role", _params, socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_inference", "Unknown Hive profile role."))}
+  end
+
   def handle_event("create_token", %{"token" => params}, socket) do
     profile = socket.assigns.profile
 
@@ -231,7 +265,15 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
                 dgettext("dashboard_inference", "Stable model profile routed through Hive.")}
             </p>
           </div>
+          <div data-part="header-actions">
+            <.profile_actions_dropdown profile={@profile} />
+          </div>
         </div>
+
+        <.edit_profile_modal
+          profile_form={@profile_form}
+          provider_options={@provider_options}
+        />
 
         <section :if={@generated_token} data-part="generated-token">
           <div data-part="generated-copy">
@@ -315,28 +357,16 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
           icon="lock"
           data-part="configuration-card"
         >
-          <:actions>
-            <.edit_profile_modal
-              profile_form={@profile_form}
-              provider_options={@provider_options}
-            />
-            <.button
-              label={
-                if @profile.enabled,
-                  do: dgettext("dashboard_inference", "Disable"),
-                  else: dgettext("dashboard_inference", "Enable")
-              }
-              variant="secondary"
-              size="medium"
-              phx-click="toggle_profile"
-            />
-          </:actions>
           <.card_section>
             <div data-part="definition-grid">
               <div data-part="definition-item">
                 <span>{dgettext("dashboard_inference", "Status")}</span>
                 <% status = profile_status(@profile) %>
                 <.badge label={status.label} color={status.color} style="light-fill" />
+              </div>
+              <div data-part="definition-item">
+                <span>{dgettext("dashboard_inference", "Hive usage")}</span>
+                <strong>{hive_usage_label(@profile)}</strong>
               </div>
               <div data-part="definition-item">
                 <span>{dgettext("dashboard_inference", "Upstream provider")}</span>
@@ -358,50 +388,6 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
                 <span>{dgettext("dashboard_inference", "Last used")}</span>
                 <strong>{last_used_label(@profile.last_used_at)}</strong>
               </div>
-            </div>
-          </.card_section>
-        </.card>
-
-        <.card
-          title={dgettext("dashboard_inference", "Client configuration")}
-          icon="external_link"
-          data-part="client-configuration-card"
-        >
-          <.card_section>
-            <p data-part="card-intro">
-              {dgettext(
-                "dashboard_inference",
-                "Use a profile token as the authorization secret. Create one below and store it as"
-              )}
-              <code>HIVE_INFERENCE_TOKEN</code>.
-            </p>
-            <div data-part="client-configuration-grid">
-              <div data-part="definition-item">
-                <span>{dgettext("dashboard_inference", "Base address")}</span>
-                <code>{@client_base_url}</code>
-              </div>
-              <div data-part="definition-item">
-                <span>{dgettext("dashboard_inference", "OpenAI-compatible model")}</span>
-                <code>{@profile.name}</code>
-              </div>
-              <div data-part="definition-item">
-                <span>{dgettext("dashboard_inference", "Blick model")}</span>
-                <code>hive/{@profile.name}</code>
-              </div>
-              <div data-part="definition-item">
-                <span>{dgettext("dashboard_inference", "Authorization header")}</span>
-                <code>Bearer $HIVE_INFERENCE_TOKEN</code>
-              </div>
-            </div>
-          </.card_section>
-          <.card_section data-part="client-snippets-card-section">
-            <div data-part="client-snippet">
-              <span>{dgettext("dashboard_inference", "opencode provider")}</span>
-              <pre><code>{opencode_provider_snippet(@client_base_url, @profile)}</code></pre>
-            </div>
-            <div data-part="client-snippet">
-              <span>{dgettext("dashboard_inference", "blick.toml")}</span>
-              <pre><code>{blick_snippet(@profile)}</code></pre>
             </div>
           </.card_section>
         </.card>
@@ -480,6 +466,50 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     """
   end
 
+  attr :profile, ModelBinding, required: true
+
+  defp profile_actions_dropdown(assigns) do
+    ~H"""
+    <.button_dropdown
+      id="inference-profile-actions"
+      label={dgettext("dashboard_inference", "Edit profile")}
+      size="medium"
+      align="end"
+      phx-click="open_edit_profile"
+    >
+      <.dropdown_item
+        label={dgettext("dashboard_inference", "Use for Hive inference")}
+        value="hive_inference"
+        on_click="set_hive_role"
+        phx-value-role="inference"
+        phx-value-enabled={if @profile.hive_inference, do: "false", else: "true"}
+        data-selected={@profile.hive_inference}
+      >
+        <:right_icon :if={@profile.hive_inference}><.check /></:right_icon>
+      </.dropdown_item>
+      <.dropdown_item
+        label={dgettext("dashboard_inference", "Use for Hive embeddings")}
+        value="hive_embeddings"
+        on_click="set_hive_role"
+        phx-value-role="embedding"
+        phx-value-enabled={if @profile.hive_embedding, do: "false", else: "true"}
+        data-selected={@profile.hive_embedding}
+      >
+        <:right_icon :if={@profile.hive_embedding}><.check /></:right_icon>
+      </.dropdown_item>
+      <.dropdown_item
+        label={
+          if @profile.enabled,
+            do: dgettext("dashboard_inference", "Disable profile"),
+            else: dgettext("dashboard_inference", "Enable profile")
+        }
+        value="toggle_profile"
+        on_click="toggle_profile"
+      />
+    </.button_dropdown>
+    """
+  end
+
   attr :profile_form, :map, required: true
   attr :provider_options, :list, required: true
 
@@ -499,15 +529,13 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
       on_dismiss="close_edit_profile"
     >
       <:trigger :let={attrs}>
-        <.button
-          label={dgettext("dashboard_inference", "Edit profile")}
-          variant="secondary"
-          size="medium"
-          phx-click="open_edit_profile"
+        <button
+          id="edit-inference-profile-trigger"
+          type="button"
+          style="display: none;"
           {attrs}
         >
-          <:icon_left><.pencil /></:icon_left>
-        </.button>
+        </button>
       </:trigger>
       <:header_icon>
         <.icon name="lock" />
@@ -694,7 +722,6 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
     |> assign(OpenGraph.assigns(open_graph(profile)))
     |> assign(:profile, profile)
     |> assign(:tokens, profile.tokens)
-    |> assign(:client_base_url, HiveWeb.Endpoint.url() <> "/inference/v1")
     |> assign(:provider_options, provider_select_options(profile.upstream_provider))
     |> assign_profile_form(Inference.change_profile(profile))
     |> assign_token_form(Inference.change_token(profile))
@@ -769,36 +796,30 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
   defp with_query(path, ""), do: path
   defp with_query(path, query), do: path <> "?" <> query
 
-  defp opencode_provider_snippet(base_url, %ModelBinding{name: name}) do
-    """
-    {
-      "provider": {
-        "hive": {
-          "name": "Hive",
-          "npm": "@ai-sdk/openai-compatible",
-          "options": {
-            "baseURL": "#{base_url}",
-            "apiKey": "{env:HIVE_INFERENCE_TOKEN}"
-          },
-          "models": {
-            "#{name}": {
-              "name": "#{name}"
-            }
-          }
-        }
-      }
-    }
-    """
-    |> String.trim()
+  defp hive_role("inference"), do: {:ok, :inference, :hive_inference}
+  defp hive_role("embedding"), do: {:ok, :embedding, :hive_embedding}
+  defp hive_role(_role), do: {:error, :unknown_hive_role}
+
+  defp maybe_ensure_hive_token(%ModelBinding{} = profile, role, true) do
+    Inference.ensure_hive_token(profile, role)
   end
 
-  defp blick_snippet(%ModelBinding{name: name}) do
-    """
-    [agent]
-    kind = "opencode"
-    model = "hive/#{name}"
-    """
-    |> String.trim()
+  defp maybe_ensure_hive_token(%ModelBinding{}, _role, false), do: {:ok, nil}
+
+  defp hive_role_flash(:inference, true) do
+    dgettext("dashboard_inference", "Profile will be used for Hive inference.")
+  end
+
+  defp hive_role_flash(:inference, false) do
+    dgettext("dashboard_inference", "Profile is no longer used for Hive inference.")
+  end
+
+  defp hive_role_flash(:embedding, true) do
+    dgettext("dashboard_inference", "Profile will be used for Hive embeddings.")
+  end
+
+  defp hive_role_flash(:embedding, false) do
+    dgettext("dashboard_inference", "Profile is no longer used for Hive embeddings.")
   end
 
   defp record_profile_audit(action, %ModelBinding{} = profile) do

@@ -122,6 +122,38 @@ defmodule Hive.Repo.Seeds do
     token
   end
 
+  def seed_inference_profiles!(profile_seeds) do
+    Enum.each(profile_seeds, &seed_inference_profile!/1)
+  end
+
+  def seed_inference_profile!(seed) do
+    profile =
+      seed.profile
+      |> Map.put_new(:hive_inference, false)
+      |> Map.put_new(:hive_embedding, false)
+      |> inference_profile!()
+
+    seeded_tokens =
+      seed
+      |> inference_token_seeds()
+      |> Enum.map(&seed_inference_token!(profile, &1))
+
+    reset_inference_usage!(Enum.map(seeded_tokens, fn {token, _seed} -> token end))
+
+    Enum.each(seeded_tokens, fn {token, token_seed} ->
+      seed_inference_usage!(
+        profile,
+        token,
+        Map.get(token_seed, :usage, []),
+        Map.fetch!(seed, :rates)
+      )
+    end)
+
+    profile
+  end
+
+  def reset_inference_usage!([]), do: :ok
+
   def reset_inference_usage!(tokens) do
     token_ids = Enum.map(tokens, & &1.id)
 
@@ -189,6 +221,7 @@ defmodule Hive.Repo.Seeds do
       output_tokens = Map.fetch!(point, :output_tokens)
 
       Repo.insert!(%Usage{
+        operation: usage_operation(point),
         model_binding_id: profile.id,
         token_id: token.id,
         upstream_provider: profile.upstream_provider,
@@ -254,6 +287,48 @@ defmodule Hive.Repo.Seeds do
       end
     end)
   end
+
+  def inference_embedding_usage_points(days, input_base, offset \\ 0) do
+    days
+    |> inference_usage_points(input_base, 0, offset)
+    |> Enum.map(&Map.merge(&1, %{operation: :embedding, output_tokens: 0}))
+  end
+
+  defp inference_token_seeds(seed) do
+    repository_tokens =
+      seed
+      |> Map.get(:tokens, [])
+      |> Enum.map(&{:repository, &1})
+
+    hive_tokens =
+      seed
+      |> Map.get(:hive_tokens, [])
+      |> Enum.map(&{:hive, &1})
+
+    repository_tokens ++ hive_tokens
+  end
+
+  defp seed_inference_token!(%ModelBinding{} = profile, {:repository, token_seed}) do
+    token_attrs = Map.drop(token_seed, [:usage])
+    token = inference_token!(profile, token_attrs)
+
+    unless Map.get(token_attrs, :enabled, true) do
+      revoke_token!(token)
+    end
+
+    {token, token_seed}
+  end
+
+  defp seed_inference_token!(%ModelBinding{} = profile, {:hive, token_seed}) do
+    role = Map.fetch!(token_seed, :role)
+    {:ok, {token, _token_value}} = Inference.ensure_hive_token(profile, role)
+
+    {token, token_seed}
+  end
+
+  defp usage_operation(%{operation: :embedding}), do: "embedding"
+  defp usage_operation(%{operation: "embedding"}), do: "embedding"
+  defp usage_operation(_point), do: "chat_completion"
 
   defp latest_usage_at(points) do
     Enum.reduce(points, nil, fn point, latest ->
@@ -600,6 +675,54 @@ inference_profiles = [
   %{
     rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
     profile: %{
+      name: "hive-agent-runtime",
+      description:
+        "Runtime profile selected for Hive's own agentic workflows. Hive calls this profile through its OpenAI-compatible gateway with a Hive-owned token.",
+      upstream_provider: "openai",
+      upstream_model: "gpt-4o-mini",
+      input_cost_per_million: "0.15",
+      output_cost_per_million: "0.60",
+      enabled: true,
+      hive_inference: true
+    },
+    hive_tokens: [
+      %{
+        role: :inference,
+        usage: Seeds.inference_usage_points(21, 8_400, 2_200, 11)
+      }
+    ],
+    tokens: [
+      %{
+        name: "Local gateway smoke tests",
+        enabled: true,
+        expires_at: nil,
+        usage: Seeds.inference_usage_points(10, 2_400, 700, 16)
+      }
+    ]
+  },
+  %{
+    rates: %{input_cost_per_million: "0.02", output_cost_per_million: "0.00"},
+    profile: %{
+      name: "hive-embeddings-runtime",
+      description:
+        "Embedding profile reserved for Hive workflows that need vectors. It uses the same gateway, attribution, and cost reporting as chat profiles.",
+      upstream_provider: "fireworks",
+      upstream_model: "accounts/fireworks/models/qwen3-embedding-8b",
+      input_cost_per_million: "0.02",
+      output_cost_per_million: "0.00",
+      enabled: true,
+      hive_embedding: true
+    },
+    hive_tokens: [
+      %{
+        role: :embedding,
+        usage: Seeds.inference_embedding_usage_points(21, 18_000, 19)
+      }
+    ]
+  },
+  %{
+    rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
+    profile: %{
       name: "spec-drafting-experiment",
       description:
         "Disabled sample profile for experimenting with repository-local spec drafting without changing production tokens.",
@@ -620,39 +743,7 @@ inference_profiles = [
   }
 ]
 
-Enum.each(inference_profiles, fn seed ->
-  profile = Seeds.inference_profile!(seed.profile)
-
-  tokens =
-    Enum.map(seed.tokens, fn token_attrs ->
-      token_attrs = Map.drop(token_attrs, [:usage])
-      token = Seeds.inference_token!(profile, token_attrs)
-
-      unless token_attrs.enabled do
-        Seeds.revoke_token!(token)
-      end
-
-      {token, token_attrs}
-    end)
-
-  tokens = Enum.map(tokens, fn {token, _token_attrs} -> token end)
-  Seeds.reset_inference_usage!(tokens)
-
-  Enum.each(seed.tokens, fn token_attrs ->
-    token = Seeds.inference_token!(profile, token_attrs)
-
-    unless token_attrs.enabled do
-      Seeds.revoke_token!(token)
-    end
-
-    Seeds.seed_inference_usage!(
-      profile,
-      token,
-      Map.fetch!(token_attrs, :usage),
-      Map.fetch!(seed, :rates)
-    )
-  end)
-end)
+Seeds.seed_inference_profiles!(inference_profiles)
 
 slack_admin = Accounts.get_user_by_email("test@hive.dev")
 

@@ -98,7 +98,9 @@ defmodule HiveWeb.OpsLive.InferenceTest do
 
     assert html =~ "blick-code-review"
     assert html =~ "Repository code review profile"
+    assert html =~ "Not used"
     assert html =~ "accounts/fireworks/models/kimi-k2p5"
+    refute profile.hive_inference
     assert Decimal.equal?(profile.input_cost_per_million, Decimal.new("0.15"))
     assert Decimal.equal?(profile.output_cost_per_million, Decimal.new("0.60"))
 
@@ -111,23 +113,61 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     {:ok, detail, html} = live(conn, ~p"/ops/inference/profiles/#{profile.id}")
 
     assert html =~ "Configuration"
-    assert html =~ "Client configuration"
+    assert html =~ "Hive usage"
+    assert html =~ "Not used by Hive"
     assert html =~ "Tokens"
+    assert html =~ ~s(id="inference-profile-actions")
+    assert html =~ "Use for Hive inference"
+    assert html =~ "Use for Hive embeddings"
     assert html =~ "Edit profile"
     assert html =~ "Create token"
-    assert html =~ HiveWeb.Endpoint.url() <> "/inference/v1"
-    assert html =~ "OpenAI-compatible model"
-    assert html =~ "Blick model"
-    assert html =~ "hive/blick-code-review"
-    assert html =~ "HIVE_INFERENCE_TOKEN"
-    assert html =~ "@ai-sdk/openai-compatible"
-    assert html =~ "baseURL"
-    assert html =~ "apiKey"
+    refute html =~ "Client configuration"
+    refute html =~ "@ai-sdk/openai-compatible"
     assert html =~ "$0.15 / million tokens"
     assert html =~ "$0.60 / million tokens"
     assert html =~ ~s(id="edit-inference-profile-provider")
     assert html =~ ~s(name="profile[upstream_provider]")
     assert html =~ ~s(data-on-value-change="profile_provider_changed")
+
+    html =
+      render_click(detail, "set_hive_role", %{
+        "role" => "inference",
+        "enabled" => "true"
+      })
+
+    profile = Inference.get_profile!(profile.id)
+
+    assert html =~ "Profile will be used for Hive inference."
+    assert html =~ "Inference"
+    assert profile.hive_inference
+
+    assert Enum.any?(profile.tokens, fn token ->
+             token.name == "Hive inference" and token.hive_role == "inference"
+           end)
+
+    html =
+      render_click(detail, "set_hive_role", %{
+        "role" => "embedding",
+        "enabled" => "true"
+      })
+
+    profile = Inference.get_profile!(profile.id)
+
+    assert html =~ "Profile will be used for Hive embeddings."
+    assert html =~ "Inference and embeddings"
+    assert profile.hive_embedding
+
+    html =
+      render_click(detail, "set_hive_role", %{
+        "role" => "inference",
+        "enabled" => "false"
+      })
+
+    profile = Inference.get_profile!(profile.id)
+
+    assert html =~ "Profile is no longer used for Hive inference."
+    assert html =~ "Embeddings"
+    refute profile.hive_inference
 
     html =
       render_hook(detail, "profile_provider_changed", %{

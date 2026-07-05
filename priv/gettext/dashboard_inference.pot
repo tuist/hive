@@ -11,17 +11,17 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:272
+#: lib/hive_web/live/ops_live/inference_helpers.ex:297
 #, elixir-autogen, elixir-format
 msgid "%{cost} / million tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:522
+#: lib/hive_web/live/ops_live/inference.ex:542
 #, elixir-autogen, elixir-format
 msgid "%{count} active"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:447
+#: lib/hive_web/live/ops_live/inference_profile.ex:433
 #, elixir-autogen, elixir-format
 msgid "%{count} in"
 msgstr ""
@@ -31,7 +31,7 @@ msgstr ""
 msgid "%{count} milliseconds"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:452
+#: lib/hive_web/live/ops_live/inference_profile.ex:438
 #, elixir-autogen, elixir-format
 msgid "%{count} out"
 msgstr ""
@@ -46,17 +46,17 @@ msgstr ""
 msgid "%{count} seconds"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:516
+#: lib/hive_web/live/ops_live/inference.ex:536
 #, elixir-autogen, elixir-format
 msgid "%{count} tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:402
+#: lib/hive_web/live/ops_live/inference_helpers.ex:427
 #, elixir-autogen, elixir-format
 msgid "%{id} (not configured)"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:689
+#: lib/hive_web/live/ops_live/inference_profile.ex:717
 #, elixir-autogen, elixir-format
 msgid "%{profile} · Inference · %{product}"
 msgstr ""
@@ -66,7 +66,7 @@ msgstr ""
 msgid "%{token} · Inference · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:525
+#: lib/hive_web/live/ops_live/inference.ex:545
 #, elixir-autogen, elixir-format
 msgid "0 active"
 msgstr ""
@@ -86,13 +86,13 @@ msgstr ""
 msgid "1 second"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:514
+#: lib/hive_web/live/ops_live/inference.ex:534
 #, elixir-autogen, elixir-format
 msgid "1 token"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:155
-#: lib/hive_web/live/ops_live/inference_helpers.ex:162
+#: lib/hive_web/live/ops_live/inference_helpers.ex:177
+#: lib/hive_web/live/ops_live/inference_helpers.ex:184
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
@@ -107,43 +107,23 @@ msgstr ""
 msgid "Apply"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:392
-#, elixir-autogen, elixir-format
-msgid "Authorization header"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:380
-#, elixir-autogen, elixir-format
-msgid "Base address"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:388
-#, elixir-autogen, elixir-format
-msgid "Blick model"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference.ex:453
+#: lib/hive_web/live/ops_live/inference.ex:473
 #: lib/hive_web/live/ops_live/inference_helpers.ex:79
-#: lib/hive_web/live/ops_live/inference_profile.ex:583
-#: lib/hive_web/live/ops_live/inference_profile.ex:661
+#: lib/hive_web/live/ops_live/inference_profile.ex:611
+#: lib/hive_web/live/ops_live/inference_profile.ex:689
 #: lib/hive_web/live/ops_live/inference_providers.ex:272
 #: lib/hive_web/live/ops_live/inference_token.ex:253
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:416
-#: lib/hive_web/live/ops_live/inference_profile.ex:548
+#: lib/hive_web/live/ops_live/inference.ex:436
+#: lib/hive_web/live/ops_live/inference_profile.ex:576
 #, elixir-autogen, elixir-format
 msgid "Choose provider"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:366
-#, elixir-autogen, elixir-format
-msgid "Client configuration"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:314
+#: lib/hive_web/live/ops_live/inference_profile.ex:356
 #: lib/hive_web/live/ops_live/inference_token.ex:178
 #, elixir-autogen, elixir-format
 msgid "Configuration"
@@ -159,24 +139,24 @@ msgstr ""
 msgid "Configured from the environment"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:259
+#: lib/hive_web/live/ops_live/inference_profile.ex:301
 #, elixir-autogen, elixir-format
 msgid "Copy token"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:458
+#: lib/hive_web/live/ops_live/inference_profile.ex:444
 #, elixir-autogen, elixir-format
 msgid "Cost"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:462
-#: lib/hive_web/live/ops_live/inference_profile.ex:670
+#: lib/hive_web/live/ops_live/inference.ex:482
+#: lib/hive_web/live/ops_live/inference_profile.ex:698
 #: lib/hive_web/live/ops_live/inference_providers.ex:281
 #, elixir-autogen, elixir-format
 msgid "Create"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:309
+#: lib/hive_web/live/ops_live/inference.ex:329
 #, elixir-autogen, elixir-format
 msgid "Create a profile to expose a stable model name to repository automation."
 msgstr ""
@@ -186,18 +166,18 @@ msgstr ""
 msgid "Create a provider before creating profiles that route to it."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:614
+#: lib/hive_web/live/ops_live/inference_profile.ex:642
 #, elixir-autogen, elixir-format
 msgid "Create a token that can only request %{profile}."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:467
+#: lib/hive_web/live/ops_live/inference_profile.ex:453
 #, elixir-autogen, elixir-format
 msgid "Create a token when repositories are ready to use this profile."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:356
-#: lib/hive_web/live/ops_live/inference.ex:369
+#: lib/hive_web/live/ops_live/inference.ex:376
+#: lib/hive_web/live/ops_live/inference.ex:389
 #, elixir-autogen, elixir-format
 msgid "Create profile"
 msgstr ""
@@ -208,13 +188,8 @@ msgstr ""
 msgid "Create provider"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:220
-#, elixir-autogen, elixir-format
-msgid "Create stable model profiles for repositories. Each profile points at one upstream provider and model, and tokens created under it can only use that profile."
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:612
-#: lib/hive_web/live/ops_live/inference_profile.ex:624
+#: lib/hive_web/live/ops_live/inference_profile.ex:640
+#: lib/hive_web/live/ops_live/inference_profile.ex:652
 #, elixir-autogen, elixir-format
 msgid "Create token"
 msgstr ""
@@ -224,7 +199,7 @@ msgstr ""
 msgid "Create upstream endpoints that profiles can target. Credentials are encrypted and are never shown after saving."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:434
+#: lib/hive_web/live/ops_live/inference_profile.ex:420
 #, elixir-autogen, elixir-format
 msgid "Created"
 msgstr ""
@@ -240,48 +215,38 @@ msgstr ""
 msgid "Credential status"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:238
+#: lib/hive_web/live/ops_live/inference_helpers.ex:263
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:398
-#: lib/hive_web/live/ops_live/inference_profile.ex:531
+#: lib/hive_web/live/ops_live/inference.ex:418
+#: lib/hive_web/live/ops_live/inference_profile.ex:559
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:326
-#, elixir-autogen, elixir-format
-msgid "Disable"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference.ex:531
-#: lib/hive_web/live/ops_live/inference.ex:598
-#: lib/hive_web/live/ops_live/inference_helpers.ex:148
+#: lib/hive_web/live/ops_live/inference.ex:551
+#: lib/hive_web/live/ops_live/inference.ex:618
+#: lib/hive_web/live/ops_live/inference_helpers.ex:170
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:266
+#: lib/hive_web/live/ops_live/inference_profile.ex:308
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:490
-#: lib/hive_web/live/ops_live/inference_profile.ex:503
+#: lib/hive_web/live/ops_live/inference_profile.ex:475
+#: lib/hive_web/live/ops_live/inference_profile.ex:520
 #, elixir-autogen, elixir-format
 msgid "Edit profile"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:327
-#, elixir-autogen, elixir-format
-msgid "Enable"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference.ex:528
-#: lib/hive_web/live/ops_live/inference.ex:597
-#: lib/hive_web/live/ops_live/inference_helpers.ex:145
+#: lib/hive_web/live/ops_live/inference.ex:548
+#: lib/hive_web/live/ops_live/inference.ex:617
+#: lib/hive_web/live/ops_live/inference_helpers.ex:167
 #, elixir-autogen, elixir-format
 msgid "Enabled"
 msgstr ""
@@ -298,23 +263,23 @@ msgstr ""
 msgid "Estimated cost"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:157
+#: lib/hive_web/live/ops_live/inference_helpers.ex:179
 #, elixir-autogen, elixir-format
 msgid "Expired"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:437
+#: lib/hive_web/live/ops_live/inference_profile.ex:423
 #: lib/hive_web/live/ops_live/inference_token.ex:196
 #, elixir-autogen, elixir-format
 msgid "Expires"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:652
+#: lib/hive_web/live/ops_live/inference_profile.ex:680
 #, elixir-autogen, elixir-format
 msgid "Expires at"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:358
+#: lib/hive_web/live/ops_live/inference.ex:378
 #, elixir-autogen, elixir-format
 msgid "Expose a stable model name that Hive can retarget later without changing repositories."
 msgstr ""
@@ -325,26 +290,28 @@ msgid "Failed to revoke token."
 msgstr ""
 
 #: lib/hive_web/live/ops_live/inference_profile.ex:152
+#: lib/hive_web/live/ops_live/inference_profile.ex:173
 #, elixir-autogen, elixir-format
 msgid "Failed to update profile."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:243
+#: lib/hive_web/live/ops_live/inference.ex:250
 #, elixir-autogen, elixir-format
 msgid "Filter"
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:280
+#: lib/hive_web/live/ops_live/inference_helpers.ex:160
 #, elixir-autogen, elixir-format
 msgid "Inference"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:36
+#: lib/hive_web/live/ops_live/inference.ex:40
 #, elixir-autogen, elixir-format
 msgid "Inference profiles"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:68
+#: lib/hive_web/live/ops_live/inference.ex:72
 #, elixir-autogen, elixir-format
 msgid "Inference profiles · %{product}"
 msgstr ""
@@ -359,12 +326,12 @@ msgstr ""
 msgid "Inference providers · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:280
+#: lib/hive_web/live/ops_live/inference_helpers.ex:305
 #, elixir-autogen, elixir-format
 msgid "Input"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:295
+#: lib/hive_web/live/ops_live/inference_profile.ex:337
 #, elixir-autogen, elixir-format
 msgid "Input and output token usage for %{profile}"
 msgstr ""
@@ -379,13 +346,13 @@ msgstr ""
 msgid "Input and output tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:350
+#: lib/hive_web/live/ops_live/inference_profile.ex:380
 #, elixir-autogen, elixir-format
 msgid "Input cost"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:432
-#: lib/hive_web/live/ops_live/inference_profile.ex:564
+#: lib/hive_web/live/ops_live/inference.ex:452
+#: lib/hive_web/live/ops_live/inference_profile.ex:592
 #, elixir-autogen, elixir-format
 msgid "Input cost per million tokens"
 msgstr ""
@@ -395,36 +362,36 @@ msgstr ""
 msgid "Input tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:235
+#: lib/hive_web/live/ops_live/inference_helpers.ex:260
 #, elixir-autogen, elixir-format
 msgid "Last 12 months"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:220
+#: lib/hive_web/live/ops_live/inference_helpers.ex:245
 #, elixir-autogen, elixir-format
 msgid "Last 24 hours"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:230
-#: lib/hive_web/live/ops_live/inference_helpers.ex:244
+#: lib/hive_web/live/ops_live/inference_helpers.ex:255
+#: lib/hive_web/live/ops_live/inference_helpers.ex:269
 #, elixir-autogen, elixir-format
 msgid "Last 30 days"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:225
+#: lib/hive_web/live/ops_live/inference_helpers.ex:250
 #, elixir-autogen, elixir-format
 msgid "Last 7 days"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:301
-#: lib/hive_web/live/ops_live/inference_profile.ex:358
-#: lib/hive_web/live/ops_live/inference_profile.ex:440
+#: lib/hive_web/live/ops_live/inference.ex:321
+#: lib/hive_web/live/ops_live/inference_profile.ex:388
+#: lib/hive_web/live/ops_live/inference_profile.ex:426
 #: lib/hive_web/live/ops_live/inference_token.ex:200
 #, elixir-autogen, elixir-format
 msgid "Last used"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:50
+#: lib/hive_web/live/ops_live/inference.ex:54
 #: lib/hive_web/live/ops_live/inference_profile.ex:49
 #, elixir-autogen, elixir-format
 msgid "Log in to manage inference profiles."
@@ -440,7 +407,7 @@ msgstr ""
 msgid "Log in to review inference providers."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:27
+#: lib/hive_web/live/ops_live/inference.ex:31
 #, elixir-autogen, elixir-format
 msgid "Manage stable inference profiles and repository tokens."
 msgstr ""
@@ -466,23 +433,23 @@ msgstr ""
 msgid "Missing"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:30
+#: lib/hive_web/live/ops_live/inference.ex:34
 #, elixir-autogen, elixir-format
 msgid "Model-bound tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:164
+#: lib/hive_web/live/ops_live/inference_helpers.ex:186
 #, elixir-autogen, elixir-format
 msgid "Never expires"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:541
-#: lib/hive_web/live/ops_live/inference_helpers.ex:167
+#: lib/hive_web/live/ops_live/inference.ex:561
+#: lib/hive_web/live/ops_live/inference_helpers.ex:189
 #, elixir-autogen, elixir-format
 msgid "Never used"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:330
+#: lib/hive_web/live/ops_live/inference.ex:350
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
@@ -492,7 +459,7 @@ msgstr ""
 msgid "No credential"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:282
+#: lib/hive_web/live/ops_live/inference.ex:289
 #, elixir-autogen, elixir-format
 msgid "No description"
 msgstr ""
@@ -502,7 +469,7 @@ msgstr ""
 msgid "No endpoint"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:307
+#: lib/hive_web/live/ops_live/inference.ex:327
 #, elixir-autogen, elixir-format
 msgid "No inference profiles"
 msgstr ""
@@ -512,31 +479,31 @@ msgstr ""
 msgid "No inference providers"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:415
-#: lib/hive_web/live/ops_live/inference_profile.ex:547
+#: lib/hive_web/live/ops_live/inference.ex:435
+#: lib/hive_web/live/ops_live/inference_profile.ex:575
 #, elixir-autogen, elixir-format
 msgid "No providers available"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:465
+#: lib/hive_web/live/ops_live/inference_profile.ex:451
 #, elixir-autogen, elixir-format
 msgid "No tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:303
+#: lib/hive_web/live/ops_live/inference_profile.ex:345
 #: lib/hive_web/live/ops_live/inference_token.ex:167
 #, elixir-autogen, elixir-format
 msgid "No usage yet"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:269
+#: lib/hive_web/live/ops_live/inference_helpers.ex:294
 #: lib/hive_web/live/ops_live/inference_providers.ex:165
 #: lib/hive_web/live/ops_live/inference_providers.ex:320
 #, elixir-autogen, elixir-format
 msgid "Not configured"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:59
+#: lib/hive_web/live/ops_live/inference.ex:63
 #: lib/hive_web/live/ops_live/inference_profile.ex:58
 #, elixir-autogen, elixir-format
 msgid "Only instance admins can manage inference profiles."
@@ -552,12 +519,7 @@ msgstr ""
 msgid "Only instance admins can review inference providers."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:384
-#, elixir-autogen, elixir-format
-msgid "OpenAI-compatible model"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference.ex:28
+#: lib/hive_web/live/ops_live/inference.ex:32
 #: lib/hive_web/live/ops_live/inference_profile.ex:27
 #: lib/hive_web/live/ops_live/inference_providers.ex:20
 #: lib/hive_web/live/ops_live/inference_token.ex:25
@@ -565,18 +527,18 @@ msgstr ""
 msgid "Ops"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:286
+#: lib/hive_web/live/ops_live/inference_helpers.ex:311
 #, elixir-autogen, elixir-format
 msgid "Output"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:354
+#: lib/hive_web/live/ops_live/inference_profile.ex:384
 #, elixir-autogen, elixir-format
 msgid "Output cost"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:441
-#: lib/hive_web/live/ops_live/inference_profile.ex:572
+#: lib/hive_web/live/ops_live/inference.ex:461
+#: lib/hive_web/live/ops_live/inference_profile.ex:600
 #, elixir-autogen, elixir-format
 msgid "Output cost per million tokens"
 msgstr ""
@@ -586,12 +548,12 @@ msgstr ""
 msgid "Output tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:322
+#: lib/hive_web/live/ops_live/inference.ex:342
 #, elixir-autogen, elixir-format
 msgid "Prev"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:278
+#: lib/hive_web/live/ops_live/inference.ex:285
 #: lib/hive_web/live/ops_live/inference_token.ex:190
 #, elixir-autogen, elixir-format
 msgid "Profile"
@@ -602,7 +564,7 @@ msgstr ""
 msgid "Profile configuration"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:141
+#: lib/hive_web/live/ops_live/inference.ex:145
 #, elixir-autogen, elixir-format
 msgid "Profile created."
 msgstr ""
@@ -617,8 +579,8 @@ msgstr ""
 msgid "Profile enabled."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:392
-#: lib/hive_web/live/ops_live/inference_profile.ex:526
+#: lib/hive_web/live/ops_live/inference.ex:412
+#: lib/hive_web/live/ops_live/inference_profile.ex:554
 #, elixir-autogen, elixir-format
 msgid "Profile name"
 msgstr ""
@@ -634,8 +596,8 @@ msgid "Profile updated."
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:291
-#: lib/hive_web/live/ops_live/inference.ex:218
-#: lib/hive_web/live/ops_live/inference.ex:228
+#: lib/hive_web/live/ops_live/inference.ex:222
+#: lib/hive_web/live/ops_live/inference.ex:232
 #: lib/hive_web/live/ops_live/inference_providers.ex:174
 #, elixir-autogen, elixir-format
 msgid "Profiles"
@@ -678,7 +640,7 @@ msgstr ""
 msgid "Referenced by profiles but not configured"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:32
+#: lib/hive_web/live/ops_live/inference.ex:36
 #, elixir-autogen, elixir-format
 msgid "Relay usage"
 msgstr ""
@@ -715,7 +677,7 @@ msgstr ""
 msgid "Revoke token"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_helpers.ex:151
+#: lib/hive_web/live/ops_live/inference_helpers.ex:173
 #, elixir-autogen, elixir-format
 msgid "Revoked"
 msgstr ""
@@ -730,37 +692,32 @@ msgstr ""
 msgid "Runtime-managed and environment-backed endpoints with profile references."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:592
+#: lib/hive_web/live/ops_live/inference_profile.ex:620
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:261
+#: lib/hive_web/live/ops_live/inference.ex:268
 #, elixir-autogen, elixir-format
 msgid "Search profiles..."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:237
-#, elixir-autogen, elixir-format
-msgid "Stable model names that repositories can request through Hive."
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:231
+#: lib/hive_web/live/ops_live/inference_profile.ex:265
 #, elixir-autogen, elixir-format
 msgid "Stable model profile routed through Hive."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:285
-#: lib/hive_web/live/ops_live/inference.ex:586
-#: lib/hive_web/live/ops_live/inference_profile.ex:337
-#: lib/hive_web/live/ops_live/inference_profile.ex:430
+#: lib/hive_web/live/ops_live/inference.ex:292
+#: lib/hive_web/live/ops_live/inference.ex:606
+#: lib/hive_web/live/ops_live/inference_profile.ex:363
+#: lib/hive_web/live/ops_live/inference_profile.ex:416
 #: lib/hive_web/live/ops_live/inference_providers.ex:158
 #: lib/hive_web/live/ops_live/inference_token.ex:185
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:244
+#: lib/hive_web/live/ops_live/inference_profile.ex:286
 #, elixir-autogen, elixir-format
 msgid "Store this token now. Hive stores only its hash and cannot show it again."
 msgstr ""
@@ -780,7 +737,7 @@ msgstr ""
 msgid "Timeout in milliseconds"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:427
+#: lib/hive_web/live/ops_live/inference_profile.ex:413
 #, elixir-autogen, elixir-format
 msgid "Token"
 msgstr ""
@@ -790,17 +747,17 @@ msgstr ""
 msgid "Token bound to"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:239
+#: lib/hive_web/live/ops_live/inference_profile.ex:281
 #, elixir-autogen, elixir-format
 msgid "Token created for %{profile}"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:170
+#: lib/hive_web/live/ops_live/inference_profile.ex:204
 #, elixir-autogen, elixir-format
 msgid "Token created."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:646
+#: lib/hive_web/live/ops_live/inference_profile.ex:674
 #, elixir-autogen, elixir-format
 msgid "Token name"
 msgstr ""
@@ -815,75 +772,160 @@ msgstr ""
 msgid "Token usage"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:295
-#: lib/hive_web/live/ops_live/inference_profile.ex:409
+#: lib/hive_web/live/ops_live/inference.ex:315
+#: lib/hive_web/live/ops_live/inference_profile.ex:395
 #, elixir-autogen, elixir-format
 msgid "Tokens"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:415
+#: lib/hive_web/live/ops_live/inference_profile.ex:401
 #, elixir-autogen, elixir-format
 msgid "Tokens are bound to this profile and can be revoked independently."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:492
+#: lib/hive_web/live/ops_live/inference_profile.ex:522
 #, elixir-autogen, elixir-format
 msgid "Update the upstream provider or model behind this stable profile."
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:289
+#: lib/hive_web/live/ops_live/inference.ex:309
 #, elixir-autogen, elixir-format
 msgid "Upstream"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:426
-#: lib/hive_web/live/ops_live/inference_profile.ex:346
-#: lib/hive_web/live/ops_live/inference_profile.ex:558
+#: lib/hive_web/live/ops_live/inference.ex:446
+#: lib/hive_web/live/ops_live/inference_profile.ex:376
+#: lib/hive_web/live/ops_live/inference_profile.ex:586
 #, elixir-autogen, elixir-format
 msgid "Upstream model"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:31
+#: lib/hive_web/live/ops_live/inference.ex:35
 #: lib/hive_web/live/ops_live/inference_profile.ex:31
 #, elixir-autogen, elixir-format
 msgid "Upstream model routing"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:402
-#: lib/hive_web/live/ops_live/inference_profile.ex:342
-#: lib/hive_web/live/ops_live/inference_profile.ex:534
+#: lib/hive_web/live/ops_live/inference.ex:422
+#: lib/hive_web/live/ops_live/inference_profile.ex:372
+#: lib/hive_web/live/ops_live/inference_profile.ex:562
 #, elixir-autogen, elixir-format
 msgid "Upstream provider"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:273
-#: lib/hive_web/live/ops_live/inference_profile.ex:443
+#: lib/hive_web/live/ops_live/inference_profile.ex:315
+#: lib/hive_web/live/ops_live/inference_profile.ex:429
 #: lib/hive_web/live/ops_live/inference_token.ex:137
 #, elixir-autogen, elixir-format
 msgid "Usage"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference_profile.ex:372
-#, elixir-autogen, elixir-format
-msgid "Use a profile token as the authorization secret. Create one below and store it as"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:403
-#, elixir-autogen, elixir-format
-msgid "blick.toml"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:399
-#, elixir-autogen, elixir-format
-msgid "opencode provider"
-msgstr ""
-
-#: lib/hive_web/live/ops_live/inference_profile.ex:647
+#: lib/hive_web/live/ops_live/inference_profile.ex:675
 #, elixir-autogen, elixir-format
 msgid "Repository automation"
 msgstr ""
 
-#: lib/hive_web/live/ops_live/inference.ex:399
+#: lib/hive_web/live/ops_live/inference.ex:419
 #, elixir-autogen, elixir-format
 msgid "Repository code review profile"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference.ex:224
+#, elixir-autogen, elixir-format
+msgid "Create stable model profiles for repositories and Hive itself. Each profile points at one upstream provider and model, and tokens created under it can only use that profile."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:503
+#, elixir-autogen, elixir-format
+msgid "Disable profile"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_helpers.ex:161
+#, elixir-autogen, elixir-format
+msgid "Embeddings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:504
+#, elixir-autogen, elixir-format
+msgid "Enable profile"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:180
+#, elixir-autogen, elixir-format
+msgid "Failed to prepare Hive profile token."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_helpers.ex:151
+#, elixir-autogen, elixir-format
+msgid "Hive embeddings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_helpers.ex:147
+#, elixir-autogen, elixir-format
+msgid "Hive inference"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:368
+#, elixir-autogen, elixir-format
+msgid "Hive usage"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference.ex:296
+#, elixir-autogen, elixir-format
+msgid "Hive use"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_helpers.ex:159
+#, elixir-autogen, elixir-format
+msgid "Inference and embeddings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference.ex:305
+#, elixir-autogen, elixir-format
+msgid "Not used"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_helpers.ex:162
+#, elixir-autogen, elixir-format
+msgid "Not used by Hive"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:822
+#, elixir-autogen, elixir-format
+msgid "Profile is no longer used for Hive embeddings."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:814
+#, elixir-autogen, elixir-format
+msgid "Profile is no longer used for Hive inference."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:818
+#, elixir-autogen, elixir-format
+msgid "Profile will be used for Hive embeddings."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:810
+#, elixir-autogen, elixir-format
+msgid "Profile will be used for Hive inference."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference.ex:241
+#, elixir-autogen, elixir-format
+msgid "Stable model names that repositories and Hive's own workflows can request through the gateway."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:187
+#, elixir-autogen, elixir-format
+msgid "Unknown Hive profile role."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:491
+#, elixir-autogen, elixir-format
+msgid "Use for Hive embeddings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/inference_profile.ex:481
+#, elixir-autogen, elixir-format
+msgid "Use for Hive inference"
 msgstr ""

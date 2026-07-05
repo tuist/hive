@@ -8,8 +8,9 @@ cost.
 
 For client traffic, repositories and workflows point at Hive with a Hive
 token. Hive decides which upstream provider and model should handle the
-request. For agentic workflows inside Hive, the same deployment-wide
-model provider configuration decides whether those workflows run.
+request. For agentic workflows inside Hive, instance admins can mark one
+profile as Hive's inference profile so Hive calls its own gateway instead
+of depending on launch-time model configuration.
 
 This gives operators one place to retarget a model for cost, latency, or
 quality without changing every repository or workflow. It also gives them
@@ -75,10 +76,18 @@ reference each provider. Secret values are never shown.
 
 Hive's agentic features call a
 [large language model](https://en.wikipedia.org/wiki/Large_language_model).
-They share a deployment-wide model provider configured through the
+The preferred setup is to create a normal gateway profile, then mark it
+as **Use for Hive inference** on the profile form. Hive generates a
+Hive-owned token for that profile, stores the token value encrypted, and
+uses the profile through `/inference/v1` just like any other
+OpenAI-compatible client. Usage and cost are attributed to that profile
+and token.
+
+If no profile is marked for Hive inference, Hive falls back to the
+deployment-wide model provider configured through the
 [configuration reference](/reference/configuration#agent-model-provider).
-When no provider key is set, agentic features stay dormant and the rest
-of Hive runs normally.
+When neither path is configured, agentic features stay dormant and the
+rest of Hive runs normally.
 
 When model configuration is present, Hive starts the agentic workflows
 automatically. There is no separate feature flag for enabling agentic
@@ -139,8 +148,22 @@ Hive currently uses agents for:
 
 ## Agent model provider
 
+Open **Ops -> Inference -> Profiles**, create a chat-completion profile,
+and enable **Use for Hive inference**. Only one enabled profile can hold
+that role at a time. Marking another profile moves Hive's inference role
+to the new profile, so operators can retarget Hive's own agents without
+redeploying.
+
+You can also mark one profile as **Use for Hive embeddings**. That gives
+Hive a separate OpenAI-compatible embedding profile for workflows that
+need vectors. Use an upstream embedding model for that profile.
+
+The environment variables below remain available as a fallback for
+deployments that prefer immutable launch-time model configuration:
+
 - [`HIVE_LLM_API_KEY`](/reference/configuration#hive_llm_api_key): the
-  provider key. When unset, every agentic feature is disabled.
+  provider key. When unset and no Hive inference profile is selected,
+  every agentic feature is disabled.
 - [`HIVE_LLM_MODEL`](/reference/configuration#hive_llm_model): the model
   in `provider:model_id` form, for example
   `anthropic:claude-haiku-4-5` or

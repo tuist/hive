@@ -45,6 +45,23 @@ defmodule Hive.InferenceTest do
                :upstream_model
              )
     end
+
+    test "keeps one Hive profile per runtime role" do
+      inference_profile = model_binding!(name: "hive-inference", hive_inference: true)
+      embedding_profile = model_binding!(name: "hive-embedding", hive_embedding: true)
+      replacement_profile = model_binding!(name: "hive-replacement")
+
+      assert {:ok, replacement_profile} =
+               Inference.update_profile(replacement_profile, %{
+                 hive_inference: true,
+                 hive_embedding: true
+               })
+
+      refute Inference.get_profile!(inference_profile.id).hive_inference
+      refute Inference.get_profile!(embedding_profile.id).hive_embedding
+      assert replacement_profile.hive_inference
+      assert replacement_profile.hive_embedding
+    end
   end
 
   describe "providers" do
@@ -195,6 +212,58 @@ defmodule Hive.InferenceTest do
 
       assert token.model_binding_id == binding.id
       refute Map.has_key?(changeset.changes, :model_binding_id)
+    end
+
+    test "creates encrypted Hive-owned tokens for runtime profile roles" do
+      binding = model_binding!()
+
+      assert {:ok, {%Token{} = token, token_value}} =
+               Inference.ensure_hive_token(binding, :inference)
+
+      assert token.name == "Hive inference"
+      assert token.hive_role == "inference"
+      assert token.token_ciphertext
+      refute token.token_ciphertext == token_value
+      assert Token.value(token) == token_value
+
+      assert {:ok, {%Token{} = same_token, same_token_value}} =
+               Inference.ensure_hive_token(binding, :inference)
+
+      assert same_token.id == token.id
+      assert same_token_value == token_value
+    end
+
+    test "refreshes revoked Hive-owned tokens" do
+      binding = model_binding!(hive_inference: true)
+
+      assert {:ok, {%Token{} = token, token_value}} =
+               Inference.ensure_hive_token(binding, :inference)
+
+      assert {:ok, _token} = Inference.revoke_token(token)
+      assert Inference.authenticate_token(token_value) == :error
+
+      assert {:ok, {%Token{} = refreshed_token, refreshed_token_value}} =
+               Inference.ensure_hive_token(binding, :inference)
+
+      assert refreshed_token.id == token.id
+      refute refreshed_token_value == token_value
+      assert refreshed_token.enabled
+      assert {:ok, %Token{id: token_id}} = Inference.authenticate_token(refreshed_token_value)
+      assert token_id == token.id
+    end
+
+    test "rejects Hive-owned tokens after their profile role moves" do
+      old_profile = model_binding!(name: "old-hive-inference", hive_inference: true)
+      replacement_profile = model_binding!(name: "new-hive-inference")
+
+      assert {:ok, {_token, token_value}} = Inference.ensure_hive_token(old_profile, :inference)
+
+      assert {:ok, replacement_profile} =
+               Inference.update_profile(replacement_profile, %{hive_inference: true})
+
+      refute Inference.get_profile!(old_profile.id).hive_inference
+      assert replacement_profile.hive_inference
+      assert Inference.authenticate_token(token_value) == :error
     end
   end
 

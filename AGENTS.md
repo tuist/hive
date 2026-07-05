@@ -106,7 +106,7 @@ Visibility for unfurls follows the dashboard's anonymous view: a Slack workspace
 
 ## Agents
 
-Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive and is configured at runtime from three env vars:
+Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive. Prefer selecting it at runtime by marking an inference profile as **Use for Hive inference** under **Ops -> Inference -> Profiles**; Hive then uses an encrypted Hive-owned token to call its own `/inference/v1` gateway and records usage on that profile. If no profile is marked, Hive falls back to three launch-time env vars:
 
 [Condukt]: https://github.com/tuist/condukt
 [ReqLLM]: https://hexdocs.pm/req_llm
@@ -115,7 +115,7 @@ Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [
 - `HIVE_LLM_MODEL` — `provider:model_id` (e.g. `anthropic:claude-haiku-4-5`, `openai:gpt-4o-mini`)
 - `HIVE_LLM_BASE_URL` — optional endpoint override
 
-When `HIVE_LLM_API_KEY` is unset, `Hive.Agents.enabled?/0` returns `false`, `Hive.Agents.Sessions.run/3` returns `{:error, :llm_not_configured}`, and agentic features stay dormant. The rest of Hive keeps booting, so deploying without an LLM is supported.
+When no Hive inference profile is marked and `HIVE_LLM_API_KEY` is unset, `Hive.Agents.enabled?/0` returns `false`, `Hive.Agents.Sessions.run/3` returns `{:error, :llm_not_configured}`, and agentic features stay dormant. The rest of Hive keeps booting, so deploying without an LLM is supported.
 
 ### Adding an agent
 

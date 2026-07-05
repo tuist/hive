@@ -141,6 +141,28 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
     end
   end
 
+  def hive_role_badges(%ModelBinding{} = profile) do
+    []
+    |> maybe_add_hive_role(profile.hive_inference, %{
+      label: dgettext("dashboard_inference", "Hive inference"),
+      color: "primary"
+    })
+    |> maybe_add_hive_role(profile.hive_embedding, %{
+      label: dgettext("dashboard_inference", "Hive embeddings"),
+      color: "secondary"
+    })
+    |> Enum.reverse()
+  end
+
+  def hive_usage_label(%ModelBinding{} = profile) do
+    case {profile.hive_inference, profile.hive_embedding} do
+      {true, true} -> dgettext("dashboard_inference", "Inference and embeddings")
+      {true, false} -> dgettext("dashboard_inference", "Inference")
+      {false, true} -> dgettext("dashboard_inference", "Embeddings")
+      {false, false} -> dgettext("dashboard_inference", "Not used by Hive")
+    end
+  end
+
   def profile_status(%ModelBinding{enabled: true}),
     do: %{label: dgettext("dashboard_inference", "Enabled"), color: "success"}
 
@@ -178,6 +200,9 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
       cost_usd: Decimal.new(0)
     }
   end
+
+  defp maybe_add_hive_role(roles, true, role), do: [role | roles]
+  defp maybe_add_hive_role(roles, _enabled, _role), do: roles
 
   def usage_period_from_params(params) do
     usage_period(params["usage-date-range"] || params["usage-period"], params)
