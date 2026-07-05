@@ -17,7 +17,11 @@ defmodule HiveWeb.OpsLive.Inference do
   alias Noora.Filter
 
   import HiveWeb.OpsLive.InferenceHelpers,
-    only: [model_identifier_placeholder: 1, provider_select_options: 0]
+    only: [
+      hive_role_badges: 1,
+      model_identifier_placeholder: 1,
+      provider_select_options: 0
+    ]
 
   @page_size 10
 
@@ -219,7 +223,7 @@ defmodule HiveWeb.OpsLive.Inference do
             <p>
               {dgettext(
                 "dashboard_inference",
-                "Create stable model profiles for repositories. Each profile points at one upstream provider and model, and tokens created under it can only use that profile."
+                "Create stable model profiles for repositories and Hive itself. Each profile points at one upstream provider and model, and tokens created under it can only use that profile."
               )}
             </p>
           </div>
@@ -234,7 +238,10 @@ defmodule HiveWeb.OpsLive.Inference do
           </:actions>
           <.card_section>
             <p data-part="card-intro">
-              {dgettext("dashboard_inference", "Stable model names that repositories can request through Hive.")}
+              {dgettext(
+                "dashboard_inference",
+                "Stable model names that repositories and Hive's own workflows can request through the gateway."
+              )}
             </p>
 
             <div data-part="table-toolbar">
@@ -285,6 +292,19 @@ defmodule HiveWeb.OpsLive.Inference do
                 <:col :let={profile} label={dgettext("dashboard_inference", "Status")}>
                   <% status = profile_status(profile) %>
                   <.badge_cell label={status.label} color={status.color} style="light-fill" />
+                </:col>
+                <:col :let={profile} label={dgettext("dashboard_inference", "Hive use")}>
+                  <div data-part="role-cell">
+                    <.badge
+                      :for={role <- hive_role_badges(profile)}
+                      label={role.label}
+                      color={role.color}
+                      style="light-fill"
+                    />
+                    <span :if={hive_role_badges(profile) == []}>
+                      {dgettext("dashboard_inference", "Not used")}
+                    </span>
+                  </div>
                 </:col>
                 <:col :let={profile} label={dgettext("dashboard_inference", "Upstream")}>
                   <div data-part="route-cell">
