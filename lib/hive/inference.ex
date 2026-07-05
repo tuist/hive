@@ -5,6 +5,7 @@ defmodule Hive.Inference do
 
   import Ecto.Query
 
+  alias Ecto.Multi
   alias Hive.Inference.ModelBinding
   alias Hive.Inference.ModelIdentifier
   alias Hive.Inference.Provider
@@ -23,6 +24,7 @@ defmodule Hive.Inference do
   @token_attr_keys Map.values(@token_attr_key_map)
   @default_profile_page_size 10
   @max_profile_page_size 100
+  @hive_roles [:inference, :embedding]
 
   def list_model_bindings do
     ModelBinding
@@ -83,6 +85,15 @@ defmodule Hive.Inference do
     Repo.get_by(ModelBinding, name: name)
   end
 
+  def get_hive_profile(role) when role in @hive_roles do
+    field = hive_role_field(role)
+
+    ModelBinding
+    |> where([binding], field(binding, ^field) == true)
+    |> where([binding], binding.enabled == true)
+    |> Repo.one()
+  end
+
   def change_model_binding(%ModelBinding{} = binding, attrs \\ %{}) do
     ModelBinding.changeset(binding, attrs)
   end
@@ -100,7 +111,7 @@ defmodule Hive.Inference do
   def create_model_binding(attrs) when is_map(attrs) do
     %ModelBinding{}
     |> ModelBinding.changeset(attrs)
-    |> Repo.insert()
+    |> persist_model_binding(:insert)
   end
 
   def create_profile(attrs), do: create_model_binding(attrs)
@@ -108,7 +119,7 @@ defmodule Hive.Inference do
   def update_model_binding(%ModelBinding{} = binding, attrs) when is_map(attrs) do
     binding
     |> ModelBinding.changeset(attrs)
-    |> Repo.update()
+    |> persist_model_binding(:update)
   end
 
   def update_profile(%ModelBinding{} = profile, attrs), do: update_model_binding(profile, attrs)
@@ -238,6 +249,21 @@ defmodule Hive.Inference do
 
   def create_profile_token(%ModelBinding{} = profile, attrs), do: create_token(profile, attrs)
 
+  def ensure_hive_token(%ModelBinding{} = binding, role) when role in @hive_roles do
+    role = to_string(role)
+
+    binding
+    |> get_hive_token(role)
+    |> case do
+      %Token{} = token ->
+        ensure_hive_token_value(token, role)
+
+      nil ->
+        create_hive_token(binding, role)
+        |> maybe_retry_hive_token(binding, role)
+    end
+  end
+
   def revoke_token(%Token{} = token) do
     token
     |> Token.changeset(%{enabled: false})
@@ -252,8 +278,8 @@ defmodule Hive.Inference do
     |> preload(:model_binding)
     |> Repo.one()
     |> case do
-      %Token{model_binding: %ModelBinding{enabled: true}} = token ->
-        if expired?(token) do
+      %Token{model_binding: %ModelBinding{enabled: true} = binding} = token ->
+        if expired?(token) or not hive_token_allowed?(token, binding) do
           :error
         else
           touch_token(token)
@@ -414,6 +440,128 @@ defmodule Hive.Inference do
     end)
     |> Enum.sort_by(& &1.id)
   end
+
+  defp persist_model_binding(changeset, operation) do
+    Multi.new()
+    |> maybe_clear_hive_role(changeset, :inference)
+    |> maybe_clear_hive_role(changeset, :embedding)
+    |> persist_model_binding_operation(changeset, operation)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{binding: binding}} -> {:ok, binding}
+      {:error, :binding, changeset, _changes_so_far} -> {:error, changeset}
+    end
+  end
+
+  defp persist_model_binding_operation(multi, changeset, :insert) do
+    Multi.insert(multi, :binding, changeset)
+  end
+
+  defp persist_model_binding_operation(multi, changeset, :update) do
+    Multi.update(multi, :binding, changeset)
+  end
+
+  defp maybe_clear_hive_role(multi, changeset, role) do
+    field = hive_role_field(role)
+
+    if Ecto.Changeset.get_field(changeset, field) == true do
+      binding_id = Ecto.Changeset.get_field(changeset, :id)
+
+      query =
+        ModelBinding
+        |> where([binding], field(binding, ^field) == true)
+        |> maybe_exclude_binding(binding_id)
+
+      Multi.update_all(multi, {:clear_hive_role, role}, query, set: [{field, false}])
+    else
+      multi
+    end
+  end
+
+  defp maybe_exclude_binding(query, id) when is_binary(id) do
+    where(query, [binding], binding.id != ^id)
+  end
+
+  defp maybe_exclude_binding(query, _id), do: query
+
+  defp create_hive_token(%ModelBinding{} = binding, role) do
+    token_value = generate_token()
+
+    %Token{}
+    |> Token.hive_changeset(hive_token_attrs(role, token_value))
+    |> Ecto.Changeset.put_change(:model_binding_id, binding.id)
+    |> Ecto.Changeset.validate_required([:model_binding_id])
+    |> Repo.insert()
+    |> case do
+      {:ok, token} -> {:ok, {token, token_value}}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp maybe_retry_hive_token({:ok, {_token, _token_value}} = result, _binding, _role), do: result
+
+  defp maybe_retry_hive_token({:error, _changeset} = error, %ModelBinding{} = binding, role) do
+    case get_hive_token(binding, role) do
+      %Token{} = token -> ensure_hive_token_value(token, role)
+      nil -> error
+    end
+  end
+
+  defp get_hive_token(%ModelBinding{} = binding, role) do
+    Token
+    |> where([token], token.model_binding_id == ^binding.id and token.hive_role == ^role)
+    |> Repo.one()
+  end
+
+  defp ensure_hive_token_value(%Token{} = token, role) do
+    token_value = Token.value(token)
+
+    if present?(token_value) and token.enabled and not expired?(token) do
+      {:ok, {token, token_value}}
+    else
+      refresh_hive_token(token, role)
+    end
+  end
+
+  defp refresh_hive_token(%Token{} = token, role) do
+    token_value = generate_token()
+
+    token
+    |> Token.hive_changeset(hive_token_attrs(role, token_value))
+    |> Repo.update()
+    |> case do
+      {:ok, token} -> {:ok, {token, token_value}}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp hive_token_attrs(role, token_value) do
+    %{
+      name: hive_token_name(role),
+      enabled: true,
+      expires_at: nil,
+      token_hash: hash_token(token_value),
+      token_ciphertext: Token.encrypt_value(token_value),
+      hive_role: role
+    }
+  end
+
+  defp hive_token_name("inference"), do: "Hive inference"
+  defp hive_token_name("embedding"), do: "Hive embeddings"
+
+  defp hive_role_field(:inference), do: :hive_inference
+  defp hive_role_field(:embedding), do: :hive_embedding
+
+  defp hive_token_allowed?(%Token{hive_role: nil}, %ModelBinding{}), do: true
+
+  defp hive_token_allowed?(%Token{hive_role: "inference"}, %ModelBinding{hive_inference: true}),
+    do: true
+
+  defp hive_token_allowed?(%Token{hive_role: "embedding"}, %ModelBinding{hive_embedding: true}),
+    do: true
+
+  defp hive_token_allowed?(%Token{hive_role: role}, %ModelBinding{}) when is_binary(role),
+    do: false
 
   defp normalize_usage_summary(nil) do
     %{

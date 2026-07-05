@@ -10,12 +10,15 @@ defmodule Hive.Inference.Token do
   alias Hive.Inference.ModelBinding
   alias Hive.Inference.Usage
 
+  @hive_roles ~w(inference embedding)
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
   schema "inference_tokens" do
     field :name, :string
     field :token_hash, :string, redact: true
+    field :token_ciphertext, :string, redact: true
+    field :hive_role, :string
     field :enabled, :boolean, default: true
     field :expires_at, :utc_datetime
     field :last_used_at, :utc_datetime
@@ -35,6 +38,32 @@ defmodule Hive.Inference.Token do
     |> foreign_key_constraint(:model_binding_id)
   end
 
+  def hive_changeset(token, attrs) do
+    token
+    |> changeset(attrs)
+    |> cast(attrs, [:hive_role, :token_ciphertext])
+    |> validate_required([:hive_role, :token_ciphertext])
+    |> validate_inclusion(:hive_role, @hive_roles)
+    |> unique_constraint(:hive_role, name: :inference_tokens_model_binding_hive_role_index)
+  end
+
+  def encrypt_value(value) when is_binary(value) do
+    {encryption_key, signing_key} = encryption_keys()
+    Plug.Crypto.MessageEncryptor.encrypt(value, encryption_key, signing_key)
+  end
+
+  def value(%__MODULE__{token_ciphertext: nil}), do: nil
+
+  def value(%__MODULE__{token_ciphertext: ciphertext}) when is_binary(ciphertext) do
+    with {encryption_key, signing_key} <- encryption_keys(),
+         {:ok, value} <-
+           Plug.Crypto.MessageEncryptor.decrypt(ciphertext, encryption_key, signing_key) do
+      value
+    else
+      _error -> nil
+    end
+  end
+
   defp normalize_name(nil), do: nil
 
   defp normalize_name(value) when is_binary(value) do
@@ -47,4 +76,21 @@ defmodule Hive.Inference.Token do
   end
 
   defp normalize_name(value), do: value
+
+  defp encryption_keys do
+    secret_key_base = HiveWeb.Endpoint.config(:secret_key_base)
+
+    {
+      Plug.Crypto.KeyGenerator.generate(
+        secret_key_base,
+        "hive inference token value encryption",
+        length: 32
+      ),
+      Plug.Crypto.KeyGenerator.generate(
+        secret_key_base,
+        "hive inference token value signing",
+        length: 32
+      )
+    }
+  end
 end

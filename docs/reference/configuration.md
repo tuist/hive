@@ -140,19 +140,21 @@ Optional GitHub application programming interface
 
 ### HIVE_LLM_API_KEY {#hive_llm_api_key}
 
-Provider key for features backed by a
+Fallback provider key for features backed by a
 [large language model](https://en.wikipedia.org/wiki/Large_language_model).
-When unset, agentic workflows stay dormant.
+Agentic workflows prefer the profile marked **Use for Hive inference** in
+the dashboard. When no profile is marked and this value is unset,
+agentic workflows stay dormant.
 
 ### HIVE_LLM_MODEL {#hive_llm_model}
 
-Model identifier in `provider:model_id` form. Required when
+Fallback model identifier in `provider:model_id` form. Required when
 `HIVE_LLM_API_KEY` is set.
 
 ### HIVE_LLM_BASE_URL {#hive_llm_base_url}
 
-Optional provider endpoint override for OpenAI-compatible gateways or
-self-hosted providers.
+Optional fallback provider endpoint override for OpenAI-compatible
+gateways or self-hosted providers.
 
 ## Model Gateway {#model-gateway}
 

@@ -22,6 +22,8 @@ defmodule Hive.Inference.ModelBinding do
     field :input_cost_per_million, :decimal
     field :output_cost_per_million, :decimal
     field :enabled, :boolean, default: true
+    field :hive_inference, :boolean, default: false
+    field :hive_embedding, :boolean, default: false
     field :last_used_at, :utc_datetime
 
     has_many :tokens, Hive.Inference.Token, foreign_key: :model_binding_id
@@ -40,6 +42,8 @@ defmodule Hive.Inference.ModelBinding do
       :input_cost_per_million,
       :output_cost_per_million,
       :enabled,
+      :hive_inference,
+      :hive_embedding,
       :last_used_at
     ])
     |> normalize_strings([:name, :upstream_provider, :upstream_model])
@@ -49,6 +53,14 @@ defmodule Hive.Inference.ModelBinding do
     |> validate_number(:input_cost_per_million, greater_than_or_equal_to: 0)
     |> validate_number(:output_cost_per_million, greater_than_or_equal_to: 0)
     |> unique_constraint(:name)
+    |> unique_constraint(:hive_inference,
+      name: :inference_model_bindings_single_hive_inference_index,
+      message: "is already assigned to another profile"
+    )
+    |> unique_constraint(:hive_embedding,
+      name: :inference_model_bindings_single_hive_embedding_index,
+      message: "is already assigned to another profile"
+    )
   end
 
   defp validate_model_identifier(changeset) do
