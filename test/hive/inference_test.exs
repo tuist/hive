@@ -525,6 +525,72 @@ defmodule Hive.InferenceTest do
       assert Decimal.equal?(usage.cost_usd, Decimal.new("0.004"))
     end
 
+    test "records failed upstream responses without billable usage" do
+      binding = model_binding!(input_cost_per_million: "1.00", output_cost_per_million: "2.00")
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      assert {:ok, usage} =
+               Inference.record_usage(
+                 binding,
+                 token,
+                 Req.Response.new(
+                   status: 403,
+                   body: %{
+                     "error" => %{"message" => "account suspended"},
+                     "usage" => %{
+                       "prompt_tokens" => 1_000,
+                       "completion_tokens" => 2_000,
+                       "total_tokens" => 3_000
+                     }
+                   }
+                 )
+               )
+
+      assert usage.status == 403
+      assert usage.input_tokens == 0
+      assert usage.output_tokens == 0
+      assert usage.total_tokens == 0
+      assert Decimal.equal?(usage.cost_usd, Decimal.new("0"))
+    end
+
+    test "usage analytics exclude failed upstream response rows" do
+      binding = model_binding!(input_cost_per_million: "1.00", output_cost_per_million: "2.00")
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      %Usage{}
+      |> Usage.changeset(%{
+        operation: "chat_completion",
+        upstream_provider: binding.upstream_provider,
+        upstream_model: binding.upstream_model,
+        status: 403,
+        input_tokens: 1_000,
+        output_tokens: 2_000,
+        total_tokens: 3_000,
+        cost_usd: Decimal.new("0.005")
+      })
+      |> put_change(:model_binding_id, binding.id)
+      |> put_change(:token_id, token.id)
+      |> Repo.insert!()
+
+      period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+      assert %{
+               request_count: 0,
+               input_tokens: 0,
+               output_tokens: 0,
+               total_tokens: 0,
+               cost_usd: cost_usd
+             } = Inference.usage_summary(binding, period)
+
+      assert Decimal.equal?(cost_usd, Decimal.new("0"))
+      assert Inference.token_usage_summaries(binding, period) == %{}
+      assert %{request_count: 0, input_tokens: 0} = Inference.usage_summary(token, period)
+
+      assert period
+             |> then(&Inference.usage_series(binding, &1, :day))
+             |> Enum.all?(&(&1.total_tokens == 0))
+    end
+
     test "usage changesets ignore caller supplied owner attrs" do
       binding = model_binding!()
       {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})

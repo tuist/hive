@@ -216,6 +216,8 @@ The profile page aggregates those rows for the selected period and shows
 input tokens, output tokens, estimated cost, and a trend chart. Token
 rows also show their own usage and cost for the same period. Each token
 has a detail page with the same widgets and chart scoped to that token.
+Failed upstream responses are not counted toward request, token, or cost
+analytics.
 
 ## Create a profile and token
 
