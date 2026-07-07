@@ -60,7 +60,10 @@ defmodule Hive.MixProject do
       {:ueberauth, "~> 0.10"},
       {:ueberauth_oidcc, "~> 0.4"},
       {:ueberauth_github, "~> 0.8"},
-      {:emcp, "~> 0.3.4"},
+      # Pinned to the upstream fix for intermittent missing Model Context Protocol tool-call responses.
+      # Revert to a Hex version once the fix is released.
+      {:emcp,
+       github: "addstar34/emcp", ref: "c687e279cf4f550f69934549a1303312ed3a23b5", override: true},
       {:boruta, git: "https://github.com/malach-it/boruta_auth", branch: "master"},
       {:condukt, github: "tuist/condukt", tag: "1.7.0", override: true},
       {:oban, "~> 2.23"},
