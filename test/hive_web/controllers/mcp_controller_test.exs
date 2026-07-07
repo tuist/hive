@@ -50,6 +50,41 @@ defmodule HiveWeb.MCPControllerTest do
       assert get_resp_header(conn, "mcp-session-id") != []
     end
 
+    test "returns request responses inline when the session has a stale event stream registration",
+         %{conn: conn} do
+      token =
+        oauth_access_token!("stale-session@example.com", "mcp", "http://www.example.com/mcp")
+
+      init_conn =
+        conn
+        |> authenticated_mcp_conn(token)
+        |> post_mcp(@initialize)
+
+      [session_id] = get_resp_header(init_conn, "mcp-session-id")
+
+      stale_pid = spawn(fn -> :ok end)
+      ref = Process.monitor(stale_pid)
+      assert_receive {:DOWN, ^ref, :process, ^stale_pid, _reason}
+      EMCP.SessionStore.ETS.register(session_id, stale_pid)
+
+      conn =
+        build_conn()
+        |> authenticated_mcp_conn(token)
+        |> put_req_header("mcp-session-id", session_id)
+        |> post_mcp(%{
+          "jsonrpc" => "2.0",
+          "id" => 2,
+          "method" => "tools/list",
+          "params" => %{}
+        })
+
+      response = json_response(conn, 200)
+
+      assert response["jsonrpc"] == "2.0"
+      assert response["id"] == 2
+      assert is_list(response["result"]["tools"])
+    end
+
     test "rejects a valid Boruta access token without the mcp scope", %{conn: conn} do
       token = oauth_access_token!("alice@example.com", "profile", "http://www.example.com/mcp")
 
@@ -83,6 +118,12 @@ defmodule HiveWeb.MCPControllerTest do
     conn
     |> put_req_header("content-type", "application/json")
     |> post(~p"/mcp", JSON.encode!(body))
+  end
+
+  defp authenticated_mcp_conn(conn, token) do
+    conn
+    |> put_req_header("authorization", "Bearer #{token.value}")
+    |> put_req_header("accept", "application/json, text/event-stream")
   end
 
   defp oauth_access_token!(email, scope, resource) do
