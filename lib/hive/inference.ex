@@ -389,16 +389,25 @@ defmodule Hive.Inference do
     |> Enum.filter(&String.starts_with?(&1, "data:"))
     |> Enum.map(&String.trim_leading(&1, "data:"))
     |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 in ["", "[DONE]"]))
-    |> Enum.find_value(fn payload ->
-      case JSON.decode(payload) do
-        {:ok, body} -> usage_from_body(body)
-        {:error, _error} -> nil
-      end
-    end)
+    |> Enum.find_value(&usage_from_stream_event_data/1)
   end
 
   def usage_from_stream_chunk(_data), do: nil
+
+  def usage_from_stream_event_data(data) when is_binary(data) do
+    case String.trim(data) do
+      payload when payload in ["", "[DONE]"] ->
+        nil
+
+      payload ->
+        case JSON.decode(payload) do
+          {:ok, body} -> usage_from_body(body)
+          {:error, _error} -> nil
+        end
+    end
+  end
+
+  def usage_from_stream_event_data(_data), do: nil
 
   def config do
     Process.get(@config_key) || Application.get_env(:hive, :inference, [])
@@ -1037,6 +1046,8 @@ defmodule Hive.Inference do
 
   defp usage_from_body(%{"usage" => usage}) when is_map(usage), do: normalize_usage(usage)
   defp usage_from_body(%{usage: usage}) when is_map(usage), do: normalize_usage(usage)
+  defp usage_from_body(%{"input_tokens" => _input_tokens} = usage), do: normalize_usage(usage)
+  defp usage_from_body(%{input_tokens: _input_tokens} = usage), do: normalize_usage(usage)
   defp usage_from_body(_body), do: nil
 
   defp normalize_usage(nil), do: normalize_usage(%{})

@@ -122,6 +122,7 @@ defmodule HiveWeb.InferenceController do
     conn_ref = make_ref()
     Process.put(conn_ref, conn)
     Process.put(stream_usage_ref(conn_ref), nil)
+    Process.put(stream_parser_ref(conn_ref), ServerSentEvents.Parser.new())
 
     request = Keyword.put(request, :into, stream_into(conn_ref))
 
@@ -145,6 +146,7 @@ defmodule HiveWeb.InferenceController do
     conn = Process.get(conn_ref)
     Process.delete(conn_ref)
     Process.delete(stream_usage_ref(conn_ref))
+    Process.delete(stream_parser_ref(conn_ref))
 
     cond do
       chunked?(conn) ->
@@ -178,7 +180,15 @@ defmodule HiveWeb.InferenceController do
   end
 
   defp put_stream_usage(conn_ref, data) do
-    case Inference.usage_from_stream_chunk(data) do
+    parser = Process.get(stream_parser_ref(conn_ref), ServerSentEvents.Parser.new())
+    {events, parser} = ServerSentEvents.Parser.parse(parser, IO.iodata_to_binary(data))
+    Process.put(stream_parser_ref(conn_ref), parser)
+
+    Enum.each(events, &put_stream_event_usage(conn_ref, &1))
+  end
+
+  defp put_stream_event_usage(conn_ref, %{data: data}) do
+    case Inference.usage_from_stream_event_data(data) do
       nil -> :ok
       usage -> Process.put(stream_usage_ref(conn_ref), usage)
     end
@@ -209,6 +219,7 @@ defmodule HiveWeb.InferenceController do
   end
 
   defp stream_usage_ref(conn_ref), do: {conn_ref, :inference_usage}
+  defp stream_parser_ref(conn_ref), do: {conn_ref, :inference_stream_parser}
 
   defp record_relay(
          %ModelBinding{} = binding,

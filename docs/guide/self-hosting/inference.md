@@ -17,9 +17,10 @@ quality without changing every repository or workflow. It also gives them
 a more granular usage and cost view because every client request is
 attributed to the profile and token that made it.
 
-The client-facing gateway supports chat completions and embeddings.
-Both use the same profile model rewriting, provider credential hiding,
-token attribution, and cost tracking.
+The client-facing gateway supports chat completions, streaming chat
+completions, and embeddings. All of them use the same profile model
+rewriting, provider credential hiding, token attribution, and cost
+tracking.
 
 ## Configure model providers
 

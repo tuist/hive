@@ -36,7 +36,7 @@ defmodule HiveWeb.Router do
   end
 
   pipeline :inference do
-    plug :accepts, ["json"]
+    plug :accepts, ["json", "event-stream"]
     plug HiveWeb.Plugs.InferenceAuthentication
   end
 
