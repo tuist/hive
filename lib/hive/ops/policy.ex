@@ -10,6 +10,8 @@ defmodule Hive.Ops.Policy do
     `:admin` role.
   - **manage drop sources** — restricted to users with the stored
     `:admin` role.
+  - **manage forage intake** — restricted to users with the stored
+    `:admin` role.
   - **manage inference profiles** — restricted to users with the stored
     `:admin` role.
   """
@@ -23,6 +25,12 @@ defmodule Hive.Ops.Policy do
   end
 
   object :drop_source do
+    action :manage do
+      allow(:admin)
+    end
+  end
+
+  object :forage_intake_settings do
     action :manage do
       allow(:admin)
     end

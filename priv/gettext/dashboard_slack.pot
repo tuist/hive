@@ -44,12 +44,12 @@ msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:108
 #, elixir-autogen, elixir-format
-msgid "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as feature requests."
+msgid "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as forage items."
 msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:401
 #, elixir-autogen, elixir-format
-msgid "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+msgid "Connect a workspace so Hive can reply in threads and capture messages as forage items."
 msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:126

@@ -8,6 +8,7 @@ defmodule Hive.Slack.Agents.ConversationAgent do
   use Condukt
 
   alias Hive.Agents.StyleGuide
+  alias Hive.Agents.Tools.CreateForageItem
 
   @message_schema %{
     type: "object",
@@ -24,9 +25,10 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     type: "object",
     properties: %{
       mention_text: %{type: "string"},
-      thread: %{type: "array", items: @message_schema}
+      thread: %{type: "array", items: @message_schema},
+      can_create_forage_item: %{type: "boolean"}
     },
-    required: ["mention_text", "thread"],
+    required: ["mention_text", "thread", "can_create_forage_item"],
     additionalProperties: false
   }
 
@@ -55,13 +57,20 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     - If you don't have enough information, ask one specific clarifying
       question instead of guessing.
     - Do not invent facts about Hive, the workspace, or its members.
+    - If the user asks you to capture, create, file, or record a feature
+      request, bug report, or feedback item, use `create_forage_item`
+      when `can_create_forage_item` is true. Reply with the Hive link
+      and the external link when the tool returns one.
+    - If `can_create_forage_item` is false and the user asks you to
+      create a forage item, ask them to sign in to Hive and link their
+      Slack profile before trying again.
 
     #{StyleGuide.prose_rules()}
     """
   end
 
   @impl true
-  def tools, do: []
+  def tools, do: [CreateForageItem]
 
   operation(:reply_to_thread,
     input: @input_schema,

@@ -107,7 +107,7 @@ defmodule HiveWeb.OpsLive.Slack do
             <p>
               {dgettext(
                 "dashboard_slack",
-                "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as feature requests."
+                "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as forage items."
               )}
             </p>
           </div>
@@ -400,7 +400,7 @@ defmodule HiveWeb.OpsLive.Slack do
   defp slack_empty_subtitle(true) do
     dgettext(
       "dashboard_slack",
-      "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+      "Connect a workspace so Hive can reply in threads and capture messages as forage items."
     )
   end
 end

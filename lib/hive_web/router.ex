@@ -175,6 +175,7 @@ defmodule HiveWeb.Router do
       root_layout: {HiveWeb.Layouts, :root} do
       live "/ops/slack", OpsLive.Slack
       live "/ops/drops", OpsLive.Drops
+      live "/ops/forage", OpsLive.Forage
       live "/ops/inference", OpsLive.Inference
       live "/ops/inference/profiles", OpsLive.Inference
       live "/ops/inference/profiles/:id", OpsLive.InferenceProfile

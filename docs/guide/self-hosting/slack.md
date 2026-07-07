@@ -9,9 +9,10 @@ Once a workspace is installed, Hive can:
 
 - Reply in threads where the bot is `@`-mentioned, using the configured
   model provider.
-- Capture any Slack message as a Hive feature request via a message
-  shortcut (right-click a message, "More message shortcuts", pick the
-  shortcut).
+- Capture any Slack message as a forage item via a message shortcut
+  (right-click a message, "More message shortcuts", pick the shortcut).
+  The Ops -> Forage intake destination decides whether the item is
+  stored in Hive or published to GitHub as an issue.
 - Unfurl Hive links inline. When a workspace member pastes a link to a
   spec, domain, or forage item, Slack expands the message with a
   preview of the resource. Only resources that an anonymous visitor
@@ -22,8 +23,8 @@ Once a workspace is installed, Hive can:
 - Let signed-in Hive users connect their Slack profile so Hive can
   target user-specific notifications even when Slack and Hive emails do
   not match.
-- Record Slack installs, disconnects, app mentions, and captured feature
-  requests in the audit trail.
+- Record Slack installs, disconnects, app mentions, and captured forage
+  items in the audit trail.
 
 ## Configuration
 
@@ -48,9 +49,13 @@ Set these on the Hive deployment:
   When exactly one workspace identifier is configured, Hive passes it to
   Slack so the workspace picker is preselected. Hive still validates the
   workspace returned by Slack before saving an install or linked profile.
-When any of the three required variables is missing, the integration
-stays dormant: the `/slack/install` link is hidden and `/ops/slack`
-shows an inert state.
+When any of the three required Slack app variables is missing, the
+integration stays dormant: the `/slack/install` link is hidden and
+`/ops/slack` shows an inert state.
+
+Slack captures use the shared intake settings from **Ops -> Forage**.
+Admins can choose whether new items are stored in Hive or created as
+GitHub issues without redeploying.
 
 ## Setting up the Slack app
 
@@ -74,10 +79,10 @@ your Hive host, and paste:
     },
     "shortcuts": [
       {
-        "name": "Capture as feature request",
+        "name": "Capture as forage item",
         "type": "message",
-        "callback_id": "capture_feature_request",
-        "description": "Send this Slack message to Hive as a feature request."
+        "callback_id": "capture_forage_item",
+        "description": "Send this Slack message to Hive as a forage item."
       }
     ]
   },
@@ -162,8 +167,8 @@ To configure it manually instead:
 5. In **Interactivity & Shortcuts**:
    - Turn on Interactivity.
    - Request address: `https://<your-host>/api/slack/interactions`.
-   - Add a **message shortcut** with name "Capture as feature request"
-     and callback ID `capture_feature_request`.
+   - Add a **message shortcut** with name "Capture as forage item"
+     and callback ID `capture_forage_item`.
 6. In **Manage Distribution**:
    - **Activate Public Distribution**. This lets any workspace install
      Hive via the install link without an App Directory submission.
@@ -204,14 +209,25 @@ allowlist as workspace installs.
 
 ## What gets captured
 
-The `capture_feature_request` shortcut matches the invoking Slack user
-to a Hive user by email. The Slack user must have signed in to Hive at
-least once (so the email is known); otherwise the shortcut responds
-with an ephemeral error and nothing is captured.
+The `capture_forage_item` shortcut matches the invoking Slack user to a
+Hive user by linked Slack profile or email. The Slack user must have
+signed in to Hive at least once, or linked their Slack profile from
+`/account/identities`; otherwise the shortcut responds with an
+ephemeral error and nothing is captured. Hive still accepts the legacy
+`capture_feature_request` callback identifier for existing Slack apps.
 
-Successful captures land in the unified Forage queue at `/forage` and
-are recorded in the audit trail as `slack.feature_request.captured`.
-Installs and disconnects are recorded too.
+Successful captures land in the unified Forage queue at `/forage`. The
+shared settings in **Ops -> Forage** decide whether they are stored as
+Hive-managed forage items or created as GitHub issues. When GitHub issue
+intake is selected, Hive immediately stores the returned issue in the
+local forage cache and infers issue labels from the captured item type.
+Captured items are recorded in the audit trail as
+`slack.forage_item.captured`. Installs and disconnects are recorded too.
+
+When the bot is `@`-mentioned in a thread, the agent can also create a
+forage item if the requester is linked to a Hive user. It uses the same
+forage intake destination as the dashboard, Slack shortcut, and
+[Model Context Protocol](https://modelcontextprotocol.io/) tool.
 
 ## Link unfurling
 

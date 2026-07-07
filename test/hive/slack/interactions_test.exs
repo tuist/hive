@@ -3,6 +3,7 @@ defmodule Hive.Slack.InteractionsTest do
   use Mimic
 
   alias Hive.Accounts
+  alias Hive.Audit.Activity
   alias Hive.Forage.FeatureRequest
   alias Hive.Slack.API
   alias Hive.Slack.Installation
@@ -27,7 +28,7 @@ defmodule Hive.Slack.InteractionsTest do
   defp capture_payload(opts) do
     %{
       "type" => "message_action",
-      "callback_id" => "capture_feature_request",
+      "callback_id" => Keyword.get(opts, :callback_id, "capture_feature_request"),
       "team" => %{"id" => Keyword.get(opts, :team_id, "T1")},
       "user" => %{"id" => "U-invoker"},
       "message" => %{
@@ -54,7 +55,7 @@ defmodule Hive.Slack.InteractionsTest do
 
     stub(API, :post_response, fn _url, body ->
       assert body["response_type"] == "ephemeral"
-      assert body["text"] =~ "feature request"
+      assert body["text"] =~ "forage item"
       :ok
     end)
 
@@ -63,6 +64,12 @@ defmodule Hive.Slack.InteractionsTest do
     assert [%FeatureRequest{title: title, description: description}] = Repo.all(FeatureRequest)
     assert String.starts_with?(title, "We should ship dark mode soon")
     assert description =~ "dark mode"
+
+    assert %Activity{interface: "webhook"} =
+             Repo.get_by!(Activity, action: "slack.forage_item.captured")
+
+    assert %Activity{interface: "webhook"} =
+             Repo.get_by!(Activity, action: "forage.intake.created")
   end
 
   test "capture_feature_request returns an ephemeral error when the Slack user has no Hive match" do
@@ -79,6 +86,36 @@ defmodule Hive.Slack.InteractionsTest do
 
     assert :ok = Interactions.handle(capture_payload([]), installation)
     assert Repo.all(FeatureRequest) == []
+  end
+
+  test "capture_forage_item callback creates a forage item" do
+    installation = installation!()
+
+    {:ok, _user} =
+      Accounts.upsert_from_auth(%{
+        email: "forage-callback@example.com",
+        provider: "test",
+        provider_uid: "forage-callback"
+      })
+
+    stub(API, :get_user, fn ^installation, "U-invoker" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "user" => %{"profile" => %{"email" => "forage-callback@example.com"}}
+       }}
+    end)
+
+    stub(API, :post_response, fn _url, _body -> :ok end)
+
+    assert :ok =
+             Interactions.handle(
+               capture_payload(callback_id: "capture_forage_item"),
+               installation
+             )
+
+    assert [%FeatureRequest{title: title}] = Repo.all(FeatureRequest)
+    assert String.starts_with?(title, "We should ship dark mode soon")
   end
 
   test "unknown callback_ids are no-ops" do

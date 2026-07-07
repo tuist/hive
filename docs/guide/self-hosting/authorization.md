@@ -32,8 +32,10 @@ reclassify existing users; promote and demote with
 |---|---|---|---|---|
 | Public domains, projects, specs, drops | yes | yes | yes | yes |
 | Sign-in, create forage items | no | yes | yes | yes |
+| Create forage items as GitHub issues | no | no | yes | yes |
 | Private domains, projects, specs, drops | no | no | yes | yes |
 | Spec editing | no | own only | yes | yes |
+| Manage forage intake settings | no | no | no | yes |
 | Audit trail (`/ops/audit`) | no | no | no | yes |
 | Operations surfaces (`/ops/*`): Slack and drop sources | no | no | no | yes |
 
