@@ -56,6 +56,7 @@ defmodule Hive.Slack.EventsTest do
       args: %{
         "installation_id" => installation.id,
         "channel_id" => channel_id,
+        "message_ts" => "100.0",
         "thread_ts" => "100.0"
       }
     )

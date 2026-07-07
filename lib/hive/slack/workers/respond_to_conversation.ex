@@ -20,33 +20,44 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   alias Hive.Audit
   alias Hive.Auth
   alias Hive.Forage.Intake
+  alias Hive.Repo
   alias Hive.Slack
   alias Hive.Slack.Agents.ConversationAgent
   alias Hive.Slack.API
+  alias Hive.Slack.Message
   alias Hive.Slack.Installation
 
-  def enqueue(installation_id, channel_id, thread_ts, _opts \\ [])
+  import Ecto.Query
+
+  def enqueue(installation_id, channel_id, thread_ts, opts \\ [])
       when is_binary(installation_id) and is_binary(channel_id) and is_binary(thread_ts) do
     %{
       "installation_id" => installation_id,
       "channel_id" => channel_id,
       "thread_ts" => thread_ts
     }
+    |> maybe_put_arg("message_ts", Keyword.get(opts, :message_ts))
     |> new()
     |> Oban.insert()
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{
-        args: %{
-          "installation_id" => installation_id,
-          "channel_id" => channel_id,
-          "thread_ts" => thread_ts
-        }
+        args:
+          %{
+            "installation_id" => installation_id,
+            "channel_id" => channel_id,
+            "thread_ts" => thread_ts
+          } = args
       }) do
     with %{} = installation <- Slack.get_installation(installation_id),
          true <- Installation.connected?(installation) || {:skipped, :disconnected} do
-      respond_to_thread(installation, channel_id, thread_ts)
+      respond_to_thread(
+        installation,
+        channel_id,
+        thread_ts,
+        Map.get(args, "message_ts") || thread_ts
+      )
     else
       nil ->
         Logger.info(
@@ -63,13 +74,15 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     end
   end
 
-  defp respond_to_thread(installation, channel_id, thread_ts) do
+  defp respond_to_thread(installation, channel_id, thread_ts, message_ts) do
     slack_channel_id = slack_channel_id_for(channel_id)
+    local_messages = local_thread_messages(channel_id, thread_ts, message_ts)
 
-    with {:ok, %{"messages" => thread_messages}} <-
-           API.list_thread_messages(installation, slack_channel_id, thread_ts),
-         %{mention_text: mention_text, thread: thread} <- summarize_thread(thread_messages),
-         requester_user = resolve_requester_user(installation, thread),
+    with {:ok, thread_messages} <-
+           thread_messages(installation, slack_channel_id, thread_ts, local_messages),
+         %{mention_text: mention_text, mention_user: mention_user, thread: thread} <-
+           summarize_thread(thread_messages, message_ts),
+         requester_user = resolve_requester_user(installation, mention_user),
          {:ok, %{"reply" => reply}} <-
            run_conversation_agent(
              %{
@@ -110,7 +123,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
         post_agent_response_failed_message(installation, slack_channel_id, thread_ts, reason)
 
       {:error, reason} ->
-        {:error, reason}
+        post_agent_response_failed_message(installation, slack_channel_id, thread_ts, reason)
     end
   end
 
@@ -121,40 +134,106 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     end
   end
 
-  defp summarize_thread([]), do: %{mention_text: "", thread: []}
+  defp thread_messages(installation, slack_channel_id, thread_ts, local_messages) do
+    case API.list_thread_messages(installation, slack_channel_id, thread_ts) do
+      {:ok, %{"messages" => remote_messages}} when is_list(remote_messages) ->
+        {:ok, merge_thread_messages(remote_messages, local_messages)}
 
-  defp summarize_thread(messages) do
-    thread =
-      Enum.map(messages, fn message ->
-        %{
-          "user" => message["user"] || message["bot_id"] || "",
-          "text" => message["text"] || "",
-          "ts" => message["ts"] || ""
-        }
-      end)
+      {:ok, body} when local_messages != [] ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack thread response did not include messages, using local messages: #{inspect(body)}"
+        )
 
-    mention_text =
-      messages
-      |> List.last()
-      |> Map.get("text", "")
+        {:ok, local_messages}
 
-    %{mention_text: mention_text, thread: thread}
-  end
+      {:ok, body} ->
+        {:error, {:slack_thread_unexpected, body}}
 
-  defp resolve_requester_user(installation, thread) do
-    thread
-    |> List.last()
-    |> case do
-      %{"user" => slack_user_id} when is_binary(slack_user_id) and slack_user_id != "" ->
-        case Slack.resolve_hive_user(installation, slack_user_id) do
-          {:ok, user} -> user
-          {:error, _reason} -> nil
-        end
+      {:error, reason} when local_messages != [] ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Could not fetch Slack thread, using local messages: #{inspect(reason)}"
+        )
 
-      _message ->
-        nil
+        {:ok, local_messages}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
+
+  defp merge_thread_messages(remote_messages, local_messages) do
+    (Enum.map(remote_messages, &message_context/1) ++ local_messages)
+    |> Enum.uniq_by(& &1["ts"])
+    |> Enum.sort_by(&slack_ts_sort_key(&1["ts"]))
+  end
+
+  defp local_thread_messages(channel_id, thread_ts, message_ts) do
+    Message
+    |> where([message], message.channel_id == ^channel_id)
+    |> where(
+      [message],
+      message.slack_ts == ^thread_ts or message.thread_ts == ^thread_ts or
+        message.slack_ts == ^message_ts
+    )
+    |> Repo.all()
+    |> Enum.map(&message_context/1)
+    |> Enum.sort_by(&slack_ts_sort_key(&1["ts"]))
+  end
+
+  defp summarize_thread([], _message_ts), do: %{mention_text: "", mention_user: nil, thread: []}
+
+  defp summarize_thread(messages, message_ts) do
+    mention_message =
+      Enum.find(messages, &(&1["ts"] == message_ts)) || List.last(messages) || %{}
+
+    %{
+      mention_text: Map.get(mention_message, "text", ""),
+      mention_user: Map.get(mention_message, "user"),
+      thread: messages
+    }
+  end
+
+  defp message_context(%Message{} = message) do
+    %{
+      "user" => message.slack_user_id || "",
+      "text" => message.text || "",
+      "ts" => message.slack_ts || ""
+    }
+  end
+
+  defp message_context(message) when is_map(message) do
+    %{
+      "user" => message["user"] || message["bot_id"] || "",
+      "text" => message["text"] || "",
+      "ts" => message["ts"] || ""
+    }
+  end
+
+  defp slack_ts_sort_key(slack_ts) when is_binary(slack_ts) do
+    case String.split(slack_ts, ".", parts: 2) do
+      [seconds, fraction] -> {parse_integer(seconds), String.pad_trailing(fraction, 9, "0")}
+      [seconds] -> {parse_integer(seconds), ""}
+    end
+  end
+
+  defp slack_ts_sort_key(_slack_ts), do: {0, ""}
+
+  defp parse_integer(value) do
+    case Integer.parse(value) do
+      {integer, _rest} -> integer
+      :error -> 0
+    end
+  end
+
+  defp resolve_requester_user(installation, slack_user_id)
+       when is_binary(slack_user_id) and slack_user_id != "" do
+    case Slack.resolve_hive_user(installation, slack_user_id) do
+      {:ok, user} -> user
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp resolve_requester_user(_installation, _slack_user_id), do: nil
 
   defp available_github_labels(nil), do: []
 
@@ -186,6 +265,9 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp maybe_put(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp maybe_put_arg(map, _key, value) when value in [nil, ""], do: map
+  defp maybe_put_arg(map, key, value), do: Map.put(map, key, value)
 
   defp run_conversation_agent(input, nil) do
     Sessions.run_operation(ConversationAgent, :reply_to_thread, input)
