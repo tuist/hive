@@ -31,7 +31,7 @@ msgstr ""
 msgid "Allow this client to access Hive MCP as %{user}?"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:108
+#: lib/hive_web/controllers/page_html.ex:109
 #, elixir-autogen, elixir-format
 msgid "Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
 msgstr ""
@@ -41,13 +41,13 @@ msgstr ""
 msgid "Authorize %{client}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:73
+#: lib/hive_web/controllers/page_html.ex:74
 #, elixir-autogen, elixir-format
 msgid "Continue with %{provider}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:83
-#: lib/hive_web/controllers/page_html.ex:115
+#: lib/hive_web/controllers/page_html.ex:84
+#: lib/hive_web/controllers/page_html.ex:116
 #, elixir-autogen, elixir-format
 msgid "Continue without signing in"
 msgstr ""
@@ -58,12 +58,12 @@ msgid "Deny"
 msgstr ""
 
 #: lib/hive_web/controllers/page_html.ex:27
-#: lib/hive_web/controllers/page_html.ex:56
+#: lib/hive_web/controllers/page_html.ex:57
 #, elixir-autogen, elixir-format
 msgid "Log in to %{product}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:93
+#: lib/hive_web/controllers/page_html.ex:94
 #, elixir-autogen, elixir-format
 msgid "No identity provider is configured"
 msgstr ""
@@ -103,7 +103,7 @@ msgstr ""
 msgid "Scopes"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:95
+#: lib/hive_web/controllers/page_html.ex:96
 #, elixir-autogen, elixir-format
 msgid "Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
 msgstr ""
@@ -113,7 +113,7 @@ msgstr ""
 msgid "Sign in"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:64
+#: lib/hive_web/controllers/page_html.ex:65
 #, elixir-autogen, elixir-format
 msgid "Sign in as test user"
 msgstr ""
@@ -123,7 +123,7 @@ msgstr ""
 msgid "Sign in to submit public ideas and help turn domain signals into actionable work."
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:47
+#: lib/hive_web/controllers/page_html.ex:48
 #, elixir-autogen, elixir-format
 msgid "Sign in · %{product}"
 msgstr ""
@@ -148,7 +148,7 @@ msgstr ""
 msgid "The state parameter must not exceed %{count} characters."
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:106
+#: lib/hive_web/controllers/page_html.ex:107
 #, elixir-autogen, elixir-format
 msgid "This instance is public"
 msgstr ""
