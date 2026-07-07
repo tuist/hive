@@ -40,4 +40,40 @@ defmodule Hive.Agents.SessionsTest do
     # Context outside the run is untouched.
     refute Map.has_key?(Audit.current_context(), :actor_kind)
   end
+
+  test "streams inside a transient session with the agent actor context" do
+    stub(Agents, :client_opts, fn ->
+      {:ok, [model: "anthropic:claude-haiku-4-5", api_key: "key"]}
+    end)
+
+    stub(Condukt.Session, :with_transient, fn NoopAgent, opts, fun ->
+      assert opts[:model] == "anthropic:claude-haiku-4-5"
+      fun.(:agent_pid)
+    end)
+
+    stub(Condukt, :stream, fn :agent_pid, "draft a spec", opts ->
+      assert opts[:model] == "anthropic:claude-haiku-4-5"
+      [{:text, "done"}]
+    end)
+
+    assert {:ok, "done"} =
+             Sessions.stream(NoopAgent, "draft a spec", fn events ->
+               :ok =
+                 Audit.record("spec.created", %{target_type: "spec", target_id: "from-stream"})
+
+               reply =
+                 Enum.map_join(events, fn
+                   {:text, chunk} -> chunk
+                   _event -> ""
+                 end)
+
+               {:ok, reply}
+             end)
+
+    activity = Repo.get_by!(Activity, action: "spec.created", target_id: "from-stream")
+
+    assert activity.actor_kind == "agent"
+    assert activity.actor_name == "NoopAgent"
+    assert activity.metadata["agent_model"] == "anthropic:claude-haiku-4-5"
+  end
 end

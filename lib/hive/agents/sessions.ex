@@ -2,8 +2,9 @@ defmodule Hive.Agents.Sessions do
   @moduledoc """
   Single call site for every Condukt-driven agentic run in Hive.
 
-  Wraps `Condukt.run/3` and `Condukt.Operation.run/4`, merging in the
-  LLM connection options resolved by `Hive.Agents.client_opts/0` so
+  Wraps `Condukt.run/3`, `Condukt.stream/3`, and
+  `Condukt.Operation.run/4`, merging in the LLM connection options
+  resolved by `Hive.Agents.client_opts/0` so
   individual agents stay free of LLM plumbing. Caller-supplied options
   win on key collision.
 
@@ -36,6 +37,30 @@ defmodule Hive.Agents.Sessions do
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
         Condukt.run(agent_module, prompt, run_opts(llm_opts, opts))
+      end)
+    end
+  end
+
+  @doc """
+  Streams an agent module with the given prompt and consumes the stream
+  inside the transient Condukt session.
+  """
+  def stream(agent_module, prompt, consume) when is_function(consume, 1) do
+    stream(agent_module, prompt, [], consume)
+  end
+
+  def stream(agent_module, prompt, opts, consume)
+      when is_atom(agent_module) and is_binary(prompt) and is_list(opts) and
+             is_function(consume, 1) do
+    with {:ok, llm_opts} <- Hive.Agents.client_opts() do
+      run_opts = run_opts(llm_opts, opts)
+
+      Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
+        Condukt.Session.with_transient(agent_module, run_opts, fn agent ->
+          agent
+          |> Condukt.stream(prompt, run_opts)
+          |> consume.()
+        end)
       end)
     end
   end

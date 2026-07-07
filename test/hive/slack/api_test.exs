@@ -60,6 +60,61 @@ defmodule Hive.Slack.APITest do
              API.list_thread_messages(connected_installation(), "C1", "1.0")
   end
 
+  test "start_stream/2 starts a native Slack stream" do
+    stub(Req, :post, fn url, opts ->
+      assert url == "https://slack.com/api/chat.startStream"
+      assert {"authorization", "Bearer xoxb-test"} in Keyword.fetch!(opts, :headers)
+
+      assert Keyword.fetch!(opts, :json) == %{
+               "channel" => "C1",
+               "thread_ts" => "1.0",
+               "markdown_text" => "hello"
+             }
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true, "ts" => "2.0"}}}
+    end)
+
+    assert {:ok, %{"ok" => true, "ts" => "2.0"}} =
+             API.start_stream(connected_installation(), %{
+               "channel" => "C1",
+               "thread_ts" => "1.0",
+               "markdown_text" => "hello"
+             })
+  end
+
+  test "append_stream/2 appends markdown text to a native Slack stream" do
+    stub(Req, :post, fn url, opts ->
+      assert url == "https://slack.com/api/chat.appendStream"
+
+      assert Keyword.fetch!(opts, :json) == %{
+               "channel" => "C1",
+               "ts" => "2.0",
+               "markdown_text" => " world"
+             }
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true, "ts" => "2.0"}}}
+    end)
+
+    assert {:ok, %{"ok" => true, "ts" => "2.0"}} =
+             API.append_stream(connected_installation(), %{
+               "channel" => "C1",
+               "ts" => "2.0",
+               "markdown_text" => " world"
+             })
+  end
+
+  test "stop_stream/2 stops a native Slack stream" do
+    stub(Req, :post, fn url, opts ->
+      assert url == "https://slack.com/api/chat.stopStream"
+      assert Keyword.fetch!(opts, :json) == %{"channel" => "C1", "ts" => "2.0"}
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true, "ts" => "2.0"}}}
+    end)
+
+    assert {:ok, %{"ok" => true, "ts" => "2.0"}} =
+             API.stop_stream(connected_installation(), %{"channel" => "C1", "ts" => "2.0"})
+  end
+
   test "decodes Slack ok: false as an error tuple" do
     stub(Req, :post, fn _url, _opts ->
       {:ok, %Req.Response{status: 200, body: %{"ok" => false, "error" => "channel_not_found"}}}

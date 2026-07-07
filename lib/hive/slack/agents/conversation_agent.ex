@@ -87,6 +87,24 @@ defmodule Hive.Slack.Agents.ConversationAgent do
   @impl true
   def tools, do: [CreateForageItem]
 
+  def build_prompt(input) when is_map(input) do
+    """
+    Mention text:
+    #{input["mention_text"] || ""}
+
+    Can create forage item:
+    #{input["can_create_forage_item"] == true}
+
+    Available GitHub labels:
+    #{format_github_labels(input["available_github_labels"] || [])}
+
+    Thread messages, oldest first:
+    #{format_thread(input["thread"] || [])}
+
+    Reply as normal Slack message text. Do not wrap the reply in a structured object.
+    """
+  end
+
   operation(:reply_to_thread,
     input: @input_schema,
     output: @output_schema,
@@ -95,4 +113,33 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     order). Produce a single reply in the `reply` field.
     """
   )
+
+  defp format_github_labels([]), do: "None"
+
+  defp format_github_labels(labels) do
+    Enum.map_join(labels, "\n", fn label ->
+      name = Map.get(label, "name") || Map.get(label, :name) || ""
+      description = Map.get(label, "description") || Map.get(label, :description)
+
+      case description do
+        description when is_binary(description) and description != "" ->
+          "- #{name}: #{description}"
+
+        _ ->
+          "- #{name}"
+      end
+    end)
+  end
+
+  defp format_thread([]), do: "No prior messages."
+
+  defp format_thread(messages) do
+    Enum.map_join(messages, "\n", fn message ->
+      user = Map.get(message, "user") || Map.get(message, :user) || "unknown"
+      ts = Map.get(message, "ts") || Map.get(message, :ts) || "unknown time"
+      text = Map.get(message, "text") || Map.get(message, :text) || ""
+
+      "- #{ts} #{user}: #{text}"
+    end)
+  end
 end
