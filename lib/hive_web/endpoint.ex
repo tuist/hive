@@ -8,15 +8,11 @@ defmodule HiveWeb.Endpoint do
     same_site: "Lax"
   ]
 
+  @live_socket_connect_info [session: @session_options]
+
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [
-      connect_info: [
-        :peer_data,
-        :uri,
-        :user_agent,
-        session: @session_options
-      ]
-    ]
+    websocket: [connect_info: @live_socket_connect_info],
+    longpoll: [connect_info: @live_socket_connect_info]
 
   plug Plug.Static,
     at: "/",
