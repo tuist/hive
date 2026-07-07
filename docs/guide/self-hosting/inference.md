@@ -17,9 +17,10 @@ quality without changing every repository or workflow. It also gives them
 a more granular usage and cost view because every client request is
 attributed to the profile and token that made it.
 
-The client-facing gateway supports chat completions and embeddings.
-Both use the same profile model rewriting, provider credential hiding,
-token attribution, and cost tracking.
+The client-facing gateway supports chat completions, streaming chat
+completions, and embeddings. All of them use the same profile model
+rewriting, provider credential hiding, token attribution, and cost
+tracking.
 
 ## Configure model providers
 
@@ -27,9 +28,9 @@ Open **Ops -> Inference -> Providers** as an instance admin and create a
 provider with:
 
 - **Provider key**: the stable key profiles will reference, such as
-  `fireworks` or `openai`.
+  `togetherai` or `openai`.
 - **Endpoint**: the upstream base address, such as
-  `https://api.fireworks.ai/inference/v1`.
+  `https://api.together.ai/v1`.
 - **Credential**: the provider token. Hive encrypts this value and never
   shows it again after saving.
 - **Timeout in milliseconds**: how long Hive should wait for upstream
@@ -44,8 +45,8 @@ upstream provider, set the single-provider variables from the
 [configuration reference](/reference/configuration#model-gateway):
 
 ```bash
-HIVE_INFERENCE_UPSTREAM_ID=fireworks
-HIVE_INFERENCE_UPSTREAM_BASE_URL=https://api.fireworks.ai/inference/v1
+HIVE_INFERENCE_UPSTREAM_ID=togetherai
+HIVE_INFERENCE_UPSTREAM_BASE_URL=https://api.together.ai/v1
 HIVE_INFERENCE_UPSTREAM_API_KEY=provider-token
 ```
 
@@ -56,8 +57,8 @@ to a JavaScript Object Notation
 
 ```bash
 HIVE_INFERENCE_PROVIDERS='{
-  "fireworks": {
-    "base_url": "https://api.fireworks.ai/inference/v1",
+  "togetherai": {
+    "base_url": "https://api.together.ai/v1",
     "api_key": "provider-token"
   },
   "openai": {
@@ -169,23 +170,35 @@ deployments that prefer immutable launch-time model configuration:
   every agentic feature is disabled.
 - [`HIVE_LLM_MODEL`](/reference/configuration#hive_llm_model): the model
   in `provider:model_id` form, for example
-  `anthropic:claude-haiku-4-5` or
-  `fireworks_ai:accounts/fireworks/models/kimi-k2p7-code`. Required when
+  `anthropic:claude-haiku-4-5`. Required when
   [`HIVE_LLM_API_KEY`](/reference/configuration#hive_llm_api_key) is set.
 - [`HIVE_LLM_BASE_URL`](/reference/configuration#hive_llm_base_url):
   optional endpoint override. Use it to point at a compatible provider
   that is not reachable at its vendor's default address.
 
 Any provider supported by [ReqLLM](https://hexdocs.pm/req_llm) works.
-ReqLLM's catalog is sourced from [models.dev](https://models.dev), so
-the `provider:model_id` strings you can put in
+ReqLLM's catalog is sourced from [models.dev](https://models.dev), so the
+`provider:model_id` strings you can put in
 [`HIVE_LLM_MODEL`](/reference/configuration#hive_llm_model) are exactly
 the identifiers listed there.
 
-For other OpenAI-compatible gateways, set the provider prefix to
-`openai:`, the model identifier to whatever the gateway expects, and
+For an OpenAI-compatible gateway such as Together.ai, set the provider
+prefix to `openai:`, the model identifier to whatever the gateway
+expects, and
 [`HIVE_LLM_BASE_URL`](/reference/configuration#hive_llm_base_url) to its
-endpoint.
+endpoint:
+
+```bash
+HIVE_LLM_MODEL=openai:MiniMaxAI/MiniMax-M3
+HIVE_LLM_BASE_URL=https://api.together.ai/v1
+HIVE_LLM_API_KEY=provider-token
+```
+
+Prefer an inference profile for Together.ai and other gateways: create a
+profile whose upstream provider is `togetherai` and upstream model is
+`MiniMaxAI/MiniMax-M3`, then mark it **Use for Hive inference** so Hive
+routes its own agents through the gateway and records usage on the
+profile.
 
 ## Track usage and cost
 
@@ -207,6 +220,8 @@ The profile page aggregates those rows for the selected period and shows
 input tokens, output tokens, estimated cost, and a trend chart. Token
 rows also show their own usage and cost for the same period. Each token
 has a detail page with the same widgets and chart scoped to that token.
+Failed upstream responses are not counted toward request, token, or cost
+analytics.
 
 ## Create a profile and token
 
@@ -221,8 +236,8 @@ Create a profile with:
   Providers** or the environment configuration, such as `fireworks`.
 - **Upstream model**: the model identifier the upstream endpoint
   expects, such as `accounts/fireworks/models/kimi-k2p5` or
-  `gpt-4o-mini`. For an embedding profile, use the upstream embedding
-  model, such as `accounts/fireworks/models/qwen3-embedding-8b`.
+  `MiniMaxAI/MiniMax-M3`. For an embedding profile, use the upstream
+  embedding model, such as `BAAI/bge-large-en-v1.5`.
 - **Input cost per million tokens** and **Output cost per million
   tokens**: optional United States dollar prices for the upstream model.
   Hive uses these values to estimate cost after each gateway response

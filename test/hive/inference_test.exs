@@ -21,6 +21,18 @@ defmodule Hive.InferenceTest do
       assert binding.enabled
     end
 
+    test "creates a Together.ai model binding" do
+      assert {:ok, %ModelBinding{} = binding} =
+               Inference.create_model_binding(%{
+                 name: "hive-agent",
+                 upstream_provider: "togetherai",
+                 upstream_model: "MiniMaxAI/MiniMax-M3"
+               })
+
+      assert binding.upstream_provider == "togetherai"
+      assert binding.upstream_model == "MiniMaxAI/MiniMax-M3"
+    end
+
     test "accepts legacy provider-prefixed model bindings" do
       assert {:ok, %ModelBinding{} = binding} =
                Inference.create_model_binding(%{
@@ -107,6 +119,40 @@ defmodule Hive.InferenceTest do
                  profile_count: 1,
                  source: :reference,
                  timeout: nil
+               }
+             ] = Inference.list_provider_configs()
+    end
+
+    test "lists configured Together.ai providers with profile references" do
+      on_exit(fn -> Inference.delete_process_config() end)
+
+      Inference.put_process_config(
+        providers: %{
+          "togetherai" => %{
+            "base_url" => "https://api.together.ai/v1",
+            "api_key" => "together-test",
+            "timeout" => "120000"
+          }
+        }
+      )
+
+      _configured_binding =
+        model_binding!(
+          name: "hive-agent",
+          upstream_provider: "togetherai",
+          upstream_model: "MiniMaxAI/MiniMax-M3"
+        )
+
+      assert [
+               %{
+                 id: "togetherai",
+                 base_url: "https://api.together.ai/v1",
+                 configured?: true,
+                 credential_configured?: true,
+                 endpoint_configured?: true,
+                 profile_count: 1,
+                 source: :environment,
+                 timeout: 120_000
                }
              ] = Inference.list_provider_configs()
     end
@@ -477,6 +523,72 @@ defmodule Hive.InferenceTest do
       assert usage.output_tokens == 0
       assert usage.total_tokens == 4_000
       assert Decimal.equal?(usage.cost_usd, Decimal.new("0.004"))
+    end
+
+    test "records failed upstream responses without billable usage" do
+      binding = model_binding!(input_cost_per_million: "1.00", output_cost_per_million: "2.00")
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      assert {:ok, usage} =
+               Inference.record_usage(
+                 binding,
+                 token,
+                 Req.Response.new(
+                   status: 403,
+                   body: %{
+                     "error" => %{"message" => "account suspended"},
+                     "usage" => %{
+                       "prompt_tokens" => 1_000,
+                       "completion_tokens" => 2_000,
+                       "total_tokens" => 3_000
+                     }
+                   }
+                 )
+               )
+
+      assert usage.status == 403
+      assert usage.input_tokens == 0
+      assert usage.output_tokens == 0
+      assert usage.total_tokens == 0
+      assert Decimal.equal?(usage.cost_usd, Decimal.new("0"))
+    end
+
+    test "usage analytics exclude failed upstream response rows" do
+      binding = model_binding!(input_cost_per_million: "1.00", output_cost_per_million: "2.00")
+      {:ok, {token, _token_value}} = Inference.create_token(binding, %{name: "Repository"})
+
+      %Usage{}
+      |> Usage.changeset(%{
+        operation: "chat_completion",
+        upstream_provider: binding.upstream_provider,
+        upstream_model: binding.upstream_model,
+        status: 403,
+        input_tokens: 1_000,
+        output_tokens: 2_000,
+        total_tokens: 3_000,
+        cost_usd: Decimal.new("0.005")
+      })
+      |> put_change(:model_binding_id, binding.id)
+      |> put_change(:token_id, token.id)
+      |> Repo.insert!()
+
+      period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+      assert %{
+               request_count: 0,
+               input_tokens: 0,
+               output_tokens: 0,
+               total_tokens: 0,
+               cost_usd: cost_usd
+             } = Inference.usage_summary(binding, period)
+
+      assert Decimal.equal?(cost_usd, Decimal.new("0"))
+      assert Inference.token_usage_summaries(binding, period) == %{}
+      assert %{request_count: 0, input_tokens: 0} = Inference.usage_summary(token, period)
+
+      assert period
+             |> then(&Inference.usage_series(binding, &1, :day))
+             |> Enum.all?(&(&1.total_tokens == 0))
     end
 
     test "usage changesets ignore caller supplied owner attrs" do

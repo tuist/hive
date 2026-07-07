@@ -36,6 +36,10 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+config :mime, :types, %{
+  "text/event-stream" => ["event-stream"]
+}
+
 config :tzdata, http_client: Hive.TzdataHTTPClient
 
 config :flop, repo: Hive.Repo

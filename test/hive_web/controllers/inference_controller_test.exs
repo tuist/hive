@@ -55,6 +55,52 @@ defmodule HiveWeb.InferenceControllerTest do
     assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
   end
 
+  test "POST /inference/v1/chat/completions forwards Together.ai models", %{conn: conn} do
+    parent = self()
+
+    Inference.put_process_config(
+      providers: %{
+        "togetherai" => %{
+          "base_url" => "https://api.together.ai/v1",
+          "api_key" => "together-token"
+        }
+      },
+      request: fn request ->
+        send(parent, {:upstream_request, request})
+
+        {:ok,
+         Req.Response.new(
+           status: 200,
+           headers: [{"content-type", "application/json"}],
+           body: %{"id" => "chatcmpl-together", "object" => "chat.completion"}
+         )}
+      end
+    )
+
+    {_binding, token_value} =
+      relay_token!(
+        name: "hive-agent",
+        upstream_provider: "togetherai",
+        upstream_model: "MiniMaxAI/MiniMax-M3"
+      )
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/chat/completions", %{
+        "model" => "hive-agent",
+        "messages" => [%{"role" => "user", "content" => "Summarize this issue."}]
+      })
+      |> json_response(200)
+
+    assert response["id"] == "chatcmpl-together"
+
+    assert_received {:upstream_request, request}
+    assert Keyword.fetch!(request, :url) == "https://api.together.ai/v1/chat/completions"
+    assert Keyword.fetch!(request, :json)["model"] == "MiniMaxAI/MiniMax-M3"
+    assert {"authorization", "Bearer together-token"} in Keyword.fetch!(request, :headers)
+  end
+
   test "POST /inference/v1/chat/completions persists token usage", %{conn: conn} do
     put_relay_config(fn _request ->
       {:ok,
@@ -93,6 +139,50 @@ defmodule HiveWeb.InferenceControllerTest do
            } = Inference.usage_summary(binding, period)
 
     assert Decimal.equal?(cost_usd, Decimal.new("0.005"))
+  end
+
+  test "POST /inference/v1/chat/completions excludes failed upstream responses from usage analytics",
+       %{conn: conn} do
+    put_relay_config(fn _request ->
+      {:ok,
+       Req.Response.new(
+         status: 403,
+         headers: [{"content-type", "application/json"}],
+         body: %{
+           "error" => %{"message" => "Your Fireworks account is suspended."},
+           "usage" => %{
+             "prompt_tokens" => 1_000,
+             "completion_tokens" => 2_000,
+             "total_tokens" => 3_000
+           }
+         }
+       )}
+    end)
+
+    {binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/chat/completions", %{
+        "model" => "blick-code-review",
+        "messages" => [%{"role" => "user", "content" => "Review this change."}]
+      })
+      |> json_response(403)
+
+    assert response["error"]["message"] =~ "suspended"
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 0,
+             input_tokens: 0,
+             output_tokens: 0,
+             total_tokens: 0,
+             cost_usd: cost_usd
+           } = Inference.usage_summary(binding, period)
+
+    assert Decimal.equal?(cost_usd, Decimal.new("0"))
   end
 
   test "POST /inference/v1/embeddings rewrites the model before forwarding", %{conn: conn} do
@@ -200,20 +290,32 @@ defmodule HiveWeb.InferenceControllerTest do
 
   test "POST /inference/v1/chat/completions streams upstream event data", %{conn: conn} do
     put_relay_config(fn request ->
+      headers = Keyword.fetch!(request, :headers)
       into = Keyword.fetch!(request, :into)
       response = Req.Response.new(status: 200, headers: [{"content-type", "text/event-stream"}])
 
-      assert {:cont, _acc} =
-               into.({:data, "data: {\"id\":\"chatcmpl-stream\"}\n\n"}, {request, response})
+      assert Keyword.fetch!(request, :url) == "https://relay.example/v1/chat/completions"
+      assert Keyword.fetch!(request, :json)["model"] == "accounts/fireworks/models/kimi-k2p5"
+      assert {"authorization", "Bearer upstream-token"} in headers
+      assert {"accept", "text/event-stream"} in headers
+
+      stream_chunk =
+        "data: {\"id\":\"chatcmpl-stream\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":20,\"total_tokens\":30}}\n\n"
+
+      {first_chunk, second_chunk} = String.split_at(stream_chunk, 24)
+
+      assert {:cont, acc} = into.({:data, first_chunk}, {request, response})
+      assert {:cont, _acc} = into.({:data, second_chunk}, acc)
 
       {:ok, %{response | body: nil}}
     end)
 
-    {_binding, token_value} = relay_token!()
+    {binding, token_value} = relay_token!()
 
     conn =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
+      |> put_req_header("accept", "text/event-stream")
       |> post(~p"/inference/v1/chat/completions", %{
         "model" => "blick-code-review",
         "messages" => [],
@@ -221,6 +323,15 @@ defmodule HiveWeb.InferenceControllerTest do
       })
 
     assert response(conn, 200) =~ "chatcmpl-stream"
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 1,
+             input_tokens: 10,
+             output_tokens: 20,
+             total_tokens: 30
+           } = Inference.usage_summary(binding, period)
   end
 
   test "returns an OpenAI-compatible authorization error", %{conn: conn} do

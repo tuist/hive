@@ -157,6 +157,7 @@ defmodule Hive.Inference do
       ) do
     Usage
     |> where([usage], usage.model_binding_id == ^binding.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> select([usage], %{
       request_count: count(usage.id),
@@ -172,6 +173,7 @@ defmodule Hive.Inference do
   def usage_summary(%Token{} = token, {%DateTime{} = start_datetime, %DateTime{} = end_datetime}) do
     Usage
     |> where([usage], usage.token_id == ^token.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> select([usage], %{
       request_count: count(usage.id),
@@ -212,6 +214,7 @@ defmodule Hive.Inference do
       ) do
     Usage
     |> where([usage], usage.model_binding_id == ^binding.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> group_by([usage], usage.token_id)
     |> select([usage], {
@@ -345,7 +348,7 @@ defmodule Hive.Inference do
         usage_payload \\ nil,
         opts \\ []
       ) do
-    usage = response_usage(response, usage_payload)
+    usage = billable_usage(response, usage_payload)
     input_tokens = Map.fetch!(usage, :input_tokens)
     output_tokens = Map.fetch!(usage, :output_tokens)
 
@@ -386,16 +389,25 @@ defmodule Hive.Inference do
     |> Enum.filter(&String.starts_with?(&1, "data:"))
     |> Enum.map(&String.trim_leading(&1, "data:"))
     |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 in ["", "[DONE]"]))
-    |> Enum.find_value(fn payload ->
-      case JSON.decode(payload) do
-        {:ok, body} -> usage_from_body(body)
-        {:error, _error} -> nil
-      end
-    end)
+    |> Enum.find_value(&usage_from_stream_event_data/1)
   end
 
   def usage_from_stream_chunk(_data), do: nil
+
+  def usage_from_stream_event_data(data) when is_binary(data) do
+    case String.trim(data) do
+      payload when payload in ["", "[DONE]"] ->
+        nil
+
+      payload ->
+        case JSON.decode(payload) do
+          {:ok, body} -> usage_from_body(body)
+          {:error, _error} -> nil
+        end
+    end
+  end
+
+  def usage_from_stream_event_data(_data), do: nil
 
   def config do
     Process.get(@config_key) || Application.get_env(:hive, :inference, [])
@@ -642,6 +654,7 @@ defmodule Hive.Inference do
 
     rows =
       query
+      |> billable_usage_query()
       |> where(
         [usage],
         usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime
@@ -1008,6 +1021,23 @@ defmodule Hive.Inference do
   defp stream?(%{stream: true}), do: true
   defp stream?(_body), do: false
 
+  defp billable_usage(response, usage_payload) do
+    if successful_response?(response) do
+      response_usage(response, usage_payload)
+    else
+      normalize_usage(nil)
+    end
+  end
+
+  defp billable_usage_query(query) do
+    where(query, [usage], usage.status >= 200 and usage.status < 300)
+  end
+
+  defp successful_response?(response) do
+    status = response_status(response)
+    status >= 200 and status < 300
+  end
+
   defp response_status(%{status: status}) when is_integer(status), do: status
   defp response_status(_response), do: 200
 
@@ -1016,6 +1046,8 @@ defmodule Hive.Inference do
 
   defp usage_from_body(%{"usage" => usage}) when is_map(usage), do: normalize_usage(usage)
   defp usage_from_body(%{usage: usage}) when is_map(usage), do: normalize_usage(usage)
+  defp usage_from_body(%{"input_tokens" => _input_tokens} = usage), do: normalize_usage(usage)
+  defp usage_from_body(%{input_tokens: _input_tokens} = usage), do: normalize_usage(usage)
   defp usage_from_body(_body), do: nil
 
   defp normalize_usage(nil), do: normalize_usage(%{})
