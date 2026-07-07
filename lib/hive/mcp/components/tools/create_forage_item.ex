@@ -29,6 +29,13 @@ defmodule Hive.MCP.Components.Tools.CreateForageItem do
         "source_label" => %{
           "type" => "string",
           "description" => "Optional label for the source URL."
+        },
+        "github_labels" => %{
+          "type" => "array",
+          "items" => %{"type" => "string"},
+          "maxItems" => 3,
+          "description" =>
+            "Optional GitHub labels to apply when the item is created as a GitHub issue. Labels must already exist on the configured repository."
         }
       }
     }
@@ -45,7 +52,15 @@ defmodule Hive.MCP.Components.Tools.CreateForageItem do
   def call(conn, args) do
     attrs =
       args
-      |> Map.take(["type", "title", "description", "destination", "source_url", "source_label"])
+      |> Map.take([
+        "type",
+        "title",
+        "description",
+        "destination",
+        "source_url",
+        "source_label",
+        "github_labels"
+      ])
       |> Map.put_new("type", "feature_request")
 
     case Intake.create(attrs, conn.assigns[:current_user], interface: "mcp") do
@@ -66,6 +81,9 @@ defmodule Hive.MCP.Components.Tools.CreateForageItem do
 
       {:error, :github_repository_not_found} ->
         Tool.json_response(%{error: "github_repository_not_found"})
+
+      {:error, {:unknown_github_labels, labels}} ->
+        Tool.json_response(%{error: "unknown_github_labels", labels: labels})
 
       {:error, _reason} ->
         Tool.json_response(%{error: "failed"})

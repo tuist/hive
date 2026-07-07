@@ -34,6 +34,13 @@ defmodule Hive.Agents.Tools.CreateForageItem do
         source_url: %{
           type: "string",
           description: "Optional source URL that explains where the request came from."
+        },
+        github_labels: %{
+          type: "array",
+          items: %{type: "string"},
+          maxItems: 3,
+          description:
+            "Optional GitHub labels to apply when forage intake creates a GitHub issue. Only use labels provided by the conversation context."
         }
       }
     }
@@ -76,6 +83,10 @@ defmodule Hive.Agents.Tools.CreateForageItem do
   defp tool_result({:error, reason})
        when reason in [:github_repository_not_configured, :github_repository_not_found] do
     {:error, "The forage intake destination is not configured."}
+  end
+
+  defp tool_result({:error, {:unknown_github_labels, labels}}) do
+    {:error, "The selected GitHub labels are not available: #{Enum.join(labels, ", ")}."}
   end
 
   defp tool_result({:error, _reason}), do: {:error, "The forage item could not be created."}

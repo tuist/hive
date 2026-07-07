@@ -139,6 +139,55 @@ defmodule Hive.GitHub.IssuesTest do
     end
   end
 
+  describe "list_labels/2" do
+    test "fetches repository labels" do
+      request = fn request ->
+        assert request[:method] == :get
+
+        assert request[:url] ==
+                 "https://api.github.test/repos/tuist/hive/labels?per_page=100&page=1"
+
+        {:ok,
+         %{
+           status: 200,
+           body: [
+             %{
+               "name" => "LiveView",
+               "color" => "0366d6",
+               "description" => "Phoenix LiveView behavior"
+             }
+           ]
+         }}
+      end
+
+      assert {:ok, [label]} =
+               Issues.list_labels(repository(),
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+
+      assert label == %{
+               name: "LiveView",
+               color: "0366d6",
+               description: "Phoenix LiveView behavior"
+             }
+    end
+
+    test "returns GitHub API errors for labels" do
+      request = fn _request ->
+        {:ok, %{status: 404, body: %{"message" => "Not Found"}}}
+      end
+
+      assert {:error, {:unexpected_status, 404, %{"message" => "Not Found"}}} =
+               Issues.list_labels(repository(),
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+    end
+  end
+
   describe "create_issue/3" do
     test "creates an issue" do
       request = fn request ->

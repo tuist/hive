@@ -57,6 +57,13 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  def list_labels(repository, opts \\ []) do
+    with {:ok, config} <- Client.config(opts),
+         {:ok, token} <- Client.installation_token(config, opts) do
+      fetch_labels(config, token, repository, opts)
+    end
+  end
+
   def create_issue(repository, attrs, opts \\ []) do
     with {:ok, config} <- Client.config(opts),
          {:ok, token} <- Client.installation_token(config, opts) do
@@ -189,6 +196,45 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  defp fetch_labels(config, token, %{owner: owner, name: name}, opts) do
+    fetch_labels(config, token, owner, name, opts, 1, [])
+  end
+
+  defp fetch_labels(_config, _token, _owner, _name, _opts, page, acc)
+       when page > @max_pages do
+    {:ok, acc}
+  end
+
+  defp fetch_labels(config, token, owner, name, opts, page, acc) do
+    url = "#{config.api_url}/repos/#{owner}/#{name}/labels?per_page=#{@per_page}&page=#{page}"
+
+    Client.request(
+      [method: :get, url: url, headers: Client.headers(token)],
+      opts
+    )
+    |> case do
+      {:ok, %{status: 200, body: body}} when is_list(body) ->
+        labels =
+          body
+          |> Enum.map(&label_option_from_api/1)
+          |> Enum.reject(&is_nil/1)
+
+        acc = acc ++ labels
+
+        if length(body) == @per_page do
+          fetch_labels(config, token, owner, name, opts, page + 1, acc)
+        else
+          {:ok, acc}
+        end
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:unexpected_status, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp fetch_comments(config, token, %{owner: owner, name: name}, issue_number, opts) do
     fetch_comments(config, token, owner, name, issue_number, opts, 1, [])
   end
@@ -248,6 +294,16 @@ defmodule Hive.GitHub.Issues do
   defp label_from_api(%{"name" => name, "color" => color}), do: %{name: name, color: color}
   defp label_from_api(%{"name" => name}), do: %{name: name, color: nil}
   defp label_from_api(_label), do: nil
+
+  defp label_option_from_api(%{"name" => name} = label) when is_binary(name) do
+    %{
+      name: name,
+      color: label["color"],
+      description: label["description"]
+    }
+  end
+
+  defp label_option_from_api(_label), do: nil
 
   defp comment_from_api(comment) do
     %Comment{

@@ -139,6 +139,76 @@ defmodule Hive.Forage.IntakeTest do
       assert [%GitHubIssue{number: 42, title: "Dark mode"}] = Repo.all(GitHubIssue)
     end
 
+    test "adds requested GitHub labels after validating them against the repository" do
+      repository = repository!()
+
+      expect(Issues, :list_labels, fn ^repository, [request: :labels] ->
+        {:ok,
+         [
+           %{name: "LiveView", description: "Phoenix LiveView behavior"},
+           %{name: "production", description: nil}
+         ]}
+      end)
+
+      expect(Issues, :create_issue, fn ^repository, attrs, [request: :labels] ->
+        assert attrs.labels == ["enhancement", "LiveView"]
+
+        {:ok,
+         %Issues{
+           number: 44,
+           title: attrs.title,
+           body: attrs.body,
+           state: "open",
+           html_url: "https://github.com/#{repository.owner}/#{repository.name}/issues/44"
+         }}
+      end)
+
+      assert {:ok, result} =
+               Intake.create(
+                 %{
+                   "type" => "feature_request",
+                   "title" => "LiveView sockets",
+                   "description" => "Fix websocket connection failures against production.",
+                   "github_labels" => ["liveview"]
+                 },
+                 user("labels-intake@example.com"),
+                 config: [
+                   destination: :github_issue,
+                   github_repository: "#{repository.owner}/#{repository.name}"
+                 ],
+                 github: [request: :labels]
+               )
+
+      assert result.destination == :github_issue
+      assert result.external_label == "#44"
+    end
+
+    test "rejects requested GitHub labels that do not exist on the repository" do
+      repository = repository!()
+
+      expect(Issues, :list_labels, fn ^repository, [request: :unknown_label] ->
+        {:ok, [%{name: "LiveView", description: nil}]}
+      end)
+
+      reject(&Issues.create_issue/3)
+
+      assert {:error, {:unknown_github_labels, ["area:web"]}} =
+               Intake.create(
+                 %{
+                   "type" => "feature_request",
+                   "title" => "LiveView sockets",
+                   "description" => "Fix websocket connection failures against production.",
+                   "github_labels" => ["area:web"]
+                 },
+                 user("unknown-label-intake@example.com"),
+                 config: [
+                   destination: :github_issue,
+                   github_repository: "#{repository.owner}/#{repository.name}"
+                 ],
+                 github: [request: :unknown_label]
+               )
+    end
+
     test "uses persisted intake settings by default" do
       repository = repository!()
 

@@ -121,9 +121,11 @@ Hive currently uses agents for:
   asks the agent to draft a short reply, posted back in the same thread.
   If the requester is linked to a Hive user and asks Hive to capture
   work, the agent can create a forage item through the configured intake
-  destination from **Ops -> Forage**. When no model provider is
-  configured, the bot stays silent. See [Slack](./slack) for the
-  workspace install flow.
+  destination from **Ops -> Forage**. When that destination creates
+  GitHub issues, Hive shows the agent the repository labels that already
+  exist so it can pick matching labels and Hive can validate them before
+  issue creation. When no model provider is configured, the bot replies
+  with a setup note. See [Slack](./slack) for the workspace install flow.
 - GitHub issue domain classification: each time the syncer sees a new
   issue in a connected project repository or notices that an issue's
   title or body changed, Hive queues a job that asks the agent which
