@@ -55,6 +55,52 @@ defmodule HiveWeb.InferenceControllerTest do
     assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
   end
 
+  test "POST /inference/v1/chat/completions forwards Together.ai models", %{conn: conn} do
+    parent = self()
+
+    Inference.put_process_config(
+      providers: %{
+        "togetherai" => %{
+          "base_url" => "https://api.together.ai/v1",
+          "api_key" => "together-token"
+        }
+      },
+      request: fn request ->
+        send(parent, {:upstream_request, request})
+
+        {:ok,
+         Req.Response.new(
+           status: 200,
+           headers: [{"content-type", "application/json"}],
+           body: %{"id" => "chatcmpl-together", "object" => "chat.completion"}
+         )}
+      end
+    )
+
+    {_binding, token_value} =
+      relay_token!(
+        name: "hive-agent",
+        upstream_provider: "togetherai",
+        upstream_model: "MiniMaxAI/MiniMax-M3"
+      )
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/chat/completions", %{
+        "model" => "hive-agent",
+        "messages" => [%{"role" => "user", "content" => "Summarize this issue."}]
+      })
+      |> json_response(200)
+
+    assert response["id"] == "chatcmpl-together"
+
+    assert_received {:upstream_request, request}
+    assert Keyword.fetch!(request, :url) == "https://api.together.ai/v1/chat/completions"
+    assert Keyword.fetch!(request, :json)["model"] == "MiniMaxAI/MiniMax-M3"
+    assert {"authorization", "Bearer together-token"} in Keyword.fetch!(request, :headers)
+  end
+
   test "POST /inference/v1/chat/completions persists token usage", %{conn: conn} do
     put_relay_config(fn _request ->
       {:ok,

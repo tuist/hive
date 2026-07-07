@@ -238,14 +238,14 @@ defmodule HiveWeb.OpsLive.InferenceProviders do
           id="new-inference-provider-key"
           field={@provider_form[:key]}
           label={dgettext("dashboard_inference", "Provider key")}
-          placeholder="fireworks"
+          placeholder="togetherai"
         />
         <.text_input
           id="new-inference-provider-endpoint"
           field={@provider_form[:base_url]}
           label={dgettext("dashboard_inference", "Endpoint")}
           input_type="url"
-          placeholder="https://api.fireworks.ai/inference/v1"
+          placeholder="https://api.together.ai/v1"
         />
         <.text_input
           id="new-inference-provider-credential"

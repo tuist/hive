@@ -133,6 +133,9 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
       "openai" ->
         "gpt-4o-mini"
 
+      provider when provider in ["togetherai", "together-ai", "together_ai", "together"] ->
+        "MiniMaxAI/MiniMax-M3"
+
       provider when provider != "" ->
         "model-id"
 
