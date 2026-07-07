@@ -1,6 +1,8 @@
 defmodule HiveWeb.OpenGraphTest do
   use HiveWeb.ConnCase, async: true
 
+  import ExUnit.CaptureLog, only: [capture_log: 1]
+
   alias Hive.Forage
   alias HiveWeb.AccountLive
   alias HiveWeb.ForageLive
@@ -16,6 +18,32 @@ defmodule HiveWeb.OpenGraphTest do
   defmodule DisabledStorage do
     def enabled?, do: false
     def configured?, do: false
+  end
+
+  defmodule LazyBrowser do
+    def init(parent: parent) do
+      send(parent, :browser_initialized)
+      {:ok, %{parent: parent}}
+    end
+
+    def terminate(reason, %{parent: parent}) do
+      send(parent, {:browser_terminated, reason})
+      :ok
+    end
+
+    def navigate(%{parent: parent}, url, opts) do
+      send(parent, {:browser_navigated, url, opts})
+      :ok
+    end
+
+    def set_viewport(%{parent: parent}, width, height, opts) do
+      send(parent, {:browser_viewport_set, width, height, opts})
+      :ok
+    end
+  end
+
+  defmodule FailingBrowser do
+    def init(_opts), do: {:error, :devtools_timeout}
   end
 
   defp open_graph_data do
@@ -151,6 +179,72 @@ defmodule HiveWeb.OpenGraphTest do
       )
 
     assert response(conn, 200) == "generated-jpeg"
+  end
+
+  test "serve returns service unavailable when image generation fails", %{conn: conn} do
+    log =
+      capture_log(fn ->
+        conn =
+          OpenGraph.serve(conn, open_graph_data(),
+            storage: DisabledStorage,
+            generator: fn _data -> raise "renderer unavailable" end
+          )
+
+        assert response(conn, 503) == "OpenGraph image unavailable"
+      end)
+
+    assert log =~ "OpenGraph image generation failed"
+  end
+
+  test "browser pool uses the lazy OpenGraph browser implementation" do
+    assert %{
+             start:
+               {Browse, :start_link,
+                [
+                  HiveWeb.OpenGraph.BrowserPool,
+                  [implementation: HiveWeb.OpenGraph.Browser, pool_size: 2]
+                ]}
+           } = OpenGraph.browser_pool_child_spec()
+  end
+
+  test "lazy browser starts the delegate on first operation and reuses it" do
+    {:ok, manager} = HiveWeb.OpenGraph.Browser.init(delegate: LazyBrowser, parent: self())
+
+    refute_received :browser_initialized
+
+    assert :ok = HiveWeb.OpenGraph.Browser.navigate(manager, "file:///card.html", [])
+    assert :ok = HiveWeb.OpenGraph.Browser.set_viewport(manager, 1920, 1008, [])
+
+    assert_receive :browser_initialized
+    assert_receive {:browser_navigated, "file:///card.html", []}
+    assert_receive {:browser_viewport_set, 1920, 1008, []}
+    refute_received :browser_initialized
+
+    assert :ok = HiveWeb.OpenGraph.Browser.terminate(:normal, manager)
+    assert_receive {:browser_terminated, :normal}
+  end
+
+  test "lazy browser returns delegate startup errors without raising" do
+    {:ok, manager} = HiveWeb.OpenGraph.Browser.init(delegate: FailingBrowser)
+
+    assert {:error, :devtools_timeout} =
+             HiveWeb.OpenGraph.Browser.navigate(manager, "file:///card.html", [])
+  end
+
+  test "browser pool starts even when the delegate cannot start" do
+    assert {:ok, pool} =
+             Browse.start_link(nil,
+               implementation: HiveWeb.OpenGraph.Browser,
+               delegate: FailingBrowser,
+               pool_size: 1
+             )
+
+    assert {:error, :devtools_timeout} =
+             Browse.checkout(pool, fn browser ->
+               Browse.navigate(browser, "file:///card.html", [])
+             end)
+
+    GenServer.stop(pool)
   end
 
   test "render_html escapes page data and includes the card content" do

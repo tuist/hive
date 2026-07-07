@@ -5,6 +5,8 @@ defmodule HiveWeb.OpenGraph do
 
   import Plug.Conn
 
+  require Logger
+
   alias Hive.Auth
   alias Hive.ObjectStorage
   alias HiveWeb.Endpoint
@@ -381,16 +383,25 @@ defmodule HiveWeb.OpenGraph do
 
   defp generate_and_send(conn, data, storage, opts, store?: store?) do
     generator = Keyword.get(opts, :generator, &generate/1)
-    body = generator.(data)
 
-    if store? do
-      put_object = Keyword.get(opts, :put_object, &storage.put_object/3)
-      put_object.(object_key(data), body, content_type: @content_type)
+    case generate_image(generator, data) do
+      {:ok, body} ->
+        if store? do
+          put_object = Keyword.get(opts, :put_object, &storage.put_object/3)
+          put_object.(object_key(data), body, content_type: @content_type)
+        end
+
+        conn
+        |> put_common_headers()
+        |> send_resp(200, body)
+
+      {:error, reason} ->
+        Logger.warning("OpenGraph image generation failed: #{inspect(reason)}")
+
+        conn
+        |> put_resp_content_type("text/plain")
+        |> send_resp(:service_unavailable, "OpenGraph image unavailable")
     end
-
-    conn
-    |> put_common_headers()
-    |> send_resp(200, body)
   end
 
   defp put_common_headers(conn) do
@@ -408,9 +419,17 @@ defmodule HiveWeb.OpenGraph do
     Carta.render(@browser_pool, html, width: @width, height: @height, quality: @quality)
   end
 
+  defp generate_image(generator, data) do
+    {:ok, generator.(data)}
+  rescue
+    error -> {:error, Exception.message(error)}
+  catch
+    kind, reason -> {:error, {kind, reason}}
+  end
+
   defp browser_pool_opts do
     [
-      implementation: BrowseChrome.Browser,
+      implementation: HiveWeb.OpenGraph.Browser,
       pool_size: browser_pool_size()
     ]
     |> maybe_put_chrome_path()
