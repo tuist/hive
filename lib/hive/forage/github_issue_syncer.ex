@@ -66,18 +66,7 @@ defmodule Hive.Forage.GitHubIssueSyncer do
       {:ok, _config} ->
         repositories = Forage.list_github_issue_repositories()
 
-        Enum.each(repositories, fn repository ->
-          case enqueue_repository(repository) do
-            {:ok, _job} ->
-              :ok
-
-            {:error, reason} ->
-              Logger.warning(
-                "[GitHubIssueSyncer] Failed to enqueue #{repository.owner}/#{repository.name}: " <>
-                  inspect(reason)
-              )
-          end
-        end)
+        Enum.each(repositories, &enqueue_repository_sync/1)
 
         Logger.debug("[GitHubIssueSyncer] Enqueued #{length(repositories)} repository syncs")
         :ok
@@ -85,6 +74,19 @@ defmodule Hive.Forage.GitHubIssueSyncer do
       {:error, {:not_configured, _missing}} ->
         Logger.debug("[GitHubIssueSyncer] GitHub App not configured; skipping sync")
         :ok
+    end
+  end
+
+  defp enqueue_repository_sync(repository) do
+    case enqueue_repository(repository) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "[GitHubIssueSyncer] Failed to enqueue #{repository.owner}/#{repository.name}: " <>
+            inspect(reason)
+        )
     end
   end
 
