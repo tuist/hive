@@ -290,20 +290,32 @@ defmodule HiveWeb.InferenceControllerTest do
 
   test "POST /inference/v1/chat/completions streams upstream event data", %{conn: conn} do
     put_relay_config(fn request ->
+      headers = Keyword.fetch!(request, :headers)
       into = Keyword.fetch!(request, :into)
       response = Req.Response.new(status: 200, headers: [{"content-type", "text/event-stream"}])
 
-      assert {:cont, _acc} =
-               into.({:data, "data: {\"id\":\"chatcmpl-stream\"}\n\n"}, {request, response})
+      assert Keyword.fetch!(request, :url) == "https://relay.example/v1/chat/completions"
+      assert Keyword.fetch!(request, :json)["model"] == "accounts/fireworks/models/kimi-k2p5"
+      assert {"authorization", "Bearer upstream-token"} in headers
+      assert {"accept", "text/event-stream"} in headers
+
+      stream_chunk =
+        "data: {\"id\":\"chatcmpl-stream\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":20,\"total_tokens\":30}}\n\n"
+
+      {first_chunk, second_chunk} = String.split_at(stream_chunk, 24)
+
+      assert {:cont, acc} = into.({:data, first_chunk}, {request, response})
+      assert {:cont, _acc} = into.({:data, second_chunk}, acc)
 
       {:ok, %{response | body: nil}}
     end)
 
-    {_binding, token_value} = relay_token!()
+    {binding, token_value} = relay_token!()
 
     conn =
       conn
       |> put_req_header("authorization", "Bearer #{token_value}")
+      |> put_req_header("accept", "text/event-stream")
       |> post(~p"/inference/v1/chat/completions", %{
         "model" => "blick-code-review",
         "messages" => [],
@@ -311,6 +323,15 @@ defmodule HiveWeb.InferenceControllerTest do
       })
 
     assert response(conn, 200) =~ "chatcmpl-stream"
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 1,
+             input_tokens: 10,
+             output_tokens: 20,
+             total_tokens: 30
+           } = Inference.usage_summary(binding, period)
   end
 
   test "returns an OpenAI-compatible authorization error", %{conn: conn} do
