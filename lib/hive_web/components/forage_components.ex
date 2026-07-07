@@ -296,6 +296,7 @@ defmodule HiveWeb.ForageComponents do
         <.card_section data-part="metadata-card-section">
           <.form
             :if={@editing_item?}
+            id="forage-item-edit-form"
             for={@item_edit_form}
             phx-change="validate_item_edit"
             phx-submit="update_item"
@@ -507,6 +508,7 @@ defmodule HiveWeb.ForageComponents do
 
           <.form
             :if={@editing_comment_id == comment_id(comment)}
+            id={"forage-comment-edit-form-#{comment_id(comment)}"}
             for={@edit_comment_form}
             phx-change="validate_comment_edit"
             phx-submit="update_comment"
@@ -701,7 +703,7 @@ defmodule HiveWeb.ForageComponents do
 
       <.card icon="rss" title={dgettext("dashboard_forage", "Item details")} data-part="form-card">
         <.card_section>
-          <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
+          <.form id="forage-item-form" for={@form} phx-change="validate" phx-submit="save" data-part="form">
             <.item_type_select form={@form} id="forage-item-type" />
             <.text_input
               field={@form[:title]}

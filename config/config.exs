@@ -36,6 +36,8 @@ config :logger, :default_formatter,
 
 config :phoenix, :json_library, Jason
 
+config :tzdata, http_client: Hive.TzdataHTTPClient
+
 config :flop, repo: Hive.Repo
 
 config :mdex_native, syntax_highlighter: :lumis

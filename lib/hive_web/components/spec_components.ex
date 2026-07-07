@@ -366,6 +366,7 @@ defmodule HiveWeb.SpecComponents do
                   </header>
                   <.form
                     :if={@editing_comment_id == comment.id}
+                    id={"spec-comment-edit-form-#{comment.id}"}
                     for={@edit_comment_form}
                     phx-change="validate_comment_edit"
                     phx-submit="update_comment"
@@ -480,7 +481,7 @@ defmodule HiveWeb.SpecComponents do
 
       <.card icon="file_text" title={dgettext("dashboard_specs", "Proposal")}>
         <.card_section>
-          <.form for={@form} phx-change="validate" phx-submit="save" data-part="form">
+          <.form id="spec-form" for={@form} phx-change="validate" phx-submit="save" data-part="form">
             <.text_input
               field={@form[:title]}
               label={dgettext("dashboard_specs", "Title")}

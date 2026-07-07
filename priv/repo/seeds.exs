@@ -682,7 +682,7 @@ inference_profiles = [
       upstream_model: "gpt-4o-mini",
       input_cost_per_million: "0.15",
       output_cost_per_million: "0.60",
-      enabled: true,
+      enabled: false,
       hive_inference: true
     },
     hive_tokens: [
@@ -753,9 +753,10 @@ slack_installation_seeds = [
       team_id: "T-SEED-TUIST-COMMUNITY",
       team_name: "Tuist Community",
       bot_user_id: "U-SEED-HIVE-BOT",
-      bot_token: "slack-bot-token-placeholder",
+      bot_token: nil,
       scope: Enum.join(Hive.Slack.default_bot_scopes(), ","),
       installed_at: ~U[2026-06-18 09:00:00Z],
+      disconnected_at: ~U[2026-06-18 09:00:00Z],
       installed_by_user_id: slack_admin && slack_admin.id
     },
     routes: [
@@ -770,9 +771,10 @@ slack_installation_seeds = [
       team_id: "T-SEED-TUIST-COMPANY",
       team_name: "Tuist Company",
       bot_user_id: "U-SEED-HIVE-BOT",
-      bot_token: "slack-bot-token-placeholder",
+      bot_token: nil,
       scope: Enum.join(Hive.Slack.default_bot_scopes(), ","),
       installed_at: ~U[2026-06-17 14:30:00Z],
+      disconnected_at: ~U[2026-06-17 14:30:00Z],
       installed_by_user_id: slack_admin && slack_admin.id
     },
     routes: [
