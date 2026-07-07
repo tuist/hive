@@ -38,6 +38,7 @@ defmodule HiveWeb.PageHTML do
       auth_enabled?: Auth.private?(),
       providers: Auth.providers(),
       dev_login?: @dev_login?,
+      dev_login_path: if(@dev_login?, do: "/dev/login"),
       csrf_token: Plug.CSRFProtection.get_csrf_token(),
       open_graph: open_graph
     }
@@ -57,7 +58,7 @@ defmodule HiveWeb.PageHTML do
               </h1>
             </div>
             <.alert :if={@error} status="error" size="medium" title={@error} />
-            <form :if={@dev_login?} method="post" action={~p"/dev/login"} data-part="oauth">
+            <form :if={@dev_login?} method="post" action={@dev_login_path} data-part="oauth">
               <input type="hidden" name="_csrf_token" value={@csrf_token} />
               <.button
                 type="submit"
