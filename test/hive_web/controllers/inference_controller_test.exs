@@ -141,6 +141,50 @@ defmodule HiveWeb.InferenceControllerTest do
     assert Decimal.equal?(cost_usd, Decimal.new("0.005"))
   end
 
+  test "POST /inference/v1/chat/completions excludes failed upstream responses from usage analytics",
+       %{conn: conn} do
+    put_relay_config(fn _request ->
+      {:ok,
+       Req.Response.new(
+         status: 403,
+         headers: [{"content-type", "application/json"}],
+         body: %{
+           "error" => %{"message" => "Your Fireworks account is suspended."},
+           "usage" => %{
+             "prompt_tokens" => 1_000,
+             "completion_tokens" => 2_000,
+             "total_tokens" => 3_000
+           }
+         }
+       )}
+    end)
+
+    {binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/chat/completions", %{
+        "model" => "blick-code-review",
+        "messages" => [%{"role" => "user", "content" => "Review this change."}]
+      })
+      |> json_response(403)
+
+    assert response["error"]["message"] =~ "suspended"
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 0,
+             input_tokens: 0,
+             output_tokens: 0,
+             total_tokens: 0,
+             cost_usd: cost_usd
+           } = Inference.usage_summary(binding, period)
+
+    assert Decimal.equal?(cost_usd, Decimal.new("0"))
+  end
+
   test "POST /inference/v1/embeddings rewrites the model before forwarding", %{conn: conn} do
     parent = self()
 

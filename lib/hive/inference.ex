@@ -157,6 +157,7 @@ defmodule Hive.Inference do
       ) do
     Usage
     |> where([usage], usage.model_binding_id == ^binding.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> select([usage], %{
       request_count: count(usage.id),
@@ -172,6 +173,7 @@ defmodule Hive.Inference do
   def usage_summary(%Token{} = token, {%DateTime{} = start_datetime, %DateTime{} = end_datetime}) do
     Usage
     |> where([usage], usage.token_id == ^token.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> select([usage], %{
       request_count: count(usage.id),
@@ -212,6 +214,7 @@ defmodule Hive.Inference do
       ) do
     Usage
     |> where([usage], usage.model_binding_id == ^binding.id)
+    |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> group_by([usage], usage.token_id)
     |> select([usage], {
@@ -345,7 +348,7 @@ defmodule Hive.Inference do
         usage_payload \\ nil,
         opts \\ []
       ) do
-    usage = response_usage(response, usage_payload)
+    usage = billable_usage(response, usage_payload)
     input_tokens = Map.fetch!(usage, :input_tokens)
     output_tokens = Map.fetch!(usage, :output_tokens)
 
@@ -642,6 +645,7 @@ defmodule Hive.Inference do
 
     rows =
       query
+      |> billable_usage_query()
       |> where(
         [usage],
         usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime
@@ -1007,6 +1011,23 @@ defmodule Hive.Inference do
   defp stream?(%{"stream" => true}), do: true
   defp stream?(%{stream: true}), do: true
   defp stream?(_body), do: false
+
+  defp billable_usage(response, usage_payload) do
+    if successful_response?(response) do
+      response_usage(response, usage_payload)
+    else
+      normalize_usage(nil)
+    end
+  end
+
+  defp billable_usage_query(query) do
+    where(query, [usage], usage.status >= 200 and usage.status < 300)
+  end
+
+  defp successful_response?(response) do
+    status = response_status(response)
+    status >= 200 and status < 300
+  end
 
   defp response_status(%{status: status}) when is_integer(status), do: status
   defp response_status(_response), do: 200
