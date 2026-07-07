@@ -57,6 +57,13 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  def create_issue(repository, attrs, opts \\ []) do
+    with {:ok, config} <- Client.config(opts),
+         {:ok, token} <- Client.installation_token(config, opts) do
+      create(config, token, repository, attrs, opts)
+    end
+  end
+
   @doc """
   Fetches a single issue or pull request by number. GitHub's REST
   `/repos/:owner/:repo/issues/:number` endpoint returns both issues and
@@ -91,8 +98,59 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  defp create(config, token, %{owner: owner, name: name}, attrs, opts) do
+    url = "#{config.api_url}/repos/#{owner}/#{name}/issues"
+
+    Client.request(
+      [
+        method: :post,
+        url: url,
+        headers: Client.headers(token),
+        json: create_issue_body(attrs)
+      ],
+      opts
+    )
+    |> case do
+      {:ok, %{status: status, body: body}} when status in [200, 201] and is_map(body) ->
+        {:ok, issue_from_api(body)}
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, {:unexpected_status, status, body}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp fetch(config, token, %{owner: owner, name: name}, opts) do
     fetch(config, token, owner, name, opts, 1, [])
+  end
+
+  defp create_issue_body(attrs) do
+    %{}
+    |> put_present("title", attr(attrs, :title))
+    |> put_present("body", attr(attrs, :body))
+    |> put_labels(attr(attrs, :labels))
+  end
+
+  defp put_present(map, _key, nil), do: map
+  defp put_present(map, _key, ""), do: map
+  defp put_present(map, key, value), do: Map.put(map, key, value)
+
+  defp put_labels(map, labels) when is_list(labels) do
+    labels = labels |> Enum.filter(&is_binary/1) |> Enum.reject(&(&1 == ""))
+
+    if labels == [] do
+      map
+    else
+      Map.put(map, "labels", labels)
+    end
+  end
+
+  defp put_labels(map, _labels), do: map
+
+  defp attr(attrs, key) when is_map(attrs) do
+    Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
   end
 
   defp fetch(_config, _token, _owner, _name, _opts, page, acc) when page > @max_pages do

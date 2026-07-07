@@ -3,6 +3,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
   use Mimic
   use Oban.Testing, repo: Hive.Repo
 
+  alias Hive.Audit.Activity
   alias Hive.Slack
   alias Hive.Slack.API
   alias Hive.Slack.Installation
@@ -33,6 +34,16 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     installation = installation!()
     channel = channel!(installation, "C-1")
 
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-agent@example.com",
+        provider: "test",
+        provider_uid: "slack-agent"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-1", linked_user_id: user.id})
+
     stub(Hive.Agents, :enabled?, fn -> true end)
     stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
 
@@ -48,7 +59,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, _args, _opts ->
+    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
+      assert args["can_create_forage_item"] == true
       {:ok, %{"reply" => "hello!"}}
     end)
 
@@ -66,6 +78,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
                "channel_id" => channel.id,
                "thread_ts" => "1.0"
              })
+
+    assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
 
   test "enqueue/4 returns :skipped when agents are disabled" do

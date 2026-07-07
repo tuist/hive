@@ -12,12 +12,13 @@ defmodule Hive.Slack.Interactions do
 
   require Logger
 
-  alias Hive.Accounts
   alias Hive.Audit
-  alias Hive.Forage
+  alias Hive.Forage.Intake
+  alias Hive.Slack
   alias Hive.Slack.API
   alias Hive.Slack.Installation
 
+  @forage_item_callback_id "capture_forage_item"
   @feature_request_callback_id "capture_feature_request"
 
   @doc """
@@ -25,7 +26,8 @@ defmodule Hive.Slack.Interactions do
   """
   def handle(%{"type" => "message_action"} = payload, %Installation{} = installation) do
     case payload["callback_id"] do
-      @feature_request_callback_id -> capture_feature_request(payload, installation)
+      @forage_item_callback_id -> capture_forage_item(payload, installation)
+      @feature_request_callback_id -> capture_forage_item(payload, installation)
       _other -> :ok
     end
   end
@@ -39,52 +41,16 @@ defmodule Hive.Slack.Interactions do
     :ok
   end
 
-  defp capture_feature_request(payload, installation) do
+  defp capture_forage_item(payload, installation) do
     slack_user_id = get_in(payload, ["user", "id"])
     response_url = payload["response_url"]
     message_text = get_in(payload, ["message", "text"]) || ""
     permalink = build_permalink(installation, payload)
 
-    case resolve_hive_user(installation, slack_user_id) do
+    case Slack.resolve_hive_user(installation, slack_user_id) do
       {:ok, user} ->
-        title = derive_title(message_text)
-        description = derive_description(message_text)
-
-        case Forage.create_feature_request(
-               %{"title" => title, "description" => description},
-               user
-             ) do
-          {:ok, feature_request} ->
-            Audit.record("slack.feature_request.captured", %{
-              actor: user,
-              interface: "slack",
-              target_type: "feature_request",
-              target_id: feature_request.id,
-              target_label: feature_request.title,
-              metadata: %{
-                team_id: installation.team_id,
-                slack_user_id: slack_user_id,
-                slack_message_permalink: permalink
-              }
-            })
-
-            respond(
-              response_url,
-              dgettext("dashboard_slack", "Captured as a feature request in Hive: %{link}.",
-                link:
-                  "<#{hive_url("/forage?filter_type_op=%3D%3D&filter_type_val=feature_request")}|#{dgettext("dashboard_slack", "view forage")}>"
-              )
-            )
-
-          {:error, _changeset} ->
-            respond(
-              response_url,
-              dgettext(
-                "dashboard_slack",
-                "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
-              )
-            )
-        end
+        capture_forage_item_for_user(user, installation, slack_user_id, message_text, permalink)
+        |> respond_to_capture_result(response_url)
 
       {:error, :no_match} ->
         respond(
@@ -103,23 +69,81 @@ defmodule Hive.Slack.Interactions do
     end
   end
 
-  defp resolve_hive_user(_installation, nil), do: {:error, :no_match}
+  defp capture_forage_item_for_user(user, installation, slack_user_id, message_text, permalink) do
+    message_text
+    |> forage_item_attrs(permalink)
+    |> Intake.create(user, interface: "webhook")
+    |> tap(fn
+      {:ok, result} ->
+        record_capture(user, installation, slack_user_id, permalink, result)
 
-  defp resolve_hive_user(installation, slack_user_id) do
-    case API.get_user(installation, slack_user_id) do
-      {:ok, %{"user" => %{"profile" => %{"email" => email}}}}
-      when is_binary(email) and email != "" ->
-        case Accounts.get_user_by_email(email) do
-          nil -> {:error, :no_match}
-          user -> {:ok, user}
-        end
+      _result ->
+        :ok
+    end)
+  end
 
-      {:ok, _other} ->
-        {:error, :no_match}
+  defp forage_item_attrs(message_text, permalink) do
+    %{
+      "type" => "feature_request",
+      "title" => derive_title(message_text),
+      "description" => derive_description(message_text),
+      "source_label" => "Slack message",
+      "source_url" => permalink
+    }
+  end
 
-      {:error, reason} ->
-        {:error, reason}
-    end
+  defp record_capture(user, installation, slack_user_id, permalink, result) do
+    Audit.record("slack.forage_item.captured", %{
+      actor: user,
+      interface: "webhook",
+      target_type: result.target_type,
+      target_id: result.target_id,
+      target_label: result.target_label,
+      metadata: %{
+        destination: Atom.to_string(result.destination),
+        external_url: result.external_url,
+        path: result.hive_path,
+        team_id: installation.team_id,
+        slack_user_id: slack_user_id,
+        slack_message_permalink: permalink
+      }
+    })
+  end
+
+  defp respond_to_capture_result({:ok, result}, response_url) do
+    respond(response_url, capture_success_message(result))
+  end
+
+  defp respond_to_capture_result({:error, %Ecto.Changeset{}}, response_url) do
+    respond(
+      response_url,
+      dgettext(
+        "dashboard_slack",
+        "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
+      )
+    )
+  end
+
+  defp respond_to_capture_result({:error, :unauthorized}, response_url) do
+    respond(
+      response_url,
+      dgettext("dashboard_slack", "You are not allowed to create forage items here.")
+    )
+  end
+
+  defp respond_to_capture_result({:error, reason}, response_url)
+       when reason in [:github_repository_not_configured, :github_repository_not_found] do
+    respond(
+      response_url,
+      dgettext(
+        "dashboard_slack",
+        "I couldn't capture that message because the forage intake destination is not configured."
+      )
+    )
+  end
+
+  defp respond_to_capture_result({:error, _reason}, response_url) do
+    respond(response_url, dgettext("dashboard_slack", "I couldn't capture that message."))
   end
 
   defp derive_title(text) do
@@ -160,6 +184,24 @@ defmodule Hive.Slack.Interactions do
       "text" => text
     })
   end
+
+  defp capture_success_message(%Intake.Result{destination: :github_issue} = result) do
+    dgettext(
+      "dashboard_slack",
+      "Created %{external_link} and added it to Hive forage: %{hive_link}.",
+      external_link: slack_link(result.external_url, result.external_label || "GitHub issue"),
+      hive_link: slack_link(hive_url(result.hive_path), dgettext("dashboard_slack", "view item"))
+    )
+  end
+
+  defp capture_success_message(%Intake.Result{} = result) do
+    dgettext("dashboard_slack", "Captured as a forage item in Hive: %{link}.",
+      link: slack_link(hive_url(result.hive_path), dgettext("dashboard_slack", "view item"))
+    )
+  end
+
+  defp slack_link(nil, label), do: label
+  defp slack_link(url, label), do: "<#{url}|#{label}>"
 
   defp build_permalink(_installation, payload) do
     case payload do

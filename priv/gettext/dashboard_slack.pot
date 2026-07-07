@@ -44,12 +44,12 @@ msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:108
 #, elixir-autogen, elixir-format
-msgid "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as feature requests."
+msgid "Connect Slack workspaces to Hive. Once installed, the bot can reply in threads and capture messages as forage items."
 msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:401
 #, elixir-autogen, elixir-format
-msgid "Connect a workspace so Hive can reply in threads and capture messages as feature requests."
+msgid "Connect a workspace so Hive can reply in threads and capture messages as forage items."
 msgstr ""
 
 #: lib/hive_web/live/ops_live/slack.ex:126
@@ -136,12 +136,12 @@ msgstr ""
 msgid "Message shortcuts"
 msgstr ""
 
-#: lib/hive/slack.ex:118
+#: lib/hive/slack.ex:119
 #, elixir-autogen, elixir-format
 msgid "New spec comments"
 msgstr ""
 
-#: lib/hive/slack.ex:115
+#: lib/hive/slack.ex:116
 #, elixir-autogen, elixir-format
 msgid "New specs"
 msgstr ""
@@ -265,17 +265,17 @@ msgstr ""
 msgid "Slack · %{product}"
 msgstr ""
 
-#: lib/hive/slack.ex:128
+#: lib/hive/slack.ex:129
 #, elixir-autogen, elixir-format
 msgid "Spec creations, comments, and review requests"
 msgstr ""
 
-#: lib/hive/slack.ex:121
+#: lib/hive/slack.ex:122
 #, elixir-autogen, elixir-format
 msgid "Spec review requests"
 msgstr ""
 
-#: lib/hive/slack.ex:125
+#: lib/hive/slack.ex:126
 #, elixir-autogen, elixir-format
 msgid "Specs"
 msgstr ""
@@ -332,12 +332,12 @@ msgstr ""
 msgid "Workspaces"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:149
+#: lib/hive/slack/interactions.ex:173
 #, elixir-autogen, elixir-format
 msgid "%{text} (captured from Slack)"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:141
+#: lib/hive/slack/interactions.ex:165
 #, elixir-autogen, elixir-format
 msgid "(no message text)"
 msgstr ""
@@ -367,12 +367,7 @@ msgstr ""
 msgid "*Reviewers:* %{reviewers}"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:73
-#, elixir-autogen, elixir-format
-msgid "Captured as a feature request in Hive: %{link}."
-msgstr ""
-
-#: lib/hive/slack/interactions.ex:132
+#: lib/hive/slack/interactions.ex:156
 #, elixir-autogen, elixir-format
 msgid "Captured from Slack"
 msgstr ""
@@ -393,12 +388,12 @@ msgstr ""
 msgid "Created by %{user}"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:82
+#: lib/hive/slack/interactions.ex:120
 #, elixir-autogen, elixir-format
 msgid "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:92
+#: lib/hive/slack/interactions.ex:58
 #, elixir-autogen, elixir-format
 msgid "I couldn't match your Slack account to a Hive user. Sign in to Hive with your work email and try again."
 msgstr ""
@@ -435,7 +430,7 @@ msgstr ""
 msgid "Revision %{revision}"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:101
+#: lib/hive/slack/interactions.ex:67
 #, elixir-autogen, elixir-format
 msgid "Something went wrong looking up your Hive account."
 msgstr ""
@@ -451,7 +446,33 @@ msgstr ""
 msgid "someone"
 msgstr ""
 
-#: lib/hive/slack/interactions.ex:75
+#: lib/hive/slack/interactions.ex:198
 #, elixir-autogen, elixir-format
-msgid "view forage"
+msgid "Captured as a forage item in Hive: %{link}."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:189
+#, elixir-autogen, elixir-format
+msgid "Created %{external_link} and added it to Hive forage: %{hive_link}."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:138
+#, elixir-autogen, elixir-format
+msgid "I couldn't capture that message because the forage intake destination is not configured."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:146
+#, elixir-autogen, elixir-format
+msgid "I couldn't capture that message."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:130
+#, elixir-autogen, elixir-format
+msgid "You are not allowed to create forage items here."
+msgstr ""
+
+#: lib/hive/slack/interactions.ex:193
+#: lib/hive/slack/interactions.ex:199
+#, elixir-autogen, elixir-format
+msgid "view item"
 msgstr ""

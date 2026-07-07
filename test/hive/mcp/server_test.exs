@@ -9,6 +9,7 @@ defmodule Hive.MCP.ServerTest do
     assert server.tools |> Map.keys() |> Enum.sort() == [
              "add_spec_comment",
              "create_domain",
+             "create_forage_item",
              "create_project",
              "create_project_webhook",
              "create_spec",

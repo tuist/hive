@@ -273,6 +273,12 @@ defmodule HiveWeb.Layouts do
             href={~p"/ops/drops"}
             selected={String.starts_with?(@current_path, ~p"/ops/drops")}
           />
+          <.sidebar_item
+            label={dgettext("dashboard_forage", "Forage")}
+            icon="rss"
+            href={~p"/ops/forage"}
+            selected={String.starts_with?(@current_path, ~p"/ops/forage")}
+          />
           <% inference_selected? = String.starts_with?(@current_path, ~p"/ops/inference") %>
           <details data-part="inference" open={inference_selected?}>
             <summary>

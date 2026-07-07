@@ -5,6 +5,7 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
 
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
+  alias Hive.Forage.Intake
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -62,15 +63,39 @@ defmodule HiveWeb.ForageLive.NewFeatureRequest do
   end
 
   def handle_event("save", %{"forage_item" => params}, socket) do
-    case Forage.create_forage_item(params, socket.assigns.current_user) do
-      {:ok, _item} ->
+    case Intake.create(params, socket.assigns.current_user, interface: "dashboard") do
+      {:ok, result} ->
         {:noreply,
          socket
          |> put_flash(:info, dgettext("dashboard_forage", "Forage item submitted."))
-         |> push_navigate(to: ~p"/forage")}
+         |> push_navigate(to: result.hive_path)}
 
-      {:error, changeset} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_forage", "You cannot create that item."))}
+
+      {:error, reason}
+      when reason in [:github_repository_not_configured, :github_repository_not_found] ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext(
+             "dashboard_forage",
+             "The forage intake destination is not configured."
+           )
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_forage", "Forage item could not be submitted.")
+         )}
     end
   end
 

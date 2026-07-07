@@ -23,6 +23,7 @@ defmodule Hive.Slack do
   alias Hive.Accounts.User
   alias Hive.Audit
   alias Hive.Repo
+  alias Hive.Slack.API
   alias Hive.Slack.Channel
   alias Hive.Slack.Installation
   alias Hive.Slack.Message
@@ -476,6 +477,19 @@ defmodule Hive.Slack do
 
   def linked_user_profiles_by_user_ids(_installation, _user_ids), do: %{}
 
+  def resolve_hive_user(%Installation{} = installation, slack_user_id)
+      when is_binary(slack_user_id) and slack_user_id != "" do
+    case linked_hive_user(installation, slack_user_id) do
+      %User{} = user ->
+        {:ok, user}
+
+      nil ->
+        resolve_hive_user_by_profile(installation, slack_user_id)
+    end
+  end
+
+  def resolve_hive_user(_installation, _slack_user_id), do: {:error, :no_match}
+
   def profile_authorize_url(redirect_uri, state, opts \\ []) do
     conf = profile_authorize_config(opts)
 
@@ -737,6 +751,45 @@ defmodule Hive.Slack do
   end
 
   defp find_hive_user_by_email(_email), do: nil
+
+  defp linked_hive_user(%Installation{id: installation_id}, slack_user_id) do
+    SlackUser
+    |> where([slack_user], slack_user.installation_id == ^installation_id)
+    |> where([slack_user], slack_user.slack_user_id == ^slack_user_id)
+    |> preload(:linked_user)
+    |> Repo.one()
+    |> case do
+      %SlackUser{linked_user: %User{} = user} -> user
+      _other -> nil
+    end
+  end
+
+  defp resolve_hive_user_by_profile(installation, slack_user_id) do
+    with {:ok, email} <- fetch_slack_user_email(installation, slack_user_id),
+         {:ok, %SlackUser{} = slack_user} <-
+           upsert_user(installation, %{slack_user_id: slack_user_id, email: email}) do
+      slack_user
+      |> Repo.preload(:linked_user)
+      |> linked_user_result()
+    end
+  end
+
+  defp fetch_slack_user_email(installation, slack_user_id) do
+    case API.get_user(installation, slack_user_id) do
+      {:ok, %{"user" => %{"profile" => %{"email" => email}}}}
+      when is_binary(email) and email != "" ->
+        {:ok, email}
+
+      {:error, reason} ->
+        {:error, reason}
+
+      _other ->
+        {:error, :no_match}
+    end
+  end
+
+  defp linked_user_result(%SlackUser{linked_user: %User{} = user}), do: {:ok, user}
+  defp linked_user_result(_slack_user), do: {:error, :no_match}
 
   @doc """
   Inserts a Slack message under a channel + installation. Returns

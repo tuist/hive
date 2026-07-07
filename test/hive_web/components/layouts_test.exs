@@ -241,6 +241,8 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Ops content"
       assert html =~ "Slack"
       assert html =~ "/ops/slack"
+      assert html =~ "Forage"
+      assert html =~ "/ops/forage"
       assert html =~ ~s(name="return_to" value="/ops/slack")
       refute html =~ ~s(<span data-part="label">Identities</span>)
     end

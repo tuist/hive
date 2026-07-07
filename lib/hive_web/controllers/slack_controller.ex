@@ -78,7 +78,7 @@ defmodule HiveWeb.SlackController do
     team_name = get_in(payload, ["team", "domain"]) || get_in(payload, ["team", "name"])
 
     Audit.put_context(%{
-      interface: "slack",
+      interface: "webhook",
       actor: Audit.agent_actor("slack"),
       target_label: team_name || team_id
     })
@@ -86,7 +86,7 @@ defmodule HiveWeb.SlackController do
 
   defp put_slack_context_for_installation(installation) do
     Audit.put_context(%{
-      interface: "slack",
+      interface: "webhook",
       actor: Audit.agent_actor("slack"),
       target_label: installation.team_name || installation.team_id
     })

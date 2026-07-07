@@ -17,6 +17,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   alias Hive.Agents.Sessions
   alias Hive.Audit
+  alias Hive.Forage.Intake
   alias Hive.Slack
   alias Hive.Slack.Agents.ConversationAgent
   alias Hive.Slack.API
@@ -52,11 +53,16 @@ defmodule Hive.Slack.Workers.RespondToConversation do
          {:ok, %{"messages" => thread_messages}} <-
            API.list_thread_messages(installation, slack_channel_id_for(channel_id), thread_ts),
          %{mention_text: mention_text, thread: thread} <- summarize_thread(thread_messages),
+         requester_user = resolve_requester_user(installation, thread),
          {:ok, %{"reply" => reply}} <-
-           Sessions.run_operation(ConversationAgent, :reply_to_thread, %{
-             "mention_text" => mention_text,
-             "thread" => thread
-           }),
+           run_conversation_agent(
+             %{
+               "mention_text" => mention_text,
+               "thread" => thread,
+               "can_create_forage_item" => not is_nil(requester_user)
+             },
+             requester_user
+           ),
          {:ok, _} <-
            API.post_message(installation, %{
              "channel" => slack_channel_id_for(channel_id),
@@ -65,7 +71,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
            }) do
       Audit.record("slack.replied", %{
         actor: Audit.agent_actor("slack.conversation"),
-        interface: "slack",
+        interface: "worker",
         target_type: "slack_installation",
         target_id: installation.id,
         target_label: installation.team_name || installation.team_id,
@@ -120,5 +126,30 @@ defmodule Hive.Slack.Workers.RespondToConversation do
       |> Map.get("text", "")
 
     %{mention_text: mention_text, thread: thread}
+  end
+
+  defp resolve_requester_user(installation, thread) do
+    thread
+    |> List.last()
+    |> case do
+      %{"user" => slack_user_id} when is_binary(slack_user_id) and slack_user_id != "" ->
+        case Slack.resolve_hive_user(installation, slack_user_id) do
+          {:ok, user} -> user
+          {:error, _reason} -> nil
+        end
+
+      _message ->
+        nil
+    end
+  end
+
+  defp run_conversation_agent(input, nil) do
+    Sessions.run_operation(ConversationAgent, :reply_to_thread, input)
+  end
+
+  defp run_conversation_agent(input, requester_user) do
+    Intake.with_requester(requester_user, fn ->
+      Sessions.run_operation(ConversationAgent, :reply_to_thread, input)
+    end)
   end
 end

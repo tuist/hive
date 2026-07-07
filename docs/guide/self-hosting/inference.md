@@ -116,10 +116,13 @@ Hive currently uses agents for:
   revision into a concise Slack message with focused review prompts. The
   Slack notification still posts with a deterministic fallback when no
   model provider is configured.
-- Slack thread replies: when Hive's Slack bot is `@`-mentioned, Hive
-  queues a job that reads the thread context and asks the agent to draft
-  a short reply, posted back in the same thread. When no model provider
-  is configured, the bot stays silent. See [Slack](./slack) for the
+- Slack thread replies and forage capture: when Hive's Slack bot is
+  `@`-mentioned, Hive queues a job that reads the thread context and
+  asks the agent to draft a short reply, posted back in the same thread.
+  If the requester is linked to a Hive user and asks Hive to capture
+  work, the agent can create a forage item through the configured intake
+  destination from **Ops -> Forage**. When no model provider is
+  configured, the bot stays silent. See [Slack](./slack) for the
   workspace install flow.
 - GitHub issue domain classification: each time the syncer sees a new
   issue in a connected project repository or notices that an issue's

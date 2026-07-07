@@ -138,4 +138,59 @@ defmodule Hive.GitHub.IssuesTest do
                )
     end
   end
+
+  describe "create_issue/3" do
+    test "creates an issue" do
+      request = fn request ->
+        assert request[:method] == :post
+        assert request[:url] == "https://api.github.test/repos/tuist/hive/issues"
+
+        assert request[:json] == %{
+                 "title" => "Dark mode",
+                 "body" => "Add a darker theme.",
+                 "labels" => ["forage"]
+               }
+
+        {:ok,
+         %{
+           status: 201,
+           body: %{
+             "number" => 44,
+             "title" => "Dark mode",
+             "body" => "Add a darker theme.",
+             "state" => "open",
+             "html_url" => "https://github.com/tuist/hive/issues/44"
+           }
+         }}
+      end
+
+      assert {:ok, issue} =
+               Issues.create_issue(
+                 repository(),
+                 %{title: "Dark mode", body: "Add a darker theme.", labels: ["forage"]},
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+
+      assert issue.number == 44
+      assert issue.title == "Dark mode"
+      assert issue.html_url == "https://github.com/tuist/hive/issues/44"
+    end
+
+    test "returns GitHub API errors for creation" do
+      request = fn _request ->
+        {:ok, %{status: 422, body: %{"message" => "Validation Failed"}}}
+      end
+
+      assert {:error, {:unexpected_status, 422, %{"message" => "Validation Failed"}}} =
+               Issues.create_issue(
+                 repository(),
+                 %{title: "Dark mode", body: "Add a darker theme."},
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+    end
+  end
 end

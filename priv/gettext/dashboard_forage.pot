@@ -98,7 +98,7 @@ msgstr ""
 msgid "A unified queue for feature requests, bug reports, feedback, GitHub issues, and Grafana alerts."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:22
+#: lib/hive_web/live/forage_live/new_feature_request.ex:23
 #, elixir-autogen, elixir-format
 msgid "Actionable context"
 msgstr ""
@@ -135,7 +135,7 @@ msgid "Cancel"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:693
-#: lib/hive_web/live/forage_live/new_feature_request.ex:15
+#: lib/hive_web/live/forage_live/new_feature_request.ex:16
 #, elixir-autogen, elixir-format
 msgid "Capture a public feature request, bug report, or feedback item."
 msgstr ""
@@ -196,7 +196,7 @@ msgstr ""
 msgid "Connect a GitHub repository to a domain in"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:23
+#: lib/hive_web/live/forage_live/new_feature_request.ex:24
 #, elixir-autogen, elixir-format
 msgid "Contributor signal"
 msgstr ""
@@ -318,13 +318,16 @@ msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:39
 #: lib/hive_web/components/layouts.ex:170
+#: lib/hive_web/components/layouts.ex:277
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
 #: lib/hive_web/live/forage_live/index.ex:27
 #: lib/hive_web/live/forage_live/index.ex:35
-#: lib/hive_web/live/forage_live/new_feature_request.ex:19
+#: lib/hive_web/live/forage_live/new_feature_request.ex:20
 #: lib/hive_web/live/forage_live/placeholder.ex:19
+#: lib/hive_web/live/ops_live/forage.ex:26
+#: lib/hive_web/live/ops_live/forage.ex:106
 #, elixir-autogen, elixir-format
 msgid "Forage"
 msgstr ""
@@ -335,7 +338,7 @@ msgstr ""
 msgid "Forage item not found."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:69
+#: lib/hive_web/live/forage_live/new_feature_request.ex:70
 #, elixir-autogen, elixir-format
 msgid "Forage item submitted."
 msgstr ""
@@ -363,6 +366,7 @@ msgid "Forage source"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:45
+#: lib/hive_web/live/ops_live/forage.ex:55
 #, elixir-autogen, elixir-format
 msgid "Forage · %{product}"
 msgstr ""
@@ -383,6 +387,8 @@ msgid "GitHub comments unavailable"
 msgstr ""
 
 #: lib/hive/forage.ex:149
+#: lib/hive_web/live/ops_live/forage.ex:139
+#: lib/hive_web/live/ops_live/forage.ex:226
 #, elixir-autogen, elixir-format
 msgid "GitHub issue"
 msgstr ""
@@ -469,7 +475,7 @@ msgstr ""
 msgid "Log in to submit"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:49
+#: lib/hive_web/live/forage_live/new_feature_request.ex:50
 #, elixir-autogen, elixir-format
 msgid "Log in to submit forage items."
 msgstr ""
@@ -480,12 +486,12 @@ msgid "Metadata"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:691
-#: lib/hive_web/live/forage_live/new_feature_request.ex:27
+#: lib/hive_web/live/forage_live/new_feature_request.ex:28
 #, elixir-autogen, elixir-format
 msgid "New forage item"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:40
+#: lib/hive_web/live/forage_live/new_feature_request.ex:41
 #, elixir-autogen, elixir-format
 msgid "New forage item · %{product}"
 msgstr ""
@@ -672,7 +678,7 @@ msgstr ""
 msgid "Public ideas submitted here will appear as forage for Hive."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/new_feature_request.ex:21
+#: lib/hive_web/live/forage_live/new_feature_request.ex:22
 #, elixir-autogen, elixir-format
 msgid "Public items"
 msgstr ""
@@ -843,4 +849,113 @@ msgstr ""
 #: lib/hive_web/live/forage_live/github_issues.ex:236
 #, elixir-autogen, elixir-format
 msgid "open issues"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:181
+#: lib/hive_web/live/ops_live/forage.ex:232
+#: lib/hive_web/live/ops_live/forage.ex:237
+#: lib/hive_web/live/ops_live/forage.ex:243
+#, elixir-autogen, elixir-format
+msgid "Choose repository"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:108
+#, elixir-autogen, elixir-format
+msgid "Choose where dashboard submissions, Slack captures, agent actions, and Model Context Protocol tools create new forage items."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:17
+#, elixir-autogen, elixir-format
+msgid "Configure how new forage items are captured."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:130
+#, elixir-autogen, elixir-format
+msgid "Destination"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:256
+#, elixir-autogen, elixir-format
+msgid "Forage intake"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:82
+#, elixir-autogen, elixir-format
+msgid "Forage intake updated."
+msgstr ""
+
+#: lib/hive_web/live/forage_live/new_feature_request.ex:97
+#, elixir-autogen, elixir-format
+msgid "Forage item could not be submitted."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:21
+#, elixir-autogen, elixir-format
+msgid "GitHub issue intake"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:166
+#, elixir-autogen, elixir-format
+msgid "GitHub repository"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:143
+#: lib/hive_web/live/ops_live/forage.ex:229
+#, elixir-autogen, elixir-format
+msgid "Hive-managed item"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:20
+#, elixir-autogen, elixir-format
+msgid "Hive-managed items"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:118
+#, elixir-autogen, elixir-format
+msgid "Intake destination"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:157
+#, elixir-autogen, elixir-format
+msgid "Link a repository from a project before selecting GitHub issue intake."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:38
+#, elixir-autogen, elixir-format
+msgid "Log in to manage forage intake."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:155
+#, elixir-autogen, elixir-format
+msgid "No linked GitHub repositories"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:46
+#, elixir-autogen, elixir-format
+msgid "Only instance admins can manage forage intake."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:18
+#, elixir-autogen, elixir-format
+msgid "Ops"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:193
+#, elixir-autogen, elixir-format
+msgid "Save settings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/forage.ex:22
+#, elixir-autogen, elixir-format
+msgid "Shared Slack and Model Context Protocol behavior"
+msgstr ""
+
+#: lib/hive_web/live/forage_live/new_feature_request.ex:86
+#, elixir-autogen, elixir-format
+msgid "The forage intake destination is not configured."
+msgstr ""
+
+#: lib/hive_web/live/forage_live/new_feature_request.ex:78
+#, elixir-autogen, elixir-format
+msgid "You cannot create that item."
 msgstr ""

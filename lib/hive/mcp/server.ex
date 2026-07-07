@@ -22,6 +22,7 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.UnlinkProjectRepository,
       Hive.MCP.Components.Tools.CreateProjectWebhook,
       Hive.MCP.Components.Tools.DeleteProjectWebhook,
+      Hive.MCP.Components.Tools.CreateForageItem,
       Hive.MCP.Components.Tools.ListSpecs,
       Hive.MCP.Components.Tools.GetSpec,
       Hive.MCP.Components.Tools.CreateSpec,

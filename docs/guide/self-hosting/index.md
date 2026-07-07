@@ -74,6 +74,7 @@ any team self-host.
 - [Drops](./drops) describes the shipped-updates surface and how
   releases and changelogs feed into it.
 - [Slack](./slack) covers connecting Slack workspaces so Hive can reply
-  in threads and capture messages as feature requests.
+  in threads and capture messages as forage items through the
+  Ops-managed intake destination.
 - [Deployment](./deployment) walks through what you need to deploy
   Hive, the visibility model, and the Helm chart values to provide.
