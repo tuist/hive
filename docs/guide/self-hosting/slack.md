@@ -8,7 +8,8 @@ through the OAuth v2 flow without going through the Slack App Directory
 Once a workspace is installed, Hive can:
 
 - Reply in threads where the bot is `@`-mentioned, using the configured
-  model provider.
+  model provider. If no model provider is configured yet, Hive replies
+  with a short setup note instead of leaving the thread silent.
 - Capture any Slack message as a forage item via a message shortcut
   (right-click a message, "More message shortcuts", pick the shortcut).
   The Ops -> Forage intake destination decides whether the item is
@@ -227,7 +228,12 @@ Captured items are recorded in the audit trail as
 When the bot is `@`-mentioned in a thread, the agent can also create a
 forage item if the requester is linked to a Hive user. It uses the same
 forage intake destination as the dashboard, Slack shortcut, and
-[Model Context Protocol](https://modelcontextprotocol.io/) tool.
+[Model Context Protocol](https://modelcontextprotocol.io/) tool. If the
+destination creates GitHub issues, Hive exposes the configured
+repository's existing labels to the agent. The agent may add up to three
+matching labels, and Hive validates them against the repository before
+creating the issue. The item type label still applies as the fallback
+when the agent does not choose a repository label.
 
 ## Link unfurling
 

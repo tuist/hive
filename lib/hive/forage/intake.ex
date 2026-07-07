@@ -68,6 +68,19 @@ defmodule Hive.Forage.Intake do
     end
   end
 
+  def available_github_labels(opts \\ []) when is_list(opts) do
+    case intake_config(opts) do
+      %{destination: :github_issue} ->
+        with {:ok, repository} <- resolve_github_repository(opts),
+             {:ok, labels} <- Issues.list_labels(repository, Keyword.get(opts, :github, [])) do
+          {:ok, normalize_label_options(labels)}
+        end
+
+      _config ->
+        {:ok, []}
+    end
+  end
+
   def with_requester(user, fun) when is_function(fun, 0) do
     previous = Process.get(@requester_key)
 
@@ -113,7 +126,8 @@ defmodule Hive.Forage.Intake do
   defp create_with_destination(:github_issue, item, attrs, user, opts) do
     if Auth.member?(user) do
       with {:ok, repository} <- resolve_github_repository(opts),
-           {:ok, github_issue} <- create_github_issue(repository, item, attrs, opts),
+           {:ok, labels} <- github_issue_labels(repository, item, attrs, opts),
+           {:ok, github_issue} <- create_github_issue(repository, item, attrs, labels, opts),
            {:ok, cached_issue} <- Forage.upsert_repository_github_issue(repository, github_issue) do
         {:ok, github_issue_result(repository, cached_issue)}
       end
@@ -165,11 +179,11 @@ defmodule Hive.Forage.Intake do
 
   defp find_github_repository(_owner, _name), do: {:error, :github_repository_not_configured}
 
-  defp create_github_issue(repository, item, attrs, opts) do
+  defp create_github_issue(repository, item, attrs, labels, opts) do
     issue_attrs = %{
       title: item.title,
       body: github_issue_body(item, attrs),
-      labels: github_issue_labels(item)
+      labels: labels
     }
 
     Issues.create_issue(repository, issue_attrs, Keyword.get(opts, :github, []))
@@ -247,9 +261,24 @@ defmodule Hive.Forage.Intake do
     end
   end
 
-  defp github_issue_labels(%FeatureRequest{type: :feature_request}), do: ["enhancement"]
-  defp github_issue_labels(%FeatureRequest{type: :bug_report}), do: ["bug"]
-  defp github_issue_labels(%FeatureRequest{type: :feedback}), do: ["feedback"]
+  defp github_issue_labels(repository, item, attrs, opts) do
+    default_labels = default_github_issue_labels(item)
+    requested_labels = requested_github_labels(attrs)
+
+    if requested_labels == [] do
+      {:ok, default_labels}
+    else
+      with {:ok, available_labels} <-
+             Issues.list_labels(repository, Keyword.get(opts, :github, [])),
+           {:ok, labels} <- validate_requested_github_labels(requested_labels, available_labels) do
+        {:ok, Enum.uniq(default_labels ++ labels)}
+      end
+    end
+  end
+
+  defp default_github_issue_labels(%FeatureRequest{type: :feature_request}), do: ["enhancement"]
+  defp default_github_issue_labels(%FeatureRequest{type: :bug_report}), do: ["bug"]
+  defp default_github_issue_labels(%FeatureRequest{type: :feedback}), do: ["feedback"]
 
   defp source_for_type(:feature_request), do: Forage.get_source!(:feature_requests)
   defp source_for_type(:bug_report), do: Forage.get_source!(:bug_reports)
@@ -323,6 +352,74 @@ defmodule Hive.Forage.Intake do
   end
 
   defp present_string(_value), do: nil
+
+  defp requested_github_labels(attrs) do
+    []
+    |> append_requested_labels(attr(attrs, :github_label))
+    |> append_requested_labels(attr(attrs, :github_labels))
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq_by(&normalize_label_name/1)
+    |> Enum.take(3)
+  end
+
+  defp append_requested_labels(labels, values) when is_list(values), do: labels ++ values
+  defp append_requested_labels(labels, value) when is_binary(value), do: labels ++ [value]
+  defp append_requested_labels(labels, _value), do: labels
+
+  defp validate_requested_github_labels(requested_labels, available_labels) do
+    available_by_name =
+      available_labels
+      |> normalize_label_options()
+      |> Map.new(fn %{name: name} -> {normalize_label_name(name), name} end)
+
+    unknown_labels =
+      Enum.reject(requested_labels, fn label ->
+        Map.has_key?(available_by_name, normalize_label_name(label))
+      end)
+
+    if unknown_labels == [] do
+      {:ok,
+       Enum.map(requested_labels, fn label ->
+         Map.fetch!(available_by_name, normalize_label_name(label))
+       end)}
+    else
+      {:error, {:unknown_github_labels, unknown_labels}}
+    end
+  end
+
+  defp normalize_label_options(labels) when is_list(labels) do
+    labels
+    |> Enum.map(&normalize_label_option/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp normalize_label_options(_labels), do: []
+
+  defp normalize_label_option(%{name: name} = label) when is_binary(name) do
+    %{
+      name: name,
+      description: Map.get(label, :description),
+      color: Map.get(label, :color)
+    }
+  end
+
+  defp normalize_label_option(%{"name" => name} = label) when is_binary(name) do
+    %{
+      name: name,
+      description: Map.get(label, "description"),
+      color: Map.get(label, "color")
+    }
+  end
+
+  defp normalize_label_option(_label), do: nil
+
+  defp normalize_label_name(label) when is_binary(label) do
+    label
+    |> String.trim()
+    |> String.downcase()
+  end
 
   defp reject_empty(map) do
     Map.reject(map, fn {_key, value} -> value in [nil, ""] end)
