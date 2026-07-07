@@ -173,6 +173,135 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
              })
   end
 
+  test "perform/1 uses the triggering mention instead of the latest thread message" do
+    installation = installation!()
+    channel = channel!(installation, "C-retry")
+
+    {:ok, requester} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-retry-requester@example.com",
+        provider: "test",
+        provider_uid: "slack-retry-requester"
+      })
+
+    {:ok, other_user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-retry-other@example.com",
+        provider: "test",
+        provider_uid: "slack-retry-other"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{
+        slack_user_id: "U-requester",
+        linked_user_id: requester.id
+      })
+
+    {:ok, _other_slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-other", linked_user_id: other_user.id})
+
+    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
+
+    installation_id = installation.id
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-retry", "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{
+             "user" => "U-requester",
+             "text" => "<@U-bot> record the LiveView websocket issue",
+             "ts" => "1.0"
+           },
+           %{"user" => "U-other", "text" => ":ignored", "ts" => "2.0"},
+           %{"user" => "U-requester", "text" => "Working on the fix", "ts" => "3.0"},
+           %{"user" => "U-requester", "text" => "<@U-bot> can you try again?", "ts" => "4.0"},
+           %{"user" => "U-other", "text" => "later unrelated message", "ts" => "5.0"}
+         ]
+       }}
+    end)
+
+    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
+      assert args["mention_text"] == "<@U-bot> can you try again?"
+      assert args["can_create_forage_item"] == true
+      assert List.last(args["thread"])["text"] == "later unrelated message"
+
+      {:ok, %{"reply" => "retrying"}}
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-retry"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] == "retrying"
+
+      {:ok, %{"ok" => true, "ts" => "6.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "4.0"
+             })
+  end
+
+  test "perform/1 falls back to the locally stored mention when Slack thread history fails" do
+    installation = installation!()
+    channel = channel!(installation, "C-local")
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-local-agent@example.com",
+        provider: "test",
+        provider_uid: "slack-local-agent"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-local", linked_user_id: user.id})
+
+    {:ok, _message} =
+      Slack.insert_message(installation, channel, %{
+        slack_user_id: "U-local",
+        slack_ts: "2.0",
+        thread_ts: "1.0",
+        text: "<@U-bot> record this from the event payload",
+        raw_payload: %{}
+      })
+
+    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
+
+    installation_id = installation.id
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-local", "1.0" ->
+      {:error, {:slack_api_error, "missing_scope"}}
+    end)
+
+    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
+      assert args["mention_text"] == "<@U-bot> record this from the event payload"
+      assert args["can_create_forage_item"] == true
+
+      {:ok, %{"reply" => "handled locally"}}
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-local"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] == "handled locally"
+
+      {:ok, %{"ok" => true, "ts" => "3.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
   test "perform/1 posts a setup reply when no model provider is configured" do
     installation = installation!()
     channel = channel!(installation, "C-disabled")
@@ -253,6 +382,55 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
       assert params["channel"] == "C-no-result"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] =~ "couldn't complete"
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+  end
+
+  test "perform/1 posts a fallback reply when the agent run fails" do
+    installation = installation!()
+    channel = channel!(installation, "C-agent-error")
+    installation_id = installation.id
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-agent-error@example.com",
+        provider: "test",
+        provider_uid: "slack-agent-error"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-agent-error", linked_user_id: user.id})
+
+    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-agent-error",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-agent-error", "text" => "<@U-bot> record this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, _args, _opts ->
+      {:error, :provider_failed}
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-agent-error"
       assert params["thread_ts"] == "1.0"
       assert params["text"] =~ "couldn't complete"
 

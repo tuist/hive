@@ -40,9 +40,14 @@ defmodule Hive.Slack.Events do
         }
       })
 
-      thread_ts = event["thread_ts"] || event["ts"]
+      message_ts = event["ts"]
+      thread_ts = event["thread_ts"] || message_ts
 
-      _ = RespondToConversation.enqueue(installation.id, channel.id, thread_ts)
+      _ =
+        RespondToConversation.enqueue(installation.id, channel.id, thread_ts,
+          message_ts: message_ts
+        )
+
       :ok
     else
       _ -> :ok
