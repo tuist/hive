@@ -148,8 +148,10 @@ agentic workflows stay dormant.
 
 ### HIVE_LLM_MODEL {#hive_llm_model}
 
-Fallback model identifier in `provider:model_id` form. Required when
-`HIVE_LLM_API_KEY` is set.
+Fallback model identifier in `provider:model_id` form, for example
+`anthropic:claude-haiku-4-5`. Required when `HIVE_LLM_API_KEY` is set.
+For an OpenAI-compatible gateway such as Together.ai, use the `openai:`
+prefix together with `HIVE_LLM_BASE_URL`.
 
 ### HIVE_LLM_BASE_URL {#hive_llm_base_url}
 
@@ -172,6 +174,7 @@ Identifier for the single upstream provider shorthand. Defaults to
 ### HIVE_INFERENCE_UPSTREAM_BASE_URL {#hive_inference_upstream_base_url}
 
 Base address for the single upstream provider shorthand.
+For Together.ai, use `https://api.together.ai/v1`.
 
 ### HIVE_INFERENCE_UPSTREAM_API_KEY {#hive_inference_upstream_api_key}
 

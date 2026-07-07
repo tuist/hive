@@ -21,6 +21,18 @@ defmodule Hive.InferenceTest do
       assert binding.enabled
     end
 
+    test "creates a Together.ai model binding" do
+      assert {:ok, %ModelBinding{} = binding} =
+               Inference.create_model_binding(%{
+                 name: "hive-agent",
+                 upstream_provider: "togetherai",
+                 upstream_model: "MiniMaxAI/MiniMax-M3"
+               })
+
+      assert binding.upstream_provider == "togetherai"
+      assert binding.upstream_model == "MiniMaxAI/MiniMax-M3"
+    end
+
     test "accepts legacy provider-prefixed model bindings" do
       assert {:ok, %ModelBinding{} = binding} =
                Inference.create_model_binding(%{
@@ -107,6 +119,40 @@ defmodule Hive.InferenceTest do
                  profile_count: 1,
                  source: :reference,
                  timeout: nil
+               }
+             ] = Inference.list_provider_configs()
+    end
+
+    test "lists configured Together.ai providers with profile references" do
+      on_exit(fn -> Inference.delete_process_config() end)
+
+      Inference.put_process_config(
+        providers: %{
+          "togetherai" => %{
+            "base_url" => "https://api.together.ai/v1",
+            "api_key" => "together-test",
+            "timeout" => "120000"
+          }
+        }
+      )
+
+      _configured_binding =
+        model_binding!(
+          name: "hive-agent",
+          upstream_provider: "togetherai",
+          upstream_model: "MiniMaxAI/MiniMax-M3"
+        )
+
+      assert [
+               %{
+                 id: "togetherai",
+                 base_url: "https://api.together.ai/v1",
+                 configured?: true,
+                 credential_configured?: true,
+                 endpoint_configured?: true,
+                 profile_count: 1,
+                 source: :environment,
+                 timeout: 120_000
                }
              ] = Inference.list_provider_configs()
     end

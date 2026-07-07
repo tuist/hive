@@ -83,6 +83,13 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ ~s(placeholder="accounts/fireworks/models/kimi-k2p5")
 
     html =
+      render_hook(view, "profile_provider_changed", %{
+        "value" => ["togetherai"]
+      })
+
+    assert html =~ ~s(placeholder="MiniMaxAI/MiniMax-M3")
+
+    html =
       render_submit(view, "create_profile", %{
         "profile" => %{
           "name" => "blick-code-review",
