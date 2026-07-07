@@ -1,6 +1,7 @@
 defmodule Hive.Forage.GitHubIssueSyncerTest do
   use Hive.DataCase, async: true
   use Mimic
+  use Oban.Testing, repo: Hive.Repo
 
   alias Hive.Forage
   alias Hive.Forage.GitHubIssue
@@ -60,6 +61,66 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
 
     assert :ok = GitHubIssueSyncer.perform(%Oban.Job{})
     assert Repo.aggregate(GitHubIssue, :count) == 0
+  end
+
+  test "perform/1 enqueues one sync job per GitHub issue repository" do
+    domain = setup_domain!()
+    domain_repository = github_repository_for_domain!(domain)
+    project = create_project!()
+    project_repository = create_repository_for_project!(project)
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    assert :ok = GitHubIssueSyncer.perform(%Oban.Job{})
+
+    repository_ids =
+      all_enqueued(worker: GitHubIssueSyncer)
+      |> Enum.map(& &1.args["repository_id"])
+      |> Enum.sort()
+
+    assert repository_ids == Enum.sort([domain_repository.id, project_repository.id])
+  end
+
+  test "enqueue_repository/1 keeps one incomplete sync job per repository" do
+    domain = setup_domain!()
+    repository = github_repository_for_domain!(domain)
+
+    assert {:ok, first_job} = GitHubIssueSyncer.enqueue_repository(repository)
+    assert {:ok, second_job} = GitHubIssueSyncer.enqueue_repository(repository)
+
+    assert first_job.id == second_job.id
+    assert second_job.conflict?
+  end
+
+  test "perform/1 syncs only the repository named in the job arguments" do
+    domain = setup_domain!()
+    repository = github_repository_for_domain!(domain)
+    other_repository = create_repository_for_project!(create_project!())
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    stub(Issues, :list_open_issues, fn ^repository ->
+      {:ok, [%Issues{number: 1, title: "Repository issue", body: "Body"}]}
+    end)
+
+    assert :ok = GitHubIssueSyncer.perform(%Oban.Job{args: %{"repository_id" => repository.id}})
+
+    assert %GitHubIssue{title: "Repository issue"} =
+             Repo.get_by(GitHubIssue, github_repository_id: repository.id, number: 1)
+
+    refute Repo.get_by(GitHubIssue, github_repository_id: other_repository.id, number: 1)
+  end
+
+  test "perform/1 ignores stale repository sync jobs" do
+    assert :ok =
+             GitHubIssueSyncer.perform(%Oban.Job{
+               args: %{"repository_id" => "00000000-0000-0000-0000-000000000001"}
+             })
+  end
+
+  test "sentry_check_in_configuration/1 gives the lightweight scheduler a small grace window" do
+    assert [monitor_config: [checkin_margin: 5, max_runtime: 5]] =
+             GitHubIssueSyncer.sentry_check_in_configuration(%Oban.Job{})
   end
 
   test "upserts new issues and deletes issues that disappeared upstream" do
