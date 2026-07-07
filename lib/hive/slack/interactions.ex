@@ -49,73 +49,8 @@ defmodule Hive.Slack.Interactions do
 
     case Slack.resolve_hive_user(installation, slack_user_id) do
       {:ok, user} ->
-        title = derive_title(message_text)
-        description = derive_description(message_text)
-
-        case Intake.create(
-               %{
-                 "type" => "feature_request",
-                 "title" => title,
-                 "description" => description,
-                 "source_label" => "Slack message",
-                 "source_url" => permalink
-               },
-               user,
-               interface: "webhook"
-             ) do
-          {:ok, result} ->
-            Audit.record("slack.forage_item.captured", %{
-              actor: user,
-              interface: "webhook",
-              target_type: result.target_type,
-              target_id: result.target_id,
-              target_label: result.target_label,
-              metadata: %{
-                destination: Atom.to_string(result.destination),
-                external_url: result.external_url,
-                path: result.hive_path,
-                team_id: installation.team_id,
-                slack_user_id: slack_user_id,
-                slack_message_permalink: permalink
-              }
-            })
-
-            respond(
-              response_url,
-              capture_success_message(result)
-            )
-
-          {:error, %Ecto.Changeset{}} ->
-            respond(
-              response_url,
-              dgettext(
-                "dashboard_slack",
-                "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
-              )
-            )
-
-          {:error, :unauthorized} ->
-            respond(
-              response_url,
-              dgettext("dashboard_slack", "You are not allowed to create forage items here.")
-            )
-
-          {:error, reason}
-          when reason in [:github_repository_not_configured, :github_repository_not_found] ->
-            respond(
-              response_url,
-              dgettext(
-                "dashboard_slack",
-                "I couldn't capture that message because the forage intake destination is not configured."
-              )
-            )
-
-          {:error, _reason} ->
-            respond(
-              response_url,
-              dgettext("dashboard_slack", "I couldn't capture that message.")
-            )
-        end
+        capture_forage_item_for_user(user, installation, slack_user_id, message_text, permalink)
+        |> respond_to_capture_result(response_url)
 
       {:error, :no_match} ->
         respond(
@@ -132,6 +67,83 @@ defmodule Hive.Slack.Interactions do
           dgettext("dashboard_slack", "Something went wrong looking up your Hive account.")
         )
     end
+  end
+
+  defp capture_forage_item_for_user(user, installation, slack_user_id, message_text, permalink) do
+    message_text
+    |> forage_item_attrs(permalink)
+    |> Intake.create(user, interface: "webhook")
+    |> tap(fn
+      {:ok, result} ->
+        record_capture(user, installation, slack_user_id, permalink, result)
+
+      _result ->
+        :ok
+    end)
+  end
+
+  defp forage_item_attrs(message_text, permalink) do
+    %{
+      "type" => "feature_request",
+      "title" => derive_title(message_text),
+      "description" => derive_description(message_text),
+      "source_label" => "Slack message",
+      "source_url" => permalink
+    }
+  end
+
+  defp record_capture(user, installation, slack_user_id, permalink, result) do
+    Audit.record("slack.forage_item.captured", %{
+      actor: user,
+      interface: "webhook",
+      target_type: result.target_type,
+      target_id: result.target_id,
+      target_label: result.target_label,
+      metadata: %{
+        destination: Atom.to_string(result.destination),
+        external_url: result.external_url,
+        path: result.hive_path,
+        team_id: installation.team_id,
+        slack_user_id: slack_user_id,
+        slack_message_permalink: permalink
+      }
+    })
+  end
+
+  defp respond_to_capture_result({:ok, result}, response_url) do
+    respond(response_url, capture_success_message(result))
+  end
+
+  defp respond_to_capture_result({:error, %Ecto.Changeset{}}, response_url) do
+    respond(
+      response_url,
+      dgettext(
+        "dashboard_slack",
+        "I couldn't capture that message. Try rewording the description (it must be at least 10 characters)."
+      )
+    )
+  end
+
+  defp respond_to_capture_result({:error, :unauthorized}, response_url) do
+    respond(
+      response_url,
+      dgettext("dashboard_slack", "You are not allowed to create forage items here.")
+    )
+  end
+
+  defp respond_to_capture_result({:error, reason}, response_url)
+       when reason in [:github_repository_not_configured, :github_repository_not_found] do
+    respond(
+      response_url,
+      dgettext(
+        "dashboard_slack",
+        "I couldn't capture that message because the forage intake destination is not configured."
+      )
+    )
+  end
+
+  defp respond_to_capture_result({:error, _reason}, response_url) do
+    respond(response_url, dgettext("dashboard_slack", "I couldn't capture that message."))
   end
 
   defp derive_title(text) do

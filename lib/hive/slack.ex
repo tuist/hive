@@ -765,27 +765,31 @@ defmodule Hive.Slack do
   end
 
   defp resolve_hive_user_by_profile(installation, slack_user_id) do
+    with {:ok, email} <- fetch_slack_user_email(installation, slack_user_id),
+         {:ok, %SlackUser{} = slack_user} <-
+           upsert_user(installation, %{slack_user_id: slack_user_id, email: email}) do
+      slack_user
+      |> Repo.preload(:linked_user)
+      |> linked_user_result()
+    end
+  end
+
+  defp fetch_slack_user_email(installation, slack_user_id) do
     case API.get_user(installation, slack_user_id) do
       {:ok, %{"user" => %{"profile" => %{"email" => email}}}}
       when is_binary(email) and email != "" ->
-        case upsert_user(installation, %{slack_user_id: slack_user_id, email: email}) do
-          {:ok, %SlackUser{} = slack_user} ->
-            case Repo.preload(slack_user, :linked_user) do
-              %SlackUser{linked_user: %User{} = user} -> {:ok, user}
-              _other -> {:error, :no_match}
-            end
-
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      {:ok, _other} ->
-        {:error, :no_match}
+        {:ok, email}
 
       {:error, reason} ->
         {:error, reason}
+
+      _other ->
+        {:error, :no_match}
     end
   end
+
+  defp linked_user_result(%SlackUser{linked_user: %User{} = user}), do: {:ok, user}
+  defp linked_user_result(_slack_user), do: {:error, :no_match}
 
   @doc """
   Inserts a Slack message under a channel + installation. Returns
