@@ -10,7 +10,9 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
   alias Hive.Projects
   alias Hive.Slack
   alias Hive.Slack.API
+  alias Hive.Agents.Sessions
   alias Hive.Slack.Installation
+  alias Hive.Slack.Agents.ConversationAgent
   alias Hive.Slack.Workers.RespondToConversation
 
   defp installation! do
@@ -32,6 +34,32 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
   defp channel!(installation, slack_channel_id) do
     {:ok, channel} = Slack.upsert_channel(installation, %{slack_channel_id: slack_channel_id})
     channel
+  end
+
+  defp stub_agent_stream(reply, assertions \\ fn _prompt -> :ok end) do
+    stub(Sessions, :stream, fn ConversationAgent, prompt, opts, consume ->
+      assert opts[:load_project_instructions] == false
+      assert opts[:max_turns] == 8
+      assertions.(prompt)
+      consume.([{:text, reply}])
+    end)
+  end
+
+  defp stub_slack_stream(installation_id, slack_channel_id, thread_ts, reply, stream_ts \\ "2.0") do
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == slack_channel_id
+      assert params["thread_ts"] == thread_ts
+      assert params["markdown_text"] == reply
+
+      {:ok, %{"ok" => true, "ts" => stream_ts}}
+    end)
+
+    stub(API, :stop_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == slack_channel_id
+      assert params["ts"] == stream_ts
+
+      {:ok, %{"ok" => true, "ts" => stream_ts}}
+    end)
   end
 
   defp repository! do
@@ -63,8 +91,6 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     {:ok, _slack_user} =
       Slack.upsert_user(installation, %{slack_user_id: "U-1", linked_user_id: user.id})
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     installation_id = installation.id
 
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-1", "1.0" ->
@@ -77,19 +103,13 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
-      assert args["can_create_forage_item"] == true
-      assert args["available_github_labels"] == []
-      {:ok, %{"reply" => "hello!"}}
+    stub_agent_stream("hello!", fn prompt ->
+      assert prompt =~ "Can create forage item:\ntrue"
+      assert prompt =~ "Available GitHub labels:\nNone"
+      assert prompt =~ "<@U-bot> hi"
     end)
 
-    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
-      assert params["channel"] == "C-1"
-      assert params["thread_ts"] == "1.0"
-      assert params["text"] == "hello!"
-
-      {:ok, %{"ok" => true, "ts" => "2.0"}}
-    end)
+    stub_slack_stream(installation_id, "C-1", "1.0", "hello!")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -134,8 +154,6 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        ]}
     end)
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     installation_id = installation.id
 
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-labels", "1.0" ->
@@ -148,22 +166,12 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
-      assert args["available_github_labels"] == [
-               %{"name" => "LiveView", "description" => "Phoenix LiveView behavior"},
-               %{"name" => "production"}
-             ]
-
-      {:ok, %{"reply" => "captured"}}
+    stub_agent_stream("captured", fn prompt ->
+      assert prompt =~ "- LiveView: Phoenix LiveView behavior"
+      assert prompt =~ "- production"
     end)
 
-    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
-      assert params["channel"] == "C-labels"
-      assert params["thread_ts"] == "1.0"
-      assert params["text"] == "captured"
-
-      {:ok, %{"ok" => true, "ts" => "2.0"}}
-    end)
+    stub_slack_stream(installation_id, "C-labels", "1.0", "captured")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -200,8 +208,6 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     {:ok, _other_slack_user} =
       Slack.upsert_user(installation, %{slack_user_id: "U-other", linked_user_id: other_user.id})
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     installation_id = installation.id
 
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-retry", "1.0" ->
@@ -222,21 +228,13 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
-      assert args["mention_text"] == "<@U-bot> can you try again?"
-      assert args["can_create_forage_item"] == true
-      assert List.last(args["thread"])["text"] == "later unrelated message"
-
-      {:ok, %{"reply" => "retrying"}}
+    stub_agent_stream("retrying", fn prompt ->
+      assert prompt =~ "Mention text:\n<@U-bot> can you try again?"
+      assert prompt =~ "Can create forage item:\ntrue"
+      assert prompt =~ "later unrelated message"
     end)
 
-    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
-      assert params["channel"] == "C-retry"
-      assert params["thread_ts"] == "1.0"
-      assert params["text"] == "retrying"
-
-      {:ok, %{"ok" => true, "ts" => "6.0"}}
-    end)
+    stub_slack_stream(installation_id, "C-retry", "1.0", "retrying", "6.0")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -270,28 +268,18 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
         raw_payload: %{}
       })
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     installation_id = installation.id
 
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-local", "1.0" ->
       {:error, {:slack_api_error, "missing_scope"}}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, args, _opts ->
-      assert args["mention_text"] == "<@U-bot> record this from the event payload"
-      assert args["can_create_forage_item"] == true
-
-      {:ok, %{"reply" => "handled locally"}}
+    stub_agent_stream("handled locally", fn prompt ->
+      assert prompt =~ "Mention text:\n<@U-bot> record this from the event payload"
+      assert prompt =~ "Can create forage item:\ntrue"
     end)
 
-    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
-      assert params["channel"] == "C-local"
-      assert params["thread_ts"] == "1.0"
-      assert params["text"] == "handled locally"
-
-      {:ok, %{"ok" => true, "ts" => "3.0"}}
-    end)
+    stub_slack_stream(installation_id, "C-local", "1.0", "handled locally", "3.0")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -329,7 +317,9 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Hive.Agents, :client_opts, fn -> {:error, :llm_not_configured} end)
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, _consume ->
+      {:error, :llm_not_configured}
+    end)
 
     stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
       assert params["channel"] == "C-disabled"
@@ -362,8 +352,6 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     {:ok, _slack_user} =
       Slack.upsert_user(installation, %{slack_user_id: "U-no-result", linked_user_id: user.id})
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
                                         "C-no-result",
                                         "1.0" ->
@@ -376,8 +364,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, _args, _opts ->
-      {:error, :no_result_submitted}
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([])
     end)
 
     stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
@@ -411,8 +399,6 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     {:ok, _slack_user} =
       Slack.upsert_user(installation, %{slack_user_id: "U-agent-error", linked_user_id: user.id})
 
-    stub(Hive.Agents, :client_opts, fn -> {:ok, [model: "anthropic:test", api_key: "k"]} end)
-
     stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
                                         "C-agent-error",
                                         "1.0" ->
@@ -425,8 +411,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub(Condukt.Operation, :run, fn _module, :reply_to_thread, _args, _opts ->
-      {:error, :provider_failed}
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([{:error, :provider_failed}])
     end)
 
     stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
@@ -443,6 +429,348 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
                "channel_id" => channel.id,
                "thread_ts" => "1.0"
              })
+  end
+
+  test "perform/1 appends later text chunks to the Slack stream" do
+    installation = installation!()
+    channel = channel!(installation, "C-stream")
+    installation_id = installation.id
+    first_chunk = String.duplicate("a", 80)
+    second_chunk = " " <> String.duplicate("b", 80)
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-stream-agent@example.com",
+        provider: "test",
+        provider_uid: "slack-stream-agent"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-stream", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-stream", "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-stream", "text" => "<@U-bot> stream this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([{:text, first_chunk}, {:text, second_chunk}])
+    end)
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-stream"
+      assert params["thread_ts"] == "1.0"
+      assert params["markdown_text"] == first_chunk
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :append_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-stream"
+      assert params["ts"] == "2.0"
+      assert params["markdown_text"] == second_chunk
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :stop_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-stream"
+      assert params["ts"] == "2.0"
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+  end
+
+  test "perform/1 falls back to message updates when Slack stream start fails" do
+    installation = installation!()
+    channel = channel!(installation, "C-update")
+    installation_id = installation.id
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-update-agent@example.com",
+        provider: "test",
+        provider_uid: "slack-update-agent"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-update", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-update", "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-update", "text" => "<@U-bot> stream this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub_agent_stream("fallback text")
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-update"
+      assert params["thread_ts"] == "1.0"
+      assert params["markdown_text"] == "fallback text"
+
+      {:error, {:slack_api_error, "method_not_supported"}}
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-update"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] == "fallback text"
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+  end
+
+  test "perform/1 confirms and records a reply when the agent only runs a tool" do
+    installation = installation!()
+    channel = channel!(installation, "C-tool-only")
+    installation_id = installation.id
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-tool-only@example.com",
+        provider: "test",
+        provider_uid: "slack-tool-only"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-tool-only", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-tool-only",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-tool-only", "text" => "<@U-bot> record this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([
+        {:tool_call, "create_forage_item", "call-1", %{}},
+        {:tool_result, "call-1", {:ok, %{}}}
+      ])
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-tool-only"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] == "Done."
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+
+    assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
+  end
+
+  test "perform/1 finalizes the streamed message in place when the agent errors mid-stream" do
+    installation = installation!()
+    channel = channel!(installation, "C-stream-error")
+    installation_id = installation.id
+    first_chunk = String.duplicate("a", 80)
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-stream-error@example.com",
+        provider: "test",
+        provider_uid: "slack-stream-error"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-stream-error", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-stream-error",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-stream-error", "text" => "<@U-bot> stream this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([{:text, first_chunk}, {:error, :provider_failed}])
+    end)
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["markdown_text"] == first_chunk
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    test_pid = self()
+
+    stub(API, :append_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["ts"] == "2.0"
+      send(test_pid, {:append, params["markdown_text"]})
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :stop_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["ts"] == "2.0"
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    # The partial stream is finalized in place; no separate failure message.
+    reject(&API.post_message/2)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+
+    assert_received {:append, note}
+    assert note =~ "couldn't finish"
+    refute Repo.get_by(Activity, action: "slack.replied")
+  end
+
+  test "perform/1 overwrites the fallback message when the agent errors after the stream fallback" do
+    installation = installation!()
+    channel = channel!(installation, "C-update-error")
+    installation_id = installation.id
+    first_chunk = String.duplicate("a", 80)
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-update-error@example.com",
+        provider: "test",
+        provider_uid: "slack-update-error"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-update-error", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-update-error",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-update-error", "text" => "<@U-bot> stream this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([{:text, first_chunk}, {:error, :provider_failed}])
+    end)
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, _params ->
+      {:error, {:slack_api_error, "method_not_supported"}}
+    end)
+
+    stub(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["text"] == first_chunk
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    test_pid = self()
+
+    stub(API, :update_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["ts"] == "2.0"
+      send(test_pid, {:update, params["text"]})
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+
+    assert_received {:update, text}
+    assert text =~ "couldn't finish"
+    refute Repo.get_by(Activity, action: "slack.replied")
+  end
+
+  test "perform/1 retries the stream stop and still succeeds when the first stop fails" do
+    installation = installation!()
+    channel = channel!(installation, "C-stop-retry")
+    installation_id = installation.id
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-stop-retry@example.com",
+        provider: "test",
+        provider_uid: "slack-stop-retry"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-stop-retry", linked_user_id: user.id})
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-stop-retry",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-stop-retry", "text" => "<@U-bot> hi", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub_agent_stream("hello!")
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, _params ->
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    API
+    |> expect(:stop_stream, fn %Installation{id: ^installation_id}, _params ->
+      {:error, {:slack_api_error, "ratelimited"}}
+    end)
+    |> expect(:stop_stream, fn %Installation{id: ^installation_id}, _params ->
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+
+    assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
 
   test "enqueue/4 enqueues even when agents are disabled" do

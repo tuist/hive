@@ -27,6 +27,21 @@ defmodule Hive.Slack.API do
   def update_message(installation, params), do: post(installation, "chat.update", params)
 
   @doc """
+  Starts a native Slack streamed message via `chat.startStream`.
+  """
+  def start_stream(installation, params), do: post(installation, "chat.startStream", params)
+
+  @doc """
+  Appends markdown text to a native Slack streamed message via `chat.appendStream`.
+  """
+  def append_stream(installation, params), do: post(installation, "chat.appendStream", params)
+
+  @doc """
+  Stops a native Slack streamed message via `chat.stopStream`.
+  """
+  def stop_stream(installation, params), do: post(installation, "chat.stopStream", params)
+
+  @doc """
   Attaches unfurl previews to a message via `chat.unfurl`. `params`
   must include `"channel"`, `"ts"`, and an `"unfurls"` map keyed by
   the URLs being unfurled.

@@ -2,7 +2,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   @moduledoc """
   Replies in a Slack thread where Hive's bot was @-mentioned. Fetches
   the thread, runs `Hive.Slack.Agents.ConversationAgent` through
-  `Hive.Agents.Sessions`, posts the reply via `Hive.Slack.API`.
+  `Hive.Agents.Sessions`, and streams the reply via `Hive.Slack.API`.
 
   Posts a short setup note when no model provider is configured. Stays
   dormant when the installation has been disconnected, returning
@@ -15,6 +15,14 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     unique: [fields: [:worker, :queue, :args], period: 300, states: :incomplete]
 
   require Logger
+
+  @update_interval_ms 900
+  @min_update_chars 80
+
+  @no_reply_message "I couldn't complete that request because the assistant did not produce a reply. Please try again with a bit more detail."
+  @interrupted_message "I couldn't finish that reply. Please try again."
+  @interrupted_stream_note "\n\n_" <> @interrupted_message <> "_"
+  @tool_only_ack "Done."
 
   alias Hive.Agents.Sessions
   alias Hive.Audit
@@ -83,22 +91,20 @@ defmodule Hive.Slack.Workers.RespondToConversation do
          %{mention_text: mention_text, mention_user: mention_user, thread: thread} <-
            summarize_thread(thread_messages, message_ts),
          requester_user = resolve_requester_user(installation, mention_user),
-         {:ok, %{"reply" => reply}} <-
+         input = %{
+           "mention_text" => mention_text,
+           "thread" => thread,
+           "can_create_forage_item" => not is_nil(requester_user),
+           "available_github_labels" => available_github_labels(requester_user)
+         },
+         {:ok, _reply} <-
            run_conversation_agent(
-             %{
-               "mention_text" => mention_text,
-               "thread" => thread,
-               "can_create_forage_item" => not is_nil(requester_user),
-               "available_github_labels" => available_github_labels(requester_user)
-             },
-             requester_user
-           ),
-         {:ok, _} <-
-           API.post_message(installation, %{
-             "channel" => slack_channel_id,
-             "thread_ts" => thread_ts,
-             "text" => reply
-           }) do
+             input,
+             requester_user,
+             installation,
+             slack_channel_id,
+             thread_ts
+           ) do
       Audit.record("slack.replied", %{
         actor: Audit.agent_actor("slack.conversation"),
         interface: "worker",
@@ -121,6 +127,9 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
       {:error, {:invalid_output, _reason} = reason} ->
         post_agent_response_failed_message(installation, slack_channel_id, thread_ts, reason)
+
+      {:error, {:notified, _reason}} ->
+        :ok
 
       {:error, reason} ->
         post_agent_response_failed_message(installation, slack_channel_id, thread_ts, reason)
@@ -269,14 +278,297 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   defp maybe_put_arg(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put_arg(map, key, value), do: Map.put(map, key, value)
 
-  defp run_conversation_agent(input, nil) do
-    Sessions.run_operation(ConversationAgent, :reply_to_thread, input)
+  defp run_conversation_agent(input, nil, installation, slack_channel_id, thread_ts) do
+    stream_conversation_agent(input, installation, slack_channel_id, thread_ts)
   end
 
-  defp run_conversation_agent(input, requester_user) do
+  defp run_conversation_agent(input, requester_user, installation, slack_channel_id, thread_ts) do
     Intake.with_requester(requester_user, fn ->
-      Sessions.run_operation(ConversationAgent, :reply_to_thread, input)
+      stream_conversation_agent(input, installation, slack_channel_id, thread_ts)
     end)
+  end
+
+  defp stream_conversation_agent(input, installation, slack_channel_id, thread_ts) do
+    prompt = ConversationAgent.build_prompt(input)
+
+    Sessions.stream(
+      ConversationAgent,
+      prompt,
+      [load_project_instructions: false, max_turns: 8],
+      fn events ->
+        events
+        |> Enum.reduce_while(initial_stream_state(), fn event, state ->
+          handle_stream_event(event, state, installation, slack_channel_id, thread_ts)
+        end)
+        |> finalize_stream_result(installation, slack_channel_id, thread_ts)
+      end
+    )
+  end
+
+  defp handle_stream_event({:text, chunk}, state, installation, slack_channel_id, thread_ts)
+       when is_binary(chunk) do
+    state = %{state | text: state.text <> chunk}
+
+    if should_update?(state) do
+      state = flush_response(state, installation, slack_channel_id, thread_ts)
+
+      if state.error do
+        {:halt, state}
+      else
+        {:cont, state}
+      end
+    else
+      {:cont, state}
+    end
+  end
+
+  defp handle_stream_event({:error, reason}, state, _installation, _slack_channel_id, _thread_ts) do
+    {:halt, %{state | error: reason}}
+  end
+
+  defp handle_stream_event(
+         {:tool_call, _name, _id, _args},
+         state,
+         _installation,
+         _slack,
+         _thread
+       ),
+       do: {:cont, %{state | tool_ran: true}}
+
+  defp handle_stream_event(_event, state, _installation, _slack_channel_id, _thread_ts),
+    do: {:cont, state}
+
+  defp finalize_stream_result(%{error: nil} = state, installation, slack_channel_id, thread_ts) do
+    state = flush_response(state, installation, slack_channel_id, thread_ts)
+
+    cond do
+      state.error != nil ->
+        fail_partial_response(state, installation, slack_channel_id, state.error)
+
+      String.trim(state.text) != "" ->
+        :ok = stop_response(state, installation, slack_channel_id)
+        {:ok, String.trim(state.text)}
+
+      state.tool_ran ->
+        post_tool_only_ack(installation, slack_channel_id, thread_ts)
+
+      true ->
+        {:error, :empty_response}
+    end
+  end
+
+  defp finalize_stream_result(
+         %{error: reason} = state,
+         installation,
+         slack_channel_id,
+         _thread_ts
+       ) do
+    fail_partial_response(state, installation, slack_channel_id, reason)
+  end
+
+  defp flush_response(state, installation, slack_channel_id, thread_ts) do
+    delta = pending_text(state)
+
+    if String.trim(delta) == "" do
+      state
+    else
+      state
+      |> do_flush_response(delta, installation, slack_channel_id, thread_ts)
+      |> mark_updated()
+    end
+  end
+
+  defp do_flush_response(%{mode: nil} = state, delta, installation, slack_channel_id, thread_ts) do
+    case API.start_stream(installation, %{
+           "channel" => slack_channel_id,
+           "thread_ts" => thread_ts,
+           "markdown_text" => delta
+         }) do
+      {:ok, %{"ts" => stream_ts}} when is_binary(stream_ts) ->
+        %{state | mode: :stream, stream_ts: stream_ts}
+
+      {:ok, response} ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack stream start did not include a timestamp: #{inspect(response)}"
+        )
+
+        start_update_fallback(state, installation, slack_channel_id, thread_ts)
+
+      {:error, reason} ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack stream start failed, falling back to message updates: #{inspect(reason)}"
+        )
+
+        start_update_fallback(state, installation, slack_channel_id, thread_ts)
+    end
+  end
+
+  defp do_flush_response(
+         %{mode: :stream, stream_ts: stream_ts} = state,
+         delta,
+         installation,
+         slack_channel_id,
+         _thread_ts
+       ) do
+    case API.append_stream(installation, %{
+           "channel" => slack_channel_id,
+           "ts" => stream_ts,
+           "markdown_text" => delta
+         }) do
+      {:ok, _response} -> state
+      {:error, reason} -> %{state | error: reason}
+    end
+  end
+
+  defp do_flush_response(
+         %{mode: :update, reply_ts: reply_ts} = state,
+         _delta,
+         installation,
+         slack_channel_id,
+         _thread_ts
+       ) do
+    case API.update_message(installation, %{
+           "channel" => slack_channel_id,
+           "ts" => reply_ts,
+           "text" => state.text
+         }) do
+      {:ok, _response} -> state
+      {:error, reason} -> %{state | error: reason}
+    end
+  end
+
+  defp start_update_fallback(state, installation, slack_channel_id, thread_ts) do
+    case API.post_message(installation, %{
+           "channel" => slack_channel_id,
+           "thread_ts" => thread_ts,
+           "text" => state.text
+         }) do
+      {:ok, %{"ts" => reply_ts}} when is_binary(reply_ts) ->
+        %{state | mode: :update, reply_ts: reply_ts}
+
+      {:ok, response} ->
+        %{state | error: {:missing_reply_ts, response}}
+
+      {:error, reason} ->
+        %{state | error: reason}
+    end
+  end
+
+  defp stop_response(%{mode: :stream, stream_ts: stream_ts}, installation, slack_channel_id)
+       when is_binary(stream_ts) do
+    stop_stream_with_retry(installation, slack_channel_id, stream_ts, 3)
+  end
+
+  defp stop_response(%{mode: :update}, _installation, _slack_channel_id), do: :ok
+
+  # The reply text was already streamed successfully; only the finalizing
+  # `chat.stopStream` failed. Retrying the whole Oban job would post a duplicate
+  # reply, so retry just the stop call and, if it keeps failing, accept the
+  # lingering streaming indicator rather than double-posting.
+  defp stop_stream_with_retry(installation, slack_channel_id, stream_ts, attempts_left) do
+    case API.stop_stream(installation, %{"channel" => slack_channel_id, "ts" => stream_ts}) do
+      {:ok, _response} ->
+        :ok
+
+      {:error, reason} when attempts_left > 1 ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack stream stop failed, retrying: #{inspect(reason)}"
+        )
+
+        stop_stream_with_retry(installation, slack_channel_id, stream_ts, attempts_left - 1)
+
+      {:error, reason} ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack stream stop failed after retries; reply already delivered: #{inspect(reason)}"
+        )
+
+        :ok
+    end
+  end
+
+  # A mid-stream failure after a message was already made visible: finalize that
+  # same message as the failure instead of leaving a truncated partial and
+  # posting a second, contradictory failure message. The `{:notified, reason}`
+  # signals the caller that the user has already been told.
+  defp fail_partial_response(
+         %{mode: :stream, stream_ts: stream_ts} = state,
+         installation,
+         slack_channel_id,
+         reason
+       )
+       when is_binary(stream_ts) do
+    _ =
+      API.append_stream(installation, %{
+        "channel" => slack_channel_id,
+        "ts" => stream_ts,
+        "markdown_text" => @interrupted_stream_note
+      })
+
+    _ = stop_response(state, installation, slack_channel_id)
+    {:error, {:notified, reason}}
+  end
+
+  defp fail_partial_response(
+         %{mode: :update, reply_ts: reply_ts},
+         installation,
+         slack_channel_id,
+         reason
+       )
+       when is_binary(reply_ts) do
+    _ =
+      API.update_message(installation, %{
+        "channel" => slack_channel_id,
+        "ts" => reply_ts,
+        "text" => @interrupted_message
+      })
+
+    {:error, {:notified, reason}}
+  end
+
+  defp fail_partial_response(_state, _installation, _slack_channel_id, reason) do
+    {:error, reason}
+  end
+
+  defp post_tool_only_ack(installation, slack_channel_id, thread_ts) do
+    case API.post_message(installation, %{
+           "channel" => slack_channel_id,
+           "thread_ts" => thread_ts,
+           "text" => @tool_only_ack
+         }) do
+      {:ok, _response} -> {:ok, @tool_only_ack}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp should_update?(%{text: text, last_text: last_text, last_update_ms: last_update_ms}) do
+    enough_text? = byte_size(text) - byte_size(last_text) >= @min_update_chars
+
+    enough_time? =
+      is_nil(last_update_ms) or
+        System.monotonic_time(:millisecond) - last_update_ms >= @update_interval_ms
+
+    enough_text? and enough_time?
+  end
+
+  defp pending_text(%{text: text, last_text: last_text}) do
+    String.replace_prefix(text, last_text, "")
+  end
+
+  defp mark_updated(%{text: text} = state) do
+    %{state | last_text: text, last_update_ms: System.monotonic_time(:millisecond)}
+  end
+
+  defp initial_stream_state do
+    %{
+      text: "",
+      last_text: "",
+      error: nil,
+      last_update_ms: nil,
+      mode: nil,
+      stream_ts: nil,
+      reply_ts: nil,
+      tool_ran: false
+    }
   end
 
   defp post_model_provider_required_message(installation, slack_channel_id, thread_ts) do
@@ -300,8 +592,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     API.post_message(installation, %{
       "channel" => slack_channel_id,
       "thread_ts" => thread_ts,
-      "text" =>
-        "I couldn't complete that request because the assistant did not produce a reply. Please try again with a bit more detail."
+      "text" => @no_reply_message
     })
     |> case do
       {:ok, _response} -> :ok
