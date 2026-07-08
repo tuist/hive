@@ -121,6 +121,66 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
 
+  test "perform/1 keeps streamed text when the agent finishes without a submitted result" do
+    installation = installation!()
+    channel = channel!(installation, "C-no-result")
+    reply = "The reply was already streamed."
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-no-result@example.com",
+        provider: "test",
+        provider_uid: "slack-no-result"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-no-result", linked_user_id: user.id})
+
+    installation_id = installation.id
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-no-result",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-no-result", "text" => "<@U-bot> try again", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([{:text, reply}, {:error, :no_result_submitted}])
+    end)
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-no-result"
+      assert params["thread_ts"] == "1.0"
+      assert params["markdown_text"] == reply
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :stop_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-no-result"
+      assert params["ts"] == "2.0"
+
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    reject(&API.post_message/2)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+
+    assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
+  end
+
   test "perform/1 passes configured GitHub labels to the agent" do
     installation = installation!()
     channel = channel!(installation, "C-labels")

@@ -322,6 +322,25 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     end
   end
 
+  defp handle_stream_event(
+         {:error, :no_result_submitted},
+         %{text: text} = state,
+         _installation,
+         _slack_channel_id,
+         _thread_ts
+       )
+       when is_binary(text) do
+    if String.trim(text) == "" do
+      {:halt, %{state | error: :no_result_submitted}}
+    else
+      Logger.warning(
+        "[Slack.RespondToConversation] Stream finished without a submitted result; keeping streamed text"
+      )
+
+      {:halt, state}
+    end
+  end
+
   defp handle_stream_event({:error, reason}, state, _installation, _slack_channel_id, _thread_ts) do
     {:halt, %{state | error: reason}}
   end
