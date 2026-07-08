@@ -56,11 +56,7 @@ defmodule Hive.Agents.Sessions do
       run_opts = run_opts(llm_opts, opts)
 
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
-        Condukt.Session.with_transient(agent_module, run_opts, fn agent ->
-          agent
-          |> Condukt.stream(prompt, run_opts)
-          |> consume.()
-        end)
+        consume_stream(agent_module, prompt, run_opts, consume)
       end)
     end
   end
@@ -81,6 +77,14 @@ defmodule Hive.Agents.Sessions do
     llm_opts
     |> Keyword.merge(opts)
     |> Keyword.put_new(:timeout, @run_timeout)
+  end
+
+  defp consume_stream(agent_module, prompt, run_opts, consume) do
+    Condukt.Session.with_transient(agent_module, run_opts, fn agent ->
+      agent
+      |> Condukt.stream(prompt, run_opts)
+      |> consume.()
+    end)
   end
 
   defp agent_actor_context(agent_module, llm_opts) do
