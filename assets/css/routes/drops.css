@@ -131,6 +131,13 @@
       padding: var(--noora-spacing-3);
       overflow-x: auto;
     }
+
+    & img {
+      display: block;
+      border-radius: var(--noora-radius-3);
+      max-width: 100%;
+      height: auto;
+    }
   }
 
   & [data-part="empty-body"] p {

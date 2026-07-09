@@ -140,7 +140,7 @@ defmodule HiveWeb.DropsLive.Show do
         <.card title={dgettext("dashboard_drops", "Update")} icon="package">
           <.card_section>
             <article :if={present?(@drop.body)} data-part="body">
-              {Markdown.render(@drop.body)}
+              {render_body(@drop)}
             </article>
             <div :if={!present?(@drop.body)} data-part="empty-body">
               <p>
@@ -268,4 +268,9 @@ defmodule HiveWeb.DropsLive.Show do
 
   defp present?(value) when is_binary(value), do: String.trim(value) != ""
   defp present?(_other), do: false
+
+  defp render_body(%{source_type: :rss, body: body, url: url}),
+    do: Markdown.render_markup(body, base_url: url)
+
+  defp render_body(%{body: body}), do: Markdown.render(body)
 end

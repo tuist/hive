@@ -90,6 +90,42 @@ defmodule HiveWeb.DropsLive.ShowTest do
     assert html =~ "v4.7.0"
   end
 
+  test "renders sanitized feed markup for changelog drops", %{conn: conn} do
+    domain = create_domain!(%{"name" => unique_domain_name("Cache"), "visibility" => "public"})
+
+    drop =
+      insert_drop!(domain, %{
+        source_type: :rss,
+        external_id: "https://tuist.dev/changelog/cache-upload",
+        title: "Cache upload access controls",
+        body: """
+        <p>Teams can switch to <strong>CI and account tokens only</strong> for cache uploads.</p>
+        <img src="/marketing/images/changelog/cache-upload.png" alt="Cache upload controls" onerror="alert(1)">
+        <a href="javascript:alert(1)" onclick="alert(1)">bad link</a>
+        <script>alert(1)</script>
+        """,
+        url: "https://tuist.dev/changelog/cache-upload",
+        version: nil
+      })
+
+    {:ok, _view, html} = live(conn, ~p"/drops/#{drop.number}")
+
+    assert html =~
+             "<p>Teams can switch to <strong>CI and account tokens only</strong> for cache uploads.</p>"
+
+    assert html =~ ~s(src="https://tuist.dev/marketing/images/changelog/cache-upload.png")
+    assert html =~ ~s(alt="Cache upload controls")
+    refute html =~ "onerror"
+    refute html =~ "javascript:"
+    refute html =~ "<script>"
+    refute html =~ "alert(1)"
+
+    assert {:ok, data} = advertised_open_graph_data(html)
+
+    assert data.description ==
+             "Teams can switch to CI and account tokens only for cache uploads. Cache upload controls bad link"
+  end
+
   test "advertises an OpenGraph image with drop-specific context", %{conn: conn} do
     {:ok, project} = Projects.create_project(%{name: "Hive", visibility: "public"})
 

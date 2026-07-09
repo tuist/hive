@@ -5,6 +5,7 @@ defmodule HiveWeb.Markdown do
 
   @paragraph_wrap ~r/\A<p>(.*)<\/p>\z/s
   @tag_split ~r/(<[^>]+>)/
+  @html_url_attr ~r/(\s(?:href|src)=["'])([^"']+)(["'])/i
   @mention ~r/(^|[^A-Za-z0-9_\/])@([A-Za-z0-9](?:[A-Za-z0-9._-]{0,37}[A-Za-z0-9])?)/u
   @mention_skip_tags ~w(a code pre)
 
@@ -44,6 +45,21 @@ defmodule HiveWeb.Markdown do
   def render(_markdown), do: raw("")
 
   @doc """
+  Renders sanitized markup imported from external feeds.
+  """
+  def render_markup(markup, opts \\ [])
+
+  def render_markup(markup, opts) when is_binary(markup) do
+    markup
+    |> absolutize_html_urls(Keyword.get(opts, :base_url))
+    |> MDEx.safe_html(escape: [content: false, curly_braces_in_code: true])
+    |> highlight_mentions()
+    |> raw()
+  end
+
+  def render_markup(_markup, _opts), do: raw("")
+
+  @doc """
   Renders a single line of markdown as inline-only HTML, suitable for use
   inside an existing block element (issue titles, excerpts, badges). The
   outer `<p>` wrapper that MDEx adds for block rendering is stripped so
@@ -69,6 +85,8 @@ defmodule HiveWeb.Markdown do
   """
   def to_plain_text(text) when is_binary(text) do
     text
+    |> decode_html_entities()
+    |> strip_html()
     |> String.replace(~r/```[\s\S]*?```/, " ")
     |> String.replace(~r/~~~[\s\S]*?~~~/, " ")
     |> String.replace(~r/!\[[^\]]*\]\([^)]*\)/, " ")
@@ -113,6 +131,91 @@ defmodule HiveWeb.Markdown do
       _ -> trimmed
     end
   end
+
+  defp strip_html(text) do
+    text
+    |> strip_tag_contents("script")
+    |> strip_tag_contents("style")
+    |> strip_tag_contents("noscript")
+    |> String.replace(~r/<li\b[^>]*>/i, "\n")
+    |> String.replace(~r/<br\s*\/?>/i, "\n")
+    |> String.replace(
+      ~r/<\/(p|div|section|article|aside|header|footer|nav|tr|table|ul|ol|h[1-6]|li)>/i,
+      "\n"
+    )
+    |> String.replace(~r/<img\b[^>]*\balt=(["'])(.*?)\1[^>]*>/i, " \\2 ")
+    |> String.replace(~r/<\/?[A-Za-z][^>]*>/, "")
+    |> String.replace(~r/<!--.*?-->/s, " ")
+  end
+
+  defp strip_tag_contents(text, tag) do
+    Regex.replace(~r/<#{tag}\b[^>]*>.*?<\/#{tag}>/is, text, "")
+  end
+
+  defp absolutize_html_urls(html, base_url) when is_binary(base_url) and base_url != "" do
+    base_uri = URI.parse(base_url)
+
+    if base_uri.scheme in ["http", "https"] and is_binary(base_uri.host) do
+      Regex.replace(@html_url_attr, html, fn _match, prefix, url, suffix ->
+        prefix <> absolutize_url(url, base_uri) <> suffix
+      end)
+    else
+      html
+    end
+  end
+
+  defp absolutize_html_urls(html, _base_url), do: html
+
+  defp absolutize_url("#" <> _rest = url, _base_uri), do: url
+
+  defp absolutize_url(url, base_uri) do
+    uri = URI.parse(url)
+
+    cond do
+      uri.scheme in ["http", "https", "mailto", "tel", "data"] ->
+        url
+
+      is_binary(uri.scheme) ->
+        url
+
+      true ->
+        base_uri
+        |> URI.merge(url)
+        |> URI.to_string()
+    end
+  rescue
+    URI.Error -> url
+  end
+
+  defp decode_html_entities(text) do
+    text
+    |> decode_numeric_entities(~r/&#(\d+);/, 10)
+    |> decode_numeric_entities(~r/&#x([0-9a-fA-F]+);/, 16)
+    |> String.replace("&nbsp;", " ")
+    |> String.replace("&amp;", "&")
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
+    |> String.replace("&#39;", "'")
+    |> String.replace("&#x27;", "'")
+    |> String.replace("&apos;", "'")
+  end
+
+  defp decode_numeric_entities(text, regex, base) do
+    Regex.replace(regex, text, fn _match, codepoint ->
+      codepoint
+      |> String.to_integer(base)
+      |> maybe_codepoint()
+    end)
+  end
+
+  defp maybe_codepoint(codepoint) when codepoint in 0..0x10FFFF do
+    <<codepoint::utf8>>
+  rescue
+    ArgumentError -> ""
+  end
+
+  defp maybe_codepoint(_codepoint), do: ""
 
   defp highlight_mentions(html) do
     @tag_split

@@ -77,6 +77,29 @@ defmodule HiveWeb.MarkdownTest do
     assert rendered =~ ~s|<span data-part="mention" data-mention="@marek">@marek</span>|
   end
 
+  describe "render_markup/2" do
+    test "renders sanitized feed markup" do
+      rendered =
+        "<p>Use <strong>trusted cache uploads</strong>.</p><script>alert(1)</script>"
+        |> Markdown.render_markup()
+        |> Phoenix.HTML.safe_to_string()
+
+      assert rendered =~ "<p>Use <strong>trusted cache uploads</strong>.</p>"
+      refute rendered =~ "<script>"
+      refute rendered =~ "alert(1)"
+    end
+
+    test "absolutizes relative links and images from a source URL" do
+      rendered =
+        ~S|<p><a href="/docs/cache">Docs</a><img src="../images/cache.png" alt="Cache"></p>|
+        |> Markdown.render_markup(base_url: "https://tuist.dev/changelog/cache-upload")
+        |> Phoenix.HTML.safe_to_string()
+
+      assert rendered =~ ~s|href="https://tuist.dev/docs/cache"|
+      assert rendered =~ ~s|src="https://tuist.dev/images/cache.png"|
+    end
+  end
+
   defp inline(markdown) do
     markdown
     |> Markdown.inline()
@@ -133,6 +156,20 @@ defmodule HiveWeb.MarkdownTest do
       assert plain =~ "bold"
       assert plain =~ "strike"
       refute plain =~ "def hidden"
+    end
+
+    test "strips markup imported from feeds" do
+      body = """
+      <p>Teams can switch to <strong>CI and account tokens only</strong>.</p>
+      <img src="/cache.png" alt="Cache upload controls">
+      """
+
+      plain = Markdown.to_plain_text(body)
+
+      refute plain =~ "<p>"
+      refute plain =~ "<strong>"
+      assert plain =~ "Teams can switch to CI and account tokens only."
+      assert plain =~ "Cache upload controls"
     end
 
     test "returns an empty string for nil" do
