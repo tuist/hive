@@ -68,6 +68,34 @@ defmodule HiveWeb.DropsLive.IndexTest do
     assert html =~ "Unclassified"
   end
 
+  test "renders feed markup as a plain subtitle preview", %{conn: conn} do
+    {:ok, project} = Projects.create_project(%{name: "Tuist", visibility: "public"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Cache",
+        project_id: project.id,
+        visibility: "public"
+      })
+
+    insert_drop!(domain, %{
+      source_type: :rss,
+      external_id: "https://tuist.dev/changelog/cache-upload",
+      title: "Cache upload access controls",
+      body:
+        "<p>Teams can switch to <strong>CI and account tokens only</strong> for cache uploads.</p>",
+      url: "https://tuist.dev/changelog/cache-upload",
+      published_at: ~U[2026-07-06 00:00:00Z]
+    })
+
+    {:ok, _view, html} = live(conn, ~p"/drops")
+    table = table_fragment(html)
+
+    assert table =~ "Teams can switch to CI and account tokens only for cache uploads."
+    refute table =~ "&lt;p&gt;"
+    refute table =~ "&lt;strong&gt;"
+  end
+
   test "advertises an OpenGraph image that reflects the loaded drops", %{conn: conn} do
     {:ok, project} = Projects.create_project(%{name: "Hive", visibility: "public"})
 
