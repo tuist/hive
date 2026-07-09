@@ -240,16 +240,19 @@ when the agent does not choose a repository label.
 When the Slack app registers your Hive host as an **app unfurl domain**,
 Slack delivers a `link_shared` event for every Hive link pasted in a
 connected channel. Hive looks each link up, builds a preview, and posts
-the preview back via `chat.unfurl`. Supported surfaces:
+the preview back via `chat.unfurl`.
 
-- `/specs/:number`: title, summary or first body line, and status.
-- `/domains/:id`: name and description.
-- `/forage/items/:origin/:id`: title, description excerpt, type, and
-  status. Manual items, GitHub issues, and Grafana alerts all unfurl
-  through the same surface.
+Hive renders dashboard previews with Slack Block Kit. Static dashboard
+pages show their page title, description, key highlights, and an action
+button back to Hive. Resource detail pages show resource-specific details
+when the same resource is visible to an anonymous dashboard visitor.
+That includes public specs, public domains, public forage items, drops,
+and projects.
 
-Only public resources are unfurled. Anything that requires a session
-to view on the dashboard stays opaque, and Slack shows the bare link.
+Anything that requires a Hive session stays opaque. Private specs,
+private domains, organization-only forage items, account pages, and
+admin-only resources do not expose record contents in Slack. They either
+fall back to generic page metadata or leave Slack to show the bare link.
 
 ## Notifications
 

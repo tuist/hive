@@ -8,6 +8,26 @@ defmodule HiveWeb.DomainLive.Index do
   alias Hive.Domains.Domain
   alias HiveWeb.DomainComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
+
+  def open_graph do
+    %{
+      description:
+        dgettext(
+          "dashboard_domains",
+          "Reusable product and engineering areas tracked across projects, specs, forage items, and drops."
+        ),
+      section_label: dgettext("dashboard_domains", "Domains"),
+      highlights: [
+        dgettext("dashboard_domains", "Product areas"),
+        dgettext("dashboard_domains", "Cross-project context"),
+        dgettext("dashboard_domains", "Shared ownership")
+      ],
+      id: "domains",
+      path: "/domains",
+      title: dgettext("dashboard_domains", "Domains")
+    }
+  end
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,6 +42,7 @@ defmodule HiveWeb.DomainLive.Index do
      )
      |> assign(:domains, Domains.list_visible_domains(user))
      |> assign(:editable?, editable?)
+     |> assign(OpenGraph.assigns(open_graph()))
      |> assign_form(Domains.change_domain())}
   end
 

@@ -92,15 +92,16 @@ When in doubt about action names, follow the dotted `domain.verb` convention: `u
 
 ## Slack link unfurling
 
-Slack's `link_shared` event is handled in `Hive.Slack.Events` and dispatched to `Hive.Slack.Workers.UnfurlLinks`, which walks each URL through `Hive.Slack.Unfurler` and posts the resulting previews back via `chat.unfurl`. Only URLs whose host matches `HiveWeb.Endpoint.url()` are considered.
+Slack's `link_shared` event is handled in `Hive.Slack.Events` and dispatched to `Hive.Slack.Workers.UnfurlLinks`, which walks each Uniform Resource Locator ([URL](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/Web_mechanics/What_is_a_URL)) through `Hive.Slack.Unfurler` and posts the resulting previews back via `chat.unfurl`. Only hosts that match `HiveWeb.Endpoint.url()` are considered.
 
-`Hive.Slack.Unfurler` keeps a list of modules implementing the `Hive.Slack.Unfurl` behaviour (one `unfurl(URI.t()) :: {:ok, payload} | :skip` callback). The first module that returns `{:ok, payload}` wins; everyone else returns `:skip`.
+`Hive.Slack.Unfurler` resolves the dashboard route with `Phoenix.Router.route_info/4` and asks the owning LiveView or controller to build the preview. Keep link-to-block mapping close to that route. Do not add a central list of path patterns or domain-specific unfurl modules.
 
-To make a new domain unfurlable:
+Every dashboard page should support Slack unfurling with [Block Kit](https://docs.slack.dev/block-kit/) blocks:
 
-1. Add `lib/hive/<domain>/slack_unfurl.ex` with `@behaviour Hive.Slack.Unfurl`. Pattern-match the URL path with `Path.split/1`, look the resource up (skip when it can't be seen by an anonymous visitor), and return a Slack attachment-style map with `"title"`, `"title_link"`, `"text"`, and `"footer"`.
-2. Register the module in `Hive.Slack.Unfurler`'s `@unfurlers` list.
-3. Add a `<name>_test.exs` under the matching `test/hive/<domain>/` folder. Cover the happy path, the private/anonymous-skips path, the not-found path, and a non-matching URL.
+1. For static pages, expose `open_graph/0`; `Hive.Slack.Unfurler` converts it to a Block Kit payload.
+2. For dynamic pages, implement `slack_unfurl(uri, params)` in the owning route module with `@behaviour Hive.Slack.Unfurl`. Fetch the resource with an anonymous viewer when including resource data, return `Hive.Slack.Unfurl.BlockKit.open_graph/2` or `Hive.Slack.Unfurl.BlockKit.generic/2`, and return `:skip` when the resource is missing or private.
+3. For admin-only or account-specific pages, use generic page metadata unless the concrete resource is safe for anonymous visitors.
+4. Add route-dispatch coverage in `test/hive/slack/unfurler_test.exs` or a narrower route test when the page needs bespoke behavior. Cover the happy path, private/anonymous skip, and not-found cases for resource pages.
 
 Visibility for unfurls follows the dashboard's anonymous view: a Slack workspace member is treated as an external visitor, so any resource that requires a Hive session stays opaque.
 

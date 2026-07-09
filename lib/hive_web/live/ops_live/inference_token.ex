@@ -35,6 +35,19 @@ defmodule HiveWeb.OpsLive.InferenceToken do
     }
   end
 
+  def slack_unfurl(uri, _params) do
+    Hive.Slack.Unfurl.BlockKit.generic(uri, %{
+      description: dgettext("dashboard_inference", "Review usage for an inference token."),
+      highlights: [
+        dgettext("dashboard_inference", "Token usage"),
+        dgettext("dashboard_inference", "Input and output tokens"),
+        dgettext("dashboard_inference", "Estimated cost")
+      ],
+      section_label: dgettext("dashboard_inference", "Ops"),
+      title: dgettext("dashboard_inference", "Inference token")
+    })
+  end
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns[:current_user]

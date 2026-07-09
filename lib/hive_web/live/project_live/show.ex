@@ -37,6 +37,13 @@ defmodule HiveWeb.ProjectLive.Show do
     }
   end
 
+  def slack_unfurl(uri, %{"id" => id}) do
+    case Projects.fetch_visible_project(id, nil) do
+      {:ok, project} -> Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(project))
+      {:error, :not_found} -> :skip
+    end
+  end
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns[:current_user]

@@ -7,6 +7,36 @@ defmodule HiveWeb.DomainLive.Show do
   alias Hive.Domains
   alias HiveWeb.DomainComponents
   alias HiveWeb.Layouts
+  alias HiveWeb.OpenGraph
+
+  def open_graph(domain) do
+    %{
+      description:
+        domain.description ||
+          dgettext(
+            "dashboard_domains",
+            "Specs, forage items, drops, and projects linked to %{domain}.",
+            domain: domain.name
+          ),
+      section_label: dgettext("dashboard_domains", "Domain"),
+      highlights: [
+        dgettext("dashboard_domains", "%{count} projects", count: length(domain.projects)),
+        dgettext("dashboard_domains", "%{visibility} visibility",
+          visibility: domain.visibility |> Atom.to_string() |> String.capitalize()
+        )
+      ],
+      id: "domain-#{domain.id}",
+      path: "/domains/#{domain.id}",
+      title: domain.name
+    }
+  end
+
+  def slack_unfurl(uri, %{"id" => id}) do
+    case Domains.fetch_visible_domain(id, nil) do
+      {:ok, domain} -> Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(domain))
+      {:error, :not_found} -> :skip
+    end
+  end
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -32,6 +62,7 @@ defmodule HiveWeb.DomainLive.Show do
          |> assign(:domain, domain)
          |> assign(:editable?, editable?)
          |> assign(:delete_domain_form, delete_domain_form())
+         |> assign(OpenGraph.assigns(open_graph(domain)))
          |> assign_form(Domains.change_domain(domain))}
 
       {:error, :not_found} ->
@@ -112,6 +143,7 @@ defmodule HiveWeb.DomainLive.Show do
            )
          )
          |> assign(:domain, domain)
+         |> assign(OpenGraph.assigns(open_graph(domain)))
          |> assign_form(Domains.change_domain(domain))}
 
       {:error, changeset} ->
