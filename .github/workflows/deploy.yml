@@ -57,6 +57,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.image_tag }}
+          build-args: |
+            RUNTIME_PACKAGE_REFRESH=${{ env.DEPLOY_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -143,6 +145,14 @@ jobs:
           echo "::endgroup::"
       - name: Smoke test
         run: |
+          set -euo pipefail
           kubectl -n "$NAMESPACE" rollout status deploy/hive --timeout=10m
           kubectl -n "$NAMESPACE" run smoke-$RANDOM --rm -i --restart=Never --image=curlimages/curl \
-            --command -- curl -fsS "http://hive/ready"
+            --command -- sh -ec '
+              curl -fsS "http://hive/ready" >/dev/null
+              curl -fsS -H "x-forwarded-proto: https" "http://hive/login" > /tmp/login.html
+              open_graph_path="$(sed -n "s/.*property=\"og:image\" content=\"[^\"]*\\(\\/open-graph\\/card.jpg?token=[^\"]*\\)\".*/\\1/p" /tmp/login.html | head -n 1)"
+              test -n "$open_graph_path"
+              curl -fsS -H "x-forwarded-proto: https" -o /tmp/open-graph.jpg "http://hive${open_graph_path}"
+              test "$(head -c 2 /tmp/open-graph.jpg | od -An -tx1 | tr -d " \n")" = "ffd8"
+            '

@@ -3,6 +3,8 @@
 ARG ELIXIR_VERSION=1.20.2
 ARG OTP_VERSION=29.0.3
 ARG DEBIAN_VERSION=trixie-20260623-slim
+ARG CHROMIUM_MIN_VERSION=150.0.7871.100
+ARG RUNTIME_PACKAGE_REFRESH=static
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
@@ -40,8 +42,17 @@ RUN mix release
 
 FROM ${RUNNER_IMAGE}
 
+ARG CHROMIUM_MIN_VERSION
+ARG RUNTIME_PACKAGE_REFRESH
+
 RUN apt-get update -y && \
+  echo "Runtime package refresh: ${RUNTIME_PACKAGE_REFRESH}" && \
   apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates chromium fonts-noto-core fonts-noto-cjk \
+  && installed_chromium_version="$(chromium --version | awk '{print $2}')" \
+  && if ! dpkg --compare-versions "$installed_chromium_version" ge "$CHROMIUM_MIN_VERSION"; then \
+    echo "Chromium $installed_chromium_version is older than required $CHROMIUM_MIN_VERSION" >&2; \
+    exit 1; \
+  fi \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen

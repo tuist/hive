@@ -255,6 +255,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-releases.outputs.server-next-version-number }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            RUNTIME_PACKAGE_REFRESH=${{ github.sha }}-${{ needs.check-releases.outputs.server-next-version-number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
