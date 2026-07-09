@@ -3,15 +3,18 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
   use Mimic
 
   alias Hive.MCP.Components.Tools.CreateSpec
+  alias Hive.Projects
   alias Hive.Specs
 
-  test "creates specs with default status and visibility" do
+  test "creates specs with inherited project visibility" do
     user = mcp_user()
+    {:ok, project} = Projects.create_project(%{name: unique_name("Hive"), visibility: "public"})
 
     response =
       create_spec(user, "GitHub sign-in", %{
         "body" => "Add GitHub sign-in for requesters.",
-        "summary" => "Let requesters authenticate with GitHub."
+        "summary" => "Let requesters authenticate with GitHub.",
+        "project_id" => project.id
       })
 
     assert %{"spec" => %{"number" => number, "revision" => 1}} = response
@@ -19,9 +22,26 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
     assert response["spec"]["summary"] == "Let requesters authenticate with GitHub."
     assert response["spec"]["status"] == "draft"
     assert response["spec"]["visibility"] == "public"
+    assert response["spec"]["visibility_override"] == nil
+    assert response["spec"]["project"]["id"] == project.id
 
     assert [%{"revision" => 1, "title" => "GitHub sign-in"}] =
              response["spec"]["revisions"]
+  end
+
+  test "creates specs with a private override" do
+    user = mcp_user()
+    {:ok, project} = Projects.create_project(%{name: unique_name("Hive"), visibility: "public"})
+
+    response =
+      create_spec(user, "Private spec", %{
+        "project_id" => project.id,
+        "visibility_override" => "private"
+      })
+
+    assert response["spec"]["visibility"] == "private"
+    assert response["spec"]["visibility_override"] == "private"
+    assert response["spec"]["project"]["id"] == project.id
   end
 
   test "does not skip numbers when a create rolls back after inserting the spec" do
@@ -32,6 +52,7 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
       CreateSpec.call(mcp_conn(user), %{
         "title" => "Invalid domain spec",
         "body" => "This create reaches domain association before failing.",
+        "project_id" => first["spec"]["project"]["id"],
         "domain_ids" => [Ecto.UUID.generate()]
       })
       |> response_json()
@@ -62,11 +83,14 @@ defmodule Hive.MCP.Components.Tools.CreateSpecTest do
   end
 
   defp create_spec(user, title, attrs \\ %{}) do
+    {:ok, project} = Projects.create_project(%{name: unique_name("Spec project")})
+
     attrs =
       Map.merge(
         %{
           "title" => title,
-          "body" => "This spec has enough body text."
+          "body" => "This spec has enough body text.",
+          "project_id" => project.id
         },
         attrs
       )

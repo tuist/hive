@@ -44,6 +44,10 @@ Anonymous access also depends on
 is `private` everyone must sign in first, including for the public content
 listed above.
 
+Specs belong to projects and inherit the project's visibility. A spec
+can be marked private inside a public project, but a spec inside a
+private project cannot be made public.
+
 ## Promoting an admin
 
 ::: tip Planned dashboard control

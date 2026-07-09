@@ -10,6 +10,8 @@ defmodule Hive.Specs do
   alias Hive.Audit
   alias Hive.Auth
   alias Hive.Domains.Domain
+  alias Hive.Projects.Project
+  alias Hive.Projects.ProjectDomain
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
@@ -59,11 +61,22 @@ defmodule Hive.Specs do
     )
   end
 
-  def effective_visibility(%Spec{visibility: visibility}) when visibility in [:public, :private],
-    do: visibility
+  def effective_visibility(%Spec{visibility_override: :private}), do: :private
+
+  def effective_visibility(%Spec{project: %Project{visibility: visibility}})
+      when visibility in [:public, :private],
+      do: visibility
+
+  def effective_visibility(%Spec{project: %Ecto.Association.NotLoaded{}, project_id: project_id})
+      when is_binary(project_id) do
+    case Repo.get(Project, project_id) do
+      %Project{visibility: visibility} -> visibility
+      nil -> :private
+    end
+  end
 
   def effective_visibility(%Spec{} = spec) do
-    if has_private_domain?(spec), do: :private, else: :public
+    if spec.project_id, do: :private, else: :public
   end
 
   def list_specs(opts \\ []) do
@@ -75,7 +88,13 @@ defmodule Hive.Specs do
       |> maybe_filter_by_status(status)
       |> maybe_filter_by_visibility(user)
       |> order_by([spec], desc: spec.updated_at)
-      |> preload([:source_feature_request, :created_by_user, :updated_by_user, :domains])
+      |> preload([
+        :project,
+        :source_feature_request,
+        :created_by_user,
+        :updated_by_user,
+        :domains
+      ])
       |> Repo.all()
 
     decorate_with_activity(specs, user)
@@ -199,19 +218,11 @@ defmodule Hive.Specs do
     if Auth.member?(user) do
       query
     else
-      private_domain_spec_ids =
-        from(domain in Domain,
-          join: domain_spec in "domains_specs",
-          on: domain_spec.domain_id == domain.id,
-          where: domain.visibility == :private,
-          select: domain_spec.spec_id
-        )
-
       where(
-        query,
-        [spec],
-        spec.visibility == :public or
-          (is_nil(spec.visibility) and spec.id not in subquery(private_domain_spec_ids))
+        join(query, :left, [spec], project in assoc(spec, :project)),
+        [spec, project],
+        is_nil(spec.visibility_override) and
+          (project.visibility == :public or is_nil(spec.project_id))
       )
     end
   end
@@ -286,6 +297,7 @@ defmodule Hive.Specs do
       )
 
     preload(query, [
+      :project,
       :source_feature_request,
       :created_by_user,
       :updated_by_user,
@@ -297,7 +309,7 @@ defmodule Hive.Specs do
 
   def change_spec(spec \\ %Spec{}, attrs \\ %{}) do
     spec
-    |> preload_domains()
+    |> preload_for_form()
     |> Spec.changeset(attrs)
     |> maybe_put_existing_domain_ids(attrs)
   end
@@ -389,6 +401,8 @@ defmodule Hive.Specs do
   defp lock_not_available?(_error), do: false
 
   defp create_spec_transaction(attrs, user) do
+    attrs = maybe_put_project_id(attrs)
+
     with {:ok, spec} <-
            %Spec{}
            |> Spec.changeset(attrs)
@@ -420,6 +434,80 @@ defmodule Hive.Specs do
 
   defp next_spec_number do
     Repo.one!(from(spec in Spec, select: fragment("COALESCE(MAX(?), 0) + 1", spec.number)))
+  end
+
+  defp maybe_put_project_id(attrs) when is_map(attrs) do
+    if project_id_present?(attrs) do
+      attrs
+    else
+      project_id = inferred_project_id(attrs) || fallback_project_id()
+
+      if project_id do
+        Map.put(attrs, project_id_key(attrs), project_id)
+      else
+        attrs
+      end
+    end
+  end
+
+  defp maybe_put_project_id(attrs), do: attrs
+
+  defp project_id_present?(attrs) do
+    present?(Map.get(attrs, "project_id")) or present?(Map.get(attrs, :project_id))
+  end
+
+  defp project_id_key(attrs) do
+    if Enum.any?(Map.keys(attrs), &is_binary/1), do: "project_id", else: :project_id
+  end
+
+  defp inferred_project_id(attrs) do
+    case normalized_domain_ids(attrs) do
+      [] ->
+        nil
+
+      domain_ids ->
+        ProjectDomain
+        |> where([project_domain], project_domain.domain_id in ^domain_ids)
+        |> select([project_domain], project_domain.project_id)
+        |> distinct(true)
+        |> Repo.all()
+        |> case do
+          [project_id] -> project_id
+          _project_ids -> nil
+        end
+    end
+  end
+
+  defp fallback_project_id do
+    Project
+    |> order_by([project], asc: project.inserted_at)
+    |> limit(2)
+    |> select([project], project.id)
+    |> Repo.all()
+    |> case do
+      [project_id] -> project_id
+      [] -> create_default_project_id()
+      _project_ids -> nil
+    end
+  end
+
+  defp create_default_project_id do
+    case %Project{}
+         |> Project.changeset(%{name: "Default project"})
+         |> Repo.insert(
+           on_conflict: :nothing,
+           conflict_target: :name,
+           returning: true
+         ) do
+      {:ok, %Project{id: id}} when is_binary(id) ->
+        id
+
+      {:ok, _project} ->
+        Repo.get_by!(Project, name: "Default project").id
+
+      {:error, _changeset} ->
+        nil
+    end
   end
 
   defp update_spec_transaction(spec, attrs, user) do
@@ -515,7 +603,7 @@ defmodule Hive.Specs do
 
   defp spec_topic(id), do: "#{@topic_prefix}:#{id}"
 
-  defp preload_domains(%Spec{} = spec), do: Repo.preload(spec, :domains)
+  defp preload_for_form(%Spec{} = spec), do: Repo.preload(spec, [:domains, :project])
 
   defp maybe_put_existing_domain_ids(changeset, attrs) do
     if domain_ids_present?(attrs) do
@@ -533,43 +621,60 @@ defmodule Hive.Specs do
     end
   end
 
-  defp has_private_domain?(%Spec{domains: %Ecto.Association.NotLoaded{}, id: id})
-       when is_binary(id) do
-    Repo.exists?(
-      from(domain in Domain,
-        join: domain_spec in "domains_specs",
-        on: domain_spec.domain_id == domain.id,
-        where: domain_spec.spec_id == ^id and domain.visibility == :private
-      )
-    )
-  end
-
-  defp has_private_domain?(%Spec{domains: domains}) when is_list(domains) do
-    Enum.any?(domains, &(&1.visibility == :private))
-  end
-
-  defp has_private_domain?(_spec), do: false
-
   defp put_domains(%Spec{} = spec, attrs) do
-    if domain_ids_present?(attrs) do
-      domain_ids = normalized_domain_ids(attrs)
-      domains = Repo.all(from(domain in Domain, where: domain.id in ^domain_ids))
+    cond do
+      domain_ids_present?(attrs) ->
+        put_domain_ids(spec, normalized_domain_ids(attrs), attrs)
 
-      if length(domains) == length(domain_ids) do
-        spec
-        |> Repo.preload(:domains)
-        |> Changeset.change()
-        |> Changeset.put_assoc(:domains, domains)
-        |> Repo.update()
-      else
-        {:error,
-         spec
-         |> Spec.changeset(attrs)
-         |> Changeset.add_error(:domain_ids, "contains unknown domains")}
-      end
-    else
-      {:ok, spec}
+      project_id_present?(attrs) ->
+        put_domain_ids(spec, existing_domain_ids_for_project(spec), attrs)
+
+      true ->
+        {:ok, spec}
     end
+  end
+
+  defp put_domain_ids(%Spec{} = spec, domain_ids, attrs) do
+    domains =
+      Repo.all(
+        from(domain in Domain,
+          join: project_domain in ProjectDomain,
+          on: project_domain.domain_id == domain.id,
+          where:
+            domain.id in ^domain_ids and
+              project_domain.project_id == ^spec.project_id
+        )
+      )
+
+    if length(domains) == length(domain_ids) do
+      spec
+      |> Repo.preload(:domains)
+      |> Changeset.change()
+      |> Changeset.put_assoc(:domains, domains)
+      |> Repo.update()
+    else
+      {:error,
+       spec
+       |> Spec.changeset(attrs)
+       |> Changeset.add_error(:domain_ids, "contains unknown domains")}
+    end
+  end
+
+  defp existing_domain_ids_for_project(%Spec{} = spec) do
+    existing_domain_ids =
+      spec
+      |> Repo.preload(:domains)
+      |> Map.fetch!(:domains)
+      |> Enum.map(& &1.id)
+
+    ProjectDomain
+    |> where(
+      [project_domain],
+      project_domain.project_id == ^spec.project_id and
+        project_domain.domain_id in ^existing_domain_ids
+    )
+    |> select([project_domain], project_domain.domain_id)
+    |> Repo.all()
   end
 
   defp domain_ids_present?(attrs) when is_map(attrs) do
@@ -585,6 +690,8 @@ defmodule Hive.Specs do
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.uniq()
   end
+
+  defp present?(value), do: is_binary(value) and value != ""
 
   defp record_spec_event(action, %Spec{} = spec, %User{} = user) do
     Audit.record(action, %{

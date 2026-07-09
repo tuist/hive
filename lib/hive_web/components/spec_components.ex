@@ -80,7 +80,9 @@ defmodule HiveWeb.SpecComponents do
                       style="light-fill"
                     />
                   </div>
-                  <p>{visibility_label(Specs.effective_visibility(spec))} · {Markdown.preview(spec.body)}</p>
+                  <p>
+                    {project_label(spec)} · {visibility_label(Specs.effective_visibility(spec))} · {Markdown.preview(spec.body)}
+                  </p>
                 </div>
               </div>
             </:col>
@@ -141,7 +143,7 @@ defmodule HiveWeb.SpecComponents do
           <div data-part="title-group">
             <h1>{@spec.title}</h1>
             <p>
-              {spec_number(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
+              {spec_number(@spec)} · {project_label(@spec)} · {visibility_label(Specs.effective_visibility(@spec))} · {source_label(@spec)}
               <span :if={@new_activity_since_visit?}>
                 · {dgettext("dashboard_specs", "New activity")}
               </span>
@@ -454,6 +456,7 @@ defmodule HiveWeb.SpecComponents do
   attr :form, :any, required: true
   attr :title, :string, required: true
   attr :action_label, :string, required: true
+  attr :projects, :list, required: true
   attr :domains, :list, required: true
   attr :source, :map, default: nil
 
@@ -503,8 +506,9 @@ defmodule HiveWeb.SpecComponents do
               required={true}
               show_required={true}
             />
+            <.project_select form={@form} projects={@projects} id="spec-project" />
             <.status_select form={@form} id="spec-status" />
-            <.visibility_select form={@form} id="spec-visibility" />
+            <.visibility_override_select form={@form} id="spec-visibility-override" />
             <fieldset data-part="checkbox-group">
               <legend>{dgettext("dashboard_specs", "Domains")}</legend>
               <input type="hidden" name="spec[domain_ids][]" value="" />
@@ -547,6 +551,9 @@ defmodule HiveWeb.SpecComponents do
     do: dgettext("dashboard_specs", "Source: %{title}", title: title)
 
   defp source_label(_spec), do: dgettext("dashboard_specs", "Created directly")
+
+  defp project_label(%{project: %{name: name}}) when is_binary(name), do: name
+  defp project_label(_spec), do: dgettext("dashboard_specs", "No project")
 
   defp new_activity_since_visit?(%{viewer_last_viewed_at: nil}), do: false
 
@@ -626,14 +633,46 @@ defmodule HiveWeb.SpecComponents do
   end
 
   attr :form, :any, required: true
+  attr :projects, :list, required: true
   attr :id, :string, required: true
 
-  defp visibility_select(assigns) do
+  defp project_select(assigns) do
     assigns =
       assign(
         assigns,
         :value,
-        Phoenix.HTML.Form.normalize_value("select", assigns.form[:visibility].value)
+        Phoenix.HTML.Form.normalize_value("select", assigns.form[:project_id].value)
+      )
+
+    ~H"""
+    <div data-part="select-field">
+      <span>{dgettext("dashboard_specs", "Project")}</span>
+      <.select
+        id={@id}
+        name={@form[:project_id].name}
+        value={@value}
+        label={dgettext("dashboard_specs", "Choose project")}
+      >
+        <:item
+          :for={project <- @projects}
+          value={project.id}
+          label={project.name}
+          icon={project_icon(project)}
+        />
+      </.select>
+    </div>
+    """
+  end
+
+  attr :form, :any, required: true
+  attr :id, :string, required: true
+
+  defp visibility_override_select(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :value,
+        Phoenix.HTML.Form.normalize_value("select", assigns.form[:visibility_override].value)
       )
 
     ~H"""
@@ -641,16 +680,12 @@ defmodule HiveWeb.SpecComponents do
       <span>{dgettext("dashboard_specs", "Visibility")}</span>
       <.select
         id={@id}
-        name={@form[:visibility].name}
+        name={@form[:visibility_override].name}
         value={@value}
         label={dgettext("dashboard_specs", "Choose visibility")}
       >
-        <:item
-          :for={visibility <- Spec.visibilities()}
-          value={Atom.to_string(visibility)}
-          label={visibility_label(visibility)}
-          icon={visibility_icon(visibility)}
-        />
+        <:item value="" label={dgettext("dashboard_specs", "Inherit from project")} icon="git_branch" />
+        <:item value="private" label={dgettext("dashboard_specs", "Private")} icon="lock" />
       </.select>
     </div>
     """
@@ -659,8 +694,8 @@ defmodule HiveWeb.SpecComponents do
   defp visibility_label(:private), do: dgettext("dashboard_specs", "Private")
   defp visibility_label(_visibility), do: dgettext("dashboard_specs", "Public")
 
-  defp visibility_icon(:private), do: "lock"
-  defp visibility_icon(_visibility), do: "world"
+  defp project_icon(%{visibility: :private}), do: "lock"
+  defp project_icon(_project), do: "world"
 
   defp spec_domains(%{domains: %Ecto.Association.NotLoaded{}}), do: []
   defp spec_domains(%{domains: domains}) when is_list(domains), do: domains

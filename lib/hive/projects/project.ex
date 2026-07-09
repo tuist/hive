@@ -26,6 +26,7 @@ defmodule Hive.Projects.Project do
 
     has_many :github_repositories, Hive.Domains.GitHubRepository
     has_many :drop_sources, Hive.Drops.DropSource
+    has_many :specs, Hive.Specs.Spec
     has_many :webhooks, Hive.Projects.Webhook
 
     timestamps(type: :utc_datetime)

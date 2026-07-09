@@ -30,7 +30,9 @@ one place:
   domains; a multi-domain project can carry several, and a shared
   domain can belong to multiple projects.
 - **Specs** capture intent, decisions, and the surface area of a piece
-  of work in a form both humans and agents can read.
+  of work in a form both humans and agents can read. Each spec belongs
+  to one project, inherits that project's visibility, and can only be
+  narrowed to private visibility.
 - **Forage** brings feature requests, bug reports, feedback, GitHub
   issues, and Grafana alerts into one triage queue. GitHub issues are
   classified into project domains; Grafana alerts arrive through

@@ -29,7 +29,11 @@ defmodule Hive.MCP.Components.Tools.ListSpecCommentsTest do
 
     {:ok, spec} =
       Specs.create_spec(
-        %{"title" => "Private", "body" => "Initial proposal.", "visibility" => "private"},
+        %{
+          "title" => "Private",
+          "body" => "Initial proposal.",
+          "visibility_override" => "private"
+        },
         user
       )
 

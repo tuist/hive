@@ -47,7 +47,7 @@ defmodule Hive.Specs.SlackUnfurlTest do
   end
 
   test "unfurl/1 skips private specs" do
-    spec = spec!(%{"visibility" => "private"})
+    spec = spec!(%{"visibility_override" => "private"})
 
     assert SlackUnfurl.unfurl(uri("/specs/#{spec.number}")) == :skip
   end

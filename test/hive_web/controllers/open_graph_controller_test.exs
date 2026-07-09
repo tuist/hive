@@ -100,7 +100,7 @@ defmodule HiveWeb.OpenGraphControllerTest do
         %{
           "title" => "Private proposal",
           "body" => "Initial proposal.",
-          "visibility" => "private"
+          "visibility_override" => "private"
         },
         user
       )

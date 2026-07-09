@@ -3,8 +3,8 @@ defmodule HiveWeb.SpecLive.New do
 
   use HiveWeb, :live_view
 
-  alias Hive.Domains
   alias Hive.Forage
+  alias Hive.Projects
   alias Hive.Specs
   alias Hive.Specs.Spec
   alias HiveWeb.Layouts
@@ -30,18 +30,20 @@ defmodule HiveWeb.SpecLive.New do
   def mount(params, _session, socket) do
     if Specs.can_create?(socket.assigns.current_user) do
       source = source(params)
+      projects = Projects.list_projects()
+      default_project_id = projects |> List.first() |> then(&(&1 && &1.id))
 
       attrs =
         case source do
           nil ->
-            %{"status" => "draft", "visibility" => "public"}
+            %{"status" => "draft", "project_id" => default_project_id}
 
           source ->
             %{
               "title" => source.title,
               "body" => source.description,
               "status" => "draft",
-              "visibility" => "public",
+              "project_id" => default_project_id,
               "source_feature_request_id" => source.id
             }
         end
@@ -55,7 +57,8 @@ defmodule HiveWeb.SpecLive.New do
          )
        )
        |> assign(OpenGraph.assigns(open_graph()))
-       |> assign(:domains, Domains.list_domains())
+       |> assign(:projects, projects)
+       |> assign(:domains, domains_for_project(default_project_id))
        |> assign(:source, source)
        |> assign_form(Specs.change_spec(%Spec{}, attrs))}
     else
@@ -76,7 +79,10 @@ defmodule HiveWeb.SpecLive.New do
       |> Specs.change_spec(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign_form(socket, changeset)}
+    {:noreply,
+     socket
+     |> assign(:domains, domains_for_project(params["project_id"]))
+     |> assign_form(changeset)}
   end
 
   def handle_event("save", %{"spec" => params}, socket) do
@@ -104,7 +110,10 @@ defmodule HiveWeb.SpecLive.New do
          )}
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        {:noreply,
+         socket
+         |> assign(:domains, domains_for_project(params["project_id"]))
+         |> assign_form(changeset)}
     end
   end
 
@@ -113,6 +122,11 @@ defmodule HiveWeb.SpecLive.New do
   end
 
   defp source(_params), do: nil
+
+  defp domains_for_project(project_id) when is_binary(project_id) and project_id != "",
+    do: Projects.list_domains_for_project(project_id)
+
+  defp domains_for_project(_project_id), do: []
 
   defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(interpolate_errors(changeset), as: :spec))
@@ -152,6 +166,7 @@ defmodule HiveWeb.SpecLive.New do
         form={@form}
         title={dgettext("dashboard_specs", "New spec")}
         action_label={dgettext("dashboard_specs", "Create spec")}
+        projects={@projects}
         domains={@domains}
         source={@source}
       />

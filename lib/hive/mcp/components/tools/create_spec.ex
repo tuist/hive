@@ -7,7 +7,7 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
     read_only_hint: false,
     schema: %{
       "type" => "object",
-      "required" => ["title", "body"],
+      "required" => ["title", "body", "project_id"],
       "properties" => %{
         "title" => %{"type" => "string"},
         "body" => %{"type" => "string"},
@@ -17,9 +17,14 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
             "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
         },
         "status" => %{"type" => "string"},
-        "visibility" => %{
+        "project_id" => %{
           "type" => "string",
-          "description" => "Spec visibility. Use public or private."
+          "description" => "Project identifier the spec belongs to."
+        },
+        "visibility_override" => %{
+          "type" => "string",
+          "enum" => ["private"],
+          "description" => "Optional private override. Omit it to inherit project visibility."
         },
         "domain_ids" => %{
           "type" => "array",
@@ -48,12 +53,12 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
         "body",
         "summary",
         "status",
-        "visibility",
+        "project_id",
+        "visibility_override",
         "domain_ids",
         "source_feature_request_id"
       ])
       |> Map.put_new("status", "draft")
-      |> Map.put_new("visibility", "public")
 
     case Specs.create_spec(attrs, conn.assigns.current_user) do
       {:ok, spec} ->
