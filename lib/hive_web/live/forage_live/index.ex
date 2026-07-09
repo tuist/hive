@@ -36,6 +36,101 @@ defmodule HiveWeb.ForageLive.Index do
     }
   end
 
+  def slack_unfurl(%URI{path: path} = uri, _params) do
+    Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph_for_path(path))
+  end
+
+  defp open_graph_for_path("/forage/feature-requests") do
+    %{
+      description:
+        dgettext(
+          "dashboard_forage",
+          "Public feature requests captured from Hive, Slack, and connected sources."
+        ),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Feature requests"),
+        dgettext("dashboard_forage", "Public items"),
+        dgettext("dashboard_forage", "Product signal")
+      ],
+      id: "forage-feature-requests",
+      path: "/forage/feature-requests",
+      title: dgettext("dashboard_forage", "Feature requests")
+    }
+  end
+
+  defp open_graph_for_path("/forage/bug-reports") do
+    %{
+      description:
+        dgettext(
+          "dashboard_forage",
+          "Bug reports captured from Hive, Slack, and connected sources."
+        ),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Bug reports"),
+        dgettext("dashboard_forage", "Open issues"),
+        dgettext("dashboard_forage", "Product signal")
+      ],
+      id: "forage-bug-reports",
+      path: "/forage/bug-reports",
+      title: dgettext("dashboard_forage", "Bug reports")
+    }
+  end
+
+  defp open_graph_for_path("/forage/feedback") do
+    %{
+      description:
+        dgettext(
+          "dashboard_forage",
+          "Feedback captured from Hive, Slack, and connected sources."
+        ),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Feedback"),
+        dgettext("dashboard_forage", "Customer context"),
+        dgettext("dashboard_forage", "Product signal")
+      ],
+      id: "forage-feedback",
+      path: "/forage/feedback",
+      title: dgettext("dashboard_forage", "Feedback")
+    }
+  end
+
+  defp open_graph_for_path("/forage/github-issues") do
+    %{
+      description:
+        dgettext("dashboard_forage", "GitHub issues mirrored into Hive's forage queue."),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "GitHub issues"),
+        dgettext("dashboard_forage", "Repository signal"),
+        dgettext("dashboard_forage", "Domain context")
+      ],
+      id: "forage-github-issues",
+      path: "/forage/github-issues",
+      title: dgettext("dashboard_forage", "GitHub issues")
+    }
+  end
+
+  defp open_graph_for_path("/forage/grafana-alerts") do
+    %{
+      description:
+        dgettext("dashboard_forage", "Grafana alerts mirrored into Hive's forage queue."),
+      section_label: dgettext("dashboard_forage", "Forage"),
+      highlights: [
+        dgettext("dashboard_forage", "Grafana alerts"),
+        dgettext("dashboard_forage", "Operational signal"),
+        dgettext("dashboard_forage", "Domain context")
+      ],
+      id: "forage-grafana-alerts",
+      path: "/forage/grafana-alerts",
+      title: dgettext("dashboard_forage", "Grafana alerts")
+    }
+  end
+
+  defp open_graph_for_path(_path), do: open_graph(%{total: 0, open: 0, domains: 0})
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,

@@ -69,12 +69,16 @@ defmodule Hive.Slack.Events do
   end
 
   defp handle_event(%{"type" => "link_shared"} = event, installation) do
-    channel = event["channel"]
+    channel = event["channel"] || event["channel_id"]
     message_ts = event["message_ts"]
     urls = event |> Map.get("links", []) |> Enum.map(& &1["url"]) |> Enum.filter(&is_binary/1)
 
     if is_binary(channel) and is_binary(message_ts) and urls != [] do
-      _ = UnfurlLinks.enqueue(installation.id, channel, message_ts, urls)
+      _ =
+        UnfurlLinks.enqueue(installation.id, channel, message_ts, urls,
+          source: event["source"],
+          unfurl_id: event["unfurl_id"]
+        )
     end
 
     :ok

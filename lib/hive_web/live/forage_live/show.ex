@@ -40,6 +40,15 @@ defmodule HiveWeb.ForageLive.Show do
     }
   end
 
+  def slack_unfurl(uri, %{"origin" => origin, "id" => id}) do
+    with {:ok, item_id} <- item_id(origin, id),
+         {:ok, item} <- Forage.get_item_for_user(item_id, nil) do
+      Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(item))
+    else
+      _error -> :skip
+    end
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,

@@ -20,6 +20,13 @@ defmodule HiveWeb.DropsLive.Show do
     }
   end
 
+  def slack_unfurl(uri, %{"number" => reference}) do
+    case Drops.fetch_visible_drop(reference, nil) do
+      {:ok, drop} -> Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(drop))
+      {:error, :not_found} -> :skip
+    end
+  end
+
   @impl true
   def mount(%{"number" => reference}, _session, socket) do
     user = socket.assigns[:current_user]
