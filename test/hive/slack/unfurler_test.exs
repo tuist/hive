@@ -1,9 +1,77 @@
 defmodule Hive.Slack.UnfurlerTest do
   use Hive.DataCase, async: true
 
+  alias Hive.Domains
+  alias Hive.Forage
+  alias Hive.Forage.FeatureRequest
+  alias Hive.Projects
   alias Hive.Slack.Unfurler
+  alias Hive.Specs
 
   defp app_url(path), do: HiveWeb.Endpoint.url() <> path
+
+  defp user! do
+    suffix = System.unique_integer([:positive])
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "alice-#{suffix}@example.com",
+        provider: "test",
+        provider_uid: "alice-#{suffix}@example.com"
+      })
+
+    user
+  end
+
+  defp spec!(attrs \\ %{}) do
+    {:ok, spec} =
+      Specs.create_spec(
+        Map.merge(
+          %{
+            "title" => "Slack unfurling",
+            "body" => "Hive should unfurl links.",
+            "summary" => "Render Hive links inline."
+          },
+          attrs
+        ),
+        user!()
+      )
+
+    spec
+  end
+
+  defp create_project! do
+    {:ok, project} =
+      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+
+    project
+  end
+
+  defp block_texts(%{"blocks" => blocks}) do
+    Enum.flat_map(blocks, fn block ->
+      [
+        get_in(block, ["text", "text"])
+        | block
+          |> Map.get("fields", [])
+          |> Enum.map(& &1["text"])
+      ] ++
+        (block
+         |> Map.get("elements", [])
+         |> Enum.flat_map(fn
+           %{"text" => %{"text" => text}} -> [text]
+           %{"text" => text} when is_binary(text) -> [text]
+           _element -> []
+         end))
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp button_url(%{"blocks" => blocks}) do
+    blocks
+    |> Enum.flat_map(&Map.get(&1, "elements", []))
+    |> Enum.find(&(&1["type"] == "button"))
+    |> Map.fetch!("url")
+  end
 
   test "skips URLs whose host doesn't match the configured endpoint" do
     assert Unfurler.unfurl("https://example.org/specs/1") == :skip
@@ -14,33 +82,90 @@ defmodule Hive.Slack.UnfurlerTest do
     assert Unfurler.unfurl("") == :skip
   end
 
-  test "skips Hive-hosted URLs that no registered module handles" do
+  test "skips Hive-hosted URLs that no dashboard route handles" do
     assert Unfurler.unfurl(app_url("/account/slack")) == :skip
   end
 
-  test "delegates to the matching unfurl module for /specs/:number" do
-    user =
-      Hive.Accounts.upsert_from_auth(%{
-        email: "alice@example.com",
-        provider: "test",
-        provider_uid: "alice@example.com"
-      })
-      |> elem(1)
+  test "builds Block Kit from static route OpenGraph metadata" do
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/ops/slack"))
 
-    {:ok, spec} =
-      Hive.Specs.create_spec(
-        %{
-          "title" => "Slack unfurling",
-          "body" => "Add support for link unfurling so links render nicely.",
-          "summary" => "Render Hive links inline."
-        },
-        user
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Slack"))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Hive"))
+    assert button_url(payload) == app_url("/ops/slack")
+  end
+
+  test "delegates spec detail links to the owning route" do
+    spec = spec!()
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/specs/#{spec.number}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Slack unfurling"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Render Hive links inline."))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Spec ##{spec.number}"))
+    assert button_url(payload) == app_url("/specs/#{spec.number}")
+  end
+
+  test "skips private specs" do
+    spec = spec!(%{"visibility" => "private"})
+    assert Unfurler.unfurl(app_url("/specs/#{spec.number}")) == :skip
+  end
+
+  test "skips specs that do not exist" do
+    assert Unfurler.unfurl(app_url("/specs/9999999")) == :skip
+  end
+
+  test "delegates domain detail links to the owning route" do
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Forage",
+        project_id: create_project!().id,
+        description: "Idea harvest.",
+        visibility: :public
+      })
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/domains/#{domain.id}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Forage"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Idea harvest."))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Domain"))
+    assert button_url(payload) == app_url("/domains/#{domain.id}")
+  end
+
+  test "skips private domains" do
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Secret",
+        project_id: create_project!().id,
+        visibility: :private
+      })
+
+    assert Unfurler.unfurl(app_url("/domains/#{domain.id}")) == :skip
+  end
+
+  test "delegates forage detail links to the owning route" do
+    {:ok, item} =
+      Forage.create_feature_request(
+        %{"title" => "Slack unfurling", "description" => "Render Hive links nicely."},
+        user!()
       )
 
-    assert {:ok, payload} = Unfurler.unfurl(app_url("/specs/#{spec.number}"))
-    assert payload["title"] =~ "Slack unfurling"
-    assert payload["text"] == "Render Hive links inline."
-    assert payload["footer"] =~ "spec"
-    assert payload["title_link"] == app_url("/specs/#{spec.number}")
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/forage/items/manual/#{item.id}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Slack unfurling"))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Feature request"))
+    assert button_url(payload) == app_url("/forage/items/manual/#{item.id}")
+  end
+
+  test "skips forage items that anonymous visitors cannot see" do
+    {:ok, item} =
+      Repo.insert(%FeatureRequest{
+        type: :feature_request,
+        title: "Internal idea",
+        description: "Internal only.",
+        status: :open,
+        visibility: :organization,
+        user_id: user!().id
+      })
+
+    assert Unfurler.unfurl(app_url("/forage/items/manual/#{item.id}")) == :skip
   end
 end

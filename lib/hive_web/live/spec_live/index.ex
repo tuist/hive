@@ -30,6 +30,10 @@ defmodule HiveWeb.SpecLive.Index do
     }
   end
 
+  def slack_unfurl(uri, _params) do
+    Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(Specs.list_specs(user: nil)))
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,

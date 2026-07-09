@@ -101,6 +101,8 @@ defmodule Hive.Slack.EventsTest do
       "type" => "link_shared",
       "channel" => "C-1",
       "message_ts" => "100.0",
+      "source" => "conversations_history",
+      "unfurl_id" => "U-1",
       "links" => [
         %{"url" => "https://hive.example.com/specs/1"},
         %{"url" => "https://hive.example.com/domains/abc"}
@@ -115,10 +117,39 @@ defmodule Hive.Slack.EventsTest do
         "installation_id" => installation.id,
         "channel" => "C-1",
         "message_ts" => "100.0",
+        "source" => "conversations_history",
+        "unfurl_id" => "U-1",
         "urls" => [
           "https://hive.example.com/specs/1",
           "https://hive.example.com/domains/abc"
         ]
+      }
+    )
+  end
+
+  test "composer link_shared events enqueue UnfurlLinks with the composer target" do
+    installation = installation!()
+
+    event = %{
+      "type" => "link_shared",
+      "channel_id" => "C-1",
+      "message_ts" => "100.0",
+      "source" => "composer",
+      "unfurl_id" => "U-composer",
+      "links" => [%{"url" => "https://hive.example.com/specs/1"}]
+    }
+
+    assert :ok = Events.handle(envelope(event, installation.team_id), installation)
+
+    assert_enqueued(
+      worker: UnfurlLinks,
+      args: %{
+        "installation_id" => installation.id,
+        "channel" => "C-1",
+        "message_ts" => "100.0",
+        "source" => "composer",
+        "unfurl_id" => "U-composer",
+        "urls" => ["https://hive.example.com/specs/1"]
       }
     )
   end

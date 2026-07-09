@@ -2,20 +2,15 @@ defmodule Hive.Slack.Unfurl do
   @moduledoc """
   Behaviour for turning a Hive URL into a Slack unfurl payload.
 
-  Each domain that wants its URLs unfurled in Slack implements this
-  behaviour and is registered in `Hive.Slack.Unfurler`. The dispatcher
-  walks the registry and uses the first module that returns
-  `{:ok, payload}` for a given URL.
+  Dashboard route modules can implement this behaviour when the route
+  needs to fetch route-specific data before deciding what Slack may see.
+  Routes that can use static metadata can expose `open_graph/0` instead,
+  and `Hive.Slack.Unfurler` will convert it to a Slack Block Kit payload.
 
-  The payload follows Slack's `chat.unfurl` attachment shape:
+  The payload follows Slack's `chat.unfurl` Block Kit shape:
 
       %{
-        "title" => "Spec 42: Add Slack unfurling",
-        "title_link" => "https://hive.tuist.dev/specs/42",
-        "text" => "Short summary",
-        "footer" => "Hive · spec · in_progress",
-        "color" => "#1A1A1A",
-        "blocks" => [...]            # optional, Block Kit
+        "blocks" => [...]
       }
 
   Implementations should return `:skip` when:
@@ -29,5 +24,5 @@ defmodule Hive.Slack.Unfurl do
 
   @type payload :: %{optional(String.t()) => term()}
 
-  @callback unfurl(URI.t()) :: {:ok, payload} | :skip
+  @callback slack_unfurl(URI.t(), map()) :: {:ok, payload} | :skip
 end

@@ -24,6 +24,16 @@ defmodule HiveWeb.SpecLive.Edit do
     }
   end
 
+  def slack_unfurl(uri, %{"number" => number}) do
+    spec = Specs.get_spec_by_number!(number)
+
+    if Specs.can_view?(spec, nil) do
+      Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(spec))
+    else
+      :skip
+    end
+  end
+
   @impl true
   def mount(%{"number" => number}, _session, socket) do
     spec = Specs.get_spec_by_number!(number)
