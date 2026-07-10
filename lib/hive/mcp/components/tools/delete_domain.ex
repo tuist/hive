@@ -12,7 +12,12 @@ defmodule Hive.MCP.Components.Tools.DeleteDomain do
       "properties" => %{
         "id" => %{"type" => "string", "description" => "Domain UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"deleted_domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        ["deleted_domain"]
+      )
 
   alias Hive.Auth
   alias Hive.Domains
@@ -29,7 +34,7 @@ defmodule Hive.MCP.Components.Tools.DeleteDomain do
     if Auth.member?(user) do
       delete_domain(user, id)
     else
-      Tool.json_response(%{error: "unauthorized"})
+      json_response(%{error: "unauthorized"})
     end
   end
 
@@ -40,14 +45,14 @@ defmodule Hive.MCP.Components.Tools.DeleteDomain do
 
         case Domains.delete_domain(domain) do
           {:ok, _domain} ->
-            Tool.json_response(%{deleted_domain: deleted_domain})
+            json_response(%{deleted_domain: deleted_domain})
 
           {:error, changeset} ->
-            Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+            json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
         end
 
       {:error, :not_found} ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
     end
   end
 end

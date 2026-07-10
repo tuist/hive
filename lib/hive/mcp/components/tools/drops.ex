@@ -6,6 +6,79 @@ defmodule Hive.MCP.Components.Tools.Drops do
   alias Hive.Drops
   alias Hive.Forage.GitHubIssue
 
+  def drop_schema do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "integer"},
+        "number" => %{"type" => "integer"},
+        "projects" => %{"type" => "array", "items" => named_reference_schema()},
+        "domains" => %{"type" => "array", "items" => named_reference_schema()},
+        "classified_at" => %{"type" => ["string", "null"]},
+        "source_type" => %{"type" => "string"},
+        "source_label" => %{"type" => "string"},
+        "external_id" => %{"type" => "string"},
+        "title" => %{"type" => "string"},
+        "body" => %{"type" => ["string", "null"]},
+        "url" => %{"type" => ["string", "null"]},
+        "hive_url" => %{"type" => "string"},
+        "version" => %{"type" => ["string", "null"]},
+        "repository" => %{"type" => ["string", "null"]},
+        "github_issues" => %{
+          "type" => "array",
+          "items" => %{
+            "type" => "object",
+            "properties" => %{
+              "id" => %{"type" => "string"},
+              "number" => %{"type" => "integer"},
+              "title" => %{"type" => "string"},
+              "state" => %{"type" => "string"},
+              "url" => %{"type" => ["string", "null"]}
+            },
+            "required" => ["id", "number", "title", "state", "url"],
+            "additionalProperties" => false
+          }
+        },
+        "published_at" => %{"type" => ["string", "null"]},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "number",
+        "projects",
+        "domains",
+        "classified_at",
+        "source_type",
+        "source_label",
+        "external_id",
+        "title",
+        "body",
+        "url",
+        "hive_url",
+        "version",
+        "repository",
+        "github_issues",
+        "published_at",
+        "inserted_at",
+        "updated_at"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  defp named_reference_schema do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "name" => %{"type" => "string"}
+      },
+      "required" => ["id", "name"],
+      "additionalProperties" => false
+    }
+  end
+
   def drop_json(drop) do
     domains = drop.domains || []
 

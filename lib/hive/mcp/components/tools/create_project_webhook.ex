@@ -17,7 +17,16 @@ defmodule Hive.MCP.Components.Tools.CreateProjectWebhook do
           "description" => "External source that will call the webhook."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
+          "webhook" => Hive.MCP.Components.Tools.Projects.webhook_schema(),
+          "webhook_url" => %{"type" => "string"}
+        },
+        ["project", "webhook", "webhook_url"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
@@ -40,18 +49,18 @@ defmodule Hive.MCP.Components.Tools.CreateProjectWebhook do
 
       case Webhooks.create(project, attrs) do
         {:ok, {webhook, token}} ->
-          Tool.json_response(%{
+          json_response(%{
             project: project.id |> Projects.get_project!() |> ProjectTool.project_json(),
             webhook: ProjectTool.webhook_json(webhook),
             webhook_url: webhook_ingest_url(project.id, webhook.source, token)
           })
 
         {:error, changeset} ->
-          Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+          json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
       end
     else
-      false -> Tool.json_response(%{error: "unauthorized"})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      false -> json_response(%{error: "unauthorized"})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 

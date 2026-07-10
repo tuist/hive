@@ -13,7 +13,15 @@ defmodule Hive.MCP.Components.Tools.DeleteProjectWebhook do
         "project_id" => %{"type" => "string", "description" => "Project UUID."},
         "webhook_id" => %{"type" => "string", "description" => "Webhook UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
+          "deleted_webhook" => Hive.MCP.Components.Tools.Projects.webhook_schema()
+        },
+        ["project", "deleted_webhook"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
@@ -32,22 +40,22 @@ defmodule Hive.MCP.Components.Tools.DeleteProjectWebhook do
          {:ok, project} <- Projects.fetch_visible_project(project_id, user),
          webhook when not is_nil(webhook) <- find_webhook(project, webhook_id),
          {:ok, deleted_webhook} <- Webhooks.delete(webhook) do
-      Tool.json_response(%{
+      json_response(%{
         project: project.id |> Projects.get_project!() |> ProjectTool.project_json(),
         deleted_webhook: ProjectTool.webhook_json(deleted_webhook)
       })
     else
       false ->
-        Tool.json_response(%{error: "unauthorized"})
+        json_response(%{error: "unauthorized"})
 
       nil ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
 
       {:error, :not_found} ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
 
       {:error, changeset} ->
-        Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+        json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end
   end
 

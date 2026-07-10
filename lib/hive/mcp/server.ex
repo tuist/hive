@@ -3,7 +3,7 @@ defmodule Hive.MCP.Server do
 
   use EMCP.Server,
     name: "hive",
-    version: "0.1.0",
+    version: "0.2.0",
     tools: [
       Hive.MCP.Components.Tools.Whoami,
       Hive.MCP.Components.Tools.ListProjects,

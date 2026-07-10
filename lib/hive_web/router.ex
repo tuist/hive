@@ -213,7 +213,7 @@ defmodule HiveWeb.Router do
   scope "/" do
     pipe_through :mcp
 
-    forward "/mcp", EMCP.Transport.StreamableHTTP, server: Hive.MCP.Server
+    forward "/mcp", Hive.MCP.Transport.StreamableHTTP, server: Hive.MCP.Server
   end
 
   scope "/inference/v1", HiveWeb do

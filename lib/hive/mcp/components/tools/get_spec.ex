@@ -13,10 +13,14 @@ defmodule Hive.MCP.Components.Tools.GetSpec do
           "description" => "Spec UUID, public number, or /specs/:number URL."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        ["spec"]
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
-  alias Hive.MCP.Tool
   alias Hive.Specs
 
   @impl EMCP.Tool
@@ -27,9 +31,9 @@ defmodule Hive.MCP.Components.Tools.GetSpec do
     spec = Specs.get_spec_by_reference!(id)
 
     if Specs.can_view?(spec, conn.assigns.current_user) do
-      Tool.json_response(%{spec: SpecTool.spec_json(spec)})
+      json_response(%{spec: SpecTool.spec_json(spec)})
     else
-      Tool.json_response(%{error: "not_found"})
+      json_response(%{error: "not_found"})
     end
   end
 end

@@ -37,7 +37,17 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
         },
         "expected_revision" => %{"type" => "integer"}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        ["spec"],
+        %{
+          "current_revision" => %{"type" => "integer"},
+          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema(),
+          "message" => %{"type" => "string"}
+        }
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
   alias Hive.MCP.Tool
@@ -54,13 +64,13 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
 
     cond do
       not Specs.can_view?(spec, conn.assigns.current_user) ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
 
       spec.lock_version == expected_revision ->
         update(conn, spec, args)
 
       true ->
-        Tool.json_response(%{
+        json_response(%{
           error: "stale_revision",
           current_revision: spec.lock_version,
           spec: SpecTool.spec_json(spec)
@@ -82,19 +92,19 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
 
     case Specs.update_spec(spec, attrs, conn.assigns.current_user) do
       {:ok, spec} ->
-        Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
+        json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
       {:error, :unauthorized} ->
-        Tool.json_response(%{error: "unauthorized"})
+        json_response(%{error: "unauthorized"})
 
       {:error, :locked} ->
-        Tool.json_response(%{
+        json_response(%{
           error: "locked",
           message: "This spec is being written by another request. Try again in a moment."
         })
 
       {:error, changeset} ->
-        Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+        json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end
   end
 end

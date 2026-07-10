@@ -12,7 +12,12 @@ defmodule Hive.MCP.Components.Tools.DeleteProject do
       "properties" => %{
         "id" => %{"type" => "string", "description" => "Project UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"deleted_project" => Hive.MCP.Components.Tools.Projects.project_schema()},
+        ["deleted_project"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
@@ -29,7 +34,7 @@ defmodule Hive.MCP.Components.Tools.DeleteProject do
     if Auth.member?(user) do
       delete_project(user, id)
     else
-      Tool.json_response(%{error: "unauthorized"})
+      json_response(%{error: "unauthorized"})
     end
   end
 
@@ -40,14 +45,14 @@ defmodule Hive.MCP.Components.Tools.DeleteProject do
 
         case Projects.delete_project(project) do
           {:ok, _project} ->
-            Tool.json_response(%{deleted_project: deleted_project})
+            json_response(%{deleted_project: deleted_project})
 
           {:error, changeset} ->
-            Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+            json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
         end
 
       {:error, :not_found} ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
     end
   end
 end

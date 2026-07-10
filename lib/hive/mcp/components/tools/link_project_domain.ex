@@ -12,13 +12,20 @@ defmodule Hive.MCP.Components.Tools.LinkProjectDomain do
         "project_id" => %{"type" => "string", "description" => "Project UUID."},
         "domain_id" => %{"type" => "string", "description" => "Domain UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
+          "domain" => Hive.MCP.Components.Tools.Domains.domain_schema()
+        },
+        ["project", "domain"]
+      )
 
   alias Hive.Auth
   alias Hive.Domains
   alias Hive.MCP.Components.Tools.Domains, as: DomainTool
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
-  alias Hive.MCP.Tool
   alias Hive.Projects
 
   @impl EMCP.Tool
@@ -32,13 +39,13 @@ defmodule Hive.MCP.Components.Tools.LinkProjectDomain do
          {:ok, project} <- Projects.fetch_visible_project(project_id, user),
          {:ok, domain} <- Domains.fetch_visible_domain(domain_id, user),
          {:ok, _domain} <- Projects.link_domain_to_project(project, domain.id) do
-      Tool.json_response(%{
+      json_response(%{
         project: project.id |> Projects.get_project!() |> ProjectTool.project_json(),
         domain: domain.id |> Domains.get_domain!() |> DomainTool.domain_json()
       })
     else
-      false -> Tool.json_response(%{error: "unauthorized"})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      false -> json_response(%{error: "unauthorized"})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 end

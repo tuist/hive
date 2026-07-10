@@ -42,11 +42,21 @@ defmodule Hive.MCP.Components.Tools.ListAuditActivities do
         "page" => %{"type" => "integer", "minimum" => 1},
         "page_size" => %{"type" => "integer", "minimum" => 1, "maximum" => 100}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "activities" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Audit.activity_schema()
+          },
+          "pagination" => Hive.MCP.Components.Tools.Audit.pagination_schema()
+        },
+        ["activities", "pagination"]
+      )
 
   alias Hive.Audit
   alias Hive.Audit.Policy
-  alias Hive.MCP.Tool
 
   @impl EMCP.Tool
   def description, do: "List Hive audit activities. Only available to admins."
@@ -61,12 +71,12 @@ defmodule Hive.MCP.Components.Tools.ListAuditActivities do
         |> list_opts()
         |> Audit.list_activities()
 
-      Tool.json_response(%{
+      json_response(%{
         activities: Enum.map(activities, &Audit.serialize/1),
         pagination: meta
       })
     else
-      Tool.json_response(%{error: "forbidden"})
+      json_response(%{error: "forbidden"})
     end
   end
 

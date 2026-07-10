@@ -7,7 +7,7 @@ defmodule HiveWeb.WellKnownControllerTest do
 
       response = json_response(conn, 200)
 
-      assert response["serverInfo"] == %{"name" => "hive", "version" => "0.1.0"}
+      assert response["serverInfo"] == %{"name" => "hive", "version" => "0.2.0"}
       assert response["transport"] == %{"endpoint" => "/mcp"}
       assert response["capabilities"] == ["tools", "prompts"]
     end

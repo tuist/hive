@@ -27,11 +27,31 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
         "page" => %{"type" => "integer", "minimum" => 1},
         "page_size" => %{"type" => "integer", "minimum" => 1, "maximum" => 100}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "drops" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Drops.drop_schema()
+          },
+          "meta" => %{
+            "type" => "object",
+            "properties" => %{
+              "current_page" => %{"type" => "integer"},
+              "page_size" => %{"type" => "integer"},
+              "total_entries" => %{"type" => "integer"},
+              "total_pages" => %{"type" => "integer"}
+            },
+            "required" => ["current_page", "page_size", "total_entries", "total_pages"],
+            "additionalProperties" => false
+          }
+        },
+        ["drops", "meta"]
+      )
 
   alias Hive.Drops
   alias Hive.MCP.Components.Tools.Drops, as: DropTool
-  alias Hive.MCP.Tool
 
   @impl EMCP.Tool
   def description,
@@ -51,7 +71,7 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
 
     {drops, meta} = Drops.list_drops(opts)
 
-    Tool.json_response(%{
+    json_response(%{
       drops: Enum.map(drops, &DropTool.drop_json/1),
       meta: %{
         current_page: meta.current_page,

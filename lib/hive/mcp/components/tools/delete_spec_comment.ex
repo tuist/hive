@@ -15,10 +15,14 @@ defmodule Hive.MCP.Components.Tools.DeleteSpecComment do
           "description" => "Comment UUID returned by get_spec or list_specs."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        ["spec"]
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
-  alias Hive.MCP.Tool
   alias Hive.Specs
 
   @impl EMCP.Tool
@@ -32,13 +36,13 @@ defmodule Hive.MCP.Components.Tools.DeleteSpecComment do
     if Specs.can_view?(spec, conn.assigns.current_user) do
       case Specs.delete_comment(comment, conn.assigns.current_user) do
         {:ok, _comment} ->
-          Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
+          json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
         {:error, :unauthorized} ->
-          Tool.json_response(%{error: "unauthorized"})
+          json_response(%{error: "unauthorized"})
       end
     else
-      Tool.json_response(%{error: "not_found"})
+      json_response(%{error: "not_found"})
     end
   end
 end

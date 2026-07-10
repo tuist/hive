@@ -17,7 +17,12 @@ defmodule Hive.MCP.Components.Tools.CreateDomain do
           "description" => "Domain visibility."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        ["domain"]
+      )
 
   alias Hive.Auth
   alias Hive.Domains
@@ -35,13 +40,13 @@ defmodule Hive.MCP.Components.Tools.CreateDomain do
       |> Domains.create_domain()
       |> case do
         {:ok, domain} ->
-          Tool.json_response(%{domain: DomainTool.domain_json(domain)})
+          json_response(%{domain: DomainTool.domain_json(domain)})
 
         {:error, changeset} ->
-          Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+          json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
       end
     else
-      Tool.json_response(%{error: "unauthorized"})
+      json_response(%{error: "unauthorized"})
     end
   end
 end

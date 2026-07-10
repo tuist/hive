@@ -13,10 +13,19 @@ defmodule Hive.MCP.Components.Tools.ListProjects do
           "description" => "Restrict to projects with this visibility."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "projects" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Projects.project_schema()
+          }
+        },
+        ["projects"]
+      )
 
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
-  alias Hive.MCP.Tool
   alias Hive.Projects
 
   @impl EMCP.Tool
@@ -33,6 +42,6 @@ defmodule Hive.MCP.Components.Tools.ListProjects do
         is_nil(visibility) or Atom.to_string(project.visibility) == visibility
       end)
 
-    Tool.json_response(%{projects: Enum.map(projects, &ProjectTool.project_json/1)})
+    json_response(%{projects: Enum.map(projects, &ProjectTool.project_json/1)})
   end
 end
