@@ -33,7 +33,13 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
         },
         "source_feature_request_id" => %{"type" => "string"}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        ["spec"],
+        %{"message" => %{"type" => "string"}}
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
   alias Hive.MCP.Tool
@@ -62,21 +68,21 @@ defmodule Hive.MCP.Components.Tools.CreateSpec do
 
     case Specs.create_spec(attrs, conn.assigns.current_user) do
       {:ok, spec} ->
-        Tool.json_response(%{
+        json_response(%{
           spec: spec.id |> Specs.get_spec!() |> SpecTool.spec_json()
         })
 
       {:error, :unauthorized} ->
-        Tool.json_response(%{error: "unauthorized"})
+        json_response(%{error: "unauthorized"})
 
       {:error, :locked} ->
-        Tool.json_response(%{
+        json_response(%{
           error: "locked",
           message: "A spec write is currently in progress. Try again in a moment."
         })
 
       {:error, changeset} ->
-        Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+        json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
     end
   end
 end

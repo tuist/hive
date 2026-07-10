@@ -18,10 +18,21 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
           "description" => "The latest spec revision observed by the caller."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "ok" => %{"type" => "boolean"},
+          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema()
+        },
+        ["ok", "spec"],
+        %{
+          "current_revision" => %{"type" => "integer"},
+          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema()
+        }
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
-  alias Hive.MCP.Tool
   alias Hive.Specs
 
   @impl EMCP.Tool
@@ -35,10 +46,10 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
 
     cond do
       not Specs.can_view?(spec, conn.assigns.current_user) ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
 
       spec.lock_version != expected_revision ->
-        Tool.json_response(%{
+        json_response(%{
           error: "stale_revision",
           current_revision: spec.lock_version,
           spec: SpecTool.spec_json(spec)
@@ -52,16 +63,16 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
   defp request_review(conn, spec) do
     case Specs.request_review(spec, conn.assigns.current_user) do
       {:ok, spec} ->
-        Tool.json_response(%{ok: true, spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
+        json_response(%{ok: true, spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
       {:error, :slack_notifications_not_configured} ->
-        Tool.json_response(%{error: "slack_notifications_not_configured"})
+        json_response(%{error: "slack_notifications_not_configured"})
 
       {:error, :unauthorized} ->
-        Tool.json_response(%{error: "unauthorized"})
+        json_response(%{error: "unauthorized"})
 
       {:error, _reason} ->
-        Tool.json_response(%{error: "failed"})
+        json_response(%{error: "failed"})
     end
   end
 end

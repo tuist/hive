@@ -15,7 +15,12 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecComment do
         },
         "body" => %{"type" => "string"}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        ["spec"]
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
   alias Hive.MCP.Tool
@@ -32,16 +37,16 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecComment do
     if Specs.can_view?(spec, conn.assigns.current_user) do
       case Specs.update_comment(comment, Map.take(args, ["body"]), conn.assigns.current_user) do
         {:ok, _comment} ->
-          Tool.json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
+          json_response(%{spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
         {:error, :unauthorized} ->
-          Tool.json_response(%{error: "unauthorized"})
+          json_response(%{error: "unauthorized"})
 
         {:error, changeset} ->
-          Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+          json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
       end
     else
-      Tool.json_response(%{error: "not_found"})
+      json_response(%{error: "not_found"})
     end
   end
 end

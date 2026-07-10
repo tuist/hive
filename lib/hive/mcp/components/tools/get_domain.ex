@@ -10,11 +10,15 @@ defmodule Hive.MCP.Components.Tools.GetDomain do
       "properties" => %{
         "id" => %{"type" => "string", "description" => "Domain UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        ["domain"]
+      )
 
   alias Hive.Domains
   alias Hive.MCP.Components.Tools.Domains, as: DomainTool
-  alias Hive.MCP.Tool
 
   @impl EMCP.Tool
   def description, do: "Fetch one domain with its linked projects and repositories."
@@ -22,8 +26,8 @@ defmodule Hive.MCP.Components.Tools.GetDomain do
   @impl EMCP.Tool
   def call(conn, %{"id" => id}) do
     case Domains.fetch_visible_domain(id, conn.assigns[:current_user]) do
-      {:ok, domain} -> Tool.json_response(%{domain: DomainTool.domain_json(domain)})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      {:ok, domain} -> json_response(%{domain: DomainTool.domain_json(domain)})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 end

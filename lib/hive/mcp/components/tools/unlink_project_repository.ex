@@ -13,11 +13,18 @@ defmodule Hive.MCP.Components.Tools.UnlinkProjectRepository do
         "project_id" => %{"type" => "string", "description" => "Project UUID."},
         "repository_id" => %{"type" => "string", "description" => "Repository UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
+          "unlinked_repository" => Hive.MCP.Components.Tools.Projects.repository_schema()
+        },
+        ["project", "unlinked_repository"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
-  alias Hive.MCP.Tool
   alias Hive.Projects
 
   @impl EMCP.Tool
@@ -31,17 +38,17 @@ defmodule Hive.MCP.Components.Tools.UnlinkProjectRepository do
          {:ok, project} <- Projects.fetch_visible_project(project_id, user) do
       case Projects.delete_repository_from_project(project, repository_id) do
         {:ok, repository} ->
-          Tool.json_response(%{
+          json_response(%{
             project: project.id |> Projects.get_project!() |> ProjectTool.project_json(),
             unlinked_repository: ProjectTool.repository_json(repository)
           })
 
         {:error, :not_found} ->
-          Tool.json_response(%{error: "not_found"})
+          json_response(%{error: "not_found"})
       end
     else
-      false -> Tool.json_response(%{error: "unauthorized"})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      false -> json_response(%{error: "unauthorized"})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 end

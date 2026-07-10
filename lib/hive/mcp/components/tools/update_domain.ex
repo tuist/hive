@@ -18,7 +18,12 @@ defmodule Hive.MCP.Components.Tools.UpdateDomain do
           "description" => "Domain visibility."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        ["domain"]
+      )
 
   alias Hive.Auth
   alias Hive.Domains
@@ -35,7 +40,7 @@ defmodule Hive.MCP.Components.Tools.UpdateDomain do
     if Auth.member?(user) do
       update_domain(user, id, args)
     else
-      Tool.json_response(%{error: "unauthorized"})
+      json_response(%{error: "unauthorized"})
     end
   end
 
@@ -46,14 +51,14 @@ defmodule Hive.MCP.Components.Tools.UpdateDomain do
 
         case Domains.update_domain(domain, attrs) do
           {:ok, domain} ->
-            Tool.json_response(%{domain: DomainTool.domain_json(domain)})
+            json_response(%{domain: DomainTool.domain_json(domain)})
 
           {:error, changeset} ->
-            Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+            json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
         end
 
       {:error, :not_found} ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
     end
   end
 end

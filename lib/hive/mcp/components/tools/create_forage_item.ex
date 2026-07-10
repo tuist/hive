@@ -38,7 +38,33 @@ defmodule Hive.MCP.Components.Tools.CreateForageItem do
             "Optional GitHub labels to apply when the item is created as a GitHub issue. Labels must already exist on the configured repository."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "forage_item" => %{
+            "type" => "object",
+            "properties" => %{
+              "destination" => %{"type" => "string"},
+              "type" => %{"type" => "string"},
+              "title" => %{"type" => "string"},
+              "hive_url" => %{"type" => "string"},
+              "external_url" => %{"type" => ["string", "null"]},
+              "external_label" => %{"type" => ["string", "null"]}
+            },
+            "required" => [
+              "destination",
+              "type",
+              "title",
+              "hive_url",
+              "external_url",
+              "external_label"
+            ],
+            "additionalProperties" => false
+          }
+        },
+        ["forage_item"]
+      )
 
   alias Hive.Forage.Intake
   alias Hive.MCP.Tool
@@ -65,28 +91,28 @@ defmodule Hive.MCP.Components.Tools.CreateForageItem do
 
     case Intake.create(attrs, conn.assigns[:current_user], interface: "mcp") do
       {:ok, result} ->
-        Tool.json_response(%{forage_item: result_json(result)})
+        json_response(%{forage_item: result_json(result)})
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+        json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
 
       {:error, :unauthorized} ->
-        Tool.json_response(%{error: "unauthorized"})
+        json_response(%{error: "unauthorized"})
 
       {:error, :unknown_destination} ->
-        Tool.json_response(%{error: "unknown_destination"})
+        json_response(%{error: "unknown_destination"})
 
       {:error, :github_repository_not_configured} ->
-        Tool.json_response(%{error: "github_repository_not_configured"})
+        json_response(%{error: "github_repository_not_configured"})
 
       {:error, :github_repository_not_found} ->
-        Tool.json_response(%{error: "github_repository_not_found"})
+        json_response(%{error: "github_repository_not_found"})
 
       {:error, {:unknown_github_labels, labels}} ->
-        Tool.json_response(%{error: "unknown_github_labels", labels: labels})
+        json_response(%{error: "unknown_github_labels", labels: labels})
 
       {:error, _reason} ->
-        Tool.json_response(%{error: "failed"})
+        json_response(%{error: "failed"})
     end
   end
 

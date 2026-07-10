@@ -13,10 +13,29 @@ defmodule Hive.MCP.Components.Tools.ListSpecComments do
           "description" => "Spec UUID, public number, or /specs/:number URL."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "spec" => %{
+            "type" => "object",
+            "properties" => %{
+              "id" => %{"type" => "string"},
+              "number" => %{"type" => "integer"},
+              "title" => %{"type" => "string"}
+            },
+            "required" => ["id", "number", "title"],
+            "additionalProperties" => false
+          },
+          "comments" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Specs.comment_schema()
+          }
+        },
+        ["spec", "comments"]
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
-  alias Hive.MCP.Tool
   alias Hive.Specs
 
   @impl EMCP.Tool
@@ -27,7 +46,7 @@ defmodule Hive.MCP.Components.Tools.ListSpecComments do
     spec = Specs.get_spec_by_reference!(spec_id)
 
     if Specs.can_view?(spec, conn.assigns.current_user) do
-      Tool.json_response(%{
+      json_response(%{
         spec: %{
           id: spec.id,
           number: spec.number,
@@ -36,7 +55,7 @@ defmodule Hive.MCP.Components.Tools.ListSpecComments do
         comments: SpecTool.comments_json(spec)
       })
     else
-      Tool.json_response(%{error: "not_found"})
+      json_response(%{error: "not_found"})
     end
   end
 end

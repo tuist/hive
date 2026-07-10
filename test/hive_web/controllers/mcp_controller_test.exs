@@ -85,6 +85,69 @@ defmodule HiveWeb.MCPControllerTest do
       assert is_list(response["result"]["tools"])
     end
 
+    test "advertises an output schema for every tool", %{conn: conn} do
+      token = oauth_access_token!("schemas@example.com", "mcp", "http://www.example.com/mcp")
+
+      conn =
+        build_conn()
+        |> authenticated_mcp_conn(token)
+        |> put_req_header("mcp-session-id", initialized_session_id(conn, token))
+        |> post_mcp(%{"jsonrpc" => "2.0", "id" => 2, "method" => "tools/list", "params" => %{}})
+
+      tools = json_response(conn, 200)["result"]["tools"]
+
+      assert tools != []
+
+      for tool <- tools do
+        assert tool["outputSchema"]["type"] == "object",
+               "tool #{tool["name"]} is missing an output schema"
+      end
+    end
+
+    test "returns structured content alongside the text content", %{conn: conn} do
+      token = oauth_access_token!("structured@example.com", "mcp", "http://www.example.com/mcp")
+
+      conn =
+        build_conn()
+        |> authenticated_mcp_conn(token)
+        |> put_req_header("mcp-session-id", initialized_session_id(conn, token))
+        |> post_mcp(%{
+          "jsonrpc" => "2.0",
+          "id" => 2,
+          "method" => "tools/call",
+          "params" => %{"name" => "whoami", "arguments" => %{}}
+        })
+
+      result = json_response(conn, 200)["result"]
+
+      assert [%{"type" => "text", "text" => text}] = result["content"]
+      assert result["structuredContent"]["email"] == "structured@example.com"
+      assert JSON.decode!(text) == result["structuredContent"]
+    end
+
+    test "negotiates the protocol version the client asked for", %{conn: conn} do
+      token = oauth_access_token!("negotiate@example.com", "mcp", "http://www.example.com/mcp")
+
+      conn =
+        conn
+        |> authenticated_mcp_conn(token)
+        |> post_mcp(@initialize)
+
+      assert json_response(conn, 200)["result"]["protocolVersion"] == "2025-03-26"
+    end
+
+    test "rejects an unsupported protocol version header", %{conn: conn} do
+      token = oauth_access_token!("unsupported@example.com", "mcp", "http://www.example.com/mcp")
+
+      conn =
+        conn
+        |> authenticated_mcp_conn(token)
+        |> put_req_header("mcp-protocol-version", "1999-01-01")
+        |> post_mcp(@initialize)
+
+      assert json_response(conn, 400)["error"] == "Unsupported MCP protocol version: 1999-01-01"
+    end
+
     test "rejects a valid Boruta access token without the mcp scope", %{conn: conn} do
       token = oauth_access_token!("alice@example.com", "profile", "http://www.example.com/mcp")
 
@@ -112,6 +175,16 @@ defmodule HiveWeb.MCPControllerTest do
                "error_description" => "Missing or invalid access token."
              }
     end
+  end
+
+  defp initialized_session_id(conn, token) do
+    [session_id] =
+      conn
+      |> authenticated_mcp_conn(token)
+      |> post_mcp(@initialize)
+      |> get_resp_header("mcp-session-id")
+
+    session_id
   end
 
   defp post_mcp(conn, body) do

@@ -10,10 +10,14 @@ defmodule Hive.MCP.Components.Tools.GetProject do
       "properties" => %{
         "id" => %{"type" => "string", "description" => "Project UUID."}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"project" => Hive.MCP.Components.Tools.Projects.project_schema()},
+        ["project"]
+      )
 
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
-  alias Hive.MCP.Tool
   alias Hive.Projects
 
   @impl EMCP.Tool
@@ -22,8 +26,8 @@ defmodule Hive.MCP.Components.Tools.GetProject do
   @impl EMCP.Tool
   def call(conn, %{"id" => id}) do
     case Projects.fetch_visible_project(id, conn.assigns[:current_user]) do
-      {:ok, project} -> Tool.json_response(%{project: ProjectTool.project_json(project)})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      {:ok, project} -> json_response(%{project: ProjectTool.project_json(project)})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 end

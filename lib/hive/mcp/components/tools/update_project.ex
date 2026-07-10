@@ -18,7 +18,12 @@ defmodule Hive.MCP.Components.Tools.UpdateProject do
           "description" => "Project visibility."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"project" => Hive.MCP.Components.Tools.Projects.project_schema()},
+        ["project"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
@@ -35,7 +40,7 @@ defmodule Hive.MCP.Components.Tools.UpdateProject do
     if Auth.member?(user) do
       update_project(user, id, args)
     else
-      Tool.json_response(%{error: "unauthorized"})
+      json_response(%{error: "unauthorized"})
     end
   end
 
@@ -46,16 +51,16 @@ defmodule Hive.MCP.Components.Tools.UpdateProject do
 
         case Projects.update_project(project, attrs) do
           {:ok, project} ->
-            Tool.json_response(%{
+            json_response(%{
               project: project.id |> Projects.get_project!() |> ProjectTool.project_json()
             })
 
           {:error, changeset} ->
-            Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+            json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
         end
 
       {:error, :not_found} ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
     end
   end
 end

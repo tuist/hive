@@ -18,7 +18,15 @@ defmodule Hive.MCP.Components.Tools.LinkProjectRepository do
           "description" => "Repository visibility inside Hive."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
+          "repository" => Hive.MCP.Components.Tools.Projects.repository_schema()
+        },
+        ["project", "repository"]
+      )
 
   alias Hive.Auth
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
@@ -38,17 +46,17 @@ defmodule Hive.MCP.Components.Tools.LinkProjectRepository do
 
       case Projects.create_repository_for_project(project, attrs) do
         {:ok, repository} ->
-          Tool.json_response(%{
+          json_response(%{
             project: project.id |> Projects.get_project!() |> ProjectTool.project_json(),
             repository: ProjectTool.repository_json(repository)
           })
 
         {:error, changeset} ->
-          Tool.json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
+          json_response(%{error: "invalid", details: Tool.changeset_errors(changeset)})
       end
     else
-      false -> Tool.json_response(%{error: "unauthorized"})
-      {:error, :not_found} -> Tool.json_response(%{error: "not_found"})
+      false -> json_response(%{error: "unauthorized"})
+      {:error, :not_found} -> json_response(%{error: "not_found"})
     end
   end
 end

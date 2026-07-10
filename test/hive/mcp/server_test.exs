@@ -2,6 +2,7 @@ defmodule Hive.MCP.ServerTest do
   use ExUnit.Case, async: true
 
   alias Hive.MCP.Server
+  alias Hive.MCP.Tool
 
   test "returns a server with the Hive tools" do
     server = Server.server()
@@ -53,6 +54,17 @@ defmodule Hive.MCP.ServerTest do
       assert is_boolean(annotations[:readOnlyHint])
       assert is_boolean(annotations[:openWorldHint])
       assert is_boolean(annotations[:destructiveHint])
+    end
+  end
+
+  test "every tool advertises an object output schema" do
+    server = Server.server()
+
+    for {name, module} <- server.tools do
+      descriptor = Tool.descriptor(module)
+
+      assert descriptor["outputSchema"]["type"] == "object",
+             "tool #{name} is missing an object output schema"
     end
   end
 end

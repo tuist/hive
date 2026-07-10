@@ -13,11 +13,20 @@ defmodule Hive.MCP.Components.Tools.ListDomains do
           "description" => "Restrict to domains with this visibility."
         }
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "domains" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Domains.domain_schema()
+          }
+        },
+        ["domains"]
+      )
 
   alias Hive.Domains
   alias Hive.MCP.Components.Tools.Domains, as: DomainTool
-  alias Hive.MCP.Tool
 
   @impl EMCP.Tool
   def description, do: "List domains visible to the authenticated caller."
@@ -33,6 +42,6 @@ defmodule Hive.MCP.Components.Tools.ListDomains do
         is_nil(visibility) or Atom.to_string(domain.visibility) == visibility
       end)
 
-    Tool.json_response(%{domains: Enum.map(domains, &DomainTool.domain_json/1)})
+    json_response(%{domains: Enum.map(domains, &DomainTool.domain_json/1)})
   end
 end

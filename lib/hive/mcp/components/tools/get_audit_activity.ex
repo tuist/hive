@@ -10,11 +10,15 @@ defmodule Hive.MCP.Components.Tools.GetAuditActivity do
       "properties" => %{
         "activity_id" => %{"type" => "string"}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{"activity" => Hive.MCP.Components.Tools.Audit.activity_schema()},
+        ["activity"]
+      )
 
   alias Hive.Audit
   alias Hive.Audit.Policy
-  alias Hive.MCP.Tool
 
   @impl EMCP.Tool
   def description, do: "Fetch one Hive audit activity by id. Only available to admins."
@@ -25,15 +29,15 @@ defmodule Hive.MCP.Components.Tools.GetAuditActivity do
 
     cond do
       not Policy.authorize?(:audit_activity_read, user, nil) ->
-        Tool.json_response(%{error: "forbidden"})
+        json_response(%{error: "forbidden"})
 
       activity = Audit.get_activity(id) ->
-        Tool.json_response(%{activity: Audit.serialize(activity)})
+        json_response(%{activity: Audit.serialize(activity)})
 
       true ->
-        Tool.json_response(%{error: "not_found"})
+        json_response(%{error: "not_found"})
     end
   end
 
-  def call(_conn, _args), do: Tool.json_response(%{error: "activity_id is required"})
+  def call(_conn, _args), do: json_response(%{error: "activity_id is required"})
 end

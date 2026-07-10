@@ -9,10 +9,19 @@ defmodule Hive.MCP.Components.Tools.ListSpecs do
       "properties" => %{
         "status" => %{"type" => "string"}
       }
-    }
+    },
+    output_schema:
+      Hive.MCP.Tool.result_schema(
+        %{
+          "specs" => %{
+            "type" => "array",
+            "items" => Hive.MCP.Components.Tools.Specs.spec_schema()
+          }
+        },
+        ["specs"]
+      )
 
   alias Hive.MCP.Components.Tools.Specs, as: SpecTool
-  alias Hive.MCP.Tool
   alias Hive.Specs
 
   @impl EMCP.Tool
@@ -26,6 +35,6 @@ defmodule Hive.MCP.Components.Tools.ListSpecs do
       Specs.list_specs(user: conn.assigns.current_user)
       |> Enum.filter(fn spec -> is_nil(status) or Atom.to_string(spec.status) == status end)
 
-    Tool.json_response(%{specs: Enum.map(specs, &SpecTool.spec_json/1)})
+    json_response(%{specs: Enum.map(specs, &SpecTool.spec_json/1)})
   end
 end
