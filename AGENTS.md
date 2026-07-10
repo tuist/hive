@@ -118,6 +118,8 @@ Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [
 
 When no Hive inference profile is marked and `HIVE_LLM_API_KEY` is unset, `Hive.Agents.enabled?/0` returns `false`, `Hive.Agents.Sessions.run/3` returns `{:error, :llm_not_configured}`, and agentic features stay dormant. The rest of Hive keeps booting, so deploying without an LLM is supported.
 
+Treat language-model tokens as a metered production resource. Any agentic workflow that runs from scheduled jobs, workers, webhooks, or syncers must be idempotent, persist durable evaluation state for generated, ignored, or no-op outcomes, cap prompt and fetched-context sizes, and avoid re-evaluating unchanged records. Hard provider failures such as credit limits, invalid credentials, and suspended accounts should become non-retryable job results instead of repeated attempts. Add regression coverage that proves repeated runs over the same input do not spend again.
+
 ### Adding an agent
 
 1. Create `lib/hive/<domain>/agents/<name>_agent.ex` (e.g. `lib/hive/forage/agents/issue_triage_agent.ex`).
