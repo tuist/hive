@@ -63,18 +63,27 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
   defp handle_classification_error(issue_id, reason) do
     sanitized_reason = Errors.sanitize_reason(reason)
 
-    if Errors.provider_unavailable?(reason) do
-      Logger.warning(
-        "[Forage.GitHubIssueClassificationWorker] Model provider unavailable while classifying issue #{issue_id}: #{inspect(sanitized_reason)}"
-      )
+    cond do
+      hard_reason = Errors.hard_failure_reason(reason) ->
+        Logger.warning(
+          "[Forage.GitHubIssueClassificationWorker] Model provider rejected classification for issue #{issue_id}: #{inspect(sanitized_reason)}"
+        )
 
-      {:snooze, @model_provider_unavailable_snooze_seconds}
-    else
-      Logger.warning(
-        "[Forage.GitHubIssueClassificationWorker] Classification failed for issue #{issue_id}: #{inspect(sanitized_reason)}"
-      )
+        {:cancel, hard_reason}
 
-      {:error, sanitized_reason}
+      Errors.provider_unavailable?(reason) ->
+        Logger.warning(
+          "[Forage.GitHubIssueClassificationWorker] Model provider unavailable while classifying issue #{issue_id}: #{inspect(sanitized_reason)}"
+        )
+
+        {:snooze, @model_provider_unavailable_snooze_seconds}
+
+      true ->
+        Logger.warning(
+          "[Forage.GitHubIssueClassificationWorker] Classification failed for issue #{issue_id}: #{inspect(sanitized_reason)}"
+        )
+
+        {:error, sanitized_reason}
     end
   end
 end

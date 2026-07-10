@@ -25,7 +25,9 @@ defmodule Hive.Drops do
   alias Hive.Drops.DropDomain
   alias Hive.Drops.DropGitHubIssue
   alias Hive.Drops.DropSource
+  alias Hive.Drops.GitHubReleaseIngestion
   alias Hive.Domains.Domain
+  alias Hive.Domains.GitHubRepository
   alias Hive.Forage.GitHubIssue
   alias Hive.Projects.Project
   alias Hive.Projects.ProjectDomain
@@ -48,6 +50,37 @@ defmodule Hive.Drops do
     :github_repository_id
   ]
   @drop_attr_key_map Map.new(@drop_attr_keys, &{Atom.to_string(&1), &1})
+
+  @doc "Returns true when a GitHub release has already been evaluated for drop items."
+  def github_release_processed?(%GitHubRepository{} = repository, release_key)
+      when is_binary(release_key) do
+    github_release_ingestion_exists?(repository, release_key) or
+      github_release_drop_exists?(repository, release_key)
+  end
+
+  @doc "Records that a GitHub release was evaluated for drop items."
+  def record_github_release_ingestion(%GitHubRepository{} = repository, attrs)
+      when is_map(attrs) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    attrs = normalize_github_release_ingestion_attrs(attrs)
+    release_key = Map.fetch!(attrs, :release_key)
+
+    attrs =
+      attrs
+      |> Map.put(:github_repository_id, repository.id)
+      |> Map.put(:release_key_hash, hash_value(release_key))
+      |> Map.put_new(:processed_at, now)
+
+    %GitHubReleaseIngestion{}
+    |> GitHubReleaseIngestion.changeset(attrs)
+    |> Repo.insert(
+      on_conflict:
+        {:replace,
+         [:release_key, :release_fingerprint, :status, :items_count, :processed_at, :updated_at]},
+      conflict_target: [:github_repository_id, :release_key_hash],
+      returning: true
+    )
+  end
 
   @doc "Lists drops the `user` can see, paginated and optionally filtered by projects or domains."
   def list_drops(opts \\ []) do
@@ -499,6 +532,29 @@ defmodule Hive.Drops do
   defp normalize_page_size(:all), do: 10_000
   defp normalize_page_size(_size), do: @default_page_size
 
+  defp github_release_ingestion_exists?(%GitHubRepository{id: repository_id}, release_key) do
+    release_key_hash = hash_value(release_key)
+
+    GitHubReleaseIngestion
+    |> where(
+      [ingestion],
+      ingestion.github_repository_id == ^repository_id and
+        ingestion.release_key_hash == ^release_key_hash
+    )
+    |> Repo.exists?()
+  end
+
+  defp github_release_drop_exists?(%GitHubRepository{id: repository_id}, release_key) do
+    Drop
+    |> where(
+      [drop],
+      drop.source_type == :github_release and
+        drop.github_repository_id == ^repository_id and
+        drop.version == ^release_key
+    )
+    |> Repo.exists?()
+  end
+
   defp normalize_domain_ids(nil), do: []
   defp normalize_domain_ids(ids) when is_list(ids), do: Enum.uniq(ids)
   defp normalize_domain_ids(_other), do: []
@@ -560,8 +616,35 @@ defmodule Hive.Drops do
   defp format_error(reason) when is_binary(reason), do: String.slice(reason, 0, 500)
   defp format_error(reason), do: inspect(reason) |> String.slice(0, 500)
 
+  defp hash_value(value) when is_binary(value) do
+    :sha256
+    |> :crypto.hash(value)
+    |> Base.encode16(case: :lower)
+  end
+
   defp normalize_drop_attrs(map) when is_map(map) do
     Enum.reduce(map, %{}, &put_known_drop_attr/2)
+  end
+
+  defp normalize_github_release_ingestion_attrs(map) when is_map(map) do
+    Enum.reduce(map, %{}, fn
+      {key, value}, acc
+      when key in [:release_key, :release_fingerprint, :status, :items_count, :processed_at] ->
+        Map.put(acc, key, value)
+
+      {key, value}, acc when is_binary(key) ->
+        case key do
+          "release_key" -> Map.put(acc, :release_key, value)
+          "release_fingerprint" -> Map.put(acc, :release_fingerprint, value)
+          "status" -> Map.put(acc, :status, value)
+          "items_count" -> Map.put(acc, :items_count, value)
+          "processed_at" -> Map.put(acc, :processed_at, value)
+          _ -> acc
+        end
+
+      _entry, acc ->
+        acc
+    end)
   end
 
   defp put_known_drop_attr({key, value}, acc) when key in @drop_attr_keys,

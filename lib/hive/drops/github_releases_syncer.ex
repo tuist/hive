@@ -18,6 +18,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
   import Ecto.Query
 
+  alias Hive.Agents.Errors
   alias Hive.Audit
   alias Hive.Drops
   alias Hive.Drops.DomainClassificationWorker
@@ -53,15 +54,29 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     case Client.config() do
       {:ok, _config} ->
         Audit.put_context(%{interface: "worker"})
-
-        list_project_repositories()
-        |> Enum.each(&sync_project_repository(&1, state))
-
+        sync_project_repositories(state)
         :ok
 
       {:error, {:not_configured, _missing}} ->
         Logger.debug("[Drops.GitHubReleasesSyncer] GitHub App not configured; skipping")
         :skipped
+    end
+  end
+
+  defp sync_project_repositories(state) do
+    case Enum.reduce_while(
+           list_project_repositories(),
+           :ok,
+           &sync_project_repository(&1, &2, state)
+         ) do
+      _result -> :ok
+    end
+  end
+
+  defp sync_project_repository(repository, :ok, state) do
+    case sync_project_repository(repository, state) do
+      :ok -> {:cont, :ok}
+      {:halt, _reason} = result -> {:halt, result}
     end
   end
 
@@ -80,24 +95,51 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
     case Releases.list_releases(repository) do
       {:ok, releases} ->
-        Enum.each(releases, fn release ->
-          upsert_release_items(domains, repository, release, state)
-        end)
+        sync_releases(domains, repository, releases, state)
 
       {:error, reason} ->
         Logger.warning(
           "[Drops.GitHubReleasesSyncer] Failed to sync #{repository.owner}/#{repository.name}: " <>
             inspect(reason)
         )
+
+        :ok
     end
   end
 
+  defp sync_releases(domains, repository, releases, state) do
+    Enum.reduce_while(releases, :ok, fn release, :ok ->
+      case upsert_release_items(domains, repository, release, state) do
+        :ok -> {:cont, :ok}
+        {:halt, _reason} = result -> {:halt, result}
+      end
+    end)
+  end
+
   defp upsert_release_items(domains, repository, %Releases{} = release, state) do
+    release_key = release_key(release)
+
+    if Drops.github_release_processed?(repository, release_key) do
+      Logger.debug(
+        "[Drops.GitHubReleasesSyncer] Skipping already-processed release #{release_label(repository, release)}"
+      )
+
+      :ok
+    else
+      generate_release_items(domains, repository, release, release_key, state)
+    end
+  end
+
+  defp generate_release_items(domains, repository, release, release_key, state) do
     case state.item_generator.(repository, release, state.generator_opts) do
       {:ok, items} ->
-        Enum.each(items, fn item ->
-          upsert_release_item_drop(domains, repository, release, item)
-        end)
+        case upsert_release_item_drops(domains, repository, release, items) do
+          :ok ->
+            record_release_ingestion(repository, release, release_key, items)
+
+          {:error, _reason} ->
+            :ok
+        end
 
       :skipped ->
         Logger.debug(
@@ -105,8 +147,46 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
         )
 
       {:error, reason} ->
+        handle_release_generation_error(repository, release, reason)
+    end
+  end
+
+  defp handle_release_generation_error(repository, release, reason) do
+    sanitized_reason = Errors.sanitize_reason(reason)
+
+    Logger.warning(
+      "[Drops.GitHubReleasesSyncer] Failed to generate drop items for release " <>
+        release_label(repository, release) <> ": " <> inspect(sanitized_reason)
+    )
+
+    if Errors.hard_failure?(reason), do: {:halt, reason}, else: :ok
+  end
+
+  defp upsert_release_item_drops(domains, repository, release, items) do
+    items
+    |> Enum.reduce_while(:ok, fn item, :ok ->
+      case upsert_release_item_drop(domains, repository, release, item) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp record_release_ingestion(repository, release, release_key, items) do
+    status = if items == [], do: :ignored, else: :generated
+
+    case Drops.record_github_release_ingestion(repository, %{
+           release_key: release_key,
+           release_fingerprint: release_fingerprint(release),
+           status: status,
+           items_count: length(items)
+         }) do
+      {:ok, _ingestion} ->
+        :ok
+
+      {:error, reason} ->
         Logger.warning(
-          "[Drops.GitHubReleasesSyncer] Failed to generate drop items for release " <>
+          "[Drops.GitHubReleasesSyncer] Failed to record release ingestion for " <>
             release_label(repository, release) <> ": " <> inspect(reason)
         )
     end
@@ -142,6 +222,8 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           "[Drops.GitHubReleasesSyncer] Failed to upsert release drop item " <>
             inspect(item.title) <> ": " <> inspect(reason)
         )
+
+        {:error, reason}
     end
   end
 
@@ -235,22 +317,36 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   defp parse_timestamp(_value), do: nil
 
   defp release_item_external_id(repository, release, item) do
-    release_key =
-      release.tag_name || release.html_url || release.published_at || release.created_at ||
-        "untagged"
-
     item_key =
       item.source_urls
       |> Enum.sort()
       |> Enum.join("\n")
       |> hash_key()
 
-    "#{repository.owner}/#{repository.name}@#{release_key}:#{item_key}"
+    "#{repository.owner}/#{repository.name}@#{release_key(release)}:#{item_key}"
   end
 
   defp release_label(repository, release) do
-    release_key = release.tag_name || release.html_url || release.published_at || "untagged"
-    "#{repository.owner}/#{repository.name}@#{release_key}"
+    "#{repository.owner}/#{repository.name}@#{release_key(release)}"
+  end
+
+  defp release_key(release) do
+    release.tag_name || release.html_url || release.published_at || release.created_at ||
+      "untagged"
+  end
+
+  defp release_fingerprint(release) do
+    [
+      release.tag_name || "",
+      release.name || "",
+      release.body || "",
+      release.html_url || "",
+      release.published_at || "",
+      release.created_at || "",
+      to_string(release.prerelease == true)
+    ]
+    |> :erlang.term_to_binary()
+    |> hash_key(full?: true)
   end
 
   defp item_url(item, release) do
@@ -282,10 +378,12 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
   defp github_issue_or_pull_path?(_path_parts), do: false
 
-  defp hash_key(value) do
+  defp hash_key(value, opts \\ []) do
+    length = if Keyword.get(opts, :full?, false), do: 64, else: 16
+
     :sha256
     |> :crypto.hash(value)
     |> Base.encode16(case: :lower)
-    |> binary_part(0, 16)
+    |> binary_part(0, length)
   end
 end

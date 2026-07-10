@@ -14,6 +14,9 @@ defmodule Hive.Domains.EvolutionWorker do
 
   require Logger
 
+  alias Hive.Agents.Errors
+  alias Hive.Domains.Evolution
+
   @default_debounce_seconds 30
 
   @doc """
@@ -34,7 +37,7 @@ defmodule Hive.Domains.EvolutionWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    case Hive.Domains.evolve_from_work_items() do
+    case Evolution.evolve_from_work_items() do
       {:ok, %{created: created, updated: updated, skipped: skipped}} ->
         Logger.info(
           "[Domains.EvolutionWorker] Evolution finished: #{length(created)} created, " <>
@@ -44,7 +47,7 @@ defmodule Hive.Domains.EvolutionWorker do
         :ok
 
       {:error, reason} ->
-        {:error, reason}
+        Errors.oban_error(reason, :domain_evolution_failed)
 
       other ->
         {:error, {:unexpected_evolution_result, other}}

@@ -81,4 +81,21 @@ defmodule Hive.Specs.RevisionSummaryWorkerTest do
     assert message == "API request failed (403): Provider response error (403): Openai API error"
     refute inspect(result) =~ "full prompt body"
   end
+
+  test "perform/1 cancels provider credit-limit errors" do
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (402): Together API error: credit_limit",
+        status: 402,
+        response_body: "402 Payment Required",
+        request_body: "full prompt body"
+      )
+
+    expect(RevisionSummaries, :summarize, fn "revision-id" -> {:error, error} end)
+
+    result = RevisionSummaryWorker.perform(%Oban.Job{args: %{"revision_id" => "revision-id"}})
+
+    assert result == {:cancel, :llm_credit_limit}
+    refute inspect(result) =~ "full prompt body"
+  end
 end

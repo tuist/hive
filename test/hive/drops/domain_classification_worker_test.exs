@@ -1,7 +1,9 @@
 defmodule Hive.Drops.DomainClassificationWorkerTest do
   use Hive.DataCase, async: true
+  use Mimic
   use Oban.Testing, repo: Hive.Repo
 
+  alias Hive.Drops.DomainClassification
   alias Hive.Drops.DomainClassificationWorker
 
   test "enqueue/2 inserts a unique classification job per drop" do
@@ -25,5 +27,20 @@ defmodule Hive.Drops.DomainClassificationWorkerTest do
              )
 
     assert [] = all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  test "perform/1 cancels provider credit-limit errors" do
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (402): Together API error: insufficient credits",
+        status: 402,
+        response_body: "402 Payment Required",
+        request_body: "full prompt body"
+      )
+
+    expect(DomainClassification, :classify, fn "drop-id" -> {:error, error} end)
+
+    assert {:cancel, :llm_credit_limit} =
+             DomainClassificationWorker.perform(%Oban.Job{args: %{"drop_id" => "drop-id"}})
   end
 end
