@@ -21,9 +21,14 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
             "Short spec description for summaries and OpenGraph cards. Do not use em dashes."
         },
         "status" => %{"type" => "string"},
-        "visibility" => %{
+        "project_id" => %{
           "type" => "string",
-          "description" => "Spec visibility. Use public or private."
+          "description" => "Project identifier the spec belongs to."
+        },
+        "visibility_override" => %{
+          "type" => "string",
+          "enum" => ["private"],
+          "description" => "Optional private override. Omit it to inherit project visibility."
         },
         "domain_ids" => %{
           "type" => "array",
@@ -64,7 +69,16 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
   end
 
   defp update(conn, spec, args) do
-    attrs = Map.take(args, ["title", "body", "summary", "status", "visibility", "domain_ids"])
+    attrs =
+      Map.take(args, [
+        "title",
+        "body",
+        "summary",
+        "status",
+        "project_id",
+        "visibility_override",
+        "domain_ids"
+      ])
 
     case Specs.update_spec(spec, attrs, conn.assigns.current_user) do
       {:ok, spec} ->

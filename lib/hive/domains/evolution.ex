@@ -201,7 +201,7 @@ defmodule Hive.Domains.Evolution do
     |> where([spec], spec.status not in [:archived, :rejected])
     |> order_by([spec], desc: spec.updated_at)
     |> limit(^limit)
-    |> preload(domains: :projects)
+    |> preload([:project, domains: :projects])
     |> Repo.all()
     |> Enum.map(fn spec ->
       %{
@@ -212,7 +212,7 @@ defmodule Hive.Domains.Evolution do
         status: Atom.to_string(spec.status),
         source: "specs",
         domains: Enum.map(spec.domains, & &1.name),
-        projects: spec.domains |> Enum.flat_map(& &1.projects) |> project_refs(),
+        projects: project_refs([spec.project]),
         occurred_at: iso8601(spec.updated_at),
         sort_at: spec.updated_at
       }

@@ -3,11 +3,21 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecTest do
   use Mimic
 
   alias Hive.MCP.Components.Tools.UpdateSpec
+  alias Hive.Projects
   alias Hive.Specs
 
   test "updates specs referenced by shared path" do
     user = mcp_user()
-    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+    {:ok, project} = Projects.create_project(%{name: unique_name("Hive"), visibility: "public"})
+
+    {:ok, private_project} =
+      Projects.create_project(%{name: unique_name("Atlas"), visibility: "private"})
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Draft", "body" => "Initial proposal.", "project_id" => project.id},
+        user
+      )
 
     response =
       UpdateSpec.call(mcp_conn(user), %{
@@ -16,19 +26,29 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecTest do
         "title" => "GitHub OAuth",
         "body" => "Updated proposal.",
         "summary" => "Use OAuth to authenticate requesters through GitHub.",
-        "status" => "proposed"
+        "status" => "proposed",
+        "project_id" => private_project.id
       })
       |> response_json()
 
     assert response["spec"]["title"] == "GitHub OAuth"
     assert response["spec"]["summary"] == "Use OAuth to authenticate requesters through GitHub."
     assert response["spec"]["revision"] == 2
+    assert response["spec"]["project"]["id"] == private_project.id
+    assert response["spec"]["visibility"] == "private"
     assert Enum.map(response["spec"]["revisions"], & &1["revision"]) == [2, 1]
   end
 
   test "rejects stale local edits" do
     user = mcp_user()
-    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+    {:ok, project} = Projects.create_project(%{name: unique_name("Hive")})
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Draft", "body" => "Initial proposal.", "project_id" => project.id},
+        user
+      )
+
     {:ok, _spec} = Specs.update_spec(spec, %{"title" => "Remote edit"}, user)
 
     response =
@@ -45,7 +65,13 @@ defmodule Hive.MCP.Components.Tools.UpdateSpecTest do
 
   test "reports a locked error instead of crashing when a write is contended" do
     user = mcp_user()
-    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+    {:ok, project} = Projects.create_project(%{name: unique_name("Hive")})
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{"title" => "Draft", "body" => "Initial proposal.", "project_id" => project.id},
+        user
+      )
 
     expect(Specs, :update_spec, fn _spec, _attrs, _user -> {:error, :locked} end)
 

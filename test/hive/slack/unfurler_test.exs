@@ -104,8 +104,21 @@ defmodule Hive.Slack.UnfurlerTest do
     assert button_url(payload) == app_url("/specs/#{spec.number}")
   end
 
-  test "skips private specs" do
-    spec = spec!(%{"visibility" => "private"})
+  test "skips specs with a private visibility override" do
+    spec = spec!(%{"visibility_override" => "private"})
+
+    assert Unfurler.unfurl(app_url("/specs/#{spec.number}")) == :skip
+  end
+
+  test "skips specs that inherit private project visibility" do
+    {:ok, project} =
+      Projects.create_project(%{
+        name: "Private project #{System.unique_integer([:positive])}",
+        visibility: :private
+      })
+
+    spec = spec!(%{"project_id" => project.id, "visibility" => "public"})
+
     assert Unfurler.unfurl(app_url("/specs/#{spec.number}")) == :skip
   end
 

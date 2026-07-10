@@ -138,8 +138,7 @@ defmodule HiveWeb.FeedControllerTest do
         Specs.create_spec(
           %{
             "title" => "Public spec",
-            "body" => "This is public content.",
-            "visibility" => "public"
+            "body" => "This is public content."
           },
           member
         )
@@ -149,7 +148,7 @@ defmodule HiveWeb.FeedControllerTest do
           %{
             "title" => "Private spec",
             "body" => "Members only content.",
-            "visibility" => "private"
+            "visibility_override" => "private"
           },
           member
         )
@@ -169,8 +168,7 @@ defmodule HiveWeb.FeedControllerTest do
         Specs.create_spec(
           %{
             "title" => "Public spec",
-            "body" => "Public content.",
-            "visibility" => "public"
+            "body" => "Public content."
           },
           member
         )
@@ -180,7 +178,7 @@ defmodule HiveWeb.FeedControllerTest do
           %{
             "title" => "Private spec",
             "body" => "Members only content.",
-            "visibility" => "private"
+            "visibility_override" => "private"
           },
           member
         )
@@ -253,8 +251,7 @@ defmodule HiveWeb.FeedControllerTest do
         Specs.create_spec(
           %{
             "title" => "Public spec",
-            "body" => "Public content.",
-            "visibility" => "public"
+            "body" => "Public content."
           },
           member
         )
@@ -264,7 +261,7 @@ defmodule HiveWeb.FeedControllerTest do
           %{
             "title" => "Private spec",
             "body" => "Members only content.",
-            "visibility" => "private"
+            "visibility_override" => "private"
           },
           member
         )

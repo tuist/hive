@@ -12,9 +12,11 @@ defmodule Hive.MCP.Components.Tools.Specs do
       body: spec.body,
       summary: spec.summary,
       status: Atom.to_string(spec.status),
-      visibility: Atom.to_string(spec.visibility),
+      visibility: Atom.to_string(SpecContext.effective_visibility(spec)),
+      visibility_override: visibility_override(spec),
       effective_visibility: Atom.to_string(SpecContext.effective_visibility(spec)),
       revision: spec.lock_version,
+      project: project_json(spec),
       domains:
         Enum.map((Ecto.assoc_loaded?(spec.domains) && spec.domains) || [], fn domain ->
           %{
@@ -44,6 +46,19 @@ defmodule Hive.MCP.Components.Tools.Specs do
 
   def comments_json(%Spec{} = spec) do
     Enum.map((Ecto.assoc_loaded?(spec.comments) && spec.comments) || [], &comment_json/1)
+  end
+
+  defp visibility_override(%{visibility_override: nil}), do: nil
+  defp visibility_override(%{visibility_override: override}), do: Atom.to_string(override)
+
+  defp project_json(%{project: project}) do
+    if Ecto.assoc_loaded?(project) and not is_nil(project) do
+      %{
+        id: project.id,
+        name: project.name,
+        visibility: Atom.to_string(project.visibility)
+      }
+    end
   end
 
   defp comment_json(comment) do

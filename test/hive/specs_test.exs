@@ -172,13 +172,17 @@ defmodule Hive.SpecsTest do
 
       {:ok, public} =
         Specs.create_spec(
-          %{"title" => "Public", "body" => "Initial proposal.", "visibility" => "public"},
+          %{"title" => "Public", "body" => "Initial proposal."},
           member
         )
 
       {:ok, private} =
         Specs.create_spec(
-          %{"title" => "Private", "body" => "Initial proposal.", "visibility" => "private"},
+          %{
+            "title" => "Private",
+            "body" => "Initial proposal.",
+            "visibility_override" => "private"
+          },
           member
         )
 
@@ -194,30 +198,56 @@ defmodule Hive.SpecsTest do
       assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public.id]
     end
 
-    test "uses spec visibility before domain visibility" do
+    test "inherits visibility from the project and only allows private overrides" do
       member = user("member@tuist.dev")
       contributor = user("contributor@example.com")
-      public_domain = create_domain!(%{name: "Hive", visibility: "public"})
-      private_domain = create_domain!(%{name: "Atlas", visibility: "private"})
+      {:ok, public_project} = Projects.create_project(%{name: "Hive", visibility: "public"})
+      {:ok, private_project} = Projects.create_project(%{name: "Atlas", visibility: "private"})
 
-      {:ok, public_spec_on_private_domain} =
+      private_domain =
+        create_domain!(%{
+          name: "Private domain",
+          project_id: public_project.id,
+          visibility: "private"
+        })
+
+      public_domain =
+        create_domain!(%{
+          name: "Public domain",
+          project_id: private_project.id,
+          visibility: "public"
+        })
+
+      {:ok, public_project_spec} =
         Specs.create_spec(
           %{
             "title" => "Public spec",
             "body" => "Initial proposal.",
-            "visibility" => "public",
+            "project_id" => public_project.id,
             "domain_ids" => [private_domain.id]
           },
           member
         )
 
-      {:ok, private_spec_on_public_domain} =
+      {:ok, private_project_spec} =
         Specs.create_spec(
           %{
-            "title" => "Private spec",
+            "title" => "Private project spec",
             "body" => "Initial proposal.",
-            "visibility" => "private",
+            "project_id" => private_project.id,
+            "visibility" => "public",
             "domain_ids" => [public_domain.id]
+          },
+          member
+        )
+
+      {:ok, private_override_spec} =
+        Specs.create_spec(
+          %{
+            "title" => "Private override spec",
+            "body" => "Initial proposal.",
+            "project_id" => public_project.id,
+            "visibility_override" => "private"
           },
           member
         )
@@ -227,28 +257,28 @@ defmodule Hive.SpecsTest do
         _user -> false
       end)
 
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), member)
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), contributor)
-      assert Specs.can_view?(Specs.get_spec!(public_spec_on_private_domain.id), nil)
-      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_domain.id), contributor)
-      refute Specs.can_view?(Specs.get_spec!(private_spec_on_public_domain.id), nil)
+      assert Specs.can_view?(Specs.get_spec!(public_project_spec.id), member)
+      assert Specs.can_view?(Specs.get_spec!(public_project_spec.id), contributor)
+      assert Specs.can_view?(Specs.get_spec!(public_project_spec.id), nil)
+      refute Specs.can_view?(Specs.get_spec!(private_project_spec.id), contributor)
+      refute Specs.can_view?(Specs.get_spec!(private_project_spec.id), nil)
+      refute Specs.can_view?(Specs.get_spec!(private_override_spec.id), contributor)
+      refute Specs.can_view?(Specs.get_spec!(private_override_spec.id), nil)
 
-      assert Specs.effective_visibility(Specs.get_spec!(public_spec_on_private_domain.id)) ==
-               :public
-
-      assert Specs.effective_visibility(Specs.get_spec!(private_spec_on_public_domain.id)) ==
-               :private
+      assert Specs.effective_visibility(Specs.get_spec!(public_project_spec.id)) == :public
+      assert Specs.effective_visibility(Specs.get_spec!(private_project_spec.id)) == :private
+      assert Specs.effective_visibility(Specs.get_spec!(private_override_spec.id)) == :private
 
       assert Specs.list_specs(user: member) |> Enum.map(& &1.id) |> Enum.sort() ==
-               Enum.sort([private_spec_on_public_domain.id, public_spec_on_private_domain.id])
+               Enum.sort([
+                 private_project_spec.id,
+                 private_override_spec.id,
+                 public_project_spec.id
+               ])
 
-      assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [
-               public_spec_on_private_domain.id
-             ]
+      assert Enum.map(Specs.list_specs(user: contributor), & &1.id) == [public_project_spec.id]
 
-      assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [
-               public_spec_on_private_domain.id
-             ]
+      assert Enum.map(Specs.list_specs(user: nil), & &1.id) == [public_project_spec.id]
     end
   end
 
@@ -286,8 +316,12 @@ defmodule Hive.SpecsTest do
 
     test "updates associated domains" do
       user = user()
-      hive = create_domain!(%{name: "Hive"})
-      noora = create_domain!(%{name: "Noora"})
+
+      {:ok, project} =
+        Projects.create_project(%{name: "Specs #{System.unique_integer([:positive])}"})
+
+      hive = create_domain!(%{name: "Hive", project_id: project.id})
+      noora = create_domain!(%{name: "Noora", project_id: project.id})
 
       {:ok, spec} =
         Specs.create_spec(
@@ -312,6 +346,44 @@ defmodule Hive.SpecsTest do
 
       spec = Specs.get_spec!(spec.id)
       assert Enum.map(spec.domains, & &1.name) == ["Noora"]
+    end
+
+    test "removes domains that do not belong to a changed project" do
+      user = user()
+
+      {:ok, old_project} =
+        Projects.create_project(%{name: "Old #{System.unique_integer([:positive])}"})
+
+      {:ok, new_project} =
+        Projects.create_project(%{name: "New #{System.unique_integer([:positive])}"})
+
+      domain = create_domain!(%{name: "Hive", project_id: old_project.id})
+
+      {:ok, spec} =
+        Specs.create_spec(
+          %{
+            "title" => "Draft",
+            "body" => "Initial proposal.",
+            "project_id" => old_project.id,
+            "domain_ids" => [domain.id]
+          },
+          user
+        )
+
+      assert {:ok, spec} =
+               Specs.update_spec(
+                 spec,
+                 %{
+                   "title" => "Draft",
+                   "body" => "Initial proposal.",
+                   "project_id" => new_project.id
+                 },
+                 user
+               )
+
+      spec = Specs.get_spec!(spec.id)
+      assert spec.project_id == new_project.id
+      assert spec.domains == []
     end
   end
 
@@ -362,7 +434,11 @@ defmodule Hive.SpecsTest do
 
       {:ok, spec} =
         Specs.create_spec(
-          %{"title" => "Private", "body" => "Initial proposal.", "visibility" => "private"},
+          %{
+            "title" => "Private",
+            "body" => "Initial proposal.",
+            "visibility_override" => "private"
+          },
           member
         )
 

@@ -82,8 +82,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
         %{
           "title" => "Move object storage into the cluster",
           "body" => "Use Rook and Ceph to provide object storage from the Kubernetes cluster.",
-          "summary" => "Move object storage to Kubernetes with Rook and Ceph.",
-          "visibility" => "public"
+          "summary" => "Move object storage to Kubernetes with Rook and Ceph."
         },
         user
       )
@@ -122,7 +121,11 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     {:ok, spec} =
       Specs.create_spec(
-        %{"title" => "Private spec", "body" => "Initial proposal.", "visibility" => "private"},
+        %{
+          "title" => "Private spec",
+          "body" => "Initial proposal.",
+          "visibility_override" => "private"
+        },
         member
       )
 
@@ -135,17 +138,18 @@ defmodule HiveWeb.SpecLive.ShowTest do
              live(contributor_conn, ~p"/specs/#{spec.number}")
   end
 
-  test "shows public specs attached to private domains to contributors", %{conn: conn} do
+  test "shows specs from public projects even when attached to private domains", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    domain = create_domain!(%{name: "Atlas", visibility: "private"})
+    {:ok, project} = Projects.create_project(%{name: "Atlas app", visibility: "public"})
+    domain = create_domain!(%{name: "Atlas", project_id: project.id, visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
           "title" => "Public domain spec",
           "body" => "Initial proposal.",
-          "visibility" => "public",
+          "project_id" => project.id,
           "domain_ids" => [domain.id]
         },
         member
@@ -160,16 +164,17 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Public domain spec"
   end
 
-  test "labels public specs attached to private domains as public for members", %{conn: conn} do
+  test "labels specs from public projects as public for members", %{conn: conn} do
     {conn, member} = sign_in(conn, "member@tuist.dev")
-    domain = create_domain!(%{name: "Atlas", visibility: "private"})
+    {:ok, project} = Projects.create_project(%{name: "Atlas app", visibility: "public"})
+    domain = create_domain!(%{name: "Atlas", project_id: project.id, visibility: "private"})
 
     {:ok, spec} =
       Specs.create_spec(
         %{
           "title" => "Public domain spec",
           "body" => "Initial proposal.",
-          "visibility" => "public",
+          "project_id" => project.id,
           "domain_ids" => [domain.id]
         },
         member
@@ -177,7 +182,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     {:ok, _view, html} = live(conn, ~p"/specs/#{spec.number}")
 
-    assert html =~ "Public · Created directly"
+    assert html =~ "Atlas app · Public · Created directly"
   end
 
   test "allows signed-in users to comment", %{conn: conn} do
@@ -389,7 +394,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     {:ok, spec} =
       Specs.create_spec(
-        %{"title" => "Memory subsystem", "body" => "Initial proposal.", "visibility" => "public"},
+        %{"title" => "Memory subsystem", "body" => "Initial proposal."},
         member
       )
 

@@ -3,7 +3,7 @@ defmodule HiveWeb.SpecLive.Edit do
 
   use HiveWeb, :live_view
 
-  alias Hive.Domains
+  alias Hive.Projects
   alias Hive.Specs
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -39,6 +39,8 @@ defmodule HiveWeb.SpecLive.Edit do
     spec = Specs.get_spec_by_number!(number)
 
     if Specs.can_edit?(spec, socket.assigns.current_user) do
+      projects = Projects.list_projects()
+
       {:ok,
        socket
        |> assign(
@@ -49,7 +51,8 @@ defmodule HiveWeb.SpecLive.Edit do
          )
        )
        |> assign(OpenGraph.assigns(open_graph(spec)))
-       |> assign(:domains, Domains.list_domains())
+       |> assign(:projects, projects)
+       |> assign(:domains, domains_for_project(spec.project_id))
        |> assign(:spec, spec)
        |> assign_form(Specs.change_spec(spec))}
     else
@@ -70,7 +73,10 @@ defmodule HiveWeb.SpecLive.Edit do
       |> Specs.change_spec(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign_form(socket, changeset)}
+    {:noreply,
+     socket
+     |> assign(:domains, domains_for_project(params["project_id"]))
+     |> assign_form(changeset)}
   end
 
   def handle_event("save", %{"spec" => params}, socket) do
@@ -113,9 +119,17 @@ defmodule HiveWeb.SpecLive.Edit do
          )}
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        {:noreply,
+         socket
+         |> assign(:domains, domains_for_project(params["project_id"]))
+         |> assign_form(changeset)}
     end
   end
+
+  defp domains_for_project(project_id) when is_binary(project_id) and project_id != "",
+    do: Projects.list_domains_for_project(project_id)
+
+  defp domains_for_project(_project_id), do: []
 
   defp assign_form(socket, changeset) do
     assign(socket, :form, to_form(interpolate_errors(changeset), as: :spec))
@@ -155,6 +169,7 @@ defmodule HiveWeb.SpecLive.Edit do
         form={@form}
         title={dgettext("dashboard_specs", "Edit spec")}
         action_label={dgettext("dashboard_specs", "Save spec")}
+        projects={@projects}
         domains={@domains}
         source={@spec.source_feature_request}
       />

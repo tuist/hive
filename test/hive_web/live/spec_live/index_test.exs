@@ -90,7 +90,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     {:ok, _public} =
       Specs.create_spec(
-        %{"title" => "Public proposal", "body" => "Initial proposal.", "visibility" => "public"},
+        %{"title" => "Public proposal", "body" => "Initial proposal."},
         member
       )
 
@@ -99,7 +99,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
         %{
           "title" => "Private proposal",
           "body" => "Initial proposal.",
-          "visibility" => "private"
+          "visibility_override" => "private"
         },
         member
       )
@@ -138,17 +138,20 @@ defmodule HiveWeb.SpecLive.IndexTest do
     assert html =~ "Tuist.Namespace.create_instance_with_ssh_connection/1"
   end
 
-  test "shows public specs attached to private domains to contributors", %{conn: conn} do
+  test "shows specs from public projects even when attached to private domains", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")
-    private_domain = create_domain!(%{name: "Atlas", visibility: "private"})
+    {:ok, project} = Projects.create_project(%{name: "Atlas app", visibility: "public"})
+
+    private_domain =
+      create_domain!(%{name: "Atlas", project_id: project.id, visibility: "private"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
           "title" => "Public domain proposal",
           "body" => "Initial proposal.",
-          "visibility" => "public",
+          "project_id" => project.id,
           "domain_ids" => [private_domain.id]
         },
         member

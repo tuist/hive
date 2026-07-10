@@ -25,10 +25,12 @@ defmodule HiveWeb.SpecLive.NewTest do
     {:ok, view, html} = live(conn, ~p"/specs/new")
 
     assert html =~ "Hive app"
+    assert html =~ ~s(id="spec-project")
+    assert html =~ ~s(name="spec[project_id]")
     assert html =~ ~s(id="spec-status")
     assert html =~ ~s(name="spec[status]")
-    assert html =~ ~s(id="spec-visibility")
-    assert html =~ ~s(name="spec[visibility]")
+    assert html =~ ~s(id="spec-visibility-override")
+    assert html =~ ~s(name="spec[visibility_override]")
     assert html =~ ~s(class="noora-dropdown")
 
     result =
