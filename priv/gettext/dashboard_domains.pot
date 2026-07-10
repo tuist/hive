@@ -11,8 +11,8 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:22
-#: lib/hive_web/live/domain_live/show.ex:109
+#: lib/hive_web/live/domain_live/show.ex:52
+#: lib/hive_web/live/domain_live/show.ex:140
 #, elixir-autogen, elixir-format
 msgid "%{domain} · Domains · %{product}"
 msgstr ""
@@ -77,26 +77,27 @@ msgstr ""
 
 #: lib/hive_web/components/domain_components.ex:38
 #: lib/hive_web/components/domain_components.ex:122
+#: lib/hive_web/live/domain_live/show.ex:21
 #, elixir-autogen, elixir-format
 msgid "Domain"
 msgstr ""
 
-#: lib/hive_web/live/domain_live/index.ex:64
+#: lib/hive_web/live/domain_live/index.ex:85
 #, elixir-autogen, elixir-format
 msgid "Domain created."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:90
+#: lib/hive_web/live/domain_live/show.ex:121
 #, elixir-autogen, elixir-format
 msgid "Domain deleted."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:40
+#: lib/hive_web/live/domain_live/show.ex:71
 #, elixir-autogen, elixir-format
 msgid "Domain not found."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:106
+#: lib/hive_web/live/domain_live/show.ex:137
 #, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr ""
@@ -104,11 +105,13 @@ msgstr ""
 #: lib/hive_web/components/domain_components.ex:19
 #: lib/hive_web/components/domain_components.ex:24
 #: lib/hive_web/components/layouts.ex:164
+#: lib/hive_web/live/domain_live/index.ex:20
+#: lib/hive_web/live/domain_live/index.ex:28
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
 
-#: lib/hive_web/live/domain_live/index.ex:21
+#: lib/hive_web/live/domain_live/index.ex:41
 #, elixir-autogen, elixir-format
 msgid "Domains · %{product}"
 msgstr ""
@@ -124,7 +127,7 @@ msgid "Feed"
 msgstr ""
 
 #: lib/hive_web/controllers/feed_controller.ex:158
-#: lib/hive_web/live/domain_live/show.ex:28
+#: lib/hive_web/live/domain_live/show.ex:58
 #, elixir-autogen, elixir-format
 msgid "Hive · %{domain}"
 msgstr ""
@@ -156,17 +159,17 @@ msgstr ""
 msgid "No project"
 msgstr ""
 
-#: lib/hive_web/live/domain_live/index.ex:54
+#: lib/hive_web/live/domain_live/index.ex:75
 #, elixir-autogen, elixir-format
 msgid "Only organization members can create domains."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:82
+#: lib/hive_web/live/domain_live/show.ex:113
 #, elixir-autogen, elixir-format
 msgid "Only organization members can delete domains."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:63
+#: lib/hive_web/live/domain_live/show.ex:94
 #, elixir-autogen, elixir-format
 msgid "Only organization members can edit domains."
 msgstr ""
@@ -221,4 +224,39 @@ msgstr ""
 #: lib/hive_web/components/domain_components.ex:323
 #, elixir-autogen, elixir-format
 msgid "What this domain covers inside the organization."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:23
+#, elixir-autogen, elixir-format
+msgid "%{count} projects"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:24
+#, elixir-autogen, elixir-format
+msgid "%{visibility} visibility"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:23
+#, elixir-autogen, elixir-format
+msgid "Cross-project context"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:22
+#, elixir-autogen, elixir-format
+msgid "Product areas"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:16
+#, elixir-autogen, elixir-format
+msgid "Reusable product and engineering areas tracked across projects, specs, forage items, and drops."
+msgstr ""
+
+#: lib/hive_web/live/domain_live/index.ex:24
+#, elixir-autogen, elixir-format
+msgid "Shared ownership"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:16
+#, elixir-autogen, elixir-format
+msgid "Specs, forage items, drops, and projects linked to %{domain}."
 msgstr ""
