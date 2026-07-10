@@ -3,6 +3,23 @@ defmodule Hive.Agents.Errors do
   Normalizes model-provider failures before they reach worker logs or Oban.
   """
 
+  @hard_statuses [401, 402, 412]
+
+  @credit_fragments [
+    "credit_limit",
+    "credit limit",
+    "insufficient credits",
+    "payment required",
+    "zero balance"
+  ]
+
+  @credential_fragments [
+    "invalid api key",
+    "invalid_api_key",
+    "missing or invalid inference token",
+    "unauthorized"
+  ]
+
   @provider_unavailable_fragments [
     "billing",
     "failure to pay",
@@ -40,6 +57,36 @@ defmodule Hive.Agents.Errors do
   end
 
   def provider_unavailable?(_reason), do: false
+
+  def hard_failure?(reason), do: not is_nil(hard_failure_reason(reason))
+
+  def hard_failure_reason(reason) do
+    text = reason_text(reason)
+
+    cond do
+      contains_any?(text, @credit_fragments) ->
+        :llm_credit_limit
+
+      contains_any?(text, @provider_unavailable_fragments) ->
+        :llm_provider_unavailable
+
+      contains_any?(text, @credential_fragments) ->
+        :llm_invalid_credentials
+
+      status_code(reason) in @hard_statuses ->
+        :llm_provider_rejected_request
+
+      true ->
+        nil
+    end
+  end
+
+  def oban_error(reason, fallback \\ :agent_failed) do
+    case hard_failure_reason(reason) do
+      nil -> {:error, sanitize_reason(reason, fallback)}
+      hard_reason -> {:cancel, hard_reason}
+    end
+  end
 
   def sanitize_reason(reason, fallback \\ :agent_failed)
 
@@ -83,6 +130,41 @@ defmodule Hive.Agents.Errors do
       (Map.get(error, :status) == 429 and
          Enum.any?(@rate_limited_fragments, &String.contains?(message, &1)))
   end
+
+  defp reason_text(reason) do
+    reason
+    |> inspect(limit: 100, printable_limit: 2_000)
+    |> String.downcase()
+  end
+
+  defp contains_any?(text, fragments),
+    do: Enum.any?(fragments, &String.contains?(text, &1))
+
+  defp status_code({:error, reason}), do: status_code(reason)
+  defp status_code(status) when is_integer(status) and status in 100..599, do: status
+  defp status_code(%{status: status}) when is_integer(status), do: status
+  defp status_code(%{"status" => status}) when is_integer(status), do: status
+  defp status_code(%{body: body}), do: status_code(body)
+  defp status_code(%{"body" => body}), do: status_code(body)
+  defp status_code(%{reason: reason}), do: status_code(reason)
+  defp status_code(%{"reason" => reason}), do: status_code(reason)
+  defp status_code(%{"error" => error}), do: status_code(error)
+
+  defp status_code(values) when is_list(values), do: Enum.find_value(values, &status_code/1)
+
+  defp status_code(tuple) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.find_value(&status_code/1)
+  end
+
+  defp status_code(map) when is_map(map) do
+    map
+    |> Map.values()
+    |> Enum.find_value(&status_code/1)
+  end
+
+  defp status_code(_reason), do: nil
 
   defp truncate_message(message) do
     message

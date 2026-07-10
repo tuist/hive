@@ -50,7 +50,7 @@ defmodule Hive.Specs.RevisionSummaryWorker do
           "[Specs.RevisionSummaryWorker] Summary generation failed for revision #{revision_id}: #{inspect(sanitized_reason)}"
         )
 
-        {:error, sanitized_reason}
+        Errors.oban_error(reason, :revision_summary_failed)
     end
   end
 end

@@ -10,6 +10,7 @@ defmodule Hive.Drops.DomainClassificationWorker do
     max_attempts: 3,
     unique: [fields: [:worker, :queue, :args], period: :infinity, states: :incomplete]
 
+  alias Hive.Agents.Errors
   alias Hive.Drops.DomainClassification
 
   @doc """
@@ -30,13 +31,18 @@ defmodule Hive.Drops.DomainClassificationWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"drop_id" => drop_id}}), do: classify(drop_id)
+  def perform(%Oban.Job{args: %{"drop_id" => drop_id}}) do
+    classify(drop_id)
+  rescue
+    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
+      Errors.oban_error(error, :drop_domain_classification_failed)
+  end
 
   defp classify(drop_id) do
     case DomainClassification.classify(drop_id) do
       {:ok, _domain_ids} -> :ok
       {:error, :not_found} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:error, reason} -> Errors.oban_error(reason, :drop_domain_classification_failed)
     end
   end
 end

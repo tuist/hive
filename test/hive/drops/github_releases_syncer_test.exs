@@ -168,12 +168,23 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
       |> Enum.sort()
 
     assert enqueued_ids == drop_ids
+
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, _release, _opts ->
+                 send(parent, :unexpected_release_regeneration)
+                 {:ok, []}
+               end
+             )
+
+    refute_received :unexpected_release_regeneration
   end
 
   test "does not create a drop when the generator returns no items" do
     repository = setup_repository!()
     owner = repository.owner
     name = repository.name
+    parent = self()
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
 
@@ -188,10 +199,26 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
        ]}
     end)
 
-    assert :ok = GitHubReleasesSyncer.sync_now()
+    item_generator = fn %{owner: ^owner, name: ^name}, %Releases{tag_name: "v1.2.1"}, [] ->
+      send(parent, :empty_release_generated)
+      {:ok, []}
+    end
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+    assert_received :empty_release_generated
 
     assert Repo.aggregate(Drop, :count) == 0
     assert [] = all_enqueued(worker: DomainClassificationWorker)
+
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, _release, _opts ->
+                 send(parent, :unexpected_empty_release_regeneration)
+                 {:ok, []}
+               end
+             )
+
+    refute_received :unexpected_empty_release_regeneration
   end
 
   test "does not create a drop when release item generation is skipped" do
@@ -219,6 +246,49 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
     assert Repo.aggregate(Drop, :count) == 0
     assert [] = all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  test "stops the sync cycle after a hard provider failure" do
+    repository = setup_repository!()
+    owner = repository.owner
+    name = repository.name
+    parent = self()
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    stub(Releases, :list_releases, fn %{owner: ^owner, name: ^name} ->
+      {:ok,
+       [
+         %Releases{
+           tag_name: "v1.2.3",
+           body: "See https://github.com/#{owner}/#{name}/issues/41",
+           published_at: "2026-06-18T10:30:00Z"
+         },
+         %Releases{
+           tag_name: "v1.2.4",
+           body: "See https://github.com/#{owner}/#{name}/issues/42",
+           published_at: "2026-06-18T11:30:00Z"
+         }
+       ]}
+    end)
+
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (402): Together API error: credit_limit",
+        status: 402,
+        response_body: "402 Payment Required",
+        request_body: "full prompt body"
+      )
+
+    item_generator = fn _repository, release, _opts ->
+      send(parent, {:generated_release, release.tag_name})
+      {:error, error}
+    end
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+
+    assert_received {:generated_release, "v1.2.3"}
+    refute_received {:generated_release, "v1.2.4"}
   end
 
   test "perform/1 maps skipped syncs to success" do

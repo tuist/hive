@@ -42,7 +42,7 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
              })
   end
 
-  test "perform/1 snoozes provider availability errors" do
+  test "perform/1 cancels hard provider availability errors" do
     error =
       ReqLLM.Error.API.Request.exception(
         reason:
@@ -56,17 +56,17 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
 
     log =
       capture_log(fn ->
-        assert {:snooze, 3_600} =
+        assert {:cancel, :llm_provider_unavailable} =
                  GitHubIssueClassificationWorker.perform(%Oban.Job{
                    args: %{"issue_id" => "issue-id"}
                  })
       end)
 
-    assert log =~ "Model provider unavailable"
+    assert log =~ "Model provider rejected"
     refute log =~ "full prompt body"
   end
 
-  test "perform/1 catches raised provider availability errors" do
+  test "perform/1 catches and snoozes raised rate-limit errors" do
     error =
       ReqLLM.Error.API.Request.exception(
         reason:

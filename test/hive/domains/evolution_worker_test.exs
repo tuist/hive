@@ -1,7 +1,9 @@
 defmodule Hive.Domains.EvolutionWorkerTest do
   use Hive.DataCase, async: true
+  use Mimic
   use Oban.Testing, repo: Hive.Repo
 
+  alias Hive.Domains.Evolution
   alias Hive.Domains.EvolutionWorker
 
   test "enqueue/1 inserts a delayed unique evolution job when agents are enabled" do
@@ -27,5 +29,19 @@ defmodule Hive.Domains.EvolutionWorkerTest do
 
   test "perform/1 evolves from work items" do
     assert :ok = perform_job(EvolutionWorker, %{})
+  end
+
+  test "perform/1 cancels provider credit-limit errors" do
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (402): Together API error: credit_limit",
+        status: 402,
+        response_body: "402 Payment Required",
+        request_body: "full prompt body"
+      )
+
+    expect(Evolution, :evolve_from_work_items, fn -> {:error, error} end)
+
+    assert {:cancel, :llm_credit_limit} = EvolutionWorker.perform(%Oban.Job{})
   end
 end
