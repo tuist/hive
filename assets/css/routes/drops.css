@@ -370,10 +370,11 @@
   }
 
   & #drops-table {
-    min-width: 1180px;
+    min-width: 0;
 
     & table {
       table-layout: fixed;
+      min-width: 0;
       width: 100%;
     }
 
