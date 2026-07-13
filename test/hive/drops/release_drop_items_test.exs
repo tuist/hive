@@ -1,14 +1,13 @@
 defmodule Hive.Drops.ReleaseDropItemsTest do
   use ExUnit.Case, async: true
 
-  alias Hive.Agents.Tools.FetchUrlContent
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.Drops.ReleaseDropItems
   alias Hive.GitHub.Releases
   alias Hive.Domains.GitHubRepository
 
-  test "release drop item agent can fetch URL content" do
-    assert ReleaseDropItemAgent.tools() == [FetchUrlContent]
+  test "release drop item agent receives pre-fetched evidence without tools" do
+    assert ReleaseDropItemAgent.tools() == []
   end
 
   test "generates normalized items from the agent output" do
@@ -35,6 +34,9 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
                "https://github.com/tuist/hive/issues/41"
              ]
 
+      assert Enum.map(input.release.references, & &1.url) == input.release.reference_urls
+      assert Enum.all?(input.release.references, &(&1.content == "Fetched release evidence"))
+
       {:ok,
        %{
          "items" => [
@@ -60,6 +62,17 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
        }}
     end
 
+    fetcher = fn _url ->
+      {:ok,
+       %{
+         final_url: "https://github.com/tuist/hive/issues/41",
+         title: "Reference",
+         content_type: "text/html",
+         content: "Fetched release evidence",
+         truncated: false
+       }}
+    end
+
     assert {:ok,
             [
               %{
@@ -70,6 +83,43 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
             ]} =
              ReleaseDropItems.generate(repository, release,
                agents_enabled?: fn -> true end,
+               fetcher: fetcher,
+               runner: runner
+             )
+  end
+
+  test "fetches a bounded set of links discovered in release evidence" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    seed_url = "https://example.com/release-notes"
+    release = %Releases{body: "See #{seed_url}"}
+
+    discovered_urls =
+      Enum.map(1..12, &"https://example.com/evidence/#{&1}")
+
+    fetcher = fn
+      ^seed_url ->
+        {:ok,
+         %{
+           content: Enum.join(discovered_urls, "\n"),
+           final_url: seed_url,
+           content_type: "text/plain"
+         }}
+
+      url ->
+        {:ok, %{content: "Evidence for #{url}", final_url: url, content_type: "text/plain"}}
+    end
+
+    runner = fn input ->
+      assert Enum.map(input.release.references, & &1.url) ==
+               [seed_url | Enum.take(discovered_urls, 10)]
+
+      {:ok, %{items: []}}
+    end
+
+    assert {:ok, []} =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> true end,
+               fetcher: fetcher,
                runner: runner
              )
   end

@@ -6,6 +6,7 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   alias Hive.Agents
   alias Hive.Agents.Sessions
+  alias Hive.Agents.Tools.FetchUrlContent
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.GitHub.IssueRefs
   alias Hive.GitHub.Releases
@@ -14,6 +15,9 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   @max_release_body_length 20_000
   @max_reference_urls 40
+  @max_discovered_reference_urls 10
+  @fetch_concurrency 8
+  @fetch_timeout 15_000
   @url_re ~r{https?://[^\s<>\]\)"]+}i
 
   @doc """
@@ -25,7 +29,8 @@ defmodule Hive.Drops.ReleaseDropItems do
   """
   def generate(%GitHubRepository{} = repository, %Releases{} = release, opts \\ []) do
     if agents_enabled?(opts) do
-      input = build_input(repository, release)
+      references = fetch_references(repository, release, opts)
+      input = build_input(repository, release, references)
 
       input
       |> run_generator(opts)
@@ -35,7 +40,9 @@ defmodule Hive.Drops.ReleaseDropItems do
     end
   end
 
-  def build_input(%GitHubRepository{} = repository, %Releases{} = release) do
+  def build_input(%GitHubRepository{} = repository, %Releases{} = release, references \\ []) do
+    reference_urls = reference_urls(repository, release.body || "")
+
     %{
       release: %{
         repository: "#{repository.owner}/#{repository.name}",
@@ -44,10 +51,87 @@ defmodule Hive.Drops.ReleaseDropItems do
         body: truncate(release.body || ""),
         url: release.html_url || "",
         published_at: release.published_at || release.created_at || "",
-        reference_urls: reference_urls(repository, release.body || "")
+        reference_urls: reference_urls,
+        references: references
       }
     }
   end
+
+  defp fetch_references(repository, release, opts) do
+    seed_urls = reference_urls(repository, release.body || "")
+    fetcher = Keyword.get(opts, :fetcher, &FetchUrlContent.fetch/1)
+
+    seed_urls
+    |> fetch_url_batch(fetcher)
+    |> fetch_discovered_references(seed_urls, fetcher)
+  end
+
+  defp fetch_discovered_references(references, seed_urls, fetcher) do
+    discovered_urls =
+      references
+      |> Enum.flat_map(&urls_from_reference/1)
+      |> Enum.reject(&(&1 in seed_urls))
+      |> Enum.uniq()
+      |> Enum.take(@max_discovered_reference_urls)
+
+    references ++ fetch_url_batch(discovered_urls, fetcher)
+  end
+
+  defp fetch_url_batch([], _fetcher), do: []
+
+  defp fetch_url_batch(urls, fetcher) do
+    urls
+    |> Task.async_stream(
+      fn url -> normalize_fetch_result(url, fetcher.(url)) end,
+      max_concurrency: @fetch_concurrency,
+      ordered: true,
+      on_timeout: :kill_task,
+      timeout: @fetch_timeout
+    )
+    |> Enum.zip(urls)
+    |> Enum.map(fn
+      {{:ok, reference}, _url} -> reference
+      {{:exit, _reason}, url} -> %{url: url, error: "The reference fetch timed out."}
+    end)
+  end
+
+  defp normalize_fetch_result(url, {:ok, result}) when is_map(result) do
+    %{
+      url: url,
+      final_url: fetch_value(result, :final_url, url),
+      title: fetch_value(result, :title, ""),
+      content_type: fetch_value(result, :content_type, "unknown"),
+      content: fetch_value(result, :content, ""),
+      truncated: fetch_value(result, :truncated, false)
+    }
+  end
+
+  defp normalize_fetch_result(url, {:error, reason}) do
+    %{url: url, error: fetch_error(reason)}
+  end
+
+  defp normalize_fetch_result(url, other) do
+    %{url: url, error: fetch_error(other)}
+  end
+
+  defp fetch_value(result, key, default) do
+    Map.get(result, key) || Map.get(result, Atom.to_string(key)) || default
+  end
+
+  defp urls_from_reference(%{content: content}) when is_binary(content),
+    do: urls_from_text(content)
+
+  defp urls_from_reference(_reference), do: []
+
+  defp urls_from_text(text) do
+    @url_re
+    |> Regex.scan(text)
+    |> Enum.map(fn [url] -> clean_url(url) end)
+    |> Enum.filter(&public_url?/1)
+  end
+
+  defp fetch_error(reason) when is_binary(reason), do: String.slice(reason, 0, 500)
+  defp fetch_error(reason), do: reason |> inspect() |> String.slice(0, 500)
 
   defp run_generator(input, opts) do
     runner = Keyword.get(opts, :runner, &run_agent(&1, opts))

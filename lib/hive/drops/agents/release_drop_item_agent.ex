@@ -1,13 +1,27 @@
 defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
   @moduledoc """
   Condukt agent that turns a GitHub release body into user-facing drop
-  items by traversing the URLs and references mentioned by the release.
+  items from bounded evidence fetched before the model request.
   """
 
   use Condukt
 
   alias Hive.Agents.StyleGuide
-  alias Hive.Agents.Tools.FetchUrlContent
+
+  @reference_schema %{
+    type: "object",
+    properties: %{
+      url: %{type: "string"},
+      final_url: %{type: "string"},
+      title: %{type: "string"},
+      content_type: %{type: "string"},
+      content: %{type: "string"},
+      truncated: %{type: "boolean"},
+      error: %{type: "string"}
+    },
+    required: ["url"],
+    additionalProperties: false
+  }
 
   @release_schema %{
     type: "object",
@@ -18,9 +32,10 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
       body: %{type: "string"},
       url: %{type: "string"},
       published_at: %{type: "string"},
-      reference_urls: %{type: "array", items: %{type: "string"}}
+      reference_urls: %{type: "array", items: %{type: "string"}},
+      references: %{type: "array", items: @reference_schema}
     },
-    required: ["repository", "body", "reference_urls"],
+    required: ["repository", "body", "reference_urls", "references"],
     additionalProperties: false
   }
 
@@ -59,16 +74,15 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
     You turn GitHub releases into Hive drop items.
 
     A release is only an envelope. It should not become a drop by itself.
-    Your job is to traverse the issue, pull request, changelog, and doc
-    URLs referenced by the release and produce one item for each
-    user-facing improvement that actually landed.
+    Hive has already fetched the issue, pull request, changelog, and doc
+    addresses referenced by the release. Your job is to review that bounded
+    evidence and produce one item for each user-facing improvement that
+    actually landed.
 
     Rules:
-    - Use `fetch_url_content` to read each URL that might describe
-      shipped work. Also fetch additional public URLs discovered in that
-      content when they are needed to understand the change.
-    - Keep traversal bounded and purposeful. Stop when you have enough
-      context to explain the user-facing outcome.
+    - Read every successful entry in `references` that might describe
+      shipped work. Entries with an `error` could not be fetched and are not
+      evidence.
     - Merge several references into one item when they describe the same
       improvement. Split them when users would understand them as
       different shipped changes.
@@ -87,17 +101,16 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
   end
 
   @impl true
-  def tools, do: [FetchUrlContent]
+  def tools, do: []
 
   operation(:generate_drop_items,
     input: @input_schema,
     output: @output_schema,
     instructions: """
-    Read the release body and the provided reference URLs. Fetch the
-    relevant URLs, traverse additional useful public links if needed,
-    and return the user-facing shipped improvements in `items`. Return
-    an empty list when the release contains no user-facing improvement
-    that can be supported by fetched context.
+    Read the release body and the fetched references, then return the
+    user-facing shipped improvements in `items`. Return an empty list when
+    the release contains no user-facing improvement that can be supported
+    by the provided evidence.
     """
   )
 end

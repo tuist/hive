@@ -34,6 +34,8 @@ defmodule Hive.Drops do
   alias Hive.Repo
 
   @default_page_size 20
+  @release_retry_base_seconds :timer.minutes(15) |> div(1_000)
+  @release_retry_max_seconds :timer.hours(24) |> div(1_000)
   # PostgreSQL advisory locks need stable application-defined integer keys.
   @drop_number_lock_namespace :binary.decode_unsigned("Hive")
   @drop_number_lock_key :binary.decode_unsigned("DROP")
@@ -50,12 +52,43 @@ defmodule Hive.Drops do
     :github_repository_id
   ]
   @drop_attr_key_map Map.new(@drop_attr_keys, &{Atom.to_string(&1), &1})
+  @github_release_ingestion_attr_keys [
+    :release_key,
+    :release_fingerprint,
+    :status,
+    :items_count,
+    :attempt_count,
+    :last_error,
+    :next_attempt_at,
+    :processed_at
+  ]
+  @github_release_ingestion_attr_key_map Map.new(
+                                           @github_release_ingestion_attr_keys,
+                                           &{Atom.to_string(&1), &1}
+                                         )
 
   @doc "Returns true when a GitHub release has already been evaluated for drop items."
   def github_release_processed?(%GitHubRepository{} = repository, release_key)
       when is_binary(release_key) do
     github_release_ingestion_exists?(repository, release_key) or
       github_release_drop_exists?(repository, release_key)
+  end
+
+  @doc "Returns true when a release fingerprint should be evaluated now."
+  def github_release_due?(
+        %GitHubRepository{} = repository,
+        release_key,
+        release_fingerprint,
+        now \\ DateTime.utc_now()
+      )
+      when is_binary(release_key) and is_binary(release_fingerprint) do
+    case github_release_ingestion(repository, release_key) do
+      %GitHubReleaseIngestion{} = ingestion ->
+        release_ingestion_due?(ingestion, release_fingerprint, now)
+
+      nil ->
+        not github_release_drop_exists?(repository, release_key)
+    end
   end
 
   @doc "Records that a GitHub release was evaluated for drop items."
@@ -69,6 +102,7 @@ defmodule Hive.Drops do
       attrs
       |> Map.put(:github_repository_id, repository.id)
       |> Map.put(:release_key_hash, hash_value(release_key))
+      |> Map.put_new(:attempt_count, 0)
       |> Map.put_new(:processed_at, now)
 
     %GitHubReleaseIngestion{}
@@ -76,10 +110,54 @@ defmodule Hive.Drops do
     |> Repo.insert(
       on_conflict:
         {:replace,
-         [:release_key, :release_fingerprint, :status, :items_count, :processed_at, :updated_at]},
+         [
+           :release_key,
+           :release_fingerprint,
+           :status,
+           :items_count,
+           :attempt_count,
+           :last_error,
+           :next_attempt_at,
+           :processed_at,
+           :updated_at
+         ]},
       conflict_target: [:github_repository_id, :release_key_hash],
       returning: true
     )
+  end
+
+  @doc "Records a failed release evaluation and schedules a bounded retry."
+  def record_github_release_failure(
+        %GitHubRepository{} = repository,
+        release_key,
+        release_fingerprint,
+        reason,
+        opts \\ []
+      )
+      when is_binary(release_key) and is_binary(release_fingerprint) and is_list(opts) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    retry? = Keyword.get(opts, :retry?, true)
+
+    attempt_count =
+      case github_release_ingestion(repository, release_key) do
+        %GitHubReleaseIngestion{release_fingerprint: ^release_fingerprint, attempt_count: count} ->
+          count + 1
+
+        _ingestion ->
+          1
+      end
+
+    record_github_release_ingestion(repository, %{
+      release_key: release_key,
+      release_fingerprint: release_fingerprint,
+      status: if(retry?, do: :failed, else: :rejected),
+      items_count: 0,
+      attempt_count: attempt_count,
+      last_error: format_error(reason),
+      next_attempt_at:
+        if(retry?, do: DateTime.add(now, release_retry_seconds(attempt_count), :second)),
+      processed_at: now
+    })
   end
 
   @doc "Lists drops the `user` can see, paginated and optionally filtered by projects or domains."
@@ -539,7 +617,8 @@ defmodule Hive.Drops do
     |> where(
       [ingestion],
       ingestion.github_repository_id == ^repository_id and
-        ingestion.release_key_hash == ^release_key_hash
+        ingestion.release_key_hash == ^release_key_hash and
+        ingestion.status in [:generated, :ignored, :rejected]
     )
     |> Repo.exists?()
   end
@@ -622,30 +701,68 @@ defmodule Hive.Drops do
     |> Base.encode16(case: :lower)
   end
 
+  defp github_release_ingestion(%GitHubRepository{id: repository_id}, release_key) do
+    Repo.get_by(GitHubReleaseIngestion,
+      github_repository_id: repository_id,
+      release_key_hash: hash_value(release_key)
+    )
+  end
+
+  defp release_ingestion_due?(
+         %GitHubReleaseIngestion{release_fingerprint: fingerprint},
+         release_fingerprint,
+         _now
+       )
+       when fingerprint != release_fingerprint,
+       do: true
+
+  defp release_ingestion_due?(
+         %GitHubReleaseIngestion{status: status},
+         _release_fingerprint,
+         _now
+       )
+       when status in [:generated, :ignored, :rejected],
+       do: false
+
+  defp release_ingestion_due?(
+         %GitHubReleaseIngestion{status: :failed, next_attempt_at: nil},
+         _release_fingerprint,
+         _now
+       ),
+       do: true
+
+  defp release_ingestion_due?(
+         %GitHubReleaseIngestion{status: :failed, next_attempt_at: next_attempt_at},
+         _release_fingerprint,
+         now
+       ),
+       do: DateTime.compare(next_attempt_at, now) != :gt
+
+  defp release_retry_seconds(attempt_count) do
+    exponent = min(max(attempt_count - 1, 0), 10)
+    min(@release_retry_base_seconds * Integer.pow(2, exponent), @release_retry_max_seconds)
+  end
+
   defp normalize_drop_attrs(map) when is_map(map) do
     Enum.reduce(map, %{}, &put_known_drop_attr/2)
   end
 
   defp normalize_github_release_ingestion_attrs(map) when is_map(map) do
-    Enum.reduce(map, %{}, fn
-      {key, value}, acc
-      when key in [:release_key, :release_fingerprint, :status, :items_count, :processed_at] ->
-        Map.put(acc, key, value)
-
-      {key, value}, acc when is_binary(key) ->
-        case key do
-          "release_key" -> Map.put(acc, :release_key, value)
-          "release_fingerprint" -> Map.put(acc, :release_fingerprint, value)
-          "status" -> Map.put(acc, :status, value)
-          "items_count" -> Map.put(acc, :items_count, value)
-          "processed_at" -> Map.put(acc, :processed_at, value)
-          _ -> acc
-        end
-
-      _entry, acc ->
-        acc
-    end)
+    Enum.reduce(map, %{}, &put_known_github_release_ingestion_attr/2)
   end
+
+  defp put_known_github_release_ingestion_attr({key, value}, acc)
+       when key in @github_release_ingestion_attr_keys,
+       do: Map.put(acc, key, value)
+
+  defp put_known_github_release_ingestion_attr({key, value}, acc) when is_binary(key) do
+    case Map.fetch(@github_release_ingestion_attr_key_map, key) do
+      {:ok, attr} -> Map.put(acc, attr, value)
+      :error -> acc
+    end
+  end
+
+  defp put_known_github_release_ingestion_attr(_entry, acc), do: acc
 
   defp put_known_drop_attr({key, value}, acc) when key in @drop_attr_keys,
     do: Map.put(acc, key, value)
