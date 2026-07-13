@@ -45,7 +45,6 @@ defmodule Hive.Drops.WeeklyDigestsTest do
     assert_receive {:digest_input, input}
     assert input.week_start == "2026-07-06"
     assert input.week_end == "2026-07-10"
-    assert input.style_sample_urls == WeeklyDigests.style_sample_urls()
     assert [%{title: "Cache controls"}] = input.drops
     refute inspect(input) =~ "Private operations"
 

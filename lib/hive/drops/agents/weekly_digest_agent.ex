@@ -7,7 +7,6 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
   use Condukt
 
   alias Hive.Agents.StyleGuide
-  alias Hive.Agents.Tools.FetchUrlContent
 
   @drop_schema %{
     type: "object",
@@ -39,10 +38,9 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
     properties: %{
       week_start: %{type: "string"},
       week_end: %{type: "string"},
-      style_sample_urls: %{type: "array", items: %{type: "string"}, minItems: 1},
       drops: %{type: "array", items: @drop_schema, minItems: 1}
     },
-    required: ["week_start", "week_end", "style_sample_urls", "drops"],
+    required: ["week_start", "week_end", "drops"],
     additionalProperties: false
   }
 
@@ -60,14 +58,9 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
   @impl true
   def system_prompt do
     """
-    You write Hive's weekly Drops digest in the voice of Pedro Piñera.
-    The digest is an editorial narration of what shipped, not release
-    notes, a changelog list, or marketing copy.
-
-    Before drafting, use fetch_url_content to read every provided style
-    sample. Learn the writing patterns, but never copy phrases or claims
-    from those posts. The subject matter must come only from the supplied
-    drops.
+    You write Hive's weekly Drops digest as an editorial narration of what
+    shipped, not release notes, a changelog list, or marketing copy. The
+    subject matter must come only from the supplied drops.
 
     Voice and structure:
     - Begin with a concrete observation about the week and name the
@@ -95,15 +88,14 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
   end
 
   @impl true
-  def tools, do: [FetchUrlContent]
+  def tools, do: []
 
   operation(:generate_weekly_digest,
     input: @input_schema,
     output: @output_schema,
     instructions: """
-    Read all style samples, then write one cohesive weekly digest from
-    the supplied public drops. Return its title, standalone summary, and
-    full Markdown body.
+    Write one cohesive weekly digest from the supplied public drops. Return
+    its title, standalone summary, and full Markdown body.
     """
   )
 end

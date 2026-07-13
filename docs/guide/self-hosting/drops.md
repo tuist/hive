@@ -71,11 +71,9 @@ at `/drops/digest/<week-start>`. Each edition connects the most meaningful
 changes into a point of view about the week instead of repeating the
 timeline as a list.
 
-The language-model agent reads the public drops from that week and
-samples three public posts from
-[Pedro Piñera's writing](https://pepicrft.me/blog/) before drafting. The
-posts guide cadence and structure only. Claims and links come from the
-Drops timeline, and generated prose never uses em dashes.
+The language-model agent connects the public drops from that week into a
+cohesive narration. Claims and links come from the Drops timeline, and
+generated prose never uses em dashes.
 
 Only drops visible to an anonymous visitor enter an edition. Private
 domain work is never sent to the agent or published in the digest. Hive

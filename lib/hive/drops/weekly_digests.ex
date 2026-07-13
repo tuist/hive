@@ -18,13 +18,6 @@ defmodule Hive.Drops.WeeklyDigests do
   @claim_timeout_seconds 300
   @default_page_size 10
   @publication_time ~T[17:00:00]
-  @style_sample_urls [
-    "https://pepicrft.me/blog/the-quiet-corner/",
-    "https://pepicrft.me/blog/the-beauty-of-being-open/",
-    "https://pepicrft.me/blog/the-single-tenant-cache/"
-  ]
-
-  def style_sample_urls, do: @style_sample_urls
 
   def latest_publishable_week(now \\ DateTime.utc_now()) do
     today = DateTime.to_date(now)
@@ -308,7 +301,6 @@ defmodule Hive.Drops.WeeklyDigests do
     %{
       week_start: Date.to_iso8601(week_start),
       week_end: Date.to_iso8601(week_end),
-      style_sample_urls: @style_sample_urls,
       drops: Enum.map(drops, &drop_input/1)
     }
   end

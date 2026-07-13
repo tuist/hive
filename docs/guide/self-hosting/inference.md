@@ -164,12 +164,10 @@ Hive currently uses agents for:
   associated with the release repository's project.
 - Drops weekly digest: every Friday at 17:00 Coordinated Universal Time,
   Hive connects the current Monday-to-Friday workweek of public drops into
-  one narrated edition. The agent samples public posts from
-  [Pedro Piñera's writing](https://pepicrft.me/blog/) for cadence and
-  structure, then grounds every claim in the supplied Drops timeline.
-  Private-domain drops are excluded before model context is built.
-  Empty and already-completed weeks do not spend model tokens, and the
-  workflow stays dormant when no model provider is configured.
+  one narrated edition and grounds every claim in the supplied Drops timeline.
+  Private-domain drops are excluded before model context is built. Empty and
+  already-completed weeks do not spend model tokens, and the workflow stays
+  dormant when no model provider is configured.
 
 Structured agent operations have a three-turn default ceiling. Individual
 workflows can lower that ceiling when they need only one response. This
