@@ -20,7 +20,6 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   @min_update_chars 80
   @max_thread_chars 48_000
   @max_message_chars 8_000
-  @max_label_description_chars 240
 
   @no_reply_message "I couldn't complete that request because the assistant did not produce a reply. Please try again with a bit more detail."
   @interrupted_message "I couldn't finish that reply. Please try again."
@@ -29,7 +28,6 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   alias Hive.Agents.Sessions
   alias Hive.Audit
-  alias Hive.Auth
   alias Hive.Forage.Intake
   alias Hive.Repo
   alias Hive.Slack
@@ -92,7 +90,6 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     with {:ok, thread_messages} <-
            thread_messages(installation, slack_channel_id, thread_ts, local_messages),
          %{
-           mention_text: mention_text,
            mention_user: mention_user,
            thread: thread,
            omitted_thread_messages: omitted_thread_messages
@@ -100,11 +97,9 @@ defmodule Hive.Slack.Workers.RespondToConversation do
            summarize_thread(thread_messages, message_ts),
          requester_user = resolve_requester_user(installation, mention_user),
          input = %{
-           "mention_text" => mention_text,
            "thread" => thread,
            "omitted_thread_messages" => omitted_thread_messages,
-           "can_create_forage_item" => not is_nil(requester_user),
-           "available_github_labels" => available_github_labels(requester_user)
+           "can_create_forage_item" => not is_nil(requester_user)
          },
          {:ok, _reply} <-
            run_conversation_agent(
@@ -199,18 +194,22 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   end
 
   defp summarize_thread([], _message_ts) do
-    %{mention_text: "", mention_user: nil, thread: [], omitted_thread_messages: 0}
+    %{mention_user: nil, thread: [], omitted_thread_messages: 0}
   end
 
   defp summarize_thread(messages, message_ts) do
     {thread, omitted_thread_messages} = compact_thread(messages, message_ts)
 
-    mention_message =
+    triggering_message =
       Enum.find(thread, &(&1["ts"] == message_ts)) || List.last(thread) || %{}
 
+    thread =
+      Enum.map(thread, fn message ->
+        Map.put(message, "triggering_mention", message["ts"] == triggering_message["ts"])
+      end)
+
     %{
-      mention_text: Map.get(mention_message, "text", ""),
-      mention_user: Map.get(mention_message, "user"),
+      mention_user: Map.get(triggering_message, "user"),
       thread: thread,
       omitted_thread_messages: omitted_thread_messages
     }
@@ -302,42 +301,6 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   end
 
   defp resolve_requester_user(_installation, _slack_user_id), do: nil
-
-  defp available_github_labels(nil), do: []
-
-  defp available_github_labels(requester_user) do
-    if Auth.member?(requester_user) do
-      fetch_available_github_labels()
-    else
-      []
-    end
-  end
-
-  defp fetch_available_github_labels do
-    case Intake.available_github_labels() do
-      {:ok, labels} ->
-        labels
-        |> Enum.map(&github_label_context/1)
-        |> Enum.take(100)
-
-      {:error, reason} ->
-        Logger.info("[Slack.RespondToConversation] GitHub labels unavailable: #{inspect(reason)}")
-        []
-    end
-  end
-
-  defp github_label_context(%{name: name} = label) do
-    %{"name" => name}
-    |> maybe_put("description", truncate_label_description(Map.get(label, :description)))
-  end
-
-  defp truncate_label_description(description) when is_binary(description),
-    do: String.slice(description, 0, @max_label_description_chars)
-
-  defp truncate_label_description(_description), do: nil
-
-  defp maybe_put(map, _key, value) when value in [nil, ""], do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp maybe_put_arg(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put_arg(map, key, value), do: Map.put(map, key, value)

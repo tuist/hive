@@ -105,8 +105,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub_agent_stream("hello!", fn prompt ->
       assert prompt =~ "Can create forage item:\ntrue"
-      assert prompt =~ "Available GitHub labels:\nNone"
-      assert prompt =~ "<@U-bot> hi"
+      assert prompt =~ "[triggering mention] 1.0 U-1: <@U-bot> hi"
+      refute prompt =~ "Available GitHub labels"
     end)
 
     stub_slack_stream(installation_id, "C-1", "1.0", "hello!")
@@ -181,7 +181,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
 
-  test "perform/1 passes configured GitHub labels to the agent" do
+  test "perform/1 leaves configured GitHub labels out until the agent asks for them" do
     installation = installation!()
     channel = channel!(installation, "C-labels")
     repository = repository!()
@@ -203,16 +203,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     {:ok, _slack_user} =
       Slack.upsert_user(installation, %{slack_user_id: "U-labels", linked_user_id: user.id})
 
-    expect(Issues, :list_labels, fn %{owner: owner, name: name}, [] ->
-      assert owner == repository.owner
-      assert name == repository.name
-
-      {:ok,
-       [
-         %{name: "LiveView", description: "Phoenix LiveView behavior"},
-         %{name: "production", description: nil}
-       ]}
-    end)
+    reject(&Issues.list_labels/2)
 
     installation_id = installation.id
 
@@ -227,8 +218,9 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
 
     stub_agent_stream("captured", fn prompt ->
-      assert prompt =~ "- LiveView: Phoenix LiveView behavior"
-      assert prompt =~ "- production"
+      assert prompt =~ "[triggering mention] 1.0 U-labels: <@U-bot> capture this"
+      refute prompt =~ "Phoenix LiveView behavior"
+      refute prompt =~ "Available GitHub labels"
     end)
 
     stub_slack_stream(installation_id, "C-labels", "1.0", "captured")
@@ -289,9 +281,10 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
 
     stub_agent_stream("retrying", fn prompt ->
-      assert prompt =~ "Mention text:\n<@U-bot> can you try again?"
+      assert prompt =~ "[triggering mention] 4.0 U-requester: <@U-bot> can you try again?"
       assert prompt =~ "Can create forage item:\ntrue"
       assert prompt =~ "later unrelated message"
+      assert length(:binary.matches(prompt, "<@U-bot> can you try again?")) == 1
     end)
 
     stub_slack_stream(installation_id, "C-retry", "1.0", "retrying", "6.0")
@@ -335,7 +328,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub_agent_stream("bounded", fn prompt ->
       assert prompt =~ "root-context"
-      assert prompt =~ "Mention text:\n<@U-bot> summarize the decision"
+      assert prompt =~ "[triggering mention] 2.0 U2: <@U-bot> summarize the decision"
       assert prompt =~ "latest-context"
 
       assert prompt =~
@@ -385,7 +378,9 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
 
     stub_agent_stream("handled locally", fn prompt ->
-      assert prompt =~ "Mention text:\n<@U-bot> record this from the event payload"
+      assert prompt =~
+               "[triggering mention] 2.0 U-local: <@U-bot> record this from the event payload"
+
       assert prompt =~ "Can create forage item:\ntrue"
     end)
 

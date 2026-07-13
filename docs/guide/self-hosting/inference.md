@@ -129,13 +129,13 @@ Hive currently uses agents for:
   If the requester is linked to a Hive user and asks Hive to capture
   work, the agent can create a forage item through the configured intake
   destination from **Ops -> Forage**. When that destination creates
-  GitHub issues, Hive shows the agent the repository labels that already
-  exist so it can pick matching labels and Hive can validate them before
-  issue creation. Long threads retain the root message, the triggering
-  mention, and the newest messages within a fixed context budget; the
-  prompt tells the agent how many earlier messages were omitted. Label
-  descriptions and individual messages are bounded as well. When no
-  model provider is configured, the bot replies with a setup note. See
+  GitHub issues, the agent can request the repository labels only when it
+  needs them, pick matching labels, and let Hive validate them before issue
+  creation. Long threads retain the root message, the triggering mention,
+  and the newest messages within a fixed context budget; the prompt tells
+  the agent how many earlier messages were omitted. Requested label
+  descriptions and individual messages are bounded as well. When no model
+  provider is configured, the bot replies with a setup note. See
   [Slack](./slack) for the workspace install flow.
 - GitHub issue domain classification: each time the syncer sees a new
   issue in a connected project repository or notices that an issue's
