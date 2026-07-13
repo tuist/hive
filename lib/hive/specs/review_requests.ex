@@ -13,6 +13,7 @@ defmodule Hive.Specs.ReviewRequests do
   alias Hive.Repo
   alias Hive.Specs.Agents.ReviewRequestAgent
   alias Hive.Specs.Revision
+  alias Hive.Specs.RevisionSummaries
   alias Hive.Specs.Spec
 
   @max_body_length 8_000
@@ -48,7 +49,7 @@ defmodule Hive.Specs.ReviewRequests do
         revision: revision_number(revision, spec),
         title: revision_title(revision, spec),
         status: revision_status(revision, spec),
-        summary: revision_summary(revision)
+        summary: revision_summary(revision, spec)
       },
       requester: user_input(requester),
       commenters: Enum.map(reviewers(spec, requester), &user_input/1)
@@ -144,8 +145,7 @@ defmodule Hive.Specs.ReviewRequests do
     end
   end
 
-  defp fallback_review_focus(_spec, %Revision{summary: summary})
-       when is_binary(summary) and summary != "" do
+  defp fallback_review_focus(_spec, %Revision{revision: revision}) when revision > 1 do
     ["Check whether the latest revision resolves the changes described in the revision summary."]
   end
 
@@ -204,8 +204,32 @@ defmodule Hive.Specs.ReviewRequests do
   defp revision_status(%Revision{status: status}, _spec), do: status(status)
   defp revision_status(_revision, %Spec{status: status}), do: status(status)
 
-  defp revision_summary(%Revision{summary: summary}) when is_binary(summary), do: summary
-  defp revision_summary(_revision), do: ""
+  defp revision_summary(%Revision{summary: summary}, _spec)
+       when is_binary(summary) and summary != "",
+       do: summary
+
+  defp revision_summary(%Revision{} = revision, spec) do
+    RevisionSummaries.describe(revision, previous_revision(spec, revision))
+  end
+
+  defp revision_summary(_revision, _spec), do: ""
+
+  defp previous_revision(%Spec{revisions: revisions}, %Revision{revision: revision})
+       when is_list(revisions) do
+    Enum.find(revisions, &(&1.revision == revision - 1))
+  end
+
+  defp previous_revision(_spec, %Revision{spec_id: spec_id, revision: revision})
+       when is_binary(spec_id) and revision > 1 do
+    Revision
+    |> where(
+      [candidate],
+      candidate.spec_id == ^spec_id and candidate.revision == ^(revision - 1)
+    )
+    |> Repo.one()
+  end
+
+  defp previous_revision(_spec, _revision), do: nil
 
   defp status(status) when is_atom(status), do: Atom.to_string(status)
   defp status(status), do: to_string(status)

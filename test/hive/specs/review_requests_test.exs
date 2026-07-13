@@ -73,6 +73,10 @@ defmodule Hive.Specs.ReviewRequestsTest do
     assert input.spec.title == "GitHub sign-in"
     assert input.spec.body =~ "Refresh tokens"
     assert input.last_revision.revision == 2
+
+    assert input.last_revision.summary ==
+             "Expanded the proposal body with 1 addition."
+
     refute Map.has_key?(input.last_revision, :body)
     assert input.requester.email == "alice@example.com"
     assert input.commenters == [%{email: "bob@example.com", name: "Bob"}]
@@ -96,6 +100,36 @@ defmodule Hive.Specs.ReviewRequestsTest do
 
     assert payload.review_focus == [
              "Review the current proposal, tradeoffs, and acceptance criteria."
+           ]
+  end
+
+  test "draft/3 keeps revision context without generated summaries" do
+    requester = user("alice@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(
+        %{
+          "title" => "GitHub sign-in",
+          "body" => "Initial proposal.",
+          "summary" => "Let users sign in through GitHub."
+        },
+        requester
+      )
+
+    {:ok, _spec} =
+      Specs.update_spec(
+        Specs.get_spec!(spec.id),
+        %{"body" => "Initial proposal.\n\nRefresh tokens before they expire."},
+        requester
+      )
+
+    assert {:ok, payload} =
+             ReviewRequests.draft(Specs.get_spec!(spec.id), requester,
+               agents_enabled?: fn -> false end
+             )
+
+    assert payload.review_focus == [
+             "Check whether the latest revision resolves the changes described in the revision summary."
            ]
   end
 end

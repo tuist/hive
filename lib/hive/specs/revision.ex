@@ -28,11 +28,4 @@ defmodule Hive.Specs.Revision do
     |> unique_constraint([:spec_id, :revision])
     |> foreign_key_constraint(:spec_id)
   end
-
-  def summary_changeset(revision, summary) when is_binary(summary) do
-    revision
-    |> cast(%{summary: summary}, [:summary])
-    |> validate_required([:summary])
-    |> validate_length(:summary, max: 500)
-  end
 end

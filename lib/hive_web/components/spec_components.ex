@@ -4,6 +4,7 @@ defmodule HiveWeb.SpecComponents do
   use HiveWeb, :html
 
   alias Hive.Specs
+  alias Hive.Specs.RevisionSummaries
   alias Hive.Specs.Spec
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
@@ -132,7 +133,6 @@ defmodule HiveWeb.SpecComponents do
   attr :current_path, :string, required: true
   attr :expanded_revision_rows, :list, required: true
   attr :viewer_last_viewed_at, :any, default: nil
-  attr :revision_summaries_enabled?, :boolean, default: false
 
   def show(assigns) do
     assigns = assign(assigns, :new_activity_since_visit?, new_activity_since_visit?(assigns))
@@ -239,11 +239,7 @@ defmodule HiveWeb.SpecComponents do
                     size="large"
                     title={revision_summary_title(revision)}
                   >
-                    <p>{revision_summary(
-                      revision,
-                      @spec.revisions,
-                      @revision_summaries_enabled?
-                    )}</p>
+                    <p>{revision_summary(revision, @spec.revisions)}</p>
                   </.alert>
                 </div>
               </:expanded_content>
@@ -750,21 +746,17 @@ defmodule HiveWeb.SpecComponents do
   defp revision_summary_title(revision),
     do: dgettext("dashboard_specs", "Revision %{revision} summary", revision: revision.revision)
 
-  defp revision_summary(%{summary: summary}, _revisions, _summaries_enabled?)
+  defp revision_summary(%{summary: summary}, _revisions)
        when is_binary(summary) and summary != "",
        do: summary
 
-  defp revision_summary(%{revision: 1, status: status}, _revisions, _summaries_enabled?) do
+  defp revision_summary(%{revision: 1, status: status}, _revisions) do
     dgettext("dashboard_specs", "Created the initial %{status} proposal.",
       status: String.downcase(status_label(status))
     )
   end
 
-  defp revision_summary(_revision, _revisions, true) do
-    dgettext("dashboard_specs", "The agent-written summary is not available yet.")
-  end
-
-  defp revision_summary(revision, revisions, false) do
+  defp revision_summary(revision, revisions) do
     previous = Enum.find(revisions, &(&1.revision == revision.revision - 1))
 
     revision
@@ -775,41 +767,21 @@ defmodule HiveWeb.SpecComponents do
   defp revision_changes(_revision, nil), do: []
 
   defp revision_changes(revision, previous) do
-    [
-      revision.title != previous.title && dgettext("dashboard_specs", "renamed the spec"),
-      revision.status != previous.status &&
-        dgettext("dashboard_specs", "moved the status from %{previous} to %{current}",
-          previous: status_label(previous.status),
-          current: status_label(revision.status)
-        ),
-      revision.body != previous.body && body_change_summary(previous.body, revision.body)
-    ]
-    |> Enum.reject(&(&1 in [false, nil]))
+    revision
+    |> RevisionSummaries.changes(previous)
+    |> Enum.map(&translate_revision_change/1)
   end
 
-  defp humanize_revision_changes([]),
-    do: dgettext("dashboard_specs", "Saved the revision without changing the proposal text.")
+  defp translate_revision_change(:renamed), do: dgettext("dashboard_specs", "renamed the spec")
 
-  defp humanize_revision_changes([change]),
-    do: dgettext("dashboard_specs", "This revision %{change}.", change: change)
-
-  defp humanize_revision_changes(changes) do
-    {last_change, previous_changes} = List.pop_at(changes, -1)
-
-    dgettext("dashboard_specs", "This revision %{changes} and %{last_change}.",
-      changes: Enum.join(previous_changes, ", "),
-      last_change: last_change
+  defp translate_revision_change({:status_changed, previous, current}) do
+    dgettext("dashboard_specs", "moved the status from %{previous} to %{current}",
+      previous: status_label(previous),
+      current: status_label(current)
     )
   end
 
-  defp body_change_summary(previous_body, body) do
-    previous_lines = meaningful_lines(previous_body)
-    lines = meaningful_lines(body)
-
-    diff = List.myers_difference(previous_lines, lines)
-    added = diff |> Keyword.get_values(:ins) |> List.flatten() |> length()
-    removed = diff |> Keyword.get_values(:del) |> List.flatten() |> length()
-
+  defp translate_revision_change({:body_changed, added, removed}) do
     cond do
       added > 0 and removed > 0 ->
         dgettext(
@@ -834,13 +806,19 @@ defmodule HiveWeb.SpecComponents do
     end
   end
 
-  defp meaningful_lines(nil), do: []
+  defp humanize_revision_changes([]),
+    do: dgettext("dashboard_specs", "Saved the revision without changing the proposal text.")
 
-  defp meaningful_lines(body) do
-    body
-    |> String.split("\n", trim: true)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
+  defp humanize_revision_changes([change]),
+    do: dgettext("dashboard_specs", "This revision %{change}.", change: change)
+
+  defp humanize_revision_changes(changes) do
+    {last_change, previous_changes} = List.pop_at(changes, -1)
+
+    dgettext("dashboard_specs", "This revision %{changes} and %{last_change}.",
+      changes: Enum.join(previous_changes, ", "),
+      last_change: last_change
+    )
   end
 
   defp change_count(1, :addition), do: dgettext("dashboard_specs", "1 addition")

@@ -89,7 +89,7 @@ defmodule Hive.SpecsTest do
                {:error, :unauthorized}
     end
 
-    test "validates the agent-written summary" do
+    test "validates the spec summary" do
       assert {:error, changeset} =
                Specs.create_spec(
                  %{

@@ -107,22 +107,14 @@ Hive currently uses agents for:
   every evaluated input, including evaluations that produce no changes,
   so periodic and event-driven jobs do not evaluate unchanged evidence
   again.
-- Spec revision summaries: whenever a spec is edited after its first
-  draft, Hive queues a job that asks the agent to describe what changed
-  between the previous and the new revision. The summary appears in the
-  draft history on the spec page. A scheduled sweeper also backfills
-  revisions whose summary is still missing, spawning one worker job per
-  revision so failures retry independently. The model receives a compact
-  line diff instead of two complete copies of the spec and runs as one
-  bounded request without loading repository instructions. When no model
-  provider is configured, the history falls back to a counts-based
-  heuristic.
 - Spec review requests: when a spec author or editor asks for another
   review, Hive asks an agent to turn the current spec and latest
   revision into a concise Slack message with focused review prompts. The
-  current body is sent once alongside the latest revision metadata. The
-  Slack notification still posts with a deterministic fallback when no
-  model provider is configured.
+  current body is sent once alongside deterministic revision-change
+  metadata. The Slack notification still posts with a deterministic
+  fallback when no model provider is configured. Spec revision history
+  itself always uses deterministic title, status, and line-change
+  summaries and does not make model requests.
 - Slack thread replies and forage capture: when Hive's Slack bot is
   `@`-mentioned, Hive queues a job that reads the thread context and
   asks the agent to draft a short reply, posted back in the same thread.
