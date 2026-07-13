@@ -241,6 +241,16 @@ defmodule Hive.Audit do
 
   def resource_path("drop", _target_id, _metadata), do: "/drops"
 
+  def resource_path("drop_digest", _target_id, %{"week_start" => week_start})
+      when is_binary(week_start) and week_start != "",
+      do: "/drops/digest/#{week_start}"
+
+  def resource_path("drop_digest", _target_id, %{week_start: week_start})
+      when is_binary(week_start) and week_start != "",
+      do: "/drops/digest/#{week_start}"
+
+  def resource_path("drop_digest", _target_id, _metadata), do: "/drops/digest"
+
   def resource_path("drop_source", _target_id, _metadata), do: "/ops/drops"
 
   def resource_path(_target_type, _target_id, _metadata), do: nil

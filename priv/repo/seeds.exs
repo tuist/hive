@@ -10,6 +10,7 @@ alias Hive.Forage.Grafana
 alias Hive.Domains
 alias Hive.Domains.GitHubRepository
 alias Hive.Domains.Domain
+alias Hive.Drops.WeeklyDigest
 alias Hive.Projects
 alias Hive.Projects.Project
 alias Hive.Projects.Webhook
@@ -878,6 +879,47 @@ Enum.each(drop_fixtures, fn fixture ->
     Hive.Drops.replace_drop_domains(drop, [domain.id])
   end
 end)
+
+weekly_digest_drops =
+  Hive.Drops.list_drops_between(~D[2026-06-15], ~D[2026-06-20], user: nil)
+
+weekly_digest_attrs = %{
+  week_start: ~D[2026-06-15],
+  week_end: ~D[2026-06-19],
+  status: :published,
+  title: "The week Hive made its connective tissue visible",
+  summary:
+    "A week of making product changes easier to follow, with richer context in Slack and a clearer home for the work behind Hive.",
+  body: """
+  Most infrastructure work earns attention only when it fails. The changes in [Drops](/drops) this week moved in the other direction. They made the quiet connections between a release, a conversation, and the people responsible for the work easier to see.
+
+  ## Context where the conversation happens
+
+  Hive links now open into useful previews inside Slack. A spec, a forage item, a domain, or a drop can carry its title and a short explanation into the thread where someone shared it. It is a small interaction, but it changes the rhythm of a conversation. People can understand why a link matters before deciding whether to leave the thread.
+
+  Workspace management also moved into Ops. That gives connected services a clearer home and makes the operational shape of Hive visible to the people responsible for it. The interface follows the ownership instead of asking administrators to remember which account page happens to contain the setting.
+
+  ## The quieter work underneath
+
+  Cache hit ratios improved for larger workspaces during the same week. It is the kind of change that is easiest to describe with a number, but the useful part is what the number gives back: fewer rebuilds, shorter interruptions, and less time spent waiting for work that has already been done.
+
+  These changes do not form a traditional release theme. They form something more practical. Each one shortens the distance between an event and the context needed to act on it. That is what made the week feel coherent, and it is the kind of progress a weekly digest should preserve.
+  """,
+  drop_ids: Enum.map(weekly_digest_drops, & &1.id),
+  published_at: ~U[2026-06-19 17:00:00Z]
+}
+
+case Repo.get_by(WeeklyDigest, week_start: weekly_digest_attrs.week_start) do
+  nil ->
+    %WeeklyDigest{}
+    |> WeeklyDigest.changeset(weekly_digest_attrs)
+    |> Repo.insert!()
+
+  digest ->
+    digest
+    |> WeeklyDigest.changeset(weekly_digest_attrs)
+    |> Repo.update!()
+end
 
 github_issue_fixtures = [
   {"tuist", "hive",

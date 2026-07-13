@@ -165,6 +165,11 @@ defmodule Hive.AuditTest do
       assert Audit.resource_path("drop", "drop-id", %{"number" => "34"}) == "/drops/34"
     end
 
+    test "uses the week start for a Drops digest" do
+      assert Audit.resource_path("drop_digest", "digest-id", %{"week_start" => "2026-07-06"}) ==
+               "/drops/digest/2026-07-06"
+    end
+
     test "returns nil for a spec without a number (no detail route to land on)" do
       assert Audit.resource_path("spec", "spec-id", %{}) == nil
     end
