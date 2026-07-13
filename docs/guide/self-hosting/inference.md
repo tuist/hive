@@ -153,17 +153,19 @@ Hive currently uses agents for:
   domain attached to its repository.
 - Drop item generation: each GitHub release body is treated as an
   envelope, not as a drop. Hive deterministically fetches the public web
-  addresses referenced by the release, plus a bounded set of addresses
-  discovered in that evidence, before making one model request. The
-  agent receives the fetched issues, pull requests, changelog entries,
-  and docs together and returns one drop item per user-facing improvement
-  that actually landed. A sync evaluates at most five unseen or edited
-  releases per repository, then continues the historical backlog on the
-  next run. Successful, ignored, and provider-rejected evaluations are
-  durable; transient failures use exponential backoff. An edited release
-  is evaluated again only when its content fingerprint changes. When no
-  model provider is configured, GitHub release drop generation is skipped
-  so release envelopes do not pollute the drops timeline.
+  addresses referenced by the release and recursively follows addresses
+  discovered in that evidence, up to 50 fetched references in total,
+  before making one model request. The agent receives the fetched issues,
+  pull requests, changelog entries, and docs together and returns one drop
+  item per user-facing improvement that actually landed. A sync evaluates
+  at most five unseen or edited releases per repository, then continues the
+  historical backlog on the next run. Successful, ignored, and
+  provider-rejected evaluations are durable; transient failures use
+  exponential backoff. An edited release is evaluated again only when its
+  content fingerprint changes, and the complete bounded evidence set is
+  re-evaluated so new context can change item grouping. When no model
+  provider is configured, GitHub release drop generation is skipped so
+  release envelopes do not pollute the drops timeline.
 - Drop domain classification: after a drop item exists, Hive queues a
   job that asks the agent which domains the drop belongs to. When no
   model provider is configured, each drop is linked to every domain

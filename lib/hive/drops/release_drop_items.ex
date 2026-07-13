@@ -15,9 +15,9 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   @max_release_body_length 20_000
   @max_reference_urls 40
-  @max_discovered_reference_urls 10
+  @max_fetched_reference_urls 50
   @fetch_concurrency 8
-  @fetch_timeout 15_000
+  @fetch_timeout 45_000
   @url_re ~r{https?://[^\s<>\]\)"]+}i
 
   @doc """
@@ -61,20 +61,28 @@ defmodule Hive.Drops.ReleaseDropItems do
     seed_urls = reference_urls(repository, release.body || "")
     fetcher = Keyword.get(opts, :fetcher, &FetchUrlContent.fetch/1)
 
-    seed_urls
-    |> fetch_url_batch(fetcher)
-    |> fetch_discovered_references(seed_urls, fetcher)
+    fetch_reference_queue(seed_urls, MapSet.new(seed_urls), fetcher, [])
   end
 
-  defp fetch_discovered_references(references, seed_urls, fetcher) do
-    discovered_urls =
-      references
-      |> Enum.flat_map(&urls_from_reference/1)
-      |> Enum.reject(&(&1 in seed_urls))
-      |> Enum.uniq()
-      |> Enum.take(@max_discovered_reference_urls)
+  defp fetch_reference_queue([], _seen_urls, _fetcher, references), do: references
 
-    references ++ fetch_url_batch(discovered_urls, fetcher)
+  defp fetch_reference_queue(urls, seen_urls, fetcher, references) do
+    remaining = @max_fetched_reference_urls - length(references)
+    urls = Enum.take(urls, remaining)
+    fetched_references = fetch_url_batch(urls, fetcher)
+    references = references ++ fetched_references
+    remaining = @max_fetched_reference_urls - length(references)
+
+    discovered_urls =
+      fetched_references
+      |> Enum.flat_map(&urls_from_reference/1)
+      |> Enum.reject(&MapSet.member?(seen_urls, &1))
+      |> Enum.uniq()
+      |> Enum.take(remaining)
+
+    seen_urls = Enum.reduce(discovered_urls, seen_urls, &MapSet.put(&2, &1))
+
+    fetch_reference_queue(discovered_urls, seen_urls, fetcher, references)
   end
 
   defp fetch_url_batch([], _fetcher), do: []
