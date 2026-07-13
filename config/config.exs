@@ -77,8 +77,7 @@ config :hive, Oban,
        {"@reboot", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper},
-       {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper},
-       {"*/15 * * * *", Hive.Specs.RevisionSummarySweeper}
+       {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper}
      ]}
   ]
 

@@ -40,7 +40,7 @@ defmodule Hive.Agents.Tools.CreateForageItem do
           items: %{type: "string"},
           maxItems: 3,
           description:
-            "Optional GitHub labels to apply when forage intake creates a GitHub issue. Only use labels provided by the conversation context."
+            "Optional GitHub labels to apply when forage intake creates a GitHub issue. Only use exact labels returned by list_github_labels during this run."
         }
       }
     }

@@ -8,6 +8,7 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
   alias Hive.Drops
   alias Hive.Drops.Drop
   alias Hive.Drops.DomainClassificationWorker
+  alias Hive.Drops.GitHubReleaseIngestion
   alias Hive.Drops.GitHubReleasesSyncer
   alias Hive.Domains
   alias Hive.Forage.GitHubIssue
@@ -289,11 +290,126 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
     assert_received {:generated_release, "v1.2.3"}
     refute_received {:generated_release, "v1.2.4"}
+
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, release, _opts ->
+                 send(parent, {:retried_release, release.tag_name})
+                 {:error, error}
+               end
+             )
+
+    assert_received {:retried_release, "v1.2.4"}
+    refute_received {:retried_release, "v1.2.3"}
+
+    ingestions =
+      GitHubReleaseIngestion
+      |> where([ingestion], ingestion.github_repository_id == ^repository.id)
+      |> Repo.all()
+
+    assert Enum.all?(ingestions, &(&1.status == :rejected))
+    assert Enum.all?(ingestions, &(&1.attempt_count == 1))
+    assert Enum.all?(ingestions, &is_nil(&1.next_attempt_at))
+  end
+
+  test "backs off transient failures instead of retrying every sync" do
+    repository = setup_repository!()
+    owner = repository.owner
+    name = repository.name
+    parent = self()
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    stub(Releases, :list_releases, fn %{owner: ^owner, name: ^name} ->
+      {:ok, [%Releases{tag_name: "v2.0.0", body: "Release evidence"}]}
+    end)
+
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, _release, _opts -> {:error, :timeout} end
+             )
+
+    ingestion = Repo.get_by!(GitHubReleaseIngestion, github_repository_id: repository.id)
+    assert ingestion.status == :failed
+    assert ingestion.attempt_count == 1
+    assert DateTime.compare(ingestion.next_attempt_at, DateTime.utc_now()) == :gt
+
+    assert :ok =
+             GitHubReleasesSyncer.sync_now(
+               item_generator: fn _repository, _release, _opts ->
+                 send(parent, :unexpected_transient_failure_retry)
+                 {:ok, []}
+               end
+             )
+
+    refute_received :unexpected_transient_failure_retry
+  end
+
+  test "evaluates at most five historical releases per repository per sync" do
+    repository = setup_repository!()
+    owner = repository.owner
+    name = repository.name
+    parent = self()
+
+    releases = Enum.map(1..7, &%Releases{tag_name: "v3.0.#{&1}", body: "Release #{&1}"})
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+    stub(Releases, :list_releases, fn %{owner: ^owner, name: ^name} -> {:ok, releases} end)
+
+    item_generator = fn _repository, release, _opts ->
+      send(parent, {:evaluated_release, release.tag_name})
+      {:ok, []}
+    end
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+
+    assert Enum.map(1..5, &"v3.0.#{&1}") == receive_release_tags(5)
+    refute_receive {:evaluated_release, _tag}
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+    assert ["v3.0.6", "v3.0.7"] == receive_release_tags(2)
+    refute_receive {:evaluated_release, _tag}
+
+    assert Repo.aggregate(GitHubReleaseIngestion, :count) == 7
+  end
+
+  test "reevaluates a release when its content fingerprint changes" do
+    repository = setup_repository!()
+    owner = repository.owner
+    name = repository.name
+    parent = self()
+    body = start_supervised!({Agent, fn -> "Original notes" end})
+
+    stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
+
+    stub(Releases, :list_releases, fn %{owner: ^owner, name: ^name} ->
+      {:ok, [%Releases{tag_name: "v4.0.0", body: Agent.get(body, & &1)}]}
+    end)
+
+    item_generator = fn _repository, release, _opts ->
+      send(parent, {:evaluated_release_body, release.body})
+      {:ok, []}
+    end
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+    assert_receive {:evaluated_release_body, "Original notes"}
+
+    assert :ok = Agent.update(body, fn _body -> "Edited notes" end)
+
+    assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+    assert_receive {:evaluated_release_body, "Edited notes"}
   end
 
   test "perform/1 maps skipped syncs to success" do
     stub(Client, :config, fn -> {:error, {:not_configured, [:private_key]}} end)
 
     assert :ok = GitHubReleasesSyncer.perform(%Oban.Job{})
+  end
+
+  defp receive_release_tags(count) do
+    Enum.map(1..count, fn _index ->
+      assert_receive {:evaluated_release, tag}
+      tag
+    end)
   end
 end

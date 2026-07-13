@@ -188,6 +188,7 @@ defmodule Hive.Agents.Tools.FetchUrlContent do
 
     content =
       html
+      |> main_content()
       |> strip_tag_contents("script")
       |> strip_tag_contents("style")
       |> strip_tag_contents("noscript")
@@ -206,6 +207,13 @@ defmodule Hive.Agents.Tools.FetchUrlContent do
       |> normalize_plain_text()
 
     {title, content}
+  end
+
+  defp main_content(html) do
+    case Regex.run(~r/<main\b[^>]*>(.*?)<\/main>/is, html, capture: :all_but_first) do
+      [main | _rest] -> main
+      _other -> html
+    end
   end
 
   defp strip_tag_contents(html, tag) do

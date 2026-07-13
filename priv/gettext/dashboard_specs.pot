@@ -11,7 +11,7 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:849
+#: lib/hive_web/components/spec_components.ex:827
 #, elixir-autogen, elixir-format
 msgid "%{count} additions"
 msgstr ""
@@ -26,7 +26,7 @@ msgstr ""
 msgid "%{count} drafts"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:854
+#: lib/hive_web/components/spec_components.ex:832
 #, elixir-autogen, elixir-format
 msgid "%{count} removals"
 msgstr ""
@@ -46,36 +46,36 @@ msgstr ""
 msgid "%{title} · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:846
+#: lib/hive_web/components/spec_components.ex:824
 #, elixir-autogen, elixir-format
 msgid "1 addition"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:851
+#: lib/hive_web/components/spec_components.ex:829
 #, elixir-autogen, elixir-format
 msgid "1 removal"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:439
+#: lib/hive_web/components/spec_components.ex:435
 #, elixir-autogen, elixir-format
 msgid "Add context or feedback with Markdown"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:737
+#: lib/hive_web/components/spec_components.ex:733
 #, elixir-autogen, elixir-format
 msgid "Anonymous"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:716
+#: lib/hive_web/components/spec_components.ex:712
 #: lib/hive_web/live/spec_live/index.ex:118
-#: lib/hive_web/live/spec_live/show.ex:450
+#: lib/hive_web/live/spec_live/show.ex:439
 #, elixir-autogen, elixir-format
 msgid "Approved"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:721
+#: lib/hive_web/components/spec_components.ex:717
 #: lib/hive_web/live/spec_live/index.ex:123
-#: lib/hive_web/live/spec_live/show.ex:455
+#: lib/hive_web/live/spec_live/show.ex:444
 #, elixir-autogen, elixir-format
 msgid "Archived"
 msgstr ""
@@ -85,12 +85,12 @@ msgstr ""
 msgid "Ask for review"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:476
+#: lib/hive_web/components/spec_components.ex:472
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:497
+#: lib/hive_web/components/spec_components.ex:493
 #, elixir-autogen, elixir-format
 msgid "Body"
 msgstr ""
@@ -100,80 +100,80 @@ msgstr ""
 msgid "Build-ready work"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:339
-#: lib/hive_web/components/spec_components.ex:390
+#: lib/hive_web/components/spec_components.ex:335
+#: lib/hive_web/components/spec_components.ex:386
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:623
+#: lib/hive_web/components/spec_components.ex:619
 #, elixir-autogen, elixir-format
 msgid "Choose status"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:685
+#: lib/hive_web/components/spec_components.ex:681
 #, elixir-autogen, elixir-format
 msgid "Choose visibility"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:438
-#: lib/hive_web/components/spec_components.ex:446
+#: lib/hive_web/components/spec_components.ex:434
+#: lib/hive_web/components/spec_components.ex:442
 #, elixir-autogen, elixir-format
 msgid "Comment"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:218
+#: lib/hive_web/live/spec_live/show.ex:207
 #, elixir-autogen, elixir-format
 msgid "Comment added."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:332
+#: lib/hive_web/live/spec_live/show.ex:321
 #, elixir-autogen, elixir-format
 msgid "Comment deleted."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:310
-#: lib/hive_web/live/spec_live/show.ex:347
+#: lib/hive_web/live/spec_live/show.ex:299
+#: lib/hive_web/live/spec_live/show.ex:336
 #, elixir-autogen, elixir-format
 msgid "Comment not found."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:290
+#: lib/hive_web/live/spec_live/show.ex:279
 #, elixir-autogen, elixir-format
 msgid "Comment updated."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:254
+#: lib/hive_web/components/spec_components.ex:250
 #, elixir-autogen, elixir-format
 msgid "Comments"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:418
+#: lib/hive_web/components/spec_components.ex:414
 #, elixir-autogen, elixir-format
 msgid "Comments are available to authenticated users."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:259
+#: lib/hive_web/components/spec_components.ex:255
 #, elixir-autogen, elixir-format
 msgid "Comments from contributors and members will appear here."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:108
+#: lib/hive_web/live/spec_live/show.ex:97
 #, elixir-autogen, elixir-format
 msgid "Configure a Slack notification channel with spec review requests enabled first."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:127
+#: lib/hive_web/live/spec_live/show.ex:116
 #, elixir-autogen, elixir-format
 msgid "Couldn't request review for this spec."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:204
+#: lib/hive_web/live/spec_live/show.ex:193
 #, elixir-autogen, elixir-format
 msgid "Couldn't update the spec status."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:525
+#: lib/hive_web/components/spec_components.ex:521
 #, elixir-autogen, elixir-format
 msgid "Create domains before linking them to specs."
 msgstr ""
@@ -183,57 +183,57 @@ msgstr ""
 msgid "Create spec"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:553
-#: lib/hive_web/live/spec_live/show.ex:463
+#: lib/hive_web/components/spec_components.ex:549
+#: lib/hive_web/live/spec_live/show.ex:452
 #, elixir-autogen, elixir-format
 msgid "Created directly"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:758
+#: lib/hive_web/components/spec_components.ex:754
 #, elixir-autogen, elixir-format
 msgid "Created the initial %{status} proposal."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:349
+#: lib/hive_web/components/spec_components.ex:345
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:314
-#: lib/hive_web/components/spec_components.ex:315
+#: lib/hive_web/components/spec_components.ex:310
+#: lib/hive_web/components/spec_components.ex:311
 #, elixir-autogen, elixir-format
 msgid "Delete comment"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:306
+#: lib/hive_web/components/spec_components.ex:302
 #, elixir-autogen, elixir-format
 msgid "Delete comment?"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:327
+#: lib/hive_web/components/spec_components.ex:323
 #, elixir-autogen, elixir-format
 msgid "Deleting this comment will permanently remove it from the spec discussion"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:499
+#: lib/hive_web/components/spec_components.ex:495
 #, elixir-autogen, elixir-format
 msgid "Describe the problem, proposal, tradeoffs, and acceptance criteria with Markdown."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:491
+#: lib/hive_web/components/spec_components.ex:487
 #, elixir-autogen, elixir-format
 msgid "Describe the proposal in one sentence"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:92
-#: lib/hive_web/components/spec_components.ex:513
+#: lib/hive_web/components/spec_components.ex:93
+#: lib/hive_web/components/spec_components.ex:509
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:714
+#: lib/hive_web/components/spec_components.ex:710
 #: lib/hive_web/live/spec_live/index.ex:116
-#: lib/hive_web/live/spec_live/show.ex:448
+#: lib/hive_web/live/spec_live/show.ex:437
 #, elixir-autogen, elixir-format
 msgid "Draft"
 msgstr ""
@@ -268,9 +268,9 @@ msgstr ""
 msgid "Edit an existing domain proposal."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:298
-#: lib/hive_web/components/spec_components.ex:299
-#: lib/hive_web/components/spec_components.ex:381
+#: lib/hive_web/components/spec_components.ex:294
+#: lib/hive_web/components/spec_components.ex:295
+#: lib/hive_web/components/spec_components.ex:377
 #, elixir-autogen, elixir-format
 msgid "Edit comment"
 msgstr ""
@@ -286,7 +286,7 @@ msgstr ""
 msgid "Editable proposal"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:23
+#: lib/hive_web/components/spec_components.ex:24
 #: lib/hive_web/controllers/feed_controller.ex:304
 #: lib/hive_web/live/spec_live/index.ex:16
 #, elixir-autogen, elixir-format
@@ -298,17 +298,17 @@ msgstr ""
 msgid "Edited"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:742
+#: lib/hive_web/components/spec_components.ex:738
 #, elixir-autogen, elixir-format
 msgid "Edited by %{email}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:744
+#: lib/hive_web/components/spec_components.ex:740
 #, elixir-autogen, elixir-format
 msgid "Edited by an unknown user"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:48
+#: lib/hive_web/components/spec_components.ex:49
 #, elixir-autogen, elixir-format
 msgid "Filter"
 msgstr ""
@@ -325,14 +325,14 @@ msgstr ""
 msgid "Hive · Specs"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:719
+#: lib/hive_web/components/spec_components.ex:715
 #: lib/hive_web/live/spec_live/index.ex:121
-#: lib/hive_web/live/spec_live/show.ex:453
+#: lib/hive_web/live/spec_live/show.ex:442
 #, elixir-autogen, elixir-format
 msgid "In progress"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:748
+#: lib/hive_web/components/spec_components.ex:744
 #, elixir-autogen, elixir-format
 msgid "Initial draft"
 msgstr ""
@@ -342,18 +342,18 @@ msgstr ""
 msgid "Member only"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:286
+#: lib/hive_web/components/spec_components.ex:282
 #, elixir-autogen, elixir-format
 msgid "New"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:78
+#: lib/hive_web/components/spec_components.ex:79
 #: lib/hive_web/components/spec_components.ex:148
 #, elixir-autogen, elixir-format
 msgid "New activity"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:33
+#: lib/hive_web/components/spec_components.ex:34
 #: lib/hive_web/live/spec_live/new.ex:25
 #: lib/hive_web/live/spec_live/new.ex:167
 #, elixir-autogen, elixir-format
@@ -365,23 +365,23 @@ msgstr ""
 msgid "New spec · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:257
+#: lib/hive_web/components/spec_components.ex:253
 #, elixir-autogen, elixir-format
 msgid "No comments yet"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:102
+#: lib/hive_web/components/spec_components.ex:103
 #, elixir-autogen, elixir-format
 msgid "No domains"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:60
+#: lib/hive_web/components/spec_components.ex:61
 #, elixir-autogen, elixir-format
 msgid "No specs yet"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:156
-#: lib/hive_web/live/spec_live/show.ex:185
+#: lib/hive_web/live/spec_live/show.ex:145
+#: lib/hive_web/live/spec_live/show.ex:174
 #, elixir-autogen, elixir-format
 msgid "Only organization members can change spec status."
 msgstr ""
@@ -398,24 +398,24 @@ msgstr ""
 msgid "Only organization members can edit specs."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:119
+#: lib/hive_web/live/spec_live/show.ex:108
 #, elixir-autogen, elixir-format
 msgid "Only organization members can request review."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:80
+#: lib/hive_web/live/spec_live/show.ex:79
 #, elixir-autogen, elixir-format
 msgid "Only organization members can view this private spec."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:343
+#: lib/hive_web/live/spec_live/show.ex:332
 #, elixir-autogen, elixir-format
 msgid "Only the comment author can delete this comment."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:245
-#: lib/hive_web/live/spec_live/show.ex:273
-#: lib/hive_web/live/spec_live/show.ex:300
+#: lib/hive_web/live/spec_live/show.ex:234
+#: lib/hive_web/live/spec_live/show.ex:262
+#: lib/hive_web/live/spec_live/show.ex:289
 #, elixir-autogen, elixir-format
 msgid "Only the comment author can edit this comment."
 msgstr ""
@@ -425,53 +425,53 @@ msgstr ""
 msgid "Optimistic locking"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:717
+#: lib/hive_web/components/spec_components.ex:713
 #: lib/hive_web/live/spec_live/index.ex:119
-#: lib/hive_web/live/spec_live/show.ex:451
+#: lib/hive_web/live/spec_live/show.ex:440
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:362
-#: lib/hive_web/components/spec_components.ex:363
+#: lib/hive_web/components/spec_components.ex:358
+#: lib/hive_web/components/spec_components.ex:359
 #, elixir-autogen, elixir-format
 msgid "Permalink to comment"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:688
-#: lib/hive_web/components/spec_components.ex:694
-#: lib/hive_web/live/spec_live/show.ex:465
+#: lib/hive_web/components/spec_components.ex:684
+#: lib/hive_web/components/spec_components.ex:690
+#: lib/hive_web/live/spec_live/show.ex:454
 #, elixir-autogen, elixir-format
 msgid "Private"
 msgstr ""
 
 #: lib/hive_web/components/spec_components.ex:196
-#: lib/hive_web/components/spec_components.ex:485
+#: lib/hive_web/components/spec_components.ex:481
 #, elixir-autogen, elixir-format
 msgid "Proposal"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:715
+#: lib/hive_web/components/spec_components.ex:711
 #: lib/hive_web/live/spec_live/index.ex:117
-#: lib/hive_web/live/spec_live/show.ex:449
+#: lib/hive_web/live/spec_live/show.ex:438
 #, elixir-autogen, elixir-format
 msgid "Proposed"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:695
-#: lib/hive_web/live/spec_live/show.ex:466
+#: lib/hive_web/components/spec_components.ex:691
+#: lib/hive_web/live/spec_live/show.ex:455
 #, elixir-autogen, elixir-format
 msgid "Public"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:718
+#: lib/hive_web/components/spec_components.ex:714
 #: lib/hive_web/live/spec_live/index.ex:120
-#: lib/hive_web/live/spec_live/show.ex:452
+#: lib/hive_web/live/spec_live/show.ex:441
 #, elixir-autogen, elixir-format
 msgid "Rejected"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:101
+#: lib/hive_web/live/spec_live/show.ex:90
 #, elixir-autogen, elixir-format
 msgid "Review request posted to Slack."
 msgstr ""
@@ -486,12 +486,12 @@ msgstr ""
 msgid "Revision %{revision}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:751
+#: lib/hive_web/components/spec_components.ex:747
 #, elixir-autogen, elixir-format
 msgid "Revision %{revision} summary"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:397
+#: lib/hive_web/components/spec_components.ex:393
 #, elixir-autogen, elixir-format
 msgid "Save comment"
 msgstr ""
@@ -501,46 +501,46 @@ msgstr ""
 msgid "Save spec"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:791
+#: lib/hive_web/components/spec_components.ex:810
 #, elixir-autogen, elixir-format
 msgid "Saved the revision without changing the proposal text."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:720
+#: lib/hive_web/components/spec_components.ex:716
 #: lib/hive_web/live/spec_live/index.ex:122
-#: lib/hive_web/live/spec_live/show.ex:454
+#: lib/hive_web/live/spec_live/show.ex:443
 #, elixir-autogen, elixir-format
 msgid "Shipped"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:421
+#: lib/hive_web/components/spec_components.ex:417
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:415
+#: lib/hive_web/components/spec_components.ex:411
 #, elixir-autogen, elixir-format
 msgid "Sign in to comment"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:224
+#: lib/hive_web/live/spec_live/show.ex:213
 #, elixir-autogen, elixir-format
 msgid "Sign in to comment."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:89
+#: lib/hive_web/components/spec_components.ex:90
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:471
-#: lib/hive_web/components/spec_components.ex:551
-#: lib/hive_web/live/spec_live/show.ex:461
+#: lib/hive_web/components/spec_components.ex:467
+#: lib/hive_web/components/spec_components.ex:547
+#: lib/hive_web/live/spec_live/show.ex:450
 #, elixir-autogen, elixir-format
 msgid "Source: %{title}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:70
+#: lib/hive_web/components/spec_components.ex:71
 #: lib/hive_web/live/spec_live/edit.ex:15
 #: lib/hive_web/live/spec_live/new.ex:17
 #, elixir-autogen, elixir-format
@@ -557,7 +557,7 @@ msgstr ""
 msgid "Spec created."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/show.ex:173
+#: lib/hive_web/live/spec_live/show.ex:162
 #, elixir-autogen, elixir-format
 msgid "Spec marked as %{status}."
 msgstr ""
@@ -568,15 +568,15 @@ msgid "Spec updated."
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:176
-#: lib/hive_web/components/spec_components.ex:22
-#: lib/hive_web/components/spec_components.ex:43
+#: lib/hive_web/components/spec_components.ex:23
+#: lib/hive_web/components/spec_components.ex:44
 #: lib/hive_web/live/spec_live/index.ex:17
 #: lib/hive_web/live/spec_live/index.ex:29
 #, elixir-autogen, elixir-format
 msgid "Specs"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:61
+#: lib/hive_web/components/spec_components.ex:62
 #, elixir-autogen, elixir-format
 msgid "Specs that match the active filters will appear here."
 msgstr ""
@@ -586,30 +586,25 @@ msgstr ""
 msgid "Specs · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:106
+#: lib/hive_web/components/spec_components.ex:107
 #: lib/hive_web/components/spec_components.ex:224
-#: lib/hive_web/components/spec_components.ex:618
+#: lib/hive_web/components/spec_components.ex:614
 #: lib/hive_web/live/spec_live/index.ex:96
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:764
-#, elixir-autogen, elixir-format
-msgid "The agent-written summary is not available yet."
-msgstr ""
-
-#: lib/hive_web/components/spec_components.ex:307
+#: lib/hive_web/components/spec_components.ex:303
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:799
+#: lib/hive_web/components/spec_components.ex:818
 #, elixir-autogen, elixir-format
 msgid "This revision %{changes} and %{last_change}."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:794
+#: lib/hive_web/components/spec_components.ex:813
 #, elixir-autogen, elixir-format
 msgid "This revision %{change}."
 msgstr ""
@@ -619,57 +614,57 @@ msgstr ""
 msgid "This spec changed elsewhere. Pull the latest version before saving."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:490
+#: lib/hive_web/components/spec_components.ex:486
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:382
+#: lib/hive_web/components/spec_components.ex:378
 #, elixir-autogen, elixir-format
 msgid "Update your comment with Markdown"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:113
+#: lib/hive_web/components/spec_components.ex:114
 #, elixir-autogen, elixir-format
 msgid "Updated"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:680
+#: lib/hive_web/components/spec_components.ex:676
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:472
+#: lib/hive_web/components/spec_components.ex:468
 #, elixir-autogen, elixir-format
 msgid "Write a proposal directly."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:823
+#: lib/hive_web/components/spec_components.ex:795
 #, elixir-autogen, elixir-format
 msgid "expanded the proposal body with %{count}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:781
+#: lib/hive_web/components/spec_components.ex:778
 #, elixir-autogen, elixir-format
 msgid "moved the status from %{previous} to %{current}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:779
+#: lib/hive_web/components/spec_components.ex:775
 #, elixir-autogen, elixir-format
 msgid "renamed the spec"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:828
+#: lib/hive_web/components/spec_components.ex:800
 #, elixir-autogen, elixir-format
 msgid "trimmed the proposal body with %{count}"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:833
+#: lib/hive_web/components/spec_components.ex:805
 #, elixir-autogen, elixir-format
 msgid "updated the proposal body"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:815
+#: lib/hive_web/components/spec_components.ex:787
 #, elixir-autogen, elixir-format
 msgid "updated the proposal body with %{added} and %{removed}"
 msgstr ""
@@ -680,27 +675,27 @@ msgid "A spec write is in progress. Try again in a moment."
 msgstr ""
 
 #: lib/hive_web/live/spec_live/edit.ex:115
-#: lib/hive_web/live/spec_live/show.ex:193
+#: lib/hive_web/live/spec_live/show.ex:182
 #, elixir-autogen, elixir-format
 msgid "This spec is being written by another request. Try again in a moment."
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:654
+#: lib/hive_web/components/spec_components.ex:650
 #, elixir-autogen, elixir-format
 msgid "Choose project"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:687
+#: lib/hive_web/components/spec_components.ex:683
 #, elixir-autogen, elixir-format
 msgid "Inherit from project"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:556
+#: lib/hive_web/components/spec_components.ex:552
 #, elixir-autogen, elixir-format
 msgid "No project"
 msgstr ""
 
-#: lib/hive_web/components/spec_components.ex:649
+#: lib/hive_web/components/spec_components.ex:645
 #, elixir-autogen, elixir-format
 msgid "Project"
 msgstr ""

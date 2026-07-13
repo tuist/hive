@@ -9,7 +9,6 @@ defmodule HiveWeb.SpecLive.ShowTest do
   alias Hive.Repo
   alias Hive.Slack.Installation
   alias Hive.Specs
-  alias Hive.Specs.RevisionSummaries
 
   defp create_domain!(attrs) do
     {:ok, project} =
@@ -448,7 +447,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     refute html =~ "<code>Import comments.</code>"
   end
 
-  test "prefers the agent-written summary when present", %{conn: conn} do
+  test "prefers a stored historical summary when present", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
 
     {:ok, spec} =
@@ -472,7 +471,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
     revision = Enum.find(spec.revisions, &(&1.revision == 2))
 
     revision
-    |> Hive.Specs.Revision.summary_changeset("Added a discussion import step.")
+    |> Ecto.Changeset.change(summary: "Added a discussion import step.")
     |> Hive.Repo.update!()
 
     {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
@@ -552,45 +551,5 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     {:ok, _view, html2} = live(author_conn, ~p"/specs/#{spec.number}")
     refute html2 =~ "New activity"
-  end
-
-  test "refreshes expanded revision rows when the agent summary is stored", %{conn: conn} do
-    {conn, user} = sign_in(conn, "alice@example.com")
-
-    {:ok, spec} =
-      Specs.create_spec(
-        %{"title" => "GitHub sign-in", "body" => "Keep source URL visible."},
-        user
-      )
-
-    {:ok, spec} =
-      Specs.update_spec(
-        Specs.get_spec!(spec.id),
-        %{
-          "title" => "GitHub sign-in",
-          "body" => "Keep source URL visible.\nImport discussion comments.",
-          "lock_version" => spec.lock_version
-        },
-        user
-      )
-
-    spec = Specs.get_spec!(spec.id)
-    revision = Enum.find(spec.revisions, &(&1.revision == 2))
-
-    {:ok, view, _html} = live(conn, ~p"/specs/#{spec.number}")
-
-    html = render_click(view, "toggle-expand", %{"row-key" => "revision-#{revision.id}"})
-    assert html =~ "This revision expanded the proposal body with 1 addition."
-
-    runner = fn _input ->
-      {:ok, %{summary: "Added discussion comment importing to the proposal."}}
-    end
-
-    assert {:ok, _updated} = RevisionSummaries.summarize(revision.id, runner: runner)
-    :sys.get_state(view.pid)
-
-    html = render(view)
-    assert html =~ "Added discussion comment importing to the proposal."
-    refute html =~ "This revision expanded the proposal body with 1 addition."
   end
 end

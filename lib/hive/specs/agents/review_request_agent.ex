@@ -26,10 +26,9 @@ defmodule Hive.Specs.Agents.ReviewRequestAgent do
       revision: %{type: "integer"},
       title: %{type: "string"},
       status: %{type: "string"},
-      body: %{type: "string"},
       summary: %{type: "string"}
     },
-    required: ["revision", "title", "status", "body"],
+    required: ["revision", "title", "status"],
     additionalProperties: false
   }
 
@@ -83,7 +82,7 @@ defmodule Hive.Specs.Agents.ReviewRequestAgent do
       another review is useful now.
     - The review focus should contain one to three concrete questions or
       risk areas reviewers should check.
-    - Base the message only on the current spec and latest revision.
+    - Base the message only on the current spec and latest revision metadata.
     - Do not include Slack user mentions; Hive adds them separately.
     - Do not invent deadlines, approvals, or reviewers.
     - Use Slack-flavored markdown where helpful: `*bold*`, backticks for

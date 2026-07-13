@@ -1,184 +1,97 @@
 defmodule Hive.Specs.RevisionSummaries do
   @moduledoc """
-  Builds the input for the revision summary agent and stores its output
-  on the revision so the spec history shows what actually changed.
+  Describes a spec revision from deterministic changes between snapshots.
   """
 
-  import Ecto.Query
-
-  require Logger
-
-  alias Hive.Agents.Sessions
-  alias Hive.Repo
-  alias Hive.Specs
-  alias Hive.Specs.Agents.RevisionSummaryAgent
   alias Hive.Specs.Revision
 
-  @max_body_length 8_000
-
-  @doc """
-  Generates and persists the summary for the given revision id.
-
-  Returns `:skipped` when there is no previous revision to diff against
-  (the very first draft) or when the LLM is not configured.
-  """
-  def summarize(revision_id, opts \\ []) when is_binary(revision_id) do
-    case Repo.get(Revision, revision_id) do
-      nil -> {:error, :not_found}
-      revision -> summarize_revision(revision, opts)
-    end
+  def describe(%Revision{revision: 1, status: status}, nil) do
+    "Created the initial #{humanize_status(status)} proposal."
   end
 
-  def summarize_revision(%Revision{} = revision, opts \\ []) do
-    case fetch_previous(revision) do
-      nil ->
-        :skipped
-
-      %Revision{} = previous ->
-        runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
-        input = build_input(previous, revision)
-
-        input
-        |> runner.()
-        |> handle_agent_result(revision, input, opts)
-    end
-  end
-
-  def build_input(%Revision{} = previous, %Revision{} = current) do
-    %{
-      previous: %{
-        title: previous.title,
-        status: Atom.to_string(previous.status),
-        body: truncate(previous.body)
-      },
-      current: %{
-        title: current.title,
-        status: Atom.to_string(current.status),
-        body: truncate(current.body)
-      }
-    }
-  end
-
-  defp fetch_previous(%Revision{spec_id: spec_id, revision: revision}) when revision > 1 do
-    Revision
-    |> where([r], r.spec_id == ^spec_id and r.revision == ^(revision - 1))
-    |> Repo.one()
-  end
-
-  defp fetch_previous(_revision), do: nil
-
-  defp run_agent(input, opts) do
-    agent = Keyword.get(opts, :agent, RevisionSummaryAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
-
-    Sessions.run_operation(agent, :summarize_revision, input, agent_opts)
-  end
-
-  defp run_freeform_agent(input, opts) do
-    agent = Keyword.get(opts, :agent, RevisionSummaryAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
-
-    Sessions.run(agent, freeform_prompt(input), agent_opts)
-  end
-
-  defp handle_agent_result(result, revision, input, opts) do
-    case result do
-      {:ok, %{summary: summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, %{"summary" => summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, summary} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, _other} ->
-        run_fallback(revision, input, :invalid_agent_response, opts)
-
-      {:error, :llm_not_configured} ->
-        :skipped
-
-      {:error, reason} ->
-        if fallback_reason?(reason),
-          do: run_fallback(revision, input, reason, opts),
-          else: {:error, reason}
-    end
-  end
-
-  defp run_fallback(revision, input, reason, opts) do
-    Logger.warning(
-      "[Specs.RevisionSummaries] Structured summary failed with #{inspect(reason)}; retrying as freeform"
-    )
-
-    fallback_runner = Keyword.get(opts, :fallback_runner, &run_freeform_agent(&1, opts))
-
-    case fallback_runner.(input) do
-      {:ok, %{summary: summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, %{"summary" => summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, summary} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, _other} ->
-        {:error, {:fallback_failed, reason, :invalid_agent_response}}
-
-      {:error, fallback_reason} ->
-        {:error, {:fallback_failed, reason, fallback_reason}}
-    end
-  end
-
-  defp fallback_reason?(:no_result_submitted), do: true
-  defp fallback_reason?({:invalid_output, _reason}), do: true
-  defp fallback_reason?(_reason), do: false
-
-  defp freeform_prompt(input) do
-    """
-    Compare the previous and current revisions and return only the revision
-    summary text. Do not wrap the summary in JSON or Markdown.
-
-    Previous revision:
-    ```json
-    #{JSON.encode!(input.previous)}
-    ```
-
-    Current revision:
-    ```json
-    #{JSON.encode!(input.current)}
-    ```
-    """
-  end
-
-  defp store_summary(revision, summary) do
+  def describe(%Revision{} = revision, %Revision{} = previous) do
     revision
-    |> Revision.summary_changeset(normalize_summary(summary))
-    |> Repo.update()
-    |> case do
-      {:ok, revision} ->
-        Specs.broadcast_revision_summary_updated(revision)
-        {:ok, revision}
+    |> changes(previous)
+    |> Enum.map(&format_change/1)
+    |> humanize_changes()
+  end
 
-      {:error, changeset} ->
-        {:error, changeset}
+  def describe(%Revision{}, nil), do: "Saved the revision."
+
+  def changes(%Revision{}, nil), do: []
+
+  def changes(%Revision{} = revision, %Revision{} = previous) do
+    [
+      revision.title != previous.title && :renamed,
+      revision.status != previous.status &&
+        {:status_changed, previous.status, revision.status},
+      revision.body != previous.body && body_change(previous.body, revision.body)
+    ]
+    |> Enum.reject(&(&1 in [false, nil]))
+  end
+
+  defp humanize_changes([]), do: "Saved the revision without changing the proposal text."
+
+  defp humanize_changes(changes) do
+    changes
+    |> join_changes()
+    |> then(&(String.capitalize(&1) <> "."))
+  end
+
+  defp join_changes([change]), do: change
+
+  defp join_changes(changes) do
+    {last_change, previous_changes} = List.pop_at(changes, -1)
+    "#{Enum.join(previous_changes, ", ")} and #{last_change}"
+  end
+
+  defp format_change(:renamed), do: "renamed the spec"
+
+  defp format_change({:status_changed, previous, current}) do
+    "moved the status from #{humanize_status(previous)} to #{humanize_status(current)}"
+  end
+
+  defp format_change({:body_changed, added, removed}) do
+    cond do
+      added > 0 and removed > 0 ->
+        "updated the proposal body with #{change_count(added, "addition")} and #{change_count(removed, "removal")}"
+
+      added > 0 ->
+        "expanded the proposal body with #{change_count(added, "addition")}"
+
+      removed > 0 ->
+        "trimmed the proposal body with #{change_count(removed, "removal")}"
+
+      true ->
+        "updated the proposal body"
     end
   end
 
-  defp normalize_summary(summary) do
-    summary
-    |> String.trim()
-    |> String.replace(~r/\A```(?:text|markdown)?\s*/i, "")
-    |> String.replace(~r/\s*```\z/, "")
-    |> String.trim()
-    |> String.slice(0, 500)
+  defp body_change(previous_body, body) do
+    previous_lines = meaningful_lines(previous_body)
+    lines = meaningful_lines(body)
+
+    diff = List.myers_difference(previous_lines, lines)
+    added = diff |> Keyword.get_values(:ins) |> List.flatten() |> length()
+    removed = diff |> Keyword.get_values(:del) |> List.flatten() |> length()
+
+    {:body_changed, added, removed}
   end
 
-  defp truncate(value) when is_binary(value) do
-    if String.length(value) > @max_body_length,
-      do: String.slice(value, 0, @max_body_length) <> "...",
-      else: value
+  defp meaningful_lines(nil), do: []
+
+  defp meaningful_lines(body) do
+    body
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
   end
 
-  defp truncate(_value), do: ""
+  defp change_count(1, label), do: "1 #{label}"
+  defp change_count(count, label), do: "#{count} #{label}s"
+
+  defp humanize_status(status) when is_atom(status),
+    do: status |> Atom.to_string() |> String.replace("_", " ")
+
+  defp humanize_status(status), do: to_string(status)
 end

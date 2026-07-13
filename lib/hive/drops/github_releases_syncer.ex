@@ -32,6 +32,8 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.Domains.GitHubRepository
   alias Hive.Repo
 
+  @max_release_evaluations_per_sync 5
+
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     case sync_now() do
@@ -108,37 +110,86 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   end
 
   defp sync_releases(domains, repository, releases, state) do
-    Enum.reduce_while(releases, :ok, fn release, :ok ->
-      case upsert_release_items(domains, repository, release, state) do
-        :ok -> {:cont, :ok}
-        {:halt, _reason} = result -> {:halt, result}
-      end
-    end)
+    releases
+    |> Enum.reduce_while(
+      0,
+      &sync_release(&1, &2, domains, repository, state)
+    )
+    |> case do
+      {:halt, _reason} = result -> result
+      _evaluation_count -> :ok
+    end
+  end
+
+  defp sync_release(
+         _release,
+         evaluation_count,
+         _domains,
+         _repository,
+         _state
+       )
+       when evaluation_count >= @max_release_evaluations_per_sync,
+       do: {:halt, evaluation_count}
+
+  defp sync_release(release, evaluation_count, domains, repository, state) do
+    case upsert_release_items(domains, repository, release, state) do
+      :not_due -> {:cont, evaluation_count}
+      :evaluated -> {:cont, evaluation_count + 1}
+      {:halt, _reason} = result -> {:halt, result}
+    end
   end
 
   defp upsert_release_items(domains, repository, %Releases{} = release, state) do
     release_key = release_key(release)
+    release_fingerprint = release_fingerprint(release)
 
-    if Drops.github_release_processed?(repository, release_key) do
+    if Drops.github_release_due?(repository, release_key, release_fingerprint) do
+      generate_release_items(
+        domains,
+        repository,
+        release,
+        release_key,
+        release_fingerprint,
+        state
+      )
+    else
       Logger.debug(
         "[Drops.GitHubReleasesSyncer] Skipping already-processed release #{release_label(repository, release)}"
       )
 
-      :ok
-    else
-      generate_release_items(domains, repository, release, release_key, state)
+      :not_due
     end
   end
 
-  defp generate_release_items(domains, repository, release, release_key, state) do
+  defp generate_release_items(
+         domains,
+         repository,
+         release,
+         release_key,
+         release_fingerprint,
+         state
+       ) do
     case state.item_generator.(repository, release, state.generator_opts) do
       {:ok, items} ->
         case upsert_release_item_drops(domains, repository, release, items) do
           :ok ->
-            record_release_ingestion(repository, release, release_key, items)
+            record_release_ingestion(
+              repository,
+              release,
+              release_key,
+              release_fingerprint,
+              items
+            )
 
-          {:error, _reason} ->
-            :ok
+          {:error, persist_reason} ->
+            Drops.record_github_release_failure(
+              repository,
+              release_key,
+              release_fingerprint,
+              persist_reason
+            )
+
+            :evaluated
         end
 
       :skipped ->
@@ -146,20 +197,48 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
           "[Drops.GitHubReleasesSyncer] Skipping release #{release_label(repository, release)} because release drop item generation is unavailable"
         )
 
+        {:halt, :release_generation_unavailable}
+
       {:error, reason} ->
-        handle_release_generation_error(repository, release, reason)
+        handle_release_generation_error(
+          repository,
+          release,
+          release_key,
+          release_fingerprint,
+          reason
+        )
     end
   end
 
-  defp handle_release_generation_error(repository, release, reason) do
+  defp handle_release_generation_error(
+         repository,
+         release,
+         release_key,
+         release_fingerprint,
+         reason
+       ) do
     sanitized_reason = Errors.sanitize_reason(reason)
+
+    case Drops.record_github_release_failure(
+           repository,
+           release_key,
+           release_fingerprint,
+           sanitized_reason,
+           retry?: not Errors.hard_failure?(reason)
+         ) do
+      {:ok, _ingestion} ->
+        :ok
+
+      {:error, record_reason} ->
+        log_release_failure_record_error(repository, release, record_reason)
+    end
 
     Logger.warning(
       "[Drops.GitHubReleasesSyncer] Failed to generate drop items for release " <>
         release_label(repository, release) <> ": " <> inspect(sanitized_reason)
     )
 
-    if Errors.hard_failure?(reason), do: {:halt, reason}, else: :ok
+    if Errors.hard_failure?(reason), do: {:halt, reason}, else: :evaluated
   end
 
   defp upsert_release_item_drops(domains, repository, release, items) do
@@ -172,24 +251,42 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end)
   end
 
-  defp record_release_ingestion(repository, release, release_key, items) do
+  defp record_release_ingestion(
+         repository,
+         release,
+         release_key,
+         release_fingerprint,
+         items
+       ) do
     status = if items == [], do: :ignored, else: :generated
 
     case Drops.record_github_release_ingestion(repository, %{
            release_key: release_key,
-           release_fingerprint: release_fingerprint(release),
+           release_fingerprint: release_fingerprint,
            status: status,
-           items_count: length(items)
+           items_count: length(items),
+           attempt_count: 0,
+           last_error: nil,
+           next_attempt_at: nil
          }) do
       {:ok, _ingestion} ->
-        :ok
+        :evaluated
 
       {:error, reason} ->
         Logger.warning(
           "[Drops.GitHubReleasesSyncer] Failed to record release ingestion for " <>
             release_label(repository, release) <> ": " <> inspect(reason)
         )
+
+        :evaluated
     end
+  end
+
+  defp log_release_failure_record_error(repository, release, reason) do
+    Logger.warning(
+      "[Drops.GitHubReleasesSyncer] Failed to record retry state for " <>
+        release_label(repository, release) <> ": " <> inspect(reason)
+    )
   end
 
   defp upsert_release_item_drop(domains, repository, release, item) do

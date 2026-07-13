@@ -15,7 +15,6 @@ defmodule Hive.Specs do
   alias Hive.Repo
   alias Hive.Specs.Comment
   alias Hive.Specs.Revision
-  alias Hive.Specs.RevisionSummaryWorker
   alias Hive.Specs.Spec
   alias Hive.Specs.View
   alias Hive.Slack
@@ -51,14 +50,6 @@ defmodule Hive.Specs do
 
   def subscribe_to_spec(id) when is_binary(id) do
     Phoenix.PubSub.subscribe(@pubsub, spec_topic(id))
-  end
-
-  def broadcast_revision_summary_updated(%Revision{} = revision) do
-    Phoenix.PubSub.broadcast(
-      @pubsub,
-      spec_topic(revision.spec_id),
-      {:revision_summary_updated, revision.id}
-    )
   end
 
   def effective_visibility(%Spec{visibility_override: :private}), do: :private
@@ -579,26 +570,16 @@ defmodule Hive.Specs do
   def delete_comment(_comment, _user), do: {:error, :unauthorized}
 
   defp create_revision(%Spec{} = spec, %User{} = user) do
-    with {:ok, revision} <-
-           %Revision{}
-           |> Revision.changeset(%{
-             revision: spec.lock_version,
-             title: spec.title,
-             body: spec.body,
-             status: spec.status,
-             spec_id: spec.id,
-             user_id: user.id
-           })
-           |> Repo.insert() do
-      schedule_revision_summary(revision)
-      {:ok, revision}
-    end
-  end
-
-  defp schedule_revision_summary(%Revision{revision: 1}), do: :skipped
-
-  defp schedule_revision_summary(%Revision{id: id}) do
-    RevisionSummaryWorker.enqueue(id)
+    %Revision{}
+    |> Revision.changeset(%{
+      revision: spec.lock_version,
+      title: spec.title,
+      body: spec.body,
+      status: spec.status,
+      spec_id: spec.id,
+      user_id: user.id
+    })
+    |> Repo.insert()
   end
 
   defp spec_topic(id), do: "#{@topic_prefix}:#{id}"

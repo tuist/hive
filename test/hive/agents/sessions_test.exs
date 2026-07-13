@@ -76,4 +76,32 @@ defmodule Hive.Agents.SessionsTest do
     assert activity.actor_name == "NoopAgent"
     assert activity.metadata["agent_model"] == "anthropic:claude-haiku-4-5"
   end
+
+  test "caps structured operations at three turns by default" do
+    stub(Agents, :client_opts, fn ->
+      {:ok, [model: "anthropic:claude-haiku-4-5", api_key: "key"]}
+    end)
+
+    expect(Condukt.Operation, :run, fn NoopAgent, :handle, %{prompt: "work"}, opts ->
+      assert opts[:max_turns] == 3
+      {:ok, %{reply: "done"}}
+    end)
+
+    assert {:ok, %{reply: "done"}} =
+             Sessions.run_operation(NoopAgent, :handle, %{prompt: "work"})
+  end
+
+  test "allows a structured operation to request a lower turn cap" do
+    stub(Agents, :client_opts, fn ->
+      {:ok, [model: "anthropic:claude-haiku-4-5", api_key: "key"]}
+    end)
+
+    expect(Condukt.Operation, :run, fn NoopAgent, :handle, %{prompt: "work"}, opts ->
+      assert opts[:max_turns] == 1
+      {:ok, %{reply: "done"}}
+    end)
+
+    assert {:ok, %{reply: "done"}} =
+             Sessions.run_operation(NoopAgent, :handle, %{prompt: "work"}, max_turns: 1)
+  end
 end

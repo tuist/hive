@@ -67,7 +67,6 @@ defmodule HiveWeb.SpecLive.Show do
          Specs.can_request_review?(spec, socket.assigns.current_user)
        )
        |> assign(:viewer_last_viewed_at, viewer_last_viewed_at)
-       |> assign(:revision_summaries_enabled?, Hive.Agents.enabled?())
        |> assign(:expanded_revision_rows, [])
        |> assign(:editing_comment_id, nil)
        |> assign_comment_form(Specs.change_comment())
@@ -81,16 +80,6 @@ defmodule HiveWeb.SpecLive.Show do
        )
        |> redirect(to: ~p"/specs")}
     end
-  end
-
-  @impl true
-  def handle_info({:revision_summary_updated, _revision_id}, socket) do
-    spec = Specs.get_spec!(socket.assigns.spec.id)
-
-    {:noreply,
-     socket
-     |> assign_spec(spec)
-     |> assign(OpenGraph.assigns(open_graph(spec)))}
   end
 
   @impl true
@@ -516,7 +505,6 @@ defmodule HiveWeb.SpecLive.Show do
         current_path={@current_path}
         expanded_revision_rows={@expanded_revision_rows}
         viewer_last_viewed_at={@viewer_last_viewed_at}
-        revision_summaries_enabled?={@revision_summaries_enabled?}
       />
     </Layouts.dashboard>
     """

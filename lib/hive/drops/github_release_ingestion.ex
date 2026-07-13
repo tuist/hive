@@ -7,7 +7,7 @@ defmodule Hive.Drops.GitHubReleaseIngestion do
 
   import Ecto.Changeset
 
-  @statuses [:generated, :ignored]
+  @statuses [:generated, :ignored, :failed, :rejected]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -17,6 +17,9 @@ defmodule Hive.Drops.GitHubReleaseIngestion do
     field :release_fingerprint, :string
     field :status, Ecto.Enum, values: @statuses
     field :items_count, :integer
+    field :attempt_count, :integer, default: 0
+    field :last_error, :string
+    field :next_attempt_at, :utc_datetime
     field :processed_at, :utc_datetime
 
     belongs_to :github_repository, Hive.Domains.GitHubRepository
@@ -35,6 +38,9 @@ defmodule Hive.Drops.GitHubReleaseIngestion do
       :release_fingerprint,
       :status,
       :items_count,
+      :attempt_count,
+      :last_error,
+      :next_attempt_at,
       :processed_at
     ])
     |> validate_required([
@@ -44,12 +50,14 @@ defmodule Hive.Drops.GitHubReleaseIngestion do
       :release_fingerprint,
       :status,
       :items_count,
+      :attempt_count,
       :processed_at
     ])
     |> validate_length(:release_key_hash, is: 64)
     |> validate_length(:release_fingerprint, is: 64)
     |> validate_inclusion(:status, @statuses)
     |> validate_number(:items_count, greater_than_or_equal_to: 0)
+    |> validate_number(:attempt_count, greater_than_or_equal_to: 0)
     |> foreign_key_constraint(:github_repository_id)
     |> unique_constraint([:github_repository_id, :release_key_hash],
       name: :drop_release_ingestions_repo_key_index
