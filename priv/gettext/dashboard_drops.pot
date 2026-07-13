@@ -107,7 +107,7 @@ msgstr ""
 msgid "Domains"
 msgstr ""
 
-#: lib/hive/drops.ex:378
+#: lib/hive/drops.ex:456
 #: lib/hive_web/live/drops_live/show.ex:189
 #: lib/hive_web/live/drops_live/show.ex:213
 #, elixir-autogen, elixir-format
@@ -172,7 +172,7 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: lib/hive/drops.ex:375
+#: lib/hive/drops.ex:453
 #: lib/hive_web/live/drops_live/index.ex:403
 #, elixir-autogen, elixir-format
 msgid "GitHub"
@@ -323,7 +323,7 @@ msgstr ""
 msgid "Published"
 msgstr ""
 
-#: lib/hive/drops.ex:376
+#: lib/hive/drops.ex:454
 #: lib/hive_web/live/drops_live/index.ex:404
 #: lib/hive_web/live/drops_live/subscribe.ex:168
 #, elixir-autogen, elixir-format
