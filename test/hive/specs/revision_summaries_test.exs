@@ -1,8 +1,11 @@
 defmodule Hive.Specs.RevisionSummariesTest do
   use Hive.DataCase, async: true
+  use Mimic
 
+  alias Hive.Agents.Sessions
   alias Hive.Accounts
   alias Hive.Specs
+  alias Hive.Specs.Agents.RevisionSummaryAgent
   alias Hive.Specs.RevisionSummaries
 
   defp user(email \\ "alice@example.com") do
@@ -52,10 +55,13 @@ defmodule Hive.Specs.RevisionSummariesTest do
     assert updated.summary == "Added a discussion import step and dedup behavior."
 
     assert_receive {:summary_input, input}
-    assert input.previous.body =~ "Import comments."
-    assert input.current.body =~ "Import discussion comments."
+    assert input.body_diff =~ "- Import comments."
+    assert input.body_diff =~ "+ Import discussion comments."
+    assert input.body_diff =~ "+ Skip duplicates."
     assert input.previous.title == "GitHub sign-in"
     assert input.previous.status == "draft"
+    refute Map.has_key?(input.previous, :body)
+    refute Map.has_key?(input.current, :body)
   end
 
   test "summarize/2 accepts string-keyed agent output" do
@@ -66,30 +72,30 @@ defmodule Hive.Specs.RevisionSummariesTest do
     assert updated.summary == "Reworded the proposal."
   end
 
-  test "summarize/2 falls back to a freeform run when structured output is missing" do
+  test "summarize/2 makes one bounded freeform model request" do
     {revision, _spec} = two_revisions()
-    runner = fn _input -> {:error, :no_result_submitted} end
-    fallback_runner = fn _input -> {:ok, "Added discussion import and deduplication details."} end
+
+    expect(Sessions, :run, fn RevisionSummaryAgent, prompt, opts ->
+      assert prompt =~ "Body diff:"
+      assert prompt =~ "+ Import discussion comments."
+      assert opts[:load_project_instructions] == false
+      assert opts[:max_turns] == 1
+
+      {:ok, "Added discussion import and deduplication details."}
+    end)
 
     assert {:ok, updated} =
-             RevisionSummaries.summarize(revision.id,
-               runner: runner,
-               fallback_runner: fallback_runner
-             )
+             RevisionSummaries.summarize(revision.id)
 
     assert updated.summary == "Added discussion import and deduplication details."
   end
 
-  test "summarize/2 returns a fallback error when both agent paths fail" do
+  test "summarize/2 does not start a second model path after an error" do
     {revision, _spec} = two_revisions()
     runner = fn _input -> {:error, :no_result_submitted} end
-    fallback_runner = fn _input -> {:error, :provider_rejected_request} end
 
-    assert {:error, {:fallback_failed, :no_result_submitted, :provider_rejected_request}} =
-             RevisionSummaries.summarize(revision.id,
-               runner: runner,
-               fallback_runner: fallback_runner
-             )
+    assert {:error, :no_result_submitted} =
+             RevisionSummaries.summarize(revision.id, runner: runner)
   end
 
   test "summarize/2 broadcasts after storing the summary" do

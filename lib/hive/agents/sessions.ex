@@ -27,6 +27,7 @@ defmodule Hive.Agents.Sessions do
   # HTTP connection instead of lingering for Condukt's 5-minute default and
   # starving the shared LLM connection pool. Callers may override `:timeout`.
   @run_timeout :timer.minutes(2)
+  @operation_max_turns 3
 
   @doc """
   Runs an agent module with the given prompt. Caller-supplied opts are
@@ -66,6 +67,8 @@ defmodule Hive.Agents.Sessions do
   """
   def run_operation(agent_module, operation_name, args, opts \\ [])
       when is_atom(agent_module) and is_atom(operation_name) and is_map(args) and is_list(opts) do
+    opts = Keyword.put_new(opts, :max_turns, @operation_max_turns)
+
     with {:ok, llm_opts} <- Hive.Agents.client_opts() do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
         Condukt.Operation.run(agent_module, operation_name, args, run_opts(llm_opts, opts))

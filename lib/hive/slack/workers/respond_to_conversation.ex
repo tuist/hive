@@ -18,6 +18,9 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   @update_interval_ms 900
   @min_update_chars 80
+  @max_thread_chars 48_000
+  @max_message_chars 8_000
+  @max_label_description_chars 240
 
   @no_reply_message "I couldn't complete that request because the assistant did not produce a reply. Please try again with a bit more detail."
   @interrupted_message "I couldn't finish that reply. Please try again."
@@ -88,12 +91,18 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
     with {:ok, thread_messages} <-
            thread_messages(installation, slack_channel_id, thread_ts, local_messages),
-         %{mention_text: mention_text, mention_user: mention_user, thread: thread} <-
+         %{
+           mention_text: mention_text,
+           mention_user: mention_user,
+           thread: thread,
+           omitted_thread_messages: omitted_thread_messages
+         } <-
            summarize_thread(thread_messages, message_ts),
          requester_user = resolve_requester_user(installation, mention_user),
          input = %{
            "mention_text" => mention_text,
            "thread" => thread,
+           "omitted_thread_messages" => omitted_thread_messages,
            "can_create_forage_item" => not is_nil(requester_user),
            "available_github_labels" => available_github_labels(requester_user)
          },
@@ -189,17 +198,67 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     |> Enum.sort_by(&slack_ts_sort_key(&1["ts"]))
   end
 
-  defp summarize_thread([], _message_ts), do: %{mention_text: "", mention_user: nil, thread: []}
+  defp summarize_thread([], _message_ts) do
+    %{mention_text: "", mention_user: nil, thread: [], omitted_thread_messages: 0}
+  end
 
   defp summarize_thread(messages, message_ts) do
+    {thread, omitted_thread_messages} = compact_thread(messages, message_ts)
+
     mention_message =
-      Enum.find(messages, &(&1["ts"] == message_ts)) || List.last(messages) || %{}
+      Enum.find(thread, &(&1["ts"] == message_ts)) || List.last(thread) || %{}
 
     %{
       mention_text: Map.get(mention_message, "text", ""),
       mention_user: Map.get(mention_message, "user"),
-      thread: messages
+      thread: thread,
+      omitted_thread_messages: omitted_thread_messages
     }
+  end
+
+  defp compact_thread(messages, message_ts) do
+    messages = Enum.map(messages, &truncate_message_context/1)
+    root = List.first(messages)
+    mention = Enum.find(messages, &(&1["ts"] == message_ts))
+
+    protected =
+      [root, mention]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq_by(& &1["ts"])
+
+    protected_timestamps = MapSet.new(protected, & &1["ts"])
+    remaining_chars = max(@max_thread_chars - thread_size(protected), 0)
+
+    {recent, _remaining_chars} =
+      messages
+      |> Enum.reject(&MapSet.member?(protected_timestamps, &1["ts"]))
+      |> Enum.reverse()
+      |> Enum.reduce({[], remaining_chars}, fn message, {selected, available} ->
+        size = thread_size([message])
+
+        if size <= available do
+          {[message | selected], available - size}
+        else
+          {selected, available}
+        end
+      end)
+
+    selected =
+      (protected ++ recent)
+      |> Enum.uniq_by(& &1["ts"])
+      |> Enum.sort_by(&slack_ts_sort_key(&1["ts"]))
+
+    {selected, length(messages) - length(selected)}
+  end
+
+  defp truncate_message_context(message) do
+    Map.update(message, "text", "", &String.slice(&1, 0, @max_message_chars))
+  end
+
+  defp thread_size(messages) do
+    Enum.reduce(messages, 0, fn message, total ->
+      total + String.length(message["user"] || "") + String.length(message["text"] || "") + 32
+    end)
   end
 
   defp message_context(%Message{} = message) do
@@ -269,8 +328,13 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp github_label_context(%{name: name} = label) do
     %{"name" => name}
-    |> maybe_put("description", Map.get(label, :description))
+    |> maybe_put("description", truncate_label_description(Map.get(label, :description)))
   end
+
+  defp truncate_label_description(description) when is_binary(description),
+    do: String.slice(description, 0, @max_label_description_chars)
+
+  defp truncate_label_description(_description), do: nil
 
   defp maybe_put(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)

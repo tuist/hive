@@ -48,7 +48,6 @@ defmodule Hive.Specs.ReviewRequests do
         revision: revision_number(revision, spec),
         title: revision_title(revision, spec),
         status: revision_status(revision, spec),
-        body: revision_body(revision, spec),
         summary: revision_summary(revision)
       },
       requester: user_input(requester),
@@ -204,9 +203,6 @@ defmodule Hive.Specs.ReviewRequests do
 
   defp revision_status(%Revision{status: status}, _spec), do: status(status)
   defp revision_status(_revision, %Spec{status: status}), do: status(status)
-
-  defp revision_body(%Revision{body: body}, _spec), do: truncate(body)
-  defp revision_body(_revision, %Spec{body: body}), do: truncate(body)
 
   defp revision_summary(%Revision{summary: summary}) when is_binary(summary), do: summary
   defp revision_summary(_revision), do: ""

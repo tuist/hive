@@ -305,6 +305,56 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
              })
   end
 
+  test "perform/1 bounds long threads while retaining the root, mention, and recent context" do
+    installation = installation!()
+    channel = channel!(installation, "C-long-thread")
+    installation_id = installation.id
+
+    messages =
+      Enum.map(1..12, fn index ->
+        prefix =
+          case index do
+            1 -> "root-context "
+            2 -> "<@U-bot> summarize the decision "
+            12 -> "latest-context "
+            _index -> "middle-#{index} "
+          end
+
+        %{
+          "user" => "U#{index}",
+          "text" => prefix <> String.duplicate("x", 8_000),
+          "ts" => "#{index}.0"
+        }
+      end)
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-long-thread",
+                                        "1.0" ->
+      {:ok, %{"ok" => true, "messages" => messages}}
+    end)
+
+    stub_agent_stream("bounded", fn prompt ->
+      assert prompt =~ "root-context"
+      assert prompt =~ "Mention text:\n<@U-bot> summarize the decision"
+      assert prompt =~ "latest-context"
+
+      assert prompt =~
+               "Earlier messages omitted because the thread exceeded the context budget:\n7"
+
+      assert String.length(prompt) < 57_000
+    end)
+
+    stub_slack_stream(installation_id, "C-long-thread", "1.0", "bounded", "13.0")
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
   test "perform/1 falls back to the locally stored mention when Slack thread history fails" do
     installation = installation!()
     channel = channel!(installation, "C-local")

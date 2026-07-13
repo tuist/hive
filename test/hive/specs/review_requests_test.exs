@@ -71,8 +71,9 @@ defmodule Hive.Specs.ReviewRequestsTest do
 
     assert_receive {:review_request_input, input}
     assert input.spec.title == "GitHub sign-in"
+    assert input.spec.body =~ "Refresh tokens"
     assert input.last_revision.revision == 2
-    assert input.last_revision.body =~ "Refresh tokens"
+    refute Map.has_key?(input.last_revision, :body)
     assert input.requester.email == "alice@example.com"
     assert input.commenters == [%{email: "bob@example.com", name: "Bob"}]
   end

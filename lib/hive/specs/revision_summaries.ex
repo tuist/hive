@@ -6,8 +6,6 @@ defmodule Hive.Specs.RevisionSummaries do
 
   import Ecto.Query
 
-  require Logger
-
   alias Hive.Agents.Sessions
   alias Hive.Repo
   alias Hive.Specs
@@ -40,7 +38,7 @@ defmodule Hive.Specs.RevisionSummaries do
 
         input
         |> runner.()
-        |> handle_agent_result(revision, input, opts)
+        |> handle_agent_result(revision)
     end
   end
 
@@ -48,14 +46,13 @@ defmodule Hive.Specs.RevisionSummaries do
     %{
       previous: %{
         title: previous.title,
-        status: Atom.to_string(previous.status),
-        body: truncate(previous.body)
+        status: Atom.to_string(previous.status)
       },
       current: %{
         title: current.title,
-        status: Atom.to_string(current.status),
-        body: truncate(current.body)
-      }
+        status: Atom.to_string(current.status)
+      },
+      body_diff: body_diff(previous.body, current.body)
     }
   end
 
@@ -69,19 +66,17 @@ defmodule Hive.Specs.RevisionSummaries do
 
   defp run_agent(input, opts) do
     agent = Keyword.get(opts, :agent, RevisionSummaryAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
 
-    Sessions.run_operation(agent, :summarize_revision, input, agent_opts)
+    agent_opts =
+      opts
+      |> Keyword.get(:agent_opts, [])
+      |> Keyword.put_new(:load_project_instructions, false)
+      |> Keyword.put_new(:max_turns, 1)
+
+    Sessions.run(agent, summary_prompt(input), agent_opts)
   end
 
-  defp run_freeform_agent(input, opts) do
-    agent = Keyword.get(opts, :agent, RevisionSummaryAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
-
-    Sessions.run(agent, freeform_prompt(input), agent_opts)
-  end
-
-  defp handle_agent_result(result, revision, input, opts) do
+  defp handle_agent_result(result, revision) do
     case result do
       {:ok, %{summary: summary}} when is_binary(summary) ->
         store_summary(revision, summary)
@@ -93,60 +88,29 @@ defmodule Hive.Specs.RevisionSummaries do
         store_summary(revision, summary)
 
       {:ok, _other} ->
-        run_fallback(revision, input, :invalid_agent_response, opts)
+        {:error, :invalid_agent_response}
 
       {:error, :llm_not_configured} ->
         :skipped
 
       {:error, reason} ->
-        if fallback_reason?(reason),
-          do: run_fallback(revision, input, reason, opts),
-          else: {:error, reason}
+        {:error, reason}
     end
   end
 
-  defp run_fallback(revision, input, reason, opts) do
-    Logger.warning(
-      "[Specs.RevisionSummaries] Structured summary failed with #{inspect(reason)}; retrying as freeform"
-    )
-
-    fallback_runner = Keyword.get(opts, :fallback_runner, &run_freeform_agent(&1, opts))
-
-    case fallback_runner.(input) do
-      {:ok, %{summary: summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, %{"summary" => summary}} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, summary} when is_binary(summary) ->
-        store_summary(revision, summary)
-
-      {:ok, _other} ->
-        {:error, {:fallback_failed, reason, :invalid_agent_response}}
-
-      {:error, fallback_reason} ->
-        {:error, {:fallback_failed, reason, fallback_reason}}
-    end
-  end
-
-  defp fallback_reason?(:no_result_submitted), do: true
-  defp fallback_reason?({:invalid_output, _reason}), do: true
-  defp fallback_reason?(_reason), do: false
-
-  defp freeform_prompt(input) do
+  defp summary_prompt(input) do
     """
     Compare the previous and current revisions and return only the revision
-    summary text. Do not wrap the summary in JSON or Markdown.
+    summary text. Do not wrap the summary in structured data or Markdown.
 
-    Previous revision:
-    ```json
-    #{JSON.encode!(input.previous)}
-    ```
+    Previous title: #{input.previous.title}
+    Previous status: #{input.previous.status}
+    Current title: #{input.current.title}
+    Current status: #{input.current.status}
 
-    Current revision:
-    ```json
-    #{JSON.encode!(input.current)}
+    Body diff:
+    ```diff
+    #{input.body_diff}
     ```
     """
   end
@@ -181,4 +145,26 @@ defmodule Hive.Specs.RevisionSummaries do
   end
 
   defp truncate(_value), do: ""
+
+  defp body_diff(previous, current) do
+    previous = previous |> truncate() |> String.split("\n")
+    current = current |> truncate() |> String.split("\n")
+
+    previous
+    |> List.myers_difference(current)
+    |> Enum.map_join("\n", &format_diff_part/1)
+  end
+
+  defp format_diff_part({:del, lines}), do: Enum.map_join(lines, "\n", &("- " <> &1))
+  defp format_diff_part({:ins, lines}), do: Enum.map_join(lines, "\n", &("+ " <> &1))
+
+  defp format_diff_part({:eq, lines}) when length(lines) <= 6,
+    do: Enum.map_join(lines, "\n", &("  " <> &1))
+
+  defp format_diff_part({:eq, lines}) do
+    omitted = length(lines) - 6
+
+    (Enum.take(lines, 3) ++ ["… #{omitted} unchanged lines …"] ++ Enum.take(lines, -3))
+    |> Enum.map_join("\n", &("  " <> &1))
+  end
 end

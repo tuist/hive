@@ -12,10 +12,9 @@ defmodule Hive.Specs.Agents.RevisionSummaryAgent do
     type: "object",
     properties: %{
       title: %{type: "string"},
-      status: %{type: "string"},
-      body: %{type: "string"}
+      status: %{type: "string"}
     },
-    required: ["title", "status", "body"],
+    required: ["title", "status"],
     additionalProperties: false
   }
 
@@ -23,9 +22,10 @@ defmodule Hive.Specs.Agents.RevisionSummaryAgent do
     type: "object",
     properties: %{
       previous: @revision_schema,
-      current: @revision_schema
+      current: @revision_schema,
+      body_diff: %{type: "string"}
     },
-    required: ["previous", "current"],
+    required: ["previous", "current", "body_diff"],
     additionalProperties: false
   }
 
@@ -50,6 +50,10 @@ defmodule Hive.Specs.Agents.RevisionSummaryAgent do
     fields. The history view already shows the revision number, who
     edited it, and when, so the summary should only describe the substance
     of the edit.
+
+    The body is provided as a line-oriented diff. Lines beginning with `-`
+    were removed, lines beginning with `+` were added, and unmarked context
+    lines are unchanged.
 
     Rules:
     - Write one or two sentences in past tense, starting with a verb.

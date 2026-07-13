@@ -36,10 +36,17 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     properties: %{
       mention_text: %{type: "string"},
       thread: %{type: "array", items: @message_schema},
+      omitted_thread_messages: %{type: "integer"},
       can_create_forage_item: %{type: "boolean"},
       available_github_labels: %{type: "array", items: @github_label_schema}
     },
-    required: ["mention_text", "thread", "can_create_forage_item", "available_github_labels"],
+    required: [
+      "mention_text",
+      "thread",
+      "omitted_thread_messages",
+      "can_create_forage_item",
+      "available_github_labels"
+    ],
     additionalProperties: false
   }
 
@@ -100,6 +107,9 @@ defmodule Hive.Slack.Agents.ConversationAgent do
 
     Thread messages, oldest first:
     #{format_thread(input["thread"] || [])}
+
+    Earlier messages omitted because the thread exceeded the context budget:
+    #{input["omitted_thread_messages"] || 0}
 
     Reply as normal Slack message text. Do not wrap the reply in a structured object.
     """
