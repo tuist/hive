@@ -202,6 +202,24 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(href="/domains")
     end
 
+    test "links the Drops section and nests only Digests beneath it" do
+      html = render_dashboard(assigns(%{current_path: "/drops/digest"}))
+
+      assert html =~ ~s(<details data-part="drops" open>)
+      assert html =~ ~s(data-part="section-link")
+      assert html =~ ~s(href="/drops")
+
+      [_before_drops, drops_section] =
+        String.split(html, ~s(<details data-part="drops" open>), parts: 2)
+
+      [_drops_summary, nested_routes] =
+        String.split(drops_section, ~s(<div data-part="content">), parts: 2)
+
+      assert nested_routes =~ ~s(href="/drops/digest")
+      assert nested_routes =~ "Digests"
+      refute nested_routes =~ ~s(href="/drops")
+    end
+
     test "does not show account navigation in the dashboard sidebar" do
       html = render_dashboard(assigns(%{signed_in?: true, current_path: "/account/identities"}))
 

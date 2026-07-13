@@ -13,6 +13,7 @@ defmodule HiveWeb.FeedController do
 
   alias Hive.Auth
   alias Hive.Drops
+  alias Hive.Drops.WeeklyDigests
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Domains
@@ -42,6 +43,12 @@ defmodule HiveWeb.FeedController do
 
   def drops_atom(conn, params), do: send_feed(conn, :atom, drops_feed(conn, params))
   def drops_rss(conn, params), do: send_feed(conn, :rss, drops_feed(conn, params))
+
+  def drops_digest_atom(conn, _params),
+    do: send_feed(conn, :atom, drops_digest_feed(conn))
+
+  def drops_digest_rss(conn, _params),
+    do: send_feed(conn, :rss, drops_digest_feed(conn))
 
   def domain_atom(conn, %{"id" => id}), do: serve_domain(conn, id, :atom)
   def domain_rss(conn, %{"id" => id}), do: serve_domain(conn, id, :rss)
@@ -196,6 +203,24 @@ defmodule HiveWeb.FeedController do
     }
   end
 
+  defp drops_digest_feed(conn) do
+    digests = WeeklyDigests.list_published()
+
+    %{
+      id: feed_id(conn),
+      title: dgettext("dashboard_drops", "Hive · Drops weekly digest"),
+      subtitle:
+        dgettext(
+          "dashboard_drops",
+          "A weekly narration connecting the most meaningful public updates shipped across Hive."
+        ),
+      updated: latest_updated(digests, fn digest -> digest.published_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/drops/digest"),
+      entries: Enum.map(digests, &drop_digest_entry(conn, &1))
+    }
+  end
+
   defp serve_domain_drops(conn, id, format) do
     user = Auth.current_user(conn)
 
@@ -265,6 +290,18 @@ defmodule HiveWeb.FeedController do
       updated: drop.published_at || drop.updated_at,
       url: url,
       summary: drop.body
+    }
+  end
+
+  defp drop_digest_entry(conn, digest) do
+    url = page_url(conn, WeeklyDigests.public_path(digest))
+
+    %{
+      id: url,
+      title: digest.title,
+      updated: digest.published_at,
+      url: url,
+      summary: digest.body
     }
   end
 

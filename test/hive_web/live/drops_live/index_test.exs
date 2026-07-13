@@ -131,6 +131,13 @@ defmodule HiveWeb.DropsLive.IndexTest do
     assert data.highlights == ["2 drops", "GitHub releases", "Changelog feeds"]
   end
 
+  test "links the Drops timeline to the weekly digest index", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/drops")
+
+    assert html =~ ~s(href="/drops/digest")
+    refute html =~ "Latest weekly digest"
+  end
+
   defp insert_drop!(domain, attrs) do
     attrs =
       Map.merge(

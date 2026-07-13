@@ -98,6 +98,8 @@ defmodule HiveWeb.Router do
       get "/specs/rss.xml", FeedController, :specs_rss
       get "/drops/atom.xml", FeedController, :drops_atom
       get "/drops/rss.xml", FeedController, :drops_rss
+      get "/drops/digest/atom.xml", FeedController, :drops_digest_atom
+      get "/drops/digest/rss.xml", FeedController, :drops_digest_rss
       get "/domains/:id/atom.xml", FeedController, :domain_atom
       get "/domains/:id/rss.xml", FeedController, :domain_rss
       get "/domains/:id/drops/atom.xml", FeedController, :domain_drops_atom
@@ -147,6 +149,8 @@ defmodule HiveWeb.Router do
       live "/specs/:number/edit", SpecLive.Edit
       live "/drops", DropsLive.Index
       live "/drops/subscribe", DropsLive.Subscribe
+      live "/drops/digest", DropsLive.Digest
+      live "/drops/digest/:week", DropsLive.Digest
       live "/drops/:number", DropsLive.Show
     end
 

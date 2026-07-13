@@ -473,6 +473,286 @@
   }
 }
 
+#drops-digests {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-7);
+  min-width: 0;
+  width: 100%;
+
+  & > .noora-card,
+  & .noora-card__section {
+    min-width: 0;
+    width: 100%;
+  }
+
+  & [data-part="header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--noora-spacing-6);
+  }
+
+  & [data-part="title-group"] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--noora-spacing-3);
+    max-width: 780px;
+  }
+
+  & [data-part="title-group"] h1 {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+  }
+
+  & [data-part="title-group"] p {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    line-height: 1.6;
+  }
+
+  & [data-part="header-actions"],
+  & [data-part="table-toolbar"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+  }
+
+  & [data-part="table-toolbar"] {
+    justify-content: space-between;
+    margin-bottom: var(--noora-spacing-5);
+  }
+
+  & [data-part="search"] {
+    flex: 1;
+    max-width: 360px;
+  }
+
+  & [data-part="active-filters"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--noora-spacing-2);
+    margin-bottom: var(--noora-spacing-4);
+  }
+
+  & [data-part="table-scroll"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  & #drops-digests-table {
+    min-width: 0;
+
+    & table {
+      table-layout: fixed;
+      min-width: 760px;
+      width: 100%;
+    }
+
+    & th,
+    & td {
+      white-space: normal;
+    }
+
+    & th:nth-child(1),
+    & td:nth-child(1) {
+      width: 22%;
+    }
+
+    & th:nth-child(2),
+    & td:nth-child(2) {
+      width: 48%;
+    }
+
+    & th:nth-child(3),
+    & td:nth-child(3) {
+      width: 14%;
+    }
+
+    & th:nth-child(4),
+    & td:nth-child(4) {
+      width: 16%;
+    }
+  }
+
+  & [data-part="pagination"] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: var(--noora-spacing-4);
+    padding-top: var(--noora-spacing-7);
+  }
+
+  @media (max-width: 960px) {
+    & [data-part="header"],
+    & [data-part="table-toolbar"] {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    & [data-part="header-actions"] {
+      justify-content: flex-start;
+    }
+
+    & [data-part="search"] {
+      max-width: none;
+    }
+  }
+}
+
+#drops-digest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-7);
+  min-width: 0;
+  width: 100%;
+
+  & > .noora-card,
+  & .noora-card__section {
+    min-width: 0;
+    width: 100%;
+  }
+
+  & [data-part="header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--noora-spacing-6);
+  }
+
+  & [data-part="title-group"] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--noora-spacing-3);
+    max-width: 780px;
+  }
+
+  & [data-part="title-group"] h1 {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+  }
+
+  & [data-part="title-group"] p {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    line-height: 1.6;
+  }
+
+  & [data-part="header-actions"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+  }
+
+  & [data-part="edition"] {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: var(--noora-spacing-4) 0;
+
+    & [data-part="week"] {
+      display: block;
+      margin-bottom: var(--noora-spacing-3);
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+    }
+
+    & > h2 {
+      margin: 0 0 var(--noora-spacing-4);
+      color: var(--noora-surface-label-primary);
+      font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+      line-height: 1.25;
+    }
+
+    & [data-part="summary"] {
+      margin: 0 0 var(--noora-spacing-7);
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-regular) var(--noora-font-body-large);
+      line-height: 1.7;
+    }
+
+    & [data-part="body"] {
+      color: var(--noora-surface-label-primary);
+      line-height: 1.75;
+
+      & > *:first-child {
+        margin-top: 0;
+      }
+
+      & > *:last-child {
+        margin-bottom: 0;
+      }
+
+      & h2,
+      & h3,
+      & h4,
+      & h5,
+      & h6 {
+        margin: var(--noora-spacing-7) 0 var(--noora-spacing-3);
+        color: var(--noora-surface-label-primary);
+        font: var(--noora-font-weight-medium) var(--noora-font-heading-medium);
+        line-height: 1.3;
+      }
+
+      & p,
+      & blockquote {
+        margin: 0 0 var(--noora-spacing-5);
+        color: var(--noora-surface-label-secondary);
+        font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+      }
+
+      & strong {
+        color: var(--noora-surface-label-primary);
+        font-weight: var(--noora-font-weight-medium);
+      }
+
+      & a {
+        color: var(--noora-surface-label-primary);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      & blockquote {
+        border-left: 3px solid var(--noora-surface-border-primary);
+        padding-left: var(--noora-spacing-4);
+      }
+    }
+
+    & [data-part="source-note"] {
+      border-top: 1px solid var(--noora-surface-border-primary);
+      margin: var(--noora-spacing-7) 0 0;
+      padding-top: var(--noora-spacing-5);
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    }
+  }
+
+  & [data-part="empty"] {
+    max-width: 680px;
+
+    & p {
+      color: var(--noora-surface-label-secondary);
+      font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
+      line-height: 1.6;
+    }
+  }
+
+  @media (max-width: 960px) {
+    & [data-part="header"] {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    & [data-part="header-actions"] {
+      justify-content: flex-start;
+    }
+  }
+}
+
 .noora-modal #new-drop-source-form,
 .noora-modal [data-part="form"] {
   display: flex;

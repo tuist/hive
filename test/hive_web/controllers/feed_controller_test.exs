@@ -332,6 +332,34 @@ defmodule HiveWeb.FeedControllerTest do
     end
   end
 
+  describe "weekly Drops digest feeds" do
+    test "Atom carries the full narrated edition", %{conn: conn} do
+      insert_drop_digest!()
+
+      conn = get(conn, ~p"/drops/digest/atom.xml")
+      assert response_content_type(conn, :xml) =~ "application/atom+xml"
+      body = response(conn, 200)
+
+      assert body =~ "<title>Hive · Drops weekly digest</title>"
+      assert body =~ "<title>The work moved closer</title>"
+      assert body =~ "/drops/digest/2026-07-06"
+      assert body =~ "The week connected cache work with the operational layer."
+    end
+
+    test "RSS carries the same narrated edition", %{conn: conn} do
+      insert_drop_digest!()
+
+      conn = get(conn, ~p"/drops/digest/rss.xml")
+      assert response_content_type(conn, :xml) =~ "application/rss+xml"
+      body = response(conn, 200)
+
+      assert body =~ ~s(<rss version="2.0")
+      assert body =~ "<title>The work moved closer</title>"
+      assert body =~ "<description>The week connected cache work with the operational layer."
+      assert body =~ "/drops/digest/2026-07-06"
+    end
+  end
+
   describe "feed discovery and dropdown" do
     test "forage page advertises both Atom and RSS feeds", %{conn: conn} do
       body = conn |> get(~p"/forage") |> html_response(200)
@@ -478,6 +506,23 @@ defmodule HiveWeb.FeedControllerTest do
       from(alert in GrafanaAlert, where: alert.id in ^alert_ids),
       set: [domain_id: domain.id]
     )
+  end
+
+  defp insert_drop_digest! do
+    alias Hive.Drops.WeeklyDigest
+
+    %WeeklyDigest{}
+    |> WeeklyDigest.changeset(%{
+      week_start: ~D[2026-07-06],
+      week_end: ~D[2026-07-10],
+      status: :published,
+      title: "The work moved closer",
+      summary: "A connected week.",
+      body: "The week connected cache work with the operational layer.",
+      drop_ids: [Ecto.UUID.generate()],
+      published_at: ~U[2026-07-10 17:00:00Z]
+    })
+    |> Repo.insert!()
   end
 
   describe "GET /domains/:id/rss.xml" do
