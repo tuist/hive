@@ -29,13 +29,17 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
     runner = fn input ->
       assert input.release.repository == "tuist/hive"
 
-      assert input.release.reference_urls == [
+      assert Enum.map(input.release.references, & &1.url) == [
                "https://github.com/tuist/hive/pull/42",
                "https://github.com/tuist/hive/issues/41"
              ]
 
-      assert Enum.map(input.release.references, & &1.url) == input.release.reference_urls
       assert Enum.all?(input.release.references, &(&1.content == "Fetched release evidence"))
+
+      assert Enum.all?(
+               input.release.references,
+               &(Enum.sort(Map.keys(&1)) == [:content, :title, :url])
+             )
 
       {:ok,
        %{
@@ -62,10 +66,10 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
        }}
     end
 
-    fetcher = fn _url ->
+    fetcher = fn url ->
       {:ok,
        %{
-         final_url: "https://github.com/tuist/hive/issues/41",
+         final_url: url,
          title: "Reference",
          content_type: "text/html",
          content: "Fetched release evidence",
@@ -81,6 +85,36 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
                 source_urls: ["https://github.com/tuist/hive/issues/41"]
               }
             ]} =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> true end,
+               fetcher: fetcher,
+               runner: runner
+             )
+  end
+
+  test "keeps failed reference metadata out of the model input" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    successful_url = "https://example.com/shipped"
+    failed_url = "https://example.com/unavailable"
+    release = %Releases{body: "See #{successful_url} and #{failed_url}"}
+
+    fetcher = fn
+      ^successful_url ->
+        {:ok, %{content: "User-facing evidence", final_url: successful_url}}
+
+      ^failed_url ->
+        {:error, "upstream unavailable"}
+    end
+
+    runner = fn input ->
+      assert input.release.references == [
+               %{url: successful_url, content: "User-facing evidence"}
+             ]
+
+      {:ok, %{items: []}}
+    end
+
+    assert {:ok, []} =
              ReleaseDropItems.generate(repository, release,
                agents_enabled?: fn -> true end,
                fetcher: fetcher,

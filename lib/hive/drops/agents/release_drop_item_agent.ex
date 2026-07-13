@@ -14,12 +14,10 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
       url: %{type: "string"},
       final_url: %{type: "string"},
       title: %{type: "string"},
-      content_type: %{type: "string"},
       content: %{type: "string"},
-      truncated: %{type: "boolean"},
-      error: %{type: "string"}
+      truncated: %{type: "boolean"}
     },
-    required: ["url"],
+    required: ["url", "content"],
     additionalProperties: false
   }
 
@@ -32,10 +30,9 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
       body: %{type: "string"},
       url: %{type: "string"},
       published_at: %{type: "string"},
-      reference_urls: %{type: "array", items: %{type: "string"}},
       references: %{type: "array", items: @reference_schema}
     },
-    required: ["repository", "body", "reference_urls", "references"],
+    required: ["repository", "body", "references"],
     additionalProperties: false
   }
 
@@ -80,9 +77,8 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
     actually landed.
 
     Rules:
-    - Read every successful entry in `references` that might describe
-      shipped work. Entries with an `error` could not be fetched and are not
-      evidence.
+    - Read every entry in `references` that might describe shipped work.
+      References that could not be fetched are not included as evidence.
     - Merge several references into one item when they describe the same
       improvement. Split them when users would understand them as
       different shipped changes.

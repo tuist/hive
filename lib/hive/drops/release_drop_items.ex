@@ -41,8 +41,6 @@ defmodule Hive.Drops.ReleaseDropItems do
   end
 
   def build_input(%GitHubRepository{} = repository, %Releases{} = release, references \\ []) do
-    reference_urls = reference_urls(repository, release.body || "")
-
     %{
       release: %{
         repository: "#{repository.owner}/#{repository.name}",
@@ -51,8 +49,7 @@ defmodule Hive.Drops.ReleaseDropItems do
         body: truncate(release.body || ""),
         url: release.html_url || "",
         published_at: release.published_at || release.created_at || "",
-        reference_urls: reference_urls,
-        references: references
+        references: Enum.filter(references, &successful_reference?/1)
       }
     }
   end
@@ -104,14 +101,15 @@ defmodule Hive.Drops.ReleaseDropItems do
   end
 
   defp normalize_fetch_result(url, {:ok, result}) when is_map(result) do
+    final_url = fetch_value(result, :final_url, url)
+
     %{
       url: url,
-      final_url: fetch_value(result, :final_url, url),
-      title: fetch_value(result, :title, ""),
-      content_type: fetch_value(result, :content_type, "unknown"),
-      content: fetch_value(result, :content, ""),
-      truncated: fetch_value(result, :truncated, false)
+      content: fetch_value(result, :content, "")
     }
+    |> maybe_put_reference(:final_url, if(final_url == url, do: nil, else: final_url))
+    |> maybe_put_reference(:title, fetch_value(result, :title, nil))
+    |> maybe_put_reference(:truncated, if(fetch_value(result, :truncated, false), do: true))
   end
 
   defp normalize_fetch_result(url, {:error, reason}) do
@@ -125,6 +123,15 @@ defmodule Hive.Drops.ReleaseDropItems do
   defp fetch_value(result, key, default) do
     Map.get(result, key) || Map.get(result, Atom.to_string(key)) || default
   end
+
+  defp successful_reference?(reference) when is_map(reference) do
+    is_binary(Map.get(reference, :content) || Map.get(reference, "content"))
+  end
+
+  defp successful_reference?(_reference), do: false
+
+  defp maybe_put_reference(reference, _key, value) when value in [nil, ""], do: reference
+  defp maybe_put_reference(reference, key, value), do: Map.put(reference, key, value)
 
   defp urls_from_reference(%{content: content}) when is_binary(content),
     do: urls_from_text(content)
