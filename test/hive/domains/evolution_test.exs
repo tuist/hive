@@ -6,6 +6,7 @@ defmodule Hive.Domains.EvolutionTest do
   alias Hive.Domains
   alias Hive.Domains.Agents.EvolutionAgent
   alias Hive.Domains.Evolution
+  alias Hive.Domains.EvolutionEvaluation
   alias Hive.Projects
   alias Hive.Specs
 
@@ -88,6 +89,52 @@ defmodule Hive.Domains.EvolutionTest do
     assert Enum.any?(input.current_domains, &(&1.name == "Tuist"))
     assert Enum.any?(input.work_items, &(&1.kind == "feature_request"))
     assert Enum.any?(input.work_items, &(&1.kind == "spec"))
+  end
+
+  test "evolve_from_work_items/1 persists no-op inputs and only reevaluates changed evidence" do
+    test_pid = self()
+    user = user()
+
+    {:ok, _feature_request} =
+      Forage.create_feature_request(
+        %{
+          "title" => "Explain cache misses",
+          "description" => "Show developers why an artifact missed the remote cache."
+        },
+        user
+      )
+
+    runner = fn input ->
+      send(test_pid, {:evolution_evaluated, Enum.map(input.work_items, & &1.id)})
+      {:ok, %{changes: []}}
+    end
+
+    assert {:ok, %{created: [], updated: [], skipped: []}} =
+             Domains.evolve_from_work_items(runner: runner)
+
+    assert {:ok, %{created: [], updated: [], skipped: []}} =
+             Domains.evolve_from_work_items(runner: runner)
+
+    assert_receive {:evolution_evaluated, first_ids}
+    refute_receive {:evolution_evaluated, _ids}
+    assert Repo.aggregate(EvolutionEvaluation, :count) == 1
+
+    {:ok, second_feature_request} =
+      Forage.create_feature_request(
+        %{
+          "title" => "Compare cache keys",
+          "description" => "Make divergent cache inputs visible across machines."
+        },
+        user
+      )
+
+    assert {:ok, %{created: [], updated: [], skipped: []}} =
+             Domains.evolve_from_work_items(runner: runner)
+
+    assert_receive {:evolution_evaluated, second_ids}
+    assert second_feature_request.id in second_ids
+    assert first_ids != second_ids
+    assert Repo.aggregate(EvolutionEvaluation, :count) == 2
   end
 
   test "apply_plan/1 links new domains to the requested project" do

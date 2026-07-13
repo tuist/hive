@@ -12,6 +12,7 @@ defmodule Hive.Domains.Evolution do
   alias Hive.Domains
   alias Hive.Domains.Agents.EvolutionAgent
   alias Hive.Domains.Domain
+  alias Hive.Domains.EvolutionEvaluation
   alias Hive.Projects.Project
   alias Hive.Repo
   alias Hive.Specs.Spec
@@ -41,15 +42,23 @@ defmodule Hive.Domains.Evolution do
 
   def evolve_from_work_items(opts \\ []) do
     input = build_input(opts)
+    fingerprint = input_fingerprint(input)
 
-    if input.work_items == [] do
-      {:ok, empty_result()}
-    else
-      runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
+    cond do
+      input.work_items == [] ->
+        {:ok, empty_result()}
 
-      with {:ok, plan} <- runner.(input) do
-        apply_plan(plan)
-      end
+      evaluation_exists?(fingerprint) ->
+        {:ok, empty_result()}
+
+      true ->
+        runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
+
+        with {:ok, plan} <- runner.(input),
+             {:ok, result} <- apply_plan(plan),
+             {:ok, _evaluation} <- record_evaluation(fingerprint, input, result) do
+          {:ok, result}
+        end
     end
   end
 
@@ -90,6 +99,35 @@ defmodule Hive.Domains.Evolution do
     agent_opts = Keyword.get(opts, :agent_opts, [])
 
     Sessions.run_operation(agent, :evolve_domains, input, agent_opts)
+  end
+
+  defp evaluation_exists?(fingerprint) do
+    EvolutionEvaluation
+    |> where([evaluation], evaluation.fingerprint == ^fingerprint)
+    |> Repo.exists?()
+  end
+
+  defp record_evaluation(fingerprint, input, result) do
+    changed? = result.created != [] or result.updated != []
+
+    %EvolutionEvaluation{}
+    |> EvolutionEvaluation.changeset(%{
+      fingerprint: fingerprint,
+      outcome: if(changed?, do: :changed, else: :noop),
+      work_items_count: length(input.work_items),
+      created_count: length(result.created),
+      updated_count: length(result.updated),
+      skipped_count: length(result.skipped),
+      evaluated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:fingerprint])
+  end
+
+  defp input_fingerprint(input) do
+    input
+    |> :erlang.term_to_binary([:deterministic])
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
   end
 
   defp current_domains do
