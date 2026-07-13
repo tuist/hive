@@ -1198,7 +1198,7 @@ specs = [
   },
   %{
     author: "sam@example.com",
-    domain_names: ["Hive", "Cache"],
+    domain_names: ["Hive"],
     attrs: %{
       "title" => "Spec revision workflow for MCP clients",
       "summary" =>
@@ -1229,7 +1229,7 @@ spec_needs_update? = fn spec, attrs ->
     spec.body != attrs["body"] or
     spec.summary != attrs["summary"] or
     Atom.to_string(spec.status) != attrs["status"] or
-    Atom.to_string(spec.visibility) != Map.get(attrs, "visibility", "public") or
+    Atom.to_string(Specs.effective_visibility(spec)) != Map.get(attrs, "visibility", "public") or
     Enum.sort(Enum.map(spec.domains, & &1.id)) != Enum.sort(domain_ids)
 end
 
