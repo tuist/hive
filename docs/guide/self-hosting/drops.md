@@ -62,11 +62,37 @@ request that grounded it when that repository is connected to Hive. The
 linked GitHub record is kept as a forage item even after it closes, so
 Hive can answer which release addressed a given forage item.
 
+## Weekly digest
+
+Hive turns each Monday-to-Friday workweek into one narrated
+edition. `/drops/digest` lists the published editions in a searchable,
+year-filtered, paginated table. Selecting an edition opens its narration
+at `/drops/digest/<week-start>`. Each edition connects the most meaningful
+changes into a point of view about the week instead of repeating the
+timeline as a list.
+
+The language-model agent connects the public drops from that week into a
+cohesive narration. Claims and links come from the Drops timeline, and
+generated prose never uses em dashes.
+
+Only drops visible to an anonymous visitor enter an edition. Private
+domain work is never sent to the agent or published in the digest. Hive
+generates the current edition every Friday at 17:00 Coordinated Universal
+Time. When the application starts, it checks the latest workweek whose
+Friday publication time has passed. This catches up a missed edition without
+publishing the current week early. Empty weeks are recorded without calling
+the model, and a completed or empty week is not evaluated again.
+
+When language-model inference is not configured, weekly generation
+stays dormant while the Drops timeline and its regular feeds continue
+to work.
+
 ## Subscribing
 
 Every list-style surface in Hive ships an Atom 1.0 feed at
-`<path>/atom.xml` and an RSS 2.0 feed at `<path>/rss.xml`. Drops are no
-exception:
+`<path>/atom.xml` and a
+[Really Simple Syndication (RSS) 2.0 feed](https://www.rssboard.org/rss-specification)
+at `<path>/rss.xml`. Drops are no exception:
 
 - `/drops/atom.xml`: every drop the subscriber is allowed to see.
 - `/drops/atom.xml?project_ids=<id>,<id>`: only drops from the listed
@@ -79,6 +105,8 @@ exception:
 - `/domains/:id/drops/atom.xml`: only the drops for one domain.
 - `/domains/:id/atom.xml`: the domain's merged feed (GitHub issues,
   Grafana alerts tagged with that domain, and drops together).
+- `/drops/digest/atom.xml`: narrated weekly editions with the full
+  digest body.
 
 Replace `atom.xml` with `rss.xml` for the RSS 2.0 version. Visibility
 is enforced the same way as the HTML page: anonymous subscribers only
@@ -88,6 +116,10 @@ The `Subscribe` button on `/drops` opens a picker that lets visitors
 choose projects, domains, or both, generates the matching feed address
 with the right query parameters, and exposes a copy button so the feed
 address can go straight into a reader.
+
+The **Weekly digest** button opens the latest edition. Its feed menu
+exposes the Atom and RSS addresses for readers that prefer one connected
+weekly update over individual drops.
 
 ## Managing RSS sources
 

@@ -50,6 +50,7 @@
       }
 
       & [data-part="forage-sources"],
+      & [data-part="drops"],
       & [data-part="inference"],
       & [data-part="settings"] {
         & > summary {
@@ -96,6 +97,22 @@
           margin-left: 14px;
           border-left: 1.5px solid var(--noora-surface-border-primary);
           padding-left: 20px;
+        }
+      }
+
+      & [data-part="drops"] > summary {
+        display: flex;
+        align-items: center;
+
+        & > [data-part="section-link"] {
+          flex: 1;
+          min-width: 0;
+          text-decoration: none;
+        }
+
+        & > [data-part="indicator"] {
+          flex-shrink: 0;
+          margin-right: var(--noora-spacing-4);
         }
       }
     }

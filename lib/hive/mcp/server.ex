@@ -35,7 +35,9 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.ListAuditActivities,
       Hive.MCP.Components.Tools.GetAuditActivity,
       Hive.MCP.Components.Tools.ListDrops,
-      Hive.MCP.Components.Tools.GetDrop
+      Hive.MCP.Components.Tools.GetDrop,
+      Hive.MCP.Components.Tools.ListDropDigests,
+      Hive.MCP.Components.Tools.GetDropDigest
     ],
     prompts: [
       Hive.MCP.Components.Prompts.WriteSpec

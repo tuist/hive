@@ -179,12 +179,32 @@ defmodule HiveWeb.Layouts do
             selected={String.starts_with?(@current_path, "/specs")}
             data-new-activity={if @specs_have_new_activity?, do: "true"}
           />
-          <.sidebar_item
-            label={dgettext("dashboard_drops", "Drops")}
-            icon="package"
-            href={~p"/drops"}
-            selected={String.starts_with?(@current_path, ~p"/drops")}
-          />
+          <% drops_selected? = String.starts_with?(@current_path, ~p"/drops") %>
+          <details data-part="drops" open={drops_selected?}>
+            <summary>
+              <.link
+                navigate={~p"/drops"}
+                data-part="section-link"
+                aria-current={if drops_path?(@current_path), do: "page"}
+              >
+                <.tab_menu_vertical
+                  label={dgettext("dashboard_drops", "Drops")}
+                  data-selected={drops_path?(@current_path)}
+                >
+                  <:icon_left><.icon name="package" /></:icon_left>
+                </.tab_menu_vertical>
+              </.link>
+              <span data-part="indicator"><.chevron_down /></span>
+            </summary>
+            <div data-part="content">
+              <.sidebar_item
+                label={dgettext("dashboard_drops", "Digests")}
+                icon="news"
+                href={~p"/drops/digest"}
+                selected={String.starts_with?(@current_path, ~p"/drops/digest")}
+              />
+            </div>
+          </details>
         </.sidebar>
         <section data-part="content">
           <.flash_group flash={@flash} />
@@ -427,5 +447,10 @@ defmodule HiveWeb.Layouts do
     current_path in [~p"/ops/inference", ~p"/ops/inference/profiles"] or
       String.starts_with?(current_path, ~p"/ops/inference/profiles/") or
       String.starts_with?(current_path, "/ops/inference/tokens/")
+  end
+
+  defp drops_path?(current_path) do
+    String.starts_with?(current_path, ~p"/drops") and
+      not String.starts_with?(current_path, ~p"/drops/digest")
   end
 end

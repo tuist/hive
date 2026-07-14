@@ -301,7 +301,7 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:286
+#: lib/hive_web/components/layouts.ex:306
 #: lib/hive_web/live/ops_live/inference_helpers.ex:163
 #, elixir-autogen, elixir-format
 msgid "Inference"
@@ -600,7 +600,7 @@ msgstr ""
 msgid "Profile updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:297
+#: lib/hive_web/components/layouts.ex:317
 #: lib/hive_web/live/ops_live/inference.ex:222
 #: lib/hive_web/live/ops_live/inference.ex:232
 #: lib/hive_web/live/ops_live/inference_providers.ex:174
@@ -628,7 +628,7 @@ msgstr ""
 msgid "Provider key"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:303
+#: lib/hive_web/components/layouts.ex:323
 #: lib/hive_web/live/ops_live/inference_providers.ex:127
 #: lib/hive_web/live/ops_live/inference_providers.ex:137
 #, elixir-autogen, elixir-format

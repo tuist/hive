@@ -2,6 +2,7 @@ defmodule Hive.Slack.UnfurlerTest do
   use Hive.DataCase, async: true
 
   alias Hive.Domains
+  alias Hive.Drops.WeeklyDigest
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Projects
@@ -180,5 +181,35 @@ defmodule Hive.Slack.UnfurlerTest do
       })
 
     assert Unfurler.unfurl(app_url("/forage/items/manual/#{item.id}")) == :skip
+  end
+
+  test "unfurls a published weekly Drops digest" do
+    digest = insert_drop_digest!()
+
+    assert {:ok, payload} =
+             Unfurler.unfurl(app_url("/drops/digest/#{Date.to_iso8601(digest.week_start)}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == "The connected week"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == "The week told one story."))
+    assert button_url(payload) == app_url("/drops/digest/2026-07-06")
+  end
+
+  test "skips a missing historical weekly Drops digest" do
+    assert Unfurler.unfurl(app_url("/drops/digest/2025-01-06")) == :skip
+  end
+
+  defp insert_drop_digest! do
+    %WeeklyDigest{}
+    |> WeeklyDigest.changeset(%{
+      week_start: ~D[2026-07-06],
+      week_end: ~D[2026-07-10],
+      status: :published,
+      title: "The connected week",
+      summary: "The week told one story.",
+      body: "Narrated body.",
+      drop_ids: [Ecto.UUID.generate()],
+      published_at: ~U[2026-07-10 17:00:00Z]
+    })
+    |> Repo.insert!()
   end
 end

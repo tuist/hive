@@ -200,6 +200,27 @@ defmodule Hive.Drops do
      }}
   end
 
+  @doc """
+  Lists visible drops published on or after the start date and before the
+  exclusive end date, oldest first. Weekly digest generation uses an
+  anonymous viewer so private-domain work never enters a public edition.
+  """
+  def list_drops_between(%Date{} = start_date, %Date{} = exclusive_end_date, opts \\ []) do
+    user = Keyword.get(opts, :user)
+    limit = Keyword.get(opts, :limit, 100)
+    start_at = DateTime.new!(start_date, ~T[00:00:00], "Etc/UTC")
+    end_at = DateTime.new!(exclusive_end_date, ~T[00:00:00], "Etc/UTC")
+
+    Drop
+    |> apply_visibility(user)
+    |> where([drop], drop.published_at >= ^start_at and drop.published_at < ^end_at)
+    |> distinct(true)
+    |> order_by([drop], asc: drop.published_at, asc: drop.inserted_at)
+    |> limit(^limit)
+    |> preload(^drop_preloads())
+    |> Repo.all()
+  end
+
   @doc "Lists drops for a single domain ordered by `published_at` descending."
   def list_drops_for_domain(%Domain{} = domain, opts \\ []) do
     limit = Keyword.get(opts, :limit, 100)
