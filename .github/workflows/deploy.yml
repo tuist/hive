@@ -80,7 +80,9 @@ jobs:
         with:
           install_args: "helm kubectl"
           cache: "false"
-      - uses: 1password/install-cli-action@v3
+      - uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3
+        with:
+          version: "2.35.0"
       - name: Load kubeconfig from 1Password
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
