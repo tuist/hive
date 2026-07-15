@@ -191,44 +191,37 @@ defmodule Hive.Slack.Workers.SendNotification do
     review_focus = Map.get(payload, :review_focus, [])
     revision = Map.get(payload, :last_revision)
 
-    blocks =
-      [
-        section(
-          dgettext("dashboard_slack", "*Review requested:* %{link}",
-            link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
-          )
-        ),
-        context([
-          dgettext("dashboard_slack", "Requested by %{user}",
-            user: user_or_slack_label(installation, requester)
-          ),
-          dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status)),
-          revision_context(revision, spec)
-        ]),
-        markdown(summary),
-        maybe_reviewers_section(reviewer_text),
-        maybe_review_focus_section(review_focus),
-        actions([
-          %{
-            "type" => "button",
-            "text" => %{
-              "type" => "plain_text",
-              "text" => dgettext("dashboard_slack", "Open spec")
-            },
-            "url" => url
-          }
-        ])
-      ]
-      |> Enum.reject(&is_nil/1)
-
-    %{
-      "text" =>
+    {:ok, message} =
+      card_message(
+        url,
         dgettext("dashboard_slack", "Review requested for spec #%{number}: %{title}",
           number: spec.number,
           title: spec.title
         ),
-      "blocks" => blocks
-    }
+        %{
+          title: spec.title,
+          description: summary,
+          description_format: :markdown,
+          highlights: [
+            dgettext("dashboard_slack", "Spec #%{number}", number: spec.number),
+            dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status)),
+            revision_context(revision, spec)
+          ],
+          extra_blocks: [
+            context([
+              dgettext("dashboard_slack", "Requested by %{user}",
+                user: user_or_slack_label(installation, requester)
+              )
+            ]),
+            maybe_reviewers_section(reviewer_text),
+            maybe_review_focus_section(review_focus)
+          ],
+          type_label: dgettext("dashboard_slack", "Review requested"),
+          action_label: dgettext("dashboard_slack", "Open spec")
+        }
+      )
+
+    message
   end
 
   defp maybe_reviewers_section(""), do: nil
@@ -289,8 +282,6 @@ defmodule Hive.Slack.Workers.SendNotification do
 
   defp revision_context(%{revision: revision}, _spec),
     do: dgettext("dashboard_slack", "Revision %{revision}", revision: revision)
-
-  defp actions(elements), do: %{"type" => "actions", "elements" => elements}
 
   defp section(text), do: %{"type" => "section", "text" => mrkdwn(text)}
 

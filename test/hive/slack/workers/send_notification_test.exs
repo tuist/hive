@@ -195,10 +195,11 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
       assert params["text"] == "Review requested for spec ##{spec.number}: Reviewable draft"
 
       blocks = params["blocks"]
-      assert Enum.any?(blocks, &block_text_contains?(&1, "*Review requested:*"))
+      assert [%{"type" => "header", "text" => %{"text" => "Reviewable draft"}} | _] = blocks
       assert Enum.any?(blocks, &block_text_contains?(&1, "Tighten the sign-in flow."))
       assert Enum.any?(blocks, &block_text_contains?(&1, "<@U-reviewer>"))
       assert Enum.any?(blocks, &block_text_contains?(&1, "**Review focus:**"))
+      assert Enum.any?(blocks, &block_text_contains?(&1, "Review requested / Hive"))
 
       assert Enum.any?(blocks, fn
                %{"type" => "actions", "elements" => [%{"text" => %{"text" => "Open spec"}}]} ->

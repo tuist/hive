@@ -1,6 +1,6 @@
 defmodule Hive.Slack.Unfurl.BlockKit do
   @moduledoc """
-  Builds Slack Block Kit payloads for Hive link unfurls.
+  Builds Slack Block Kit payloads for Hive link previews and notifications.
   """
 
   @max_header_length 150
@@ -32,16 +32,21 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     section_label = attrs |> Map.get(:section_label) |> present_string()
     type_label = attrs |> Map.get(:type_label) |> present_string()
     highlights = attrs |> Map.get(:highlights, []) |> normalize_highlights()
+    extra_blocks = attrs |> Map.get(:extra_blocks, []) |> normalize_blocks()
+    action_label = attrs |> Map.get(:action_label, "Open in Hive") |> to_string()
 
     %{
       "blocks" =>
-        [
-          header_block(title),
-          description_block(description, description_format),
-          fields_block(highlights),
-          context_block([type_label || section_label, "Hive"]),
-          actions_block(uri)
-        ]
+        ([
+           header_block(title),
+           description_block(description, description_format),
+           fields_block(highlights)
+         ] ++
+           extra_blocks ++
+           [
+             context_block([type_label || section_label, "Hive"]),
+             actions_block(uri, action_label)
+           ])
         |> Enum.reject(&is_nil/1)
     }
   end
@@ -116,7 +121,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     end
   end
 
-  defp actions_block(uri) do
+  defp actions_block(uri, label) do
     %{
       "type" => "actions",
       "elements" => [
@@ -124,7 +129,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
           "type" => "button",
           "text" => %{
             "type" => "plain_text",
-            "text" => truncate("Open in Hive", @max_button_length),
+            "text" => label |> plain_text() |> truncate(@max_button_length),
             "emoji" => true
           },
           "url" => URI.to_string(uri),
@@ -141,6 +146,9 @@ defmodule Hive.Slack.Unfurl.BlockKit do
   end
 
   defp normalize_highlights(_highlights), do: []
+
+  defp normalize_blocks(blocks) when is_list(blocks), do: Enum.reject(blocks, &is_nil/1)
+  defp normalize_blocks(_blocks), do: []
 
   defp present_string(nil), do: nil
 

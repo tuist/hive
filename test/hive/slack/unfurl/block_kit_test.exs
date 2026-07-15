@@ -50,4 +50,21 @@ defmodule Hive.Slack.Unfurl.BlockKitTest do
 
     assert %{"type" => "markdown", "text" => ^description} = Enum.at(payload["blocks"], 1)
   end
+
+  test "builds cards with additional blocks and a custom action label" do
+    uri = URI.parse("https://hive.tuist.dev/specs/1")
+    detail = %{"type" => "section", "text" => %{"type" => "mrkdwn", "text" => "Reviewers"}}
+
+    assert {:ok, payload} =
+             BlockKit.generic(uri, %{
+               title: "Spec",
+               extra_blocks: [detail],
+               action_label: "Open spec"
+             })
+
+    assert ^detail = Enum.at(payload["blocks"], 1)
+
+    assert %{"type" => "actions", "elements" => [%{"text" => %{"text" => "Open spec"}}]} =
+             List.last(payload["blocks"])
+  end
 end
