@@ -5,6 +5,8 @@ defmodule Hive.Specs.Revision do
 
   import Ecto.Changeset
 
+  alias Hive.Specs.Status
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -13,7 +15,7 @@ defmodule Hive.Specs.Revision do
     field :title, :string
     field :body, :string
     field :summary, :string
-    field :status, Ecto.Enum, values: Hive.Specs.Spec.statuses()
+    field :status, Ecto.Enum, values: Status.values()
 
     belongs_to :spec, Hive.Specs.Spec
     belongs_to :user, Hive.Accounts.User
