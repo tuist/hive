@@ -1,70 +1,37 @@
 # Slack
 
-Hive can be installed into one or more Slack workspaces. With Public
-Distribution enabled on the Slack app, any workspace can install Hive
-through the OAuth v2 flow without going through the Slack App Directory
-(which would require a multi-week review).
+Connect Slack when people should be able to discuss Hive work where
+their team already communicates.
 
-Once a workspace is installed, Hive can:
+Once connected, Hive can:
 
-- Reply in threads where the bot is `@`-mentioned, using the configured
-  model provider. If no model provider is configured yet, Hive replies
-  with a short setup note instead of leaving the thread silent.
-- Capture any Slack message as a forage item via a message shortcut
-  (right-click a message, "More message shortcuts", pick the shortcut).
-  The Ops -> Forage intake destination decides whether the item is
-  stored in Hive or published to GitHub as an issue.
-- Unfurl Hive links inline. When a workspace member pastes a link to a
-  spec, domain, or forage item, Slack expands the message with a
-  preview of the resource. Only resources that an anonymous visitor
-  could see on the dashboard are previewed; private specs and
-  organization-only forage items stay opaque.
-- Notify a configured channel when product activity happens, starting
-  with new specs, new spec comments, and explicit spec review requests.
-- Let signed-in Hive users connect their Slack profile so Hive can
-  target user-specific notifications even when Slack and Hive emails do
-  not match.
-- Record Slack installs, disconnects, app mentions, and captured forage
-  items in the audit trail.
+- Reply in threads where the bot is mentioned.
+- Capture a Slack message as a Forage item.
+- Preview public Hive links inside Slack.
+- Notify a channel about new specs, comments, and review requests.
+- Mention the correct person after they link their Slack and Hive
+  profiles.
 
-## Configuration
+Language-model replies require a configured
+[Hive inference profile](./inference#agentic-workflows). Capture,
+notifications, profile linking, and public link previews do not.
 
-Set these on the Hive deployment:
+## Before you begin
 
-- [`HIVE_SLACK_CLIENT_ID`](/reference/configuration#hive_slack_client_id): the
-  Slack app's client ID.
-- [`HIVE_SLACK_CLIENT_SECRET`](/reference/configuration#hive_slack_client_secret):
-  the Slack app's client secret.
-- [`HIVE_SLACK_SIGNING_SECRET`](/reference/configuration#hive_slack_signing_secret):
-  the Slack app's signing secret, used to verify Events and
-  Interactivity requests.
-- [`HIVE_SLACK_BOT_SCOPES`](/reference/configuration#hive_slack_bot_scopes):
-  optional, comma-separated list of bot OAuth scopes to request at
-  install time. Defaults to:
-  `app_mentions:read,channels:history,channels:read,chat:write,chat:write.public,commands,groups:history,groups:read,im:history,im:read,links:read,links:write,mpim:history,mpim:read,users:read,users:read.email`.
-- [`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids):
-  optional, comma-separated list of Slack workspace identifiers allowed
-  to install Hive or link Slack profiles. Slack calls a workspace a
-  `team` in its
-  [authorization flow](https://docs.slack.dev/authentication/installing-with-oauth/).
-  When exactly one workspace identifier is configured, Hive passes it to
-  Slack so the workspace picker is preselected. Hive still validates the
-  workspace returned by Slack before saving an install or linked profile.
-When any of the three required Slack app variables is missing, the
-integration stays dormant: the `/slack/install` link is hidden and
-`/ops/slack` shows an inert state.
+You need:
 
-Slack captures use the shared intake settings from **Ops -> Forage**.
-Admins can choose whether new items are stored in Hive or created as
-GitHub issues without redeploying.
+- A Hive instance reachable through a public secure web address.
+- A Hive administrator account.
+- Permission to create a Slack app.
+- A configured [Forage intake destination](/guide/using-hive/forage#submit-an-item).
 
-## Setting up the Slack app
+## Create the Slack app
 
-The fastest path is to create the app from a manifest. Go to
-<https://api.slack.com/apps>, select **Create New App → From an app
-manifest**, choose JavaScript Object Notation
-([JSON](https://www.json.org/json-en.html)), replace `<your-host>` with
-your Hive host, and paste:
+Open [Your Apps](https://api.slack.com/apps), select **Create New App →
+From an app manifest**, choose JavaScript Object Notation
+([JSON](https://www.json.org/json-en.html)), and paste the manifest below.
+Replace every `<your-host>` value with the Hive domain name without the
+scheme, for example `hive.example.com`.
 
 ```json
 {
@@ -144,131 +111,93 @@ your Hive host, and paste:
 }
 ```
 
-To configure it manually instead:
+Create the app in a development workspace. If workspaces outside that
+workspace should be able to install Hive, enable **Public Distribution**
+under **Manage Distribution**. Publishing in the Slack App Directory is
+not required.
 
-1. Go to <https://api.slack.com/apps> and **Create New App → From scratch**.
-   Pick any name and workspace; you can change it later.
-2. In **Basic Information**, copy the Client ID, Client Secret, and
-   Signing Secret into the environment variables above.
-3. In **OAuth & Permissions**:
-   - Add the bot scopes listed under
-     [`HIVE_SLACK_BOT_SCOPES`](/reference/configuration#hive_slack_bot_scopes).
-   - Add the redirect addresses: `https://<your-host>/slack/install/callback`
-     and `https://<your-host>/account/slack/callback`.
-   - Add the user scopes `openid`, `profile`, and `email` for Slack
-     profile linking.
-4. In **Event Subscriptions**:
-   - Enable events.
-   - Request address: `https://<your-host>/api/slack/events`. Slack verifies
-     the address once with a challenge; Hive responds automatically.
-   - Subscribe to bot events: `app_mention`, `link_shared`,
-     `message.channels`, `message.groups`, `message.im`, `message.mpim`.
-   - Under **App unfurl domains**, add `<your-host>` so Slack delivers
-     `link_shared` events for Hive links.
-5. In **Interactivity & Shortcuts**:
-   - Turn on Interactivity.
-   - Request address: `https://<your-host>/api/slack/interactions`.
-   - Add a **message shortcut** with name "Capture as forage item"
-     and callback ID `capture_forage_item`.
-6. In **Manage Distribution**:
-   - **Activate Public Distribution**. This lets any workspace install
-     Hive via the install link without an App Directory submission.
+## Configure Hive
 
-## Installing into a workspace
+Copy the client identifier, client secret, and signing secret from the
+Slack app's **Basic Information** page. Store them in the Hive deployment
+secret as:
 
-Once the Slack configuration variables are set and the deploy is rolled out:
+- [`HIVE_SLACK_CLIENT_ID`](/reference/configuration#hive_slack_client_id)
+- [`HIVE_SLACK_CLIENT_SECRET`](/reference/configuration#hive_slack_client_secret)
+- [`HIVE_SLACK_SIGNING_SECRET`](/reference/configuration#hive_slack_signing_secret)
 
-1. Sign in to Hive as an instance admin and open **Ops → Slack** at
-   `/ops/slack`.
-2. Click **Connect a Slack workspace**, complete the Slack OAuth prompt,
-   and pick the workspace.
-3. The workspace appears in the list. Click **Disconnect** to revoke
-   Hive's access to that workspace (Hive keeps the row so the install
-   history stays in the audit trail).
-4. To post product activity into Slack, use the notification routes
-   table on the workspace row. Each row maps a Hive object type to the
-   Slack channel that should receive its notifications.
+Restart Hive after adding the values. The Slack installation action stays
+hidden when any required value is missing.
 
-If
+Optionally set
 [`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids)
-is set, Hive rejects installs from any workspace outside that list. With
-a single configured workspace, Slack usually preselects it in the prompt
-for users who are already signed in there.
+to a comma-separated list of workspace identifiers. Hive then rejects
+installation and profile linking from other workspaces.
 
-## Linking a Slack profile
+## Install a workspace
 
-After an admin connects the workspace, signed-in users can open
-`/account/identities` and click **Connect Slack profile**. Hive sends
-the user through Slack's OpenID Connect flow and stores the returned
-Slack workspace and user IDs on the matching workspace install. This
-explicit link is used even when the user's Slack email differs from
-their Hive email.
+1. Sign in to Hive as an administrator.
+2. Open **Ops (Operations) → Slack**.
+3. Select **Connect a Slack workspace** and approve the Slack prompt.
+4. Confirm that the workspace appears in Hive.
 
-Profile linking uses the same
-[`HIVE_SLACK_ALLOWED_TEAM_IDS`](/reference/configuration#hive_slack_allowed_team_ids)
-allowlist as workspace installs.
+Use **Disconnect** when Hive should no longer access a workspace. Existing
+audit history remains available.
 
-## What gets captured
+## Capture a Slack message
 
-The `capture_forage_item` shortcut matches the invoking Slack user to a
-Hive user by linked Slack profile or email. The Slack user must have
-signed in to Hive at least once, or linked their Slack profile from
-`/account/identities`; otherwise the shortcut responds with an
-ephemeral error and nothing is captured. Hive still accepts the legacy
-`capture_feature_request` callback identifier for existing Slack apps.
+In Slack, open a message's shortcuts and select **Capture as forage
+item**. The Slack user must have signed in to Hive before capture, either
+with a matching email address or through an explicitly linked profile.
 
-Successful captures land in the unified Forage queue at `/forage`. The
-shared settings in **Ops -> Forage** decide whether they are stored as
-Hive-managed forage items or created as GitHub issues. When GitHub issue
-intake is selected, Hive immediately stores the returned issue in the
-local forage cache and infers issue labels from the captured item type.
-Captured items are recorded in the audit trail as
-`slack.forage_item.captured`. Installs and disconnects are recorded too.
+The item follows the destination configured under
+**Ops (Operations) → Forage**. It either becomes a Hive-managed item or a
+GitHub issue in the selected repository.
 
-When the bot is `@`-mentioned in a thread, the agent can also create a
-forage item if the requester is linked to a Hive user. It uses the same
-forage intake destination as the dashboard, Slack shortcut, and
-[Model Context Protocol](https://modelcontextprotocol.io/) tool. If the
-destination creates GitHub issues, Hive exposes the configured
-repository's existing labels to the agent. The agent may add up to three
-matching labels, and Hive validates them against the repository before
-creating the issue. The item type label still applies as the fallback
-when the agent does not choose a repository label.
+When a linked user mentions the Hive bot and asks it to capture work, the
+bot can use the same destination. If the destination is GitHub, Hive can
+apply matching labels from that repository.
 
-## Link unfurling
+## Link a Slack profile
 
-When the Slack app registers your Hive host as an **app unfurl domain**,
-Slack delivers a `link_shared` event for every Hive link pasted in a
-connected channel. Hive looks each link up, builds a preview, and posts
-the preview back via `chat.unfurl`.
+After an administrator connects the workspace, signed-in users can open
+`/account/identities` and select **Connect Slack profile**.
 
-Hive renders dashboard previews with Slack Block Kit. Static dashboard
-pages show their page title, description, key highlights, and an action
-button back to Hive. Resource detail pages show resource-specific details
-when the same resource is visible to an anonymous dashboard visitor.
-That includes public specs, public domains, public forage items, drops,
-and projects.
+An explicit link is useful when the person's Slack and Hive email
+addresses differ. Hive uses the link for captures, replies, and targeted
+notifications.
 
-Anything that requires a Hive session stays opaque. Private specs,
-private domains, organization-only forage items, account pages, and
-admin-only resources do not expose record contents in Slack. They either
-fall back to generic page metadata or leave Slack to show the bare link.
+## Preview Hive links
 
-## Notifications
+Pasting a public Hive link into a connected Slack channel shows a preview
+with the resource title, context, and a link back to Hive.
 
-Hive can post product activity to one Slack channel per object type in
-each connected workspace. Instance admins configure notification routes
-from `/ops/slack`; no redeploy is required.
+Preview visibility follows the anonymous dashboard view. Private specs,
+private domains, organization-only Forage items, account pages, and
+administrator pages do not expose their content in Slack.
 
-The first supported route is `Specs`, which sends these events:
+## Configure notifications
 
-- `spec.created`: a new spec was created from the dashboard or
-  [Model Context Protocol](https://modelcontextprotocol.io/) tooling.
-- `spec.comment.created`: a new comment was added to a spec.
-- `spec.review.requested`: a spec author or editor asked for another
-  review of the latest revision. Hive posts a Block Kit message with
-  the spec state, a link back to the spec, focused review prompts, and
-  Slack mentions for prior commenters whose Slack profiles are linked.
+Open a connected workspace under **Ops (Operations) → Slack** and edit its
+notification routes. Each route connects a Hive resource type with one
+Slack channel.
 
-The channel must be reachable by Hive's installed bot. Use the Slack
-channel ID, not the display name.
+The Specs route can notify the channel when:
+
+- A spec is created.
+- A comment is added.
+- An organization member asks for review.
+
+Use the Slack channel identifier rather than its display name. The Hive
+bot must be able to post in the selected channel.
+
+## Troubleshooting
+
+- If installation is unavailable, confirm that all three required Hive
+  settings are present and restart the deployment.
+- If Slack rejects an address, confirm that Hive is publicly reachable
+  through a valid secure certificate.
+- If captures fail for one person, ask them to sign in to Hive and link
+  their Slack profile.
+- If notifications do not arrive, confirm that the bot can access the
+  configured channel.

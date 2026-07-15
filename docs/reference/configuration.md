@@ -2,29 +2,32 @@
 
 Hive is configured with environment variables. Keep secrets in the
 runtime environment or in your deployment secret manager, not in source
-control.
+control. The deployment platform must provide the required database and
+application settings.
 
 ## Core runtime
 
 ### SECRET_KEY_BASE {#secret_key_base}
 
-Required in production. Phoenix uses this secret to sign and encrypt
-session data. Generate it with `mix phx.gen.secret`.
+Required in production. Hive uses this value to protect session data.
+Generate it with `mix phx.gen.secret` or another cryptographically secure
+64-byte random-value generator.
 
 ### DATABASE_URL {#database_url}
 
-Required in production. PostgreSQL connection string, for example
+Required for direct container deployments. PostgreSQL connection string, for example
 `ecto://USER:PASS@HOST/DATABASE`.
 
 ### PHX_HOST {#phx_host}
 
-Public host name used to build absolute application links in production.
+Public host name used to build application links. Set it to the deployed
+Hive domain.
 
 ### PORT {#port}
 
 Hypertext Transfer Protocol
-([HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)) port the
-Phoenix endpoint listens on. Defaults to `4000`.
+([HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)) port Hive
+listens on. Defaults to `4000`.
 
 ### POOL_SIZE {#pool_size}
 
@@ -38,12 +41,12 @@ Security ([TLS](https://www.cloudflare.com/learning/ssl/transport-layer-security
 ### DATABASE_SSL_CA_CERT_FILE {#database_ssl_ca_cert_file}
 
 Path to the certificate authority file used to verify the PostgreSQL
-server certificate when database TLS verification is required.
+server certificate when secure connection verification is required.
 
 ### ECTO_IPV6 {#ecto_ipv6}
 
 Set to `true` or `1` when the database connection should use Internet
-Protocol version 6 ([IPv6](https://en.wikipedia.org/wiki/IPv6)).
+Protocol version 6 ([IPv6](https://en.wikipedia.org/wiki/IPv6)). Optional.
 
 ## Access control
 
@@ -62,12 +65,12 @@ signup. When unset, every signed-in user becomes a member.
 
 ### HIVE_GOOGLE_CLIENT_ID {#hive_google_client_id}
 
-Google OAuth 2.0 ([OAuth](https://oauth.net/2/)) client identifier for
-Google sign-in.
+Google Open Authorization ([OAuth 2.0](https://oauth.net/2/)) client
+identifier for Google sign-in.
 
 ### HIVE_GOOGLE_CLIENT_SECRET {#hive_google_client_secret}
 
-Google OAuth 2.0 client secret for Google sign-in.
+Google Open Authorization 2.0 client secret for Google sign-in.
 
 ### HIVE_GOOGLE_ALLOWED_DOMAINS {#hive_google_allowed_domains}
 
@@ -77,8 +80,9 @@ the account picker.
 
 ### HIVE_OIDC_ISSUER {#hive_oidc_issuer}
 
-Issuer base address for a generic OpenID Connect
-([OIDC](https://openid.net/developers/how-connect-works/)) provider.
+Issuer base address for a generic
+[OpenID Connect](https://openid.net/developers/how-connect-works/)
+provider.
 Hive discovers provider endpoints from
 `<issuer>/.well-known/openid-configuration`.
 
@@ -102,17 +106,17 @@ Connect sign-in.
 
 ### HIVE_GITHUB_CLIENT_ID {#hive_github_client_id}
 
-GitHub OAuth 2.0 client identifier for GitHub sign-in.
+GitHub Open Authorization 2.0 client identifier for GitHub sign-in.
 
 ### HIVE_GITHUB_CLIENT_SECRET {#hive_github_client_secret}
 
-GitHub OAuth 2.0 client secret for GitHub sign-in.
+GitHub Open Authorization 2.0 client secret for GitHub sign-in.
 
 ### HIVE_GITHUB_ALLOWED_DOMAINS {#hive_github_allowed_domains}
 
 Optional comma-separated email domain allowlist for GitHub sign-in.
 
-## GitHub app
+## GitHub App
 
 ### HIVE_GITHUB_APP_ID {#hive_github_app_id}
 
@@ -124,11 +128,12 @@ GitHub App installation identifier.
 
 ### HIVE_GITHUB_APP_PRIVATE_KEY {#hive_github_app_private_key}
 
-Private key for the GitHub App installation.
+Private key for the GitHub App installation. Accepts Privacy Enhanced
+Mail text or a base64-encoded value.
 
 ### HIVE_GITHUB_WEBHOOK_SECRET {#hive_github_webhook_secret}
 
-Webhook signing secret for GitHub events.
+Optional signing secret for requests sent to `/webhooks/github`.
 
 ### HIVE_GITHUB_API_URL {#hive_github_api_url}
 
@@ -238,7 +243,7 @@ Slack app signing secret used to verify incoming Slack requests.
 
 ### HIVE_SLACK_BOT_SCOPES {#hive_slack_bot_scopes}
 
-Optional comma-separated Slack bot OAuth 2.0 scope list. Defaults to
+Optional comma-separated Slack bot authorization scope list. Defaults to
 the scopes Hive needs for installation, message capture, replies, and
 link unfurling.
 
@@ -264,22 +269,23 @@ Release tag for Sentry events.
 
 ### SENTRY_OBAN_CAPTURE_ERRORS {#sentry_oban_capture_errors}
 
-Set to `true` or `1` to capture failed Oban job attempts. Defaults to
-`true`.
+Set to `true` or `1` to report background tasks that exhaust their
+attempts. Defaults to `true`.
 
 ### SENTRY_OBAN_REPORT_RETRIES {#sentry_oban_report_retries}
 
-Set to `true` or `1` to report retryable Oban failures before their
-final attempt. Defaults to `false`.
+Set to `true` or `1` to report retryable background-task failures before
+their final attempt. Defaults to `false`.
 
 ### SENTRY_OBAN_CRON_MONITORING {#sentry_oban_cron_monitoring}
 
-Set to `true` or `1` to send Sentry check-ins for scheduled Oban jobs.
+Set to `true` or `1` to send Sentry check-ins for scheduled tasks.
 Defaults to `true`.
 
 ## Vector database
 
 ### HIVE_OPENDATA_VECTOR_URL {#hive_opendata_vector_url}
 
-Optional base address for the bundled vector service used by semantic
-search.
+Optional base address for a compatible vector service. Current
+deployments can leave it unset unless a feature explicitly requires
+vector search.
