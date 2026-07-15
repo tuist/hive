@@ -21,6 +21,8 @@ defmodule Hive.Slack.Workers.SendNotification do
   alias Hive.Specs.ReviewRequests
   alias Hive.Specs.Spec
 
+  @max_markdown_length 12_000
+
   def enqueue(event, args) when is_binary(event) and is_map(args) do
     if Slack.notification_enabled_for?(event) do
       args
@@ -142,7 +144,7 @@ defmodule Hive.Slack.Workers.SendNotification do
                author_text(spec.created_by_user_id),
                dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status))
              ]),
-             section(summary_text(spec))
+             markdown(summary_text(spec))
            ]
          }}
     end
@@ -167,7 +169,7 @@ defmodule Hive.Slack.Workers.SendNotification do
                )
              ),
              context([comment_author_text(comment)]),
-             section(comment.body)
+             markdown(comment.body)
            ]
          }}
     end
@@ -196,7 +198,7 @@ defmodule Hive.Slack.Workers.SendNotification do
           dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status)),
           revision_context(revision, spec)
         ]),
-        section(escape(summary)),
+        markdown(summary),
         maybe_reviewers_section(reviewer_text),
         maybe_review_focus_section(review_focus),
         actions([
@@ -230,9 +232,9 @@ defmodule Hive.Slack.Workers.SendNotification do
   defp maybe_review_focus_section([]), do: nil
 
   defp maybe_review_focus_section(review_focus) do
-    text = Enum.map_join(review_focus, "\n", &"- #{escape(&1)}")
+    text = Enum.map_join(review_focus, "\n", &"- #{&1}")
 
-    section(dgettext("dashboard_slack", "*Review focus:*\n%{focus}", focus: text))
+    markdown(dgettext("dashboard_slack", "**Review focus:**\n\n%{focus}", focus: text))
   end
 
   defp reviewers_text(%Installation{} = installation, reviewers) do
@@ -294,6 +296,9 @@ defmodule Hive.Slack.Workers.SendNotification do
 
   defp mrkdwn(text), do: %{"type" => "mrkdwn", "text" => truncate(text, 3_000)}
 
+  defp markdown(text),
+    do: %{"type" => "markdown", "text" => truncate(text, @max_markdown_length)}
+
   defp author_text(user_id) do
     user_id
     |> Hive.Accounts.get_user()
@@ -338,11 +343,14 @@ defmodule Hive.Slack.Workers.SendNotification do
     Ecto.NoResultsError -> nil
   end
 
-  defp truncate(text, max) when is_binary(text) and byte_size(text) > max do
-    String.slice(text, 0, max - 3) <> "..."
+  defp truncate(text, max) when is_binary(text) do
+    if String.length(text) > max do
+      String.slice(text, 0, max - 3) <> "..."
+    else
+      text
+    end
   end
 
-  defp truncate(text, _max) when is_binary(text), do: text
   defp truncate(text, _max), do: to_string(text)
 
   defp escape(text) do
