@@ -73,7 +73,8 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
         notification_events: ["spec.created"]
       })
 
-    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+    body = "**Initial proposal.**\n\n- Keep the behavior focused."
+    {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => body}, user)
 
     expect(API, :post_message, fn %Installation{id: id}, params ->
       assert id == installation.id
@@ -81,6 +82,7 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
       assert params["text"] == "New spec: Draft"
       assert [%{"text" => %{"text" => title}} | _] = params["blocks"]
       assert title =~ "##{spec.number}"
+      assert %{"type" => "markdown", "text" => ^body} = List.last(params["blocks"])
 
       {:ok, %{"ok" => true}}
     end)
@@ -102,13 +104,21 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
       })
 
     {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
-    {:ok, comment} = Specs.add_comment(spec, %{"body" => "Looks useful."}, user)
+
+    body = """
+    **Addressed as suggested**
+
+    - Exact analytics on a lossy pipeline
+    - `bytes_wired` is counted at stream end
+    """
+
+    {:ok, comment} = Specs.add_comment(spec, %{"body" => body}, user)
 
     expect(API, :post_message, fn %Installation{id: id}, params ->
       assert id == installation.id
       assert params["channel"] == "C-notify"
       assert params["text"] == "New spec comment: Draft"
-      assert Enum.any?(params["blocks"], &match?(%{"text" => %{"text" => "Looks useful."}}, &1))
+      assert %{"type" => "markdown", "text" => ^body} = List.last(params["blocks"])
 
       {:ok, %{"ok" => true}}
     end)
@@ -158,7 +168,7 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
       assert Enum.any?(blocks, &block_text_contains?(&1, "*Review requested:*"))
       assert Enum.any?(blocks, &block_text_contains?(&1, "Tighten the sign-in flow."))
       assert Enum.any?(blocks, &block_text_contains?(&1, "<@U-reviewer>"))
-      assert Enum.any?(blocks, &block_text_contains?(&1, "*Review focus:*"))
+      assert Enum.any?(blocks, &block_text_contains?(&1, "**Review focus:**"))
 
       assert Enum.any?(blocks, fn
                %{"type" => "actions", "elements" => [%{"text" => %{"text" => "Open spec"}}]} ->
@@ -190,6 +200,9 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
   end
 
   defp block_text_contains?(%{"text" => %{"text" => text}}, needle),
+    do: String.contains?(text, needle)
+
+  defp block_text_contains?(%{"text" => text}, needle) when is_binary(text),
     do: String.contains?(text, needle)
 
   defp block_text_contains?(%{"elements" => elements}, needle) when is_list(elements) do
