@@ -4,6 +4,7 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
   use Oban.Testing, repo: Hive.Repo
 
   alias Hive.Forage.GitHubIssue
+  alias Hive.Forage.GitHubIssueClassification
   alias Hive.Forage.GitHubIssueClassificationSweeper
   alias Hive.Forage.GitHubIssueClassificationWorker
   alias Hive.Domains
@@ -73,6 +74,18 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
     repository = create_repository!()
     classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
     insert_issue!(repository, 1, %{classified_at: classified_at})
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  test "perform/1 does not retry terminal provider failures" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_invalid_credentials)
 
     assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
     assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)

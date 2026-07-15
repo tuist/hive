@@ -10,7 +10,10 @@ defmodule Hive.Drops.DomainClassificationWorker do
     max_attempts: 3,
     unique: [fields: [:worker, :queue, :args], period: :infinity, states: :incomplete]
 
+  require Logger
+
   alias Hive.Agents.Errors
+  alias Hive.Drops
   alias Hive.Drops.DomainClassification
 
   @doc """
@@ -32,17 +35,41 @@ defmodule Hive.Drops.DomainClassificationWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"drop_id" => drop_id}}) do
-    classify(drop_id)
+    drop_id
+    |> DomainClassification.classify()
+    |> handle_classification_result(drop_id)
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
-      Errors.oban_error(error, :drop_domain_classification_failed)
+      handle_classification_result({:error, error}, drop_id)
   end
 
-  defp classify(drop_id) do
-    case DomainClassification.classify(drop_id) do
+  defp handle_classification_result(result, drop_id) do
+    case result do
       {:ok, _domain_ids} -> :ok
       {:error, :not_found} -> :ok
-      {:error, reason} -> Errors.oban_error(reason, :drop_domain_classification_failed)
+      {:error, reason} -> handle_classification_error(drop_id, reason)
+    end
+  end
+
+  defp handle_classification_error(drop_id, reason) do
+    sanitized_reason = Errors.sanitize_reason(reason, :drop_domain_classification_failed)
+
+    case Errors.hard_failure_reason(reason) do
+      nil ->
+        Logger.warning(
+          "[Drops.DomainClassificationWorker] Classification failed for drop #{drop_id}: #{inspect(sanitized_reason)}"
+        )
+
+        {:error, sanitized_reason}
+
+      hard_reason ->
+        :ok = Drops.mark_drop_classification_failed(drop_id, hard_reason)
+
+        Logger.warning(
+          "[Drops.DomainClassificationWorker] Model provider rejected classification for drop #{drop_id}: #{inspect(sanitized_reason)}"
+        )
+
+        {:cancel, hard_reason}
     end
   end
 end

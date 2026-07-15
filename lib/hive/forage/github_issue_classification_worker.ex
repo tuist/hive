@@ -65,6 +65,8 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
 
     cond do
       hard_reason = Errors.hard_failure_reason(reason) ->
+        :ok = GitHubIssueClassification.mark_failed(issue_id, hard_reason)
+
         Logger.warning(
           "[Forage.GitHubIssueClassificationWorker] Model provider rejected classification for issue #{issue_id}: #{inspect(sanitized_reason)}"
         )

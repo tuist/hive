@@ -15,7 +15,7 @@ defmodule Hive.MCP.Components.Tools.DeleteDomain do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"deleted_domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        %{"deleted_domain" => Hive.MCP.Components.Schemas.domain()},
         ["deleted_domain"]
       )
 

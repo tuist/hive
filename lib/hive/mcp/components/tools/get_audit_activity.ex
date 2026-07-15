@@ -13,7 +13,7 @@ defmodule Hive.MCP.Components.Tools.GetAuditActivity do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"activity" => Hive.MCP.Components.Tools.Audit.activity_schema()},
+        %{"activity" => Hive.MCP.Components.Schemas.audit_activity()},
         ["activity"]
       )
 

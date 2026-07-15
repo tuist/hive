@@ -15,7 +15,7 @@ defmodule Hive.MCP.Components.Tools.DeleteProject do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"deleted_project" => Hive.MCP.Components.Tools.Projects.project_schema()},
+        %{"deleted_project" => Hive.MCP.Components.Schemas.project()},
         ["deleted_project"]
       )
 

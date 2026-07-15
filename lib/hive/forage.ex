@@ -839,7 +839,8 @@ defmodule Hive.Forage do
     GitHubIssue
     |> where(
       [issue],
-      issue.github_repository_id == ^repository_id and is_nil(issue.classified_at)
+      issue.github_repository_id == ^repository_id and is_nil(issue.classified_at) and
+        is_nil(issue.classification_failed_at)
     )
     |> select([issue], issue.id)
     |> Repo.all()
@@ -859,7 +860,12 @@ defmodule Hive.Forage do
 
     attrs =
       if content_changed?,
-        do: Map.put(attrs, :classified_at, nil),
+        do:
+          Map.merge(attrs, %{
+            classified_at: nil,
+            classification_failure: nil,
+            classification_failed_at: nil
+          }),
         else: attrs
 
     changeset =

@@ -5,9 +5,11 @@ defmodule Hive.Specs.Spec do
 
   import Ecto.Changeset
 
+  alias Hive.Specs.Status
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  @statuses [:draft, :proposed, :approved, :paused, :rejected, :in_progress, :shipped, :archived]
+  @statuses Status.values()
   @visibility_overrides [:private]
 
   schema "specs" do

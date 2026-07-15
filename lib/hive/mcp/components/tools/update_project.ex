@@ -21,7 +21,7 @@ defmodule Hive.MCP.Components.Tools.UpdateProject do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"project" => Hive.MCP.Components.Tools.Projects.project_schema()},
+        %{"project" => Hive.MCP.Components.Schemas.project()},
         ["project"]
       )
 

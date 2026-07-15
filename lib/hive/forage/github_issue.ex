@@ -24,6 +24,8 @@ defmodule Hive.Forage.GitHubIssue do
     field :body, :string
     field :state, Ecto.Enum, values: @states, default: :open
     field :classified_at, :utc_datetime
+    field :classification_failure, :string
+    field :classification_failed_at, :utc_datetime
 
     belongs_to :github_repository, GitHubRepository
 
@@ -42,7 +44,16 @@ defmodule Hive.Forage.GitHubIssue do
 
   def changeset(issue, attrs) do
     issue
-    |> cast(attrs, [:github_repository_id, :number, :title, :body, :state, :classified_at])
+    |> cast(attrs, [
+      :github_repository_id,
+      :number,
+      :title,
+      :body,
+      :state,
+      :classified_at,
+      :classification_failure,
+      :classification_failed_at
+    ])
     |> validate_required([:github_repository_id, :number, :title, :state])
     |> validate_length(:title, max: 500)
     |> validate_inclusion(:state, @states)

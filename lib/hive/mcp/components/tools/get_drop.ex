@@ -16,7 +16,7 @@ defmodule Hive.MCP.Components.Tools.GetDrop do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"drop" => Hive.MCP.Components.Tools.Drops.drop_schema()},
+        %{"drop" => Hive.MCP.Components.Schemas.drop()},
         ["drop"]
       )
 

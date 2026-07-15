@@ -21,8 +21,8 @@ defmodule Hive.MCP.Components.Tools.CreateProjectWebhook do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "webhook" => Hive.MCP.Components.Tools.Projects.webhook_schema(),
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "webhook" => Hive.MCP.Components.Schemas.webhook(),
           "webhook_url" => %{"type" => "string"}
         },
         ["project", "webhook", "webhook_url"]

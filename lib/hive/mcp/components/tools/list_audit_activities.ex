@@ -48,9 +48,9 @@ defmodule Hive.MCP.Components.Tools.ListAuditActivities do
         %{
           "activities" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Audit.activity_schema()
+            "items" => Hive.MCP.Components.Schemas.audit_activity()
           },
-          "pagination" => Hive.MCP.Components.Tools.Audit.pagination_schema()
+          "pagination" => Hive.MCP.Components.Schemas.pagination()
         },
         ["activities", "pagination"]
       )

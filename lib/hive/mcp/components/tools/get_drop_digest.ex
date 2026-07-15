@@ -16,7 +16,7 @@ defmodule Hive.MCP.Components.Tools.GetDropDigest do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"digest" => Hive.MCP.Components.Tools.DropDigests.digest_schema()},
+        %{"digest" => Hive.MCP.Components.Schemas.drop_digest()},
         ["digest"]
       )
 

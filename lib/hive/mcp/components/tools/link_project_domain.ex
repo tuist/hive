@@ -16,8 +16,8 @@ defmodule Hive.MCP.Components.Tools.LinkProjectDomain do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "domain" => Hive.MCP.Components.Tools.Domains.domain_schema()
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "domain" => Hive.MCP.Components.Schemas.domain()
         },
         ["project", "domain"]
       )

@@ -19,7 +19,7 @@ defmodule Hive.MCP.Components.Tools.ListProjects do
         %{
           "projects" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Projects.project_schema()
+            "items" => Hive.MCP.Components.Schemas.project()
           }
         },
         ["projects"]

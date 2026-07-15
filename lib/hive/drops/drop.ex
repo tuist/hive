@@ -25,6 +25,8 @@ defmodule Hive.Drops.Drop do
     field :version, :string
     field :published_at, :utc_datetime
     field :classified_at, :utc_datetime
+    field :classification_failure, :string
+    field :classification_failed_at, :utc_datetime
 
     belongs_to :drop_source, Hive.Drops.DropSource
     belongs_to :github_repository, Hive.Domains.GitHubRepository
@@ -53,6 +55,8 @@ defmodule Hive.Drops.Drop do
       :version,
       :published_at,
       :classified_at,
+      :classification_failure,
+      :classification_failed_at,
       :drop_source_id,
       :github_repository_id
     ])

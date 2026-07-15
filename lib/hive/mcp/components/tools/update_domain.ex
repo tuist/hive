@@ -21,7 +21,7 @@ defmodule Hive.MCP.Components.Tools.UpdateDomain do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"domain" => Hive.MCP.Components.Tools.Domains.domain_schema()},
+        %{"domain" => Hive.MCP.Components.Schemas.domain()},
         ["domain"]
       )
 

@@ -120,7 +120,8 @@ defmodule Hive.MCP.Transport.StreamableHTTP do
 
   defp add_output_schemas(%{"result" => %{"tools" => tools} = result} = response, opts)
        when is_list(tools) do
-    modules = opts |> Keyword.fetch!(:server) |> apply(:server, []) |> Map.fetch!(:tools)
+    server = Keyword.fetch!(opts, :server)
+    modules = server.server().tools
 
     descriptors =
       Enum.map(tools, fn %{"name" => name} = tool ->

@@ -33,7 +33,7 @@ defmodule Hive.MCP.Components.Tools.ListDrops do
         %{
           "drops" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Drops.drop_schema()
+            "items" => Hive.MCP.Components.Schemas.drop()
           },
           "meta" => %{
             "type" => "object",

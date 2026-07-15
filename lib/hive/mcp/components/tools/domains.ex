@@ -4,46 +4,6 @@ defmodule Hive.MCP.Components.Tools.Domains do
   alias Hive.MCP.Components.Tools.Projects, as: ProjectTool
   alias Hive.Repo
 
-  def domain_schema do
-    %{
-      "type" => "object",
-      "properties" => %{
-        "id" => %{"type" => "string"},
-        "name" => %{"type" => "string"},
-        "description" => %{"type" => ["string", "null"]},
-        "visibility" => %{"type" => "string"},
-        "projects" => %{"type" => "array", "items" => project_summary_schema()},
-        "inserted_at" => %{"type" => "string"},
-        "updated_at" => %{"type" => "string"}
-      },
-      "required" => [
-        "id",
-        "name",
-        "description",
-        "visibility",
-        "projects",
-        "inserted_at",
-        "updated_at"
-      ],
-      "additionalProperties" => false
-    }
-  end
-
-  defp project_summary_schema do
-    %{
-      "type" => "object",
-      "properties" => %{
-        "id" => %{"type" => "string"},
-        "name" => %{"type" => "string"},
-        "description" => %{"type" => ["string", "null"]},
-        "visibility" => %{"type" => "string"},
-        "repositories" => %{"type" => "array", "items" => ProjectTool.repository_schema()}
-      },
-      "required" => ["id", "name", "description", "visibility", "repositories"],
-      "additionalProperties" => false
-    }
-  end
-
   def domain_json(domain) do
     domain = Repo.preload(domain, projects: :github_repositories)
 

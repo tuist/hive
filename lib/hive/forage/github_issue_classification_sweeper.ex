@@ -1,10 +1,10 @@
 defmodule Hive.Forage.GitHubIssueClassificationSweeper do
   @moduledoc """
-  Periodic Oban job that enqueues classification for every GitHub issue
-  whose `classified_at` is `nil`. Catches rows that existed before the
-  classifier shipped, rows whose classification job hit max attempts, and
-  rows whose repository was attached to its first domain after the issue
-  was already cached.
+  Periodic Oban job that enqueues every pending GitHub issue
+  classification. Catches rows that existed before the classifier shipped,
+  rows whose classification job hit max attempts, and rows whose repository
+  was attached to its first domain after the issue was already cached.
+  Terminal provider failures are persisted and excluded.
 
   Runs on the `:agents` queue. The sync-time backfill in
   `Hive.Forage.reconcile_repository_github_issues/2` covers the same
@@ -30,7 +30,10 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeper do
   def perform(%Oban.Job{}) do
     ids =
       GitHubIssue
-      |> where([issue], is_nil(issue.classified_at))
+      |> where(
+        [issue],
+        is_nil(issue.classified_at) and is_nil(issue.classification_failed_at)
+      )
       |> order_by([issue], asc: issue.inserted_at)
       |> limit(^@batch_size)
       |> select([issue], issue.id)

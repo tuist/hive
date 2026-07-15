@@ -7,6 +7,7 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
   alias Hive.Forage.GitHubIssueClassification
   alias Hive.Forage.GitHubIssueDomain
   alias Hive.Domains
+  alias Hive.GitHub.Issues
   alias Hive.Projects
 
   defp unique, do: System.unique_integer([:positive])
@@ -171,5 +172,51 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     refreshed = Repo.get!(GitHubIssue, issue.id)
     assert is_nil(refreshed.classified_at)
     assert [] = Repo.all(GitHubIssueDomain)
+  end
+
+  test "keeps terminal failures for unchanged content and retries changed content" do
+    stub(Hive.Agents, :enabled?, fn -> false end)
+
+    domain = create_domain_with_new_repo!("retry")
+    repository = github_repository_for_domain!(domain)
+
+    issue =
+      Repo.insert!(
+        GitHubIssue.changeset(%GitHubIssue{}, %{
+          github_repository_id: repository.id,
+          number: 7,
+          title: "Original",
+          body: "Body",
+          state: :open
+        })
+      )
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+
+    assert {:ok, _issue} =
+             Forage.upsert_repository_github_issue(repository, %Issues{
+               number: 7,
+               title: "Original",
+               body: "Body",
+               state: "open"
+             })
+
+    unchanged = Repo.get!(GitHubIssue, issue.id)
+    assert unchanged.classification_failure == "llm_credit_limit"
+    assert is_nil(unchanged.classified_at)
+
+    assert {:ok, _issue} =
+             Forage.upsert_repository_github_issue(repository, %Issues{
+               number: 7,
+               title: "Updated",
+               body: "Body",
+               state: "open"
+             })
+
+    changed = Repo.get!(GitHubIssue, issue.id)
+    assert changed.title == "Updated"
+    assert is_nil(changed.classification_failure)
+    assert is_nil(changed.classification_failed_at)
+    assert %DateTime{} = changed.classified_at
   end
 end

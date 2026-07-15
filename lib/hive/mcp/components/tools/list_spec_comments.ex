@@ -29,7 +29,7 @@ defmodule Hive.MCP.Components.Tools.ListSpecComments do
           },
           "comments" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Specs.comment_schema()
+            "items" => Hive.MCP.Components.Schemas.comment()
           }
         },
         ["spec", "comments"]
