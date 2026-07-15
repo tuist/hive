@@ -9,14 +9,17 @@ defmodule Hive.Slack.Unfurl.BlockKitTest do
     assert {:ok, payload} =
              BlockKit.generic(uri, %{
                title: "Spec",
-               description: "Use <tag> & >",
+               description: "Use <tag> & >\n\n- Keep the list",
                highlights: ["Draft"],
                section_label: "Specs"
              })
 
     assert [
              %{"type" => "header", "text" => %{"text" => "Spec"}},
-             %{"type" => "section", "text" => %{"text" => "Use &lt;tag&gt; &amp; &gt;"}},
+             %{
+               "type" => "section",
+               "text" => %{"text" => "Use &lt;tag&gt; &amp; &gt;\n\n- Keep the list"}
+             },
              %{"type" => "section", "fields" => [%{"text" => "- Draft"}]},
              %{"type" => "context", "elements" => [%{"text" => "Specs / Hive"}]},
              %{"type" => "actions", "elements" => [%{"url" => "https://hive.tuist.dev/specs/1"}]}
@@ -32,5 +35,36 @@ defmodule Hive.Slack.Unfurl.BlockKitTest do
 
     assert String.length(header) == 150
     assert String.ends_with?(header, "...")
+  end
+
+  test "builds native markdown description blocks" do
+    uri = URI.parse("https://hive.tuist.dev/specs/1")
+    description = "**Proposal**\n\n- Keep standard Markdown"
+
+    assert {:ok, payload} =
+             BlockKit.generic(uri, %{
+               title: "Spec",
+               description: description,
+               description_format: :markdown
+             })
+
+    assert %{"type" => "markdown", "text" => ^description} = Enum.at(payload["blocks"], 1)
+  end
+
+  test "builds cards with additional blocks and a custom action label" do
+    uri = URI.parse("https://hive.tuist.dev/specs/1")
+    detail = %{"type" => "section", "text" => %{"type" => "mrkdwn", "text" => "Reviewers"}}
+
+    assert {:ok, payload} =
+             BlockKit.generic(uri, %{
+               title: "Spec",
+               extra_blocks: [detail],
+               action_label: "Open spec"
+             })
+
+    assert ^detail = Enum.at(payload["blocks"], 1)
+
+    assert %{"type" => "actions", "elements" => [%{"text" => %{"text" => "Open spec"}}]} =
+             List.last(payload["blocks"])
   end
 end

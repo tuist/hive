@@ -1,10 +1,11 @@
 defmodule Hive.Slack.Unfurl.BlockKit do
   @moduledoc """
-  Builds Slack Block Kit payloads for Hive link unfurls.
+  Builds Slack Block Kit payloads for Hive link previews and notifications.
   """
 
   @max_header_length 150
   @max_section_length 2_900
+  @max_markdown_length 12_000
   @max_field_length 1_800
   @max_context_length 2_000
   @max_button_length 75
@@ -26,20 +27,26 @@ defmodule Hive.Slack.Unfurl.BlockKit do
 
   defp payload(uri, attrs) do
     title = attrs |> Map.fetch!(:title) |> to_string()
-    description = attrs |> Map.get(:description) |> present_string()
+    description = attrs |> Map.get(:description) |> present_markdown()
+    description_format = Map.get(attrs, :description_format, :mrkdwn)
     section_label = attrs |> Map.get(:section_label) |> present_string()
     type_label = attrs |> Map.get(:type_label) |> present_string()
     highlights = attrs |> Map.get(:highlights, []) |> normalize_highlights()
+    extra_blocks = attrs |> Map.get(:extra_blocks, []) |> normalize_blocks()
+    action_label = attrs |> Map.get(:action_label, "Open in Hive") |> to_string()
 
     %{
       "blocks" =>
-        [
-          header_block(title),
-          description_block(description),
-          fields_block(highlights),
-          context_block([type_label || section_label, "Hive"]),
-          actions_block(uri)
-        ]
+        ([
+           header_block(title),
+           description_block(description, description_format),
+           fields_block(highlights)
+         ] ++
+           extra_blocks ++
+           [
+             context_block([type_label || section_label, "Hive"]),
+             actions_block(uri, action_label)
+           ])
         |> Enum.reject(&is_nil/1)
     }
   end
@@ -55,9 +62,16 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     }
   end
 
-  defp description_block(nil), do: nil
+  defp description_block(nil, _format), do: nil
 
-  defp description_block(description) do
+  defp description_block(description, :markdown) do
+    %{
+      "type" => "markdown",
+      "text" => truncate(description, @max_markdown_length)
+    }
+  end
+
+  defp description_block(description, _format) do
     %{
       "type" => "section",
       "text" => %{
@@ -107,7 +121,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     end
   end
 
-  defp actions_block(uri) do
+  defp actions_block(uri, label) do
     %{
       "type" => "actions",
       "elements" => [
@@ -115,7 +129,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
           "type" => "button",
           "text" => %{
             "type" => "plain_text",
-            "text" => truncate("Open in Hive", @max_button_length),
+            "text" => label |> plain_text() |> truncate(@max_button_length),
             "emoji" => true
           },
           "url" => URI.to_string(uri),
@@ -133,12 +147,27 @@ defmodule Hive.Slack.Unfurl.BlockKit do
 
   defp normalize_highlights(_highlights), do: []
 
+  defp normalize_blocks(blocks) when is_list(blocks), do: Enum.reject(blocks, &is_nil/1)
+  defp normalize_blocks(_blocks), do: []
+
   defp present_string(nil), do: nil
 
   defp present_string(value) do
     value
     |> to_string()
     |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> case do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  defp present_markdown(nil), do: nil
+
+  defp present_markdown(value) do
+    value
+    |> to_string()
     |> String.trim()
     |> case do
       "" -> nil

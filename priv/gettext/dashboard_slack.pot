@@ -342,21 +342,6 @@ msgstr ""
 msgid "(no message text)"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:167
-#, elixir-autogen, elixir-format
-msgid "*New comment on spec:* %{link}"
-msgstr ""
-
-#: lib/hive/slack/workers/send_notification.ex:139
-#, elixir-autogen, elixir-format
-msgid "*New spec:* %{link}"
-msgstr ""
-
-#: lib/hive/slack/workers/send_notification.ex:190
-#, elixir-autogen, elixir-format
-msgid "*Review requested:* %{link}"
-msgstr ""
-
 #: lib/hive/slack/workers/send_notification.ex:230
 #, elixir-autogen, elixir-format
 msgid "*Reviewers:* %{reviewers}"
@@ -367,18 +352,18 @@ msgstr ""
 msgid "Captured from Slack"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:315
-#: lib/hive/slack/workers/send_notification.ex:318
+#: lib/hive/slack/workers/send_notification.ex:313
+#: lib/hive/slack/workers/send_notification.ex:316
 #, elixir-autogen, elixir-format
 msgid "Comment by %{user}"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:307
+#: lib/hive/slack/workers/send_notification.ex:305
 #, elixir-autogen, elixir-format
 msgid "Created by"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:310
+#: lib/hive/slack/workers/send_notification.ex:308
 #, elixir-autogen, elixir-format
 msgid "Created by %{user}"
 msgstr ""
@@ -398,22 +383,22 @@ msgstr ""
 msgid "New spec comment: %{title}"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:136
+#: lib/hive/slack/workers/send_notification.ex:137
 #, elixir-autogen, elixir-format
 msgid "New spec: %{title}"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:209
+#: lib/hive/slack/workers/send_notification.ex:220
 #, elixir-autogen, elixir-format
 msgid "Open spec"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:195
+#: lib/hive/slack/workers/send_notification.ex:212
 #, elixir-autogen, elixir-format
 msgid "Requested by %{user}"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:219
+#: lib/hive/slack/workers/send_notification.ex:197
 #, elixir-autogen, elixir-format
 msgid "Review requested for spec #%{number}: %{title}"
 msgstr ""
@@ -431,12 +416,12 @@ msgid "Something went wrong looking up your Hive account."
 msgstr ""
 
 #: lib/hive/slack/workers/send_notification.ex:145
-#: lib/hive/slack/workers/send_notification.ex:198
+#: lib/hive/slack/workers/send_notification.ex:207
 #, elixir-autogen, elixir-format
 msgid "Status: %{status}"
 msgstr ""
 
-#: lib/hive/slack/workers/send_notification.ex:322
+#: lib/hive/slack/workers/send_notification.ex:320
 #, elixir-autogen, elixir-format
 msgid "someone"
 msgstr ""
@@ -475,4 +460,26 @@ msgstr ""
 #: lib/hive/slack/workers/send_notification.ex:237
 #, elixir-autogen, elixir-format
 msgid "**Review focus:**\n\n%{focus}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:147
+#, elixir-autogen, elixir-format
+msgid "New spec"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:173
+#, elixir-autogen, elixir-format
+msgid "New spec comment"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:143
+#: lib/hive/slack/workers/send_notification.ex:170
+#: lib/hive/slack/workers/send_notification.ex:206
+#, elixir-autogen, elixir-format
+msgid "Spec #%{number}"
+msgstr ""
+
+#: lib/hive/slack/workers/send_notification.ex:219
+#, elixir-autogen, elixir-format
+msgid "Review requested"
 msgstr ""
