@@ -19,7 +19,7 @@ defmodule Hive.MCP.Components.Tools.ListDomains do
         %{
           "domains" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Domains.domain_schema()
+            "items" => Hive.MCP.Components.Schemas.domain()
           }
         },
         ["domains"]

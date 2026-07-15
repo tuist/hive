@@ -20,7 +20,7 @@ defmodule Hive.MCP.Components.Tools.ListDropDigests do
         %{
           "digests" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.DropDigests.digest_schema()
+            "items" => Hive.MCP.Components.Schemas.drop_digest()
           }
         },
         ["digests"]

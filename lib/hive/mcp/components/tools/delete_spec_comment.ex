@@ -18,7 +18,7 @@ defmodule Hive.MCP.Components.Tools.DeleteSpecComment do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        %{"spec" => Hive.MCP.Components.Schemas.spec()},
         ["spec"]
       )
 

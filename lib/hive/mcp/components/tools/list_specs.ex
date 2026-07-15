@@ -15,7 +15,7 @@ defmodule Hive.MCP.Components.Tools.ListSpecs do
         %{
           "specs" => %{
             "type" => "array",
-            "items" => Hive.MCP.Components.Tools.Specs.spec_schema()
+            "items" => Hive.MCP.Components.Schemas.spec()
           }
         },
         ["specs"]

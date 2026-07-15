@@ -17,8 +17,8 @@ defmodule Hive.MCP.Components.Tools.UnlinkProjectDomain do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "unlinked_domain" => Hive.MCP.Components.Tools.Domains.domain_schema()
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "unlinked_domain" => Hive.MCP.Components.Schemas.domain()
         },
         ["project", "unlinked_domain"]
       )

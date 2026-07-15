@@ -22,8 +22,8 @@ defmodule Hive.MCP.Components.Tools.LinkProjectRepository do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "repository" => Hive.MCP.Components.Tools.Projects.repository_schema()
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "repository" => Hive.MCP.Components.Schemas.repository()
         },
         ["project", "repository"]
       )

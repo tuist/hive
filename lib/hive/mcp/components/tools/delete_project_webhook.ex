@@ -17,8 +17,8 @@ defmodule Hive.MCP.Components.Tools.DeleteProjectWebhook do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "deleted_webhook" => Hive.MCP.Components.Tools.Projects.webhook_schema()
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "deleted_webhook" => Hive.MCP.Components.Schemas.webhook()
         },
         ["project", "deleted_webhook"]
       )

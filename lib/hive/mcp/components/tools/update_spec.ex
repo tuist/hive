@@ -40,11 +40,11 @@ defmodule Hive.MCP.Components.Tools.UpdateSpec do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        %{"spec" => Hive.MCP.Components.Schemas.spec()},
         ["spec"],
         %{
           "current_revision" => %{"type" => "integer"},
-          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema(),
+          "spec" => Hive.MCP.Components.Schemas.spec(),
           "message" => %{"type" => "string"}
         }
       )

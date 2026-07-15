@@ -19,7 +19,7 @@ defmodule Hive.MCP.Components.Tools.AddSpecComment do
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
-        %{"spec" => Hive.MCP.Components.Tools.Specs.spec_schema()},
+        %{"spec" => Hive.MCP.Components.Schemas.spec()},
         ["spec"]
       )
 

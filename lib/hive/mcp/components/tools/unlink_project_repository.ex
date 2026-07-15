@@ -17,8 +17,8 @@ defmodule Hive.MCP.Components.Tools.UnlinkProjectRepository do
     output_schema:
       Hive.MCP.Tool.result_schema(
         %{
-          "project" => Hive.MCP.Components.Tools.Projects.project_schema(),
-          "unlinked_repository" => Hive.MCP.Components.Tools.Projects.repository_schema()
+          "project" => Hive.MCP.Components.Schemas.project(),
+          "unlinked_repository" => Hive.MCP.Components.Schemas.repository()
         },
         ["project", "unlinked_repository"]
       )

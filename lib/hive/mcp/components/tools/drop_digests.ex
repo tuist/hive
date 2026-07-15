@@ -5,35 +5,6 @@ defmodule Hive.MCP.Components.Tools.DropDigests do
 
   alias Hive.Drops.WeeklyDigests
 
-  def digest_schema do
-    %{
-      "type" => "object",
-      "properties" => %{
-        "id" => %{"type" => "string"},
-        "week_start" => %{"type" => "string"},
-        "week_end" => %{"type" => "string"},
-        "title" => %{"type" => "string"},
-        "summary" => %{"type" => "string"},
-        "body" => %{"type" => "string"},
-        "drop_count" => %{"type" => "integer"},
-        "hive_url" => %{"type" => "string"},
-        "published_at" => %{"type" => "string"}
-      },
-      "required" => [
-        "id",
-        "week_start",
-        "week_end",
-        "title",
-        "summary",
-        "body",
-        "drop_count",
-        "hive_url",
-        "published_at"
-      ],
-      "additionalProperties" => false
-    }
-  end
-
   def digest_json(digest) do
     %{
       id: digest.id,

@@ -23,12 +23,12 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
       Hive.MCP.Tool.result_schema(
         %{
           "ok" => %{"type" => "boolean"},
-          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema()
+          "spec" => Hive.MCP.Components.Schemas.spec()
         },
         ["ok", "spec"],
         %{
           "current_revision" => %{"type" => "integer"},
-          "spec" => Hive.MCP.Components.Tools.Specs.spec_schema()
+          "spec" => Hive.MCP.Components.Schemas.spec()
         }
       )
 
