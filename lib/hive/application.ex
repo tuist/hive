@@ -10,6 +10,7 @@ defmodule Hive.Application do
   @impl true
   def start(_type, _args) do
     attach_sentry_logger()
+    Hive.Oban.Telemetry.attach()
     ensure_mcp_session_store_started()
 
     children =
