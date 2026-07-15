@@ -5,6 +5,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
 
   @max_header_length 150
   @max_section_length 2_900
+  @max_markdown_length 12_000
   @max_field_length 1_800
   @max_context_length 2_000
   @max_button_length 75
@@ -26,7 +27,8 @@ defmodule Hive.Slack.Unfurl.BlockKit do
 
   defp payload(uri, attrs) do
     title = attrs |> Map.fetch!(:title) |> to_string()
-    description = attrs |> Map.get(:description) |> present_string()
+    description = attrs |> Map.get(:description) |> present_markdown()
+    description_format = Map.get(attrs, :description_format, :mrkdwn)
     section_label = attrs |> Map.get(:section_label) |> present_string()
     type_label = attrs |> Map.get(:type_label) |> present_string()
     highlights = attrs |> Map.get(:highlights, []) |> normalize_highlights()
@@ -35,7 +37,7 @@ defmodule Hive.Slack.Unfurl.BlockKit do
       "blocks" =>
         [
           header_block(title),
-          description_block(description),
+          description_block(description, description_format),
           fields_block(highlights),
           context_block([type_label || section_label, "Hive"]),
           actions_block(uri)
@@ -55,9 +57,16 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     }
   end
 
-  defp description_block(nil), do: nil
+  defp description_block(nil, _format), do: nil
 
-  defp description_block(description) do
+  defp description_block(description, :markdown) do
+    %{
+      "type" => "markdown",
+      "text" => truncate(description, @max_markdown_length)
+    }
+  end
+
+  defp description_block(description, _format) do
     %{
       "type" => "section",
       "text" => %{
@@ -139,6 +148,18 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     value
     |> to_string()
     |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> case do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  defp present_markdown(nil), do: nil
+
+  defp present_markdown(value) do
+    value
+    |> to_string()
     |> String.trim()
     |> case do
       "" -> nil

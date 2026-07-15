@@ -16,6 +16,7 @@ defmodule Hive.Slack.Workers.SendNotification do
   alias Hive.Slack
   alias Hive.Slack.API
   alias Hive.Slack.Installation
+  alias Hive.Slack.Unfurl.BlockKit
   alias Hive.Specs
   alias Hive.Specs.Comment
   alias Hive.Specs.ReviewRequests
@@ -131,22 +132,21 @@ defmodule Hive.Slack.Workers.SendNotification do
       spec ->
         url = spec_url(spec)
 
-        {:ok,
-         %{
-           "text" => dgettext("dashboard_slack", "New spec: %{title}", title: spec.title),
-           "blocks" => [
-             section(
-               dgettext("dashboard_slack", "*New spec:* %{link}",
-                 link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
-               )
-             ),
-             context([
-               author_text(spec.created_by_user_id),
-               dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status))
-             ]),
-             markdown(summary_text(spec))
-           ]
-         }}
+        card_message(
+          url,
+          dgettext("dashboard_slack", "New spec: %{title}", title: spec.title),
+          %{
+            title: spec.title,
+            description: summary_text(spec),
+            description_format: :markdown,
+            highlights: [
+              dgettext("dashboard_slack", "Spec #%{number}", number: spec.number),
+              author_text(spec.created_by_user_id),
+              dgettext("dashboard_slack", "Status: %{status}", status: status_label(spec.status))
+            ],
+            type_label: dgettext("dashboard_slack", "New spec")
+          }
+        )
     end
   end
 
@@ -159,23 +159,30 @@ defmodule Hive.Slack.Workers.SendNotification do
         %Comment{spec: spec} = comment = Repo.preload(comment, [:user, :spec])
         url = spec_url(spec)
 
-        {:ok,
-         %{
-           "text" => dgettext("dashboard_slack", "New spec comment: %{title}", title: spec.title),
-           "blocks" => [
-             section(
-               dgettext("dashboard_slack", "*New comment on spec:* %{link}",
-                 link: "<#{url}|##{spec.number} #{escape(spec.title)}>"
-               )
-             ),
-             context([comment_author_text(comment)]),
-             markdown(comment.body)
-           ]
-         }}
+        card_message(
+          url,
+          dgettext("dashboard_slack", "New spec comment: %{title}", title: spec.title),
+          %{
+            title: spec.title,
+            description: comment.body,
+            description_format: :markdown,
+            highlights: [
+              dgettext("dashboard_slack", "Spec #%{number}", number: spec.number),
+              comment_author_text(comment)
+            ],
+            type_label: dgettext("dashboard_slack", "New spec comment")
+          }
+        )
     end
   end
 
   defp message_for(_event, _args), do: {:skipped, :unknown_event}
+
+  defp card_message(url, fallback_text, attrs) do
+    with {:ok, payload} <- BlockKit.generic(URI.parse(url), attrs) do
+      {:ok, Map.put(payload, "text", fallback_text)}
+    end
+  end
 
   defp review_request_message(%Installation{} = installation, %Spec{} = spec, requester, payload) do
     url = spec_url(spec)

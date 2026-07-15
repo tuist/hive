@@ -80,9 +80,21 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
       assert id == installation.id
       assert params["channel"] == "C-notify"
       assert params["text"] == "New spec: Draft"
-      assert [%{"text" => %{"text" => title}} | _] = params["blocks"]
-      assert title =~ "##{spec.number}"
-      assert %{"type" => "markdown", "text" => ^body} = List.last(params["blocks"])
+
+      assert [
+               %{"type" => "header", "text" => %{"text" => "Draft"}},
+               %{"type" => "markdown", "text" => ^body},
+               %{"type" => "section", "fields" => fields},
+               %{"type" => "context", "elements" => [%{"text" => "New spec / Hive"}]},
+               %{
+                 "type" => "actions",
+                 "elements" => [%{"url" => url, "text" => %{"text" => "Open in Hive"}}]
+               }
+             ] = params["blocks"]
+
+      assert Enum.any?(fields, &(&1["text"] == "- Spec ##{spec.number}"))
+      assert Enum.any?(fields, &(&1["text"] == "- Status: draft"))
+      assert url == HiveWeb.Endpoint.url() <> "/specs/#{spec.number}"
 
       {:ok, %{"ok" => true}}
     end)
@@ -112,13 +124,31 @@ defmodule Hive.Slack.Workers.SendNotificationTest do
     - `bytes_wired` is counted at stream end
     """
 
+    description = String.trim(body)
+
     {:ok, comment} = Specs.add_comment(spec, %{"body" => body}, user)
 
     expect(API, :post_message, fn %Installation{id: id}, params ->
       assert id == installation.id
       assert params["channel"] == "C-notify"
       assert params["text"] == "New spec comment: Draft"
-      assert %{"type" => "markdown", "text" => ^body} = List.last(params["blocks"])
+
+      assert [
+               %{"type" => "header", "text" => %{"text" => "Draft"}},
+               %{"type" => "markdown", "text" => ^description},
+               %{"type" => "section", "fields" => fields},
+               %{
+                 "type" => "context",
+                 "elements" => [%{"text" => "New spec comment / Hive"}]
+               },
+               %{
+                 "type" => "actions",
+                 "elements" => [%{"url" => url, "text" => %{"text" => "Open in Hive"}}]
+               }
+             ] = params["blocks"]
+
+      assert Enum.any?(fields, &(&1["text"] == "- Spec ##{spec.number}"))
+      assert url == HiveWeb.Endpoint.url() <> "/specs/#{spec.number}"
 
       {:ok, %{"ok" => true}}
     end)
