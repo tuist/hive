@@ -1,92 +1,57 @@
 # Authorization
 
-Hive uses a single persisted role on each user record to decide what
-that user can see and do. There are three roles, ordered weakest to
-strongest:
+Every Hive account has one role. The role controls access consistently
+across the dashboard and connected clients.
 
-- `collaborator`: signed in, but not part of the org. The default for
-  anyone whose email domain is not in
-  [`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains). Collaborators
-  can sign in, comment on forage items they submitted, and see public
-  domains and projects.
-- `member`: part of the org. The default for users whose email domain
-  matches [`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains) at
-  signup, and for every signed-in user when no org domains are
-  configured. Members can see private domains and projects, create
-  specs, and act on the dashboard or
-  [Model Context Protocol](https://modelcontextprotocol.io/) endpoint
-  the way the team does.
-- `admin`: explicitly promoted. Admins additionally see the audit
-  trail at `/ops/audit` and reach the Operations surfaces at `/ops/*`,
-  where they manage Slack workspaces and drop sources.
+## Roles
 
-The role is derived from the email domain the first time a user signs
-in and then stored. Changing
-[`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains) later does not
-reclassify existing users; promote and demote with
-`Hive.Accounts.update_user_role/2`.
+- **Collaborator** is signed in but is outside the organization.
+  Collaborators can view public content, submit Forage items, comment on
+  visible work, and edit items they authored.
+- **Member** belongs to the organization. Members can also see private
+  content, create projects, domains, and specs, and manage the team's
+  product work.
+- **Administrator** has every member capability and can manage
+  Operations settings, connected workspaces, model providers, and the
+  audit trail.
+
+At first sign-in, Hive compares the account's email domain with
+[`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains). A match
+creates a member; a non-match creates a collaborator. When no
+organization domains are configured, every signed-in account becomes a
+member.
+
+Changing the configured domains later does not change existing roles.
 
 ## What each role can do
 
-| Surface | Anonymous | `collaborator` | `member` | `admin` |
+| Capability | Anonymous | Collaborator | Member | Administrator |
 |---|---|---|---|---|
-| Public domains, projects, specs, drops | yes | yes | yes | yes |
-| Sign-in, create forage items | no | yes | yes | yes |
-| Create forage items as GitHub issues | no | no | yes | yes |
-| Private domains, projects, specs, drops | no | no | yes | yes |
-| Spec editing | no | own only | yes | yes |
-| Manage forage intake settings | no | no | no | yes |
-| Audit trail (`/ops/audit`) | no | no | no | yes |
-| Operations surfaces (`/ops/*`): Slack and drop sources | no | no | no | yes |
+| View public projects, domains, specs, and drops | yes | yes | yes | yes |
+| Submit Forage items | no | yes | yes | yes |
+| Comment on visible Forage items and specs | no | yes | yes | yes |
+| Create Forage items as GitHub issues | no | no | yes | yes |
+| View private product work | no | no | yes | yes |
+| Create and manage projects, domains, and specs | no | no | yes | yes |
+| Manage Forage intake | no | no | no | yes |
+| Manage Slack and model gateway settings | no | no | no | yes |
+| View the audit trail | no | no | no | yes |
 
 Anonymous access also depends on
-[`HIVE_VISIBILITY`](/reference/configuration#hive_visibility). When the instance
-is `private` everyone must sign in first, including for the public content
-listed above.
+[`HIVE_VISIBILITY`](/reference/configuration#hive_visibility). A private
+instance requires sign-in before any dashboard content is shown.
 
-Specs belong to projects and inherit the project's visibility. A spec
-can be marked private inside a public project, but a spec inside a
+## Resource visibility
+
+Projects and domains can be public or private. Specs inherit their
+project's visibility and can be narrowed to private, but a spec in a
 private project cannot be made public.
 
-## Promoting an admin
+Public feeds and Slack link previews follow the anonymous view. Content
+that requires a Hive session is not included.
 
-::: tip Planned dashboard control
-Hive does not yet expose role management in the dashboard. A dashboard
-control is planned so administrators can promote and demote users
-without opening a remote shell.
-:::
+## Change an account role
 
-Until then, open a remote Interactive Elixir
-([IEx](https://hexdocs.pm/iex/IEx.html)) shell in the running Hive
-release and promote the user by email. The command depends on how the
-instance is deployed, but the important part is running
-`bin/hive remote` against the live application.
-
-For a Helm release named `hive` on Kubernetes:
-
-```bash
-kubectl exec -it deploy/hive -- bin/hive remote
-```
-
-For a Docker Compose service named `hive`:
-
-```bash
-docker compose exec hive bin/hive remote
-```
-
-For any other process manager, open a shell in the host or container
-running the Hive release and run:
-
-```bash
-bin/hive remote
-```
-
-Then in the Interactive Elixir shell:
-
-```elixir
-user = Hive.Accounts.get_user_by_email("admin@example.com")
-{:ok, _user} = Hive.Accounts.update_user_role(user, :admin)
-```
-
-Demote the same way, passing `:member` or `:collaborator` instead. The
-change takes effect on the user's next request.
+Role management is not yet available in the dashboard. Until it is,
+role changes require an operator-side maintenance action. Ask the person
+who runs your Hive instance to promote or demote the account.

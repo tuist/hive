@@ -9,6 +9,10 @@ export default defineConfig({
   lastUpdated: true,
   sitemap: {
     hostname: "https://docs.hive.tuist.dev",
+    transformItems: (items) =>
+      items.filter(
+        (item) => !item.url.includes("guide/self-hosting/agents"),
+      ),
   },
   head: [
     ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],

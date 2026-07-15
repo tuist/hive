@@ -15,9 +15,9 @@ tags:
 
 _By Tuist on June 26, 2026_
 
-We did not set out to build Hive because we wanted another tool. We set out because LLMs reopened a question we had quietly given up on: how do we actually want to build product, and what would the thing that supports that look like?
+We did not set out to build Hive because we wanted another tool. We set out because language models reopened a question we had quietly given up on: how do we actually want to build product, and what would the thing that supports that look like?
 
-When some of us worked at [Shopify](https://shopify.com), the part that stuck was how they treated internal tooling. Most companies reach for whatever the market is selling, Jira, the CRM of the month, the tracker everyone uses, and then bend themselves around someone else's opinion of how work should happen. Shopify did the reverse. They decided how they wanted to operate, and then built the tools that supported it. That always read as a luxury reserved for companies with that kind of headcount. For a team our size it was simply not affordable.
+When some of us worked at [Shopify](https://shopify.com), the part that stuck was how they treated internal tooling. Most companies reach for whatever the market is selling, Jira, the customer relationship management software of the month, the tracker everyone uses, and then bend themselves around someone else's opinion of how work should happen. Shopify did the reverse. They decided how they wanted to operate, and then built the tools that supported it. That always read as a luxury reserved for companies with that kind of headcount. For a team our size it was simply not affordable.
 
 That equation flipped. The cost of writing code is at a historic low. The cost of running and scaling it is at a historic low. The cost of designing an interface that does not feel hostile, when you can lean on a design system and a coding agent, is at a historic low. And the foundations we had already paid for while building [Tuist](https://tuist.dev) as a business, a design system, the muscle to deploy, run, and scale services, the observability underneath, meant the gap between how we want to build product and a tool that embodies it had almost closed. Hive is what we built in that gap.
 

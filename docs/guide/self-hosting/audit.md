@@ -1,54 +1,40 @@
 # Audit
 
-Hive keeps an append-only audit trail of who did what across every
-surface: the dashboard, Model Context Protocol
-([MCP](https://modelcontextprotocol.io/)) tools, webhooks, background
-jobs, and system paths. The trail lives in PostgreSQL alongside the rest
-of the application data, so nothing extra needs to be wired up to enable
-it.
+Hive keeps an append-only record of important activity from people,
+agents, webhooks, scheduled work, and system operations.
 
-## What gets recorded
+Administrators can open **Ops (Operations) → Audit** at `/ops/audit`.
 
-Each entry captures:
+## Find an activity
 
-- **Actor**: the user, agent, or system that initiated the action,
-  with its id, email, name, and role at the time the entry was
-  written.
-- **Interface**: where the action came from. One of `dashboard`,
-  `mcp`, `webhook`, `worker`, or `system`.
-- **Action**: a dotted `domain.verb` string, for example
-  `user.signed_in`, `spec.created`, or `spec.updated`.
-- **Target**: the resource the action acted on, with its type, id,
-  and a human-readable label.
-- **Metadata**: a JavaScript Object Notation
-  ([JSON](https://www.json.org/json-en.html)) blob with any extra
-  context the action chose to record.
-- **Time**: when the action occurred, in Coordinated Universal Time
-  ([UTC](https://www.timeanddate.com/time/aboututc.html)).
+The audit table shows:
 
-User sign-ins, sign-outs, and spec creation and updates are
-recorded out of the box. Agent-run workflows attribute their
-entries to the agent module name, with the model id captured in
-metadata, so when an agent drives one of those actions you can
-trace which model produced the side effect.
+- **Time**: when the activity happened.
+- **Actor**: the person, agent, or system responsible.
+- **Source**: whether the activity came from the dashboard, a connected
+  client, a webhook, scheduled work, or Hive itself.
+- **Action**: what happened, such as signing in or creating a spec.
+- **Target**: the project, spec, account, or other resource affected.
 
-## Who sees it
+Use the search field to search actors, actions, targets, and additional
+context. Filters can narrow the list by source, action, actor type, or
+target type. When a target still exists, select it to open the related
+dashboard page.
 
-Access to the audit trail is gated by the `admin` role on the user
-record. See [Authorization](./authorization) for the three roles,
-how they are derived from
-[`HIVE_ORG_DOMAINS`](/reference/configuration#hive_org_domains), and how
-to promote a user to `admin`.
+## What Hive records
 
-## MCP tools
+Hive records account sign-ins and sign-outs, changes to specs and other
+managed resources, integration activity, and actions performed by
+language-model workflows. Entries retain the actor and role that applied
+when the activity occurred.
 
-Two MCP tools expose the same data the dashboard does, gated by the
-same admin check:
+The audit trail is intended for operational investigation and change
+history. It does not replace application error reporting or infrastructure
+logs.
 
-- `list_audit_activities`: paginated listing with filters for
-  interface, action, actor kind, and target type.
-- `get_audit_activity`: fetch a single entry by id.
+## Connected-client access
 
-Non-admin callers receive `{"error": "forbidden"}`. The tools are
-always registered, so admins can use the trail from any MCP-aware
-client without extra configuration.
+The same administrator-only data is available to
+[Model Context Protocol](https://modelcontextprotocol.io/) clients through
+`list_audit_activities` and `get_audit_activity`. These tools use the same
+authorization rules as the dashboard.

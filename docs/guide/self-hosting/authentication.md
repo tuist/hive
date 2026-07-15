@@ -1,64 +1,103 @@
 # Authentication
 
-Hive's login is available regardless of visibility so administrators can
-sign in to a public instance. Configure one or more identity providers
-and Hive shows each provider as a login option. Optional domain
-allowlists are enforced after the provider returns the user's verified
-email address.
+Hive can show one or more sign-in providers. Configure the providers your
+organization already uses, and Hive presents each configured option on
+the login page.
 
-Hive supports two provider paths out of the box. Use Google when your
-team signs in with Google Workspace. Use generic OpenID Connect
-([OIDC](https://openid.net/developers/how-connect-works/)) when your
-identity provider publishes a discovery document.
+The login page remains available on public instances so administrators
+can sign in. On private instances, configure and test at least one
+provider before changing `HIVE_VISIBILITY` to `private`.
 
 ## Google
 
-Configure Google when you want Hive to use the same accounts your team
-already uses for Google Workspace. Set these environment variables:
+Use Google for organizations that sign in with Google Workspace.
+
+Set:
 
 - [`HIVE_GOOGLE_CLIENT_ID`](/reference/configuration#hive_google_client_id)
 - [`HIVE_GOOGLE_CLIENT_SECRET`](/reference/configuration#hive_google_client_secret)
 - [`HIVE_GOOGLE_ALLOWED_DOMAINS`](/reference/configuration#hive_google_allowed_domains)
-  (optional, comma-separated list of email domains to accept; for
-  example `tuist.dev`).
+  to an optional comma-separated list of accepted email domains
 
-When a single domain is set, the authorize redirect also includes
-Google's `hd=` hint to pre-filter the account picker. The allowlist is
-enforced on the callback regardless.
+Create a web application credential in the
+[Google Cloud credentials console](https://console.cloud.google.com/apis/credentials)
+and add this authorized redirect address:
 
-Callback address: `/auth/google/callback` on the deployed host.
+```text
+https://hive.example.com/auth/google/callback
+```
 
-### Setting up Google OAuth 2.0
+Request the `openid`, `profile`, and `email` scopes. For a single Google
+Workspace organization, use an internal consent screen when available.
 
-1. Open <https://console.cloud.google.com/apis/credentials> in the
-   Google Cloud project you want to use.
-2. Configure the [OAuth 2.0](https://oauth.net/2/) consent screen
-   (User type **Internal** for a
-   workspace, **External** otherwise; scopes `openid`, `profile`,
-   `email`).
-3. **Create Credentials → OAuth 2.0 client ID → Web application**.
-4. Add the **Authorized redirect URI** for each environment, for example
-   `https://hive.example.com/auth/google/callback`.
-5. Copy the Client ID and Client Secret into
-   [`HIVE_GOOGLE_CLIENT_ID`](/reference/configuration#hive_google_client_id) and
-   [`HIVE_GOOGLE_CLIENT_SECRET`](/reference/configuration#hive_google_client_secret).
+When one allowed domain is configured, Hive also preselects it in the
+Google account picker. Hive still validates the verified email after
+sign-in.
+
+## GitHub
+
+Use GitHub sign-in when users should authenticate with their GitHub
+accounts. This sign-in application is separate from the
+[GitHub App used for repository access](./github).
+
+Set:
+
+- [`HIVE_GITHUB_CLIENT_ID`](/reference/configuration#hive_github_client_id)
+- [`HIVE_GITHUB_CLIENT_SECRET`](/reference/configuration#hive_github_client_secret)
+- [`HIVE_GITHUB_ALLOWED_DOMAINS`](/reference/configuration#hive_github_allowed_domains)
+  to an optional comma-separated list of accepted email domains
+
+Create an app that uses Open Authorization
+([OAuth 2.0](https://oauth.net/2/)) under the
+[GitHub developer settings](https://github.com/settings/developers).
+GitHub calls this an OAuth App. Use your Hive address as the homepage and
+add this authorization callback:
+
+```text
+https://hive.example.com/auth/github/callback
+```
+
+Hive requests access to the user's email address so it can apply the
+configured domain rules and connect the identity to the correct account.
 
 ## Generic OpenID Connect
 
-Configure generic OpenID Connect when your identity provider is not
-Google but exposes a `.well-known/openid-configuration` endpoint. Set
-these environment variables:
+Use generic
+[OpenID Connect](https://openid.net/developers/how-connect-works/) when
+your identity provider publishes a discovery document.
 
-- [`HIVE_OIDC_ISSUER`](/reference/configuration#hive_oidc_issuer): the issuer
-  base address. Hive's auth client discovers authorize/token/userinfo
-  endpoints from
-  `<issuer>/.well-known/openid-configuration`.
+Set:
+
+- [`HIVE_OIDC_ISSUER`](/reference/configuration#hive_oidc_issuer) to the
+  issuer address
 - [`HIVE_OIDC_CLIENT_ID`](/reference/configuration#hive_oidc_client_id)
 - [`HIVE_OIDC_CLIENT_SECRET`](/reference/configuration#hive_oidc_client_secret)
-  (optional)
+  when required by the provider
 - [`HIVE_OIDC_DISPLAY_NAME`](/reference/configuration#hive_oidc_display_name)
-  (optional, label on the login button; defaults to "Identity provider")
+  to the label shown on the login button
 - [`HIVE_OIDC_ALLOWED_DOMAINS`](/reference/configuration#hive_oidc_allowed_domains)
-  (optional, comma-separated allowlist)
+  to an optional comma-separated list of accepted email domains
 
-Callback address: `/auth/oidc/callback` on the deployed host.
+Register this callback with the provider:
+
+```text
+https://hive.example.com/auth/oidc/callback
+```
+
+The issuer must expose its discovery document at
+`<issuer>/.well-known/openid-configuration`.
+
+## Test before requiring sign-in
+
+After restarting Hive:
+
+1. Open `/login` in a private browser window.
+2. Confirm that every configured provider appears once.
+3. Sign in and verify that Hive returns to the dashboard.
+4. Test an account outside any provider allowlist and confirm that it is
+   rejected.
+5. Only then set `HIVE_VISIBILITY=private` if the instance should require
+   sign-in.
+
+Authentication decides who can sign in. [Authorization](./authorization)
+decides what each signed-in account can see and change.
