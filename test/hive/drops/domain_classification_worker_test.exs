@@ -3,6 +3,10 @@ defmodule Hive.Drops.DomainClassificationWorkerTest do
   use Mimic
   use Oban.Testing, repo: Hive.Repo
 
+  import ExUnit.CaptureLog
+
+  alias Hive.Drops
+  alias Hive.Drops.Drop
   alias Hive.Drops.DomainClassification
   alias Hive.Drops.DomainClassificationWorker
 
@@ -30,6 +34,14 @@ defmodule Hive.Drops.DomainClassificationWorkerTest do
   end
 
   test "perform/1 cancels provider credit-limit errors" do
+    {:ok, drop} =
+      Drops.upsert_drop(%{
+        source_type: :rss,
+        external_id: "terminal-failure",
+        title: "Drop",
+        url: "https://example.com/drop"
+      })
+
     error =
       ReqLLM.Error.API.Request.exception(
         reason: "Provider response error (402): Together API error: insufficient credits",
@@ -38,9 +50,19 @@ defmodule Hive.Drops.DomainClassificationWorkerTest do
         request_body: "full prompt body"
       )
 
-    expect(DomainClassification, :classify, fn "drop-id" -> {:error, error} end)
+    expect(DomainClassification, :classify, fn id when id == drop.id -> {:error, error} end)
 
-    assert {:cancel, :llm_credit_limit} =
-             DomainClassificationWorker.perform(%Oban.Job{args: %{"drop_id" => "drop-id"}})
+    log =
+      capture_log(fn ->
+        assert {:cancel, :llm_credit_limit} =
+                 DomainClassificationWorker.perform(%Oban.Job{args: %{"drop_id" => drop.id}})
+      end)
+
+    failed = Repo.get!(Drop, drop.id)
+    assert failed.classification_failure == "llm_credit_limit"
+    assert %DateTime{} = failed.classification_failed_at
+    assert [] = Drops.list_unclassified_drops()
+    assert log =~ "Model provider rejected classification"
+    refute log =~ "full prompt body"
   end
 end

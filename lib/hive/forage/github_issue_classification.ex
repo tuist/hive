@@ -128,8 +128,32 @@ defmodule Hive.Forage.GitHubIssueClassification do
 
       GitHubIssue
       |> where([issue], issue.id == ^issue_id)
-      |> Repo.update_all(set: [classified_at: classified_at])
+      |> Repo.update_all(
+        set: [
+          classified_at: classified_at,
+          classification_failure: nil,
+          classification_failed_at: nil
+        ]
+      )
     end)
+
+    :ok
+  end
+
+  @doc "Records a terminal failure so scheduled sweeps do not repeat the model request."
+  def mark_failed(issue_id, reason)
+      when is_binary(issue_id) and (is_atom(reason) or is_binary(reason)) do
+    failed_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    GitHubIssue
+    |> where(
+      [issue],
+      issue.id == ^issue_id and is_nil(issue.classified_at) and
+        is_nil(issue.classification_failed_at)
+    )
+    |> Repo.update_all(
+      set: [classification_failure: to_string(reason), classification_failed_at: failed_at]
+    )
 
     :ok
   end

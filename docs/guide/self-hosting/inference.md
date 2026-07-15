@@ -111,6 +111,11 @@ These workflows start automatically when Hive inference is configured.
 When it is not configured, Hive continues to run and uses the documented
 non-model behavior for each feature.
 
+Scheduled classification retries only revisit pending work. Permanent
+provider rejections, such as invalid credentials or exhausted credit, are
+recorded and are not requested again for unchanged source content. A changed
+GitHub issue becomes eligible for classification again.
+
 For a separate embedding profile, select **Use for Hive embeddings** on
 an embedding-capable profile.
 

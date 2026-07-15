@@ -308,7 +308,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
         record_audit(drop, domains, repository, release, item)
 
-        if is_nil(drop.classified_at) do
+        if is_nil(drop.classified_at) and is_nil(drop.classification_failed_at) do
           DomainClassificationWorker.enqueue(drop.id)
         end
 

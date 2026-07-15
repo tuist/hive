@@ -5,8 +5,36 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
 
   import ExUnit.CaptureLog
 
+  alias Hive.Domains
+  alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GitHubIssueClassification
   alias Hive.Forage.GitHubIssueClassificationWorker
+  alias Hive.Projects
+
+  defp insert_issue! do
+    suffix = System.unique_integer([:positive])
+    {:ok, project} = Projects.create_project(%{name: "Project #{suffix}"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Domain #{suffix}",
+        project_id: project.id,
+        github_repository_owner: "owner#{suffix}",
+        github_repository_name: "repo#{suffix}",
+        github_repository_visibility: "public"
+      })
+
+    repository = github_repository_for_domain!(domain)
+
+    Repo.insert!(
+      GitHubIssue.changeset(%GitHubIssue{}, %{
+        github_repository_id: repository.id,
+        number: 1,
+        title: "Issue",
+        state: :open
+      })
+    )
+  end
 
   test "enqueue/2 inserts a unique classification job per issue when agents are enabled" do
     assert {:ok, %Oban.Job{} = first} =
@@ -43,6 +71,8 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
   end
 
   test "perform/1 cancels hard provider availability errors" do
+    issue = insert_issue!()
+
     error =
       ReqLLM.Error.API.Request.exception(
         reason:
@@ -52,18 +82,22 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
         request_body: "full prompt body"
       )
 
-    expect(GitHubIssueClassification, :classify, fn "issue-id" -> {:error, error} end)
+    expect(GitHubIssueClassification, :classify, fn id when id == issue.id -> {:error, error} end)
 
     log =
       capture_log(fn ->
         assert {:cancel, :llm_provider_unavailable} =
                  GitHubIssueClassificationWorker.perform(%Oban.Job{
-                   args: %{"issue_id" => "issue-id"}
+                   args: %{"issue_id" => issue.id}
                  })
       end)
 
     assert log =~ "Model provider rejected"
     refute log =~ "full prompt body"
+
+    failed = Repo.get!(GitHubIssue, issue.id)
+    assert failed.classification_failure == "llm_provider_unavailable"
+    assert %DateTime{} = failed.classification_failed_at
   end
 
   test "perform/1 catches and snoozes raised rate-limit errors" do

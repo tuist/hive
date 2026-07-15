@@ -106,7 +106,7 @@ defmodule Hive.Drops.RssSyncer do
       {:ok, drop} ->
         record_audit(drop, source)
 
-        if is_nil(drop.classified_at) do
+        if is_nil(drop.classified_at) and is_nil(drop.classification_failed_at) do
           DomainClassificationWorker.enqueue(drop.id)
         end
 
