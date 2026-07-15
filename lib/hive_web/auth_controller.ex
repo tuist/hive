@@ -212,11 +212,9 @@ defmodule HiveWeb.AuthController do
   end
 
   defp safe_atom(key) when is_binary(key) do
-    try do
-      String.to_existing_atom(key)
-    rescue
-      ArgumentError -> nil
-    end
+    String.to_existing_atom(key)
+  rescue
+    ArgumentError -> nil
   end
 
   defp unauthorized(conn, message) do

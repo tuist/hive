@@ -233,25 +233,23 @@ defmodule Hive.Drops.Rss do
   end
 
   defp parse_rfc1123(value) do
-    try do
-      case :httpd_util.convert_request_date(String.to_charlist(value)) do
-        {{year, month, day}, {hour, minute, second}} ->
-          case NaiveDateTime.new(year, month, day, hour, minute, second) do
-            {:ok, naive} ->
-              naive |> DateTime.from_naive!("Etc/UTC") |> DateTime.truncate(:second)
+    case :httpd_util.convert_request_date(String.to_charlist(value)) do
+      {{year, month, day}, {hour, minute, second}} ->
+        case NaiveDateTime.new(year, month, day, hour, minute, second) do
+          {:ok, naive} ->
+            naive |> DateTime.from_naive!("Etc/UTC") |> DateTime.truncate(:second)
 
-            _ ->
-              nil
-          end
+          _ ->
+            nil
+        end
 
-        _ ->
-          nil
-      end
-    rescue
-      _ -> nil
-    catch
-      _, _ -> nil
+      _ ->
+        nil
     end
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
   end
 
   defp strip_tags(value) when is_binary(value) do
