@@ -348,7 +348,7 @@ defmodule HiveWeb.ProjectLive.Show do
                 <.select
                   id="project-visibility"
                   name={@project_form[:visibility].name}
-                  value={Phoenix.HTML.Form.normalize_value("select", @project_form[:visibility].value)}
+                  value={to_string(@project_form[:visibility].value)}
                   label={dgettext("dashboard_projects", "Choose visibility")}
                 >
                   <:item value="public" label={dgettext("dashboard_projects", "Public")} icon="world" />

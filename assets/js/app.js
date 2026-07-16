@@ -10,10 +10,21 @@ import { copyTextToClipboard } from "./clipboard"
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content")
+const NooraSelect = {
+  ...Noora.Hooks.NooraSelect,
+  context() {
+    const value = this.el.querySelector('[data-part="hidden-select"]')?.value
+
+    return {
+      ...Noora.Hooks.NooraSelect.context.call(this),
+      defaultValue: value ? [value] : [],
+    }
+  },
+}
 
 const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
-  hooks: { ...Noora.Hooks, MentionAutocomplete, Clipboard },
+  hooks: { ...Noora.Hooks, NooraSelect, MentionAutocomplete, Clipboard },
 })
 
 liveSocket.connect()

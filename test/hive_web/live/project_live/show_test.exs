@@ -189,6 +189,8 @@ defmodule HiveWeb.ProjectLive.ShowTest do
     {:ok, view, html} = live(conn, ~p"/projects/#{project.id}")
     assert html =~ "Webhooks"
     assert html =~ "New webhook"
+    assert has_element?(view, "#project-visibility option[value='public'][selected]")
+    assert html =~ ~s(<option value="grafana" selected="">)
 
     html =
       render_submit(view, "create_webhook", %{
