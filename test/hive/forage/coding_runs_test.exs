@@ -195,6 +195,20 @@ defmodule Hive.Forage.CodingRunsTest do
     refute_receive {:agent_run, _, _, _}
   end
 
+  test "records a terminal failure after the linked repository is removed", ctx do
+    assert {:ok, run} = create_run(ctx)
+
+    assert {:ok, _repository} =
+             Projects.delete_repository_from_project(ctx.project, ctx.repository.id)
+
+    assert :ok = CodingRuns.execute(run.id)
+
+    failed = CodingRuns.get(run.id)
+    assert failed.status == :failed
+    assert failed.repository_id == nil
+    assert failed.completed_at
+  end
+
   defp create_run(ctx) do
     CodingRuns.create_for_grafana_alert(ctx.alert, ctx.repository.id, ctx.user,
       enabled?: fn -> true end,

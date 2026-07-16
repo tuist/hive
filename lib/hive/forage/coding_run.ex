@@ -56,9 +56,9 @@ defmodule Hive.Forage.CodingRun do
       :status,
       :runner,
       :repository_full_name,
-      :input,
-      :repository_id
+      :input
     ])
+    |> require_repository_on_insert(run)
     |> validate_inclusion(:status, @statuses)
     |> validate_length(:runner, max: 100)
     |> validate_length(:repository_full_name, max: 255)
@@ -69,4 +69,10 @@ defmodule Hive.Forage.CodingRun do
     |> foreign_key_constraint(:repository_id)
     |> foreign_key_constraint(:requested_by_id)
   end
+
+  defp require_repository_on_insert(changeset, %__MODULE__{id: nil}) do
+    validate_required(changeset, [:repository_id])
+  end
+
+  defp require_repository_on_insert(changeset, %__MODULE__{}), do: changeset
 end
