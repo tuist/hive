@@ -245,6 +245,11 @@ defmodule HiveWeb.ForageComponents do
   attr :signed_in?, :boolean, required: true
   attr :current_path, :string, required: true
   attr :current_user, :map, default: nil
+  attr :coding_runs, :list, default: []
+  attr :coding_repositories, :list, default: []
+  attr :coding_runner_enabled?, :boolean, default: false
+  attr :can_start_coding_run?, :boolean, default: false
+  attr :coding_run_form, :any, default: nil
 
   def item_detail(assigns) do
     ~H"""
@@ -382,6 +387,15 @@ defmodule HiveWeb.ForageComponents do
         </.card_section>
       </.card>
 
+      <.coding_runs_card
+        :if={@item.origin == :grafana}
+        runs={@coding_runs}
+        repositories={@coding_repositories}
+        runner_enabled?={@coding_runner_enabled?}
+        can_start?={@can_start_coding_run?}
+        form={@coding_run_form}
+      />
+
       <.card
         title={dgettext("dashboard_forage", "Comments")}
         icon="message_circle"
@@ -442,6 +456,337 @@ defmodule HiveWeb.ForageComponents do
     </section>
     """
   end
+
+  attr :runs, :list, required: true
+  attr :repositories, :list, required: true
+  attr :runner_enabled?, :boolean, required: true
+  attr :can_start?, :boolean, required: true
+  attr :form, :any, required: true
+
+  defp coding_runs_card(assigns) do
+    ~H"""
+    <.card
+      title={dgettext("dashboard_forage", "Coding runs")}
+      icon="devices_code"
+      data-part="coding-runs-card"
+    >
+      <:actions :if={@repositories != [] and @runner_enabled?}>
+        <.form
+          id="forage-coding-run-form"
+          for={@form}
+          phx-submit="start_coding_run"
+          data-part="coding-run-form"
+        >
+          <input
+            :if={length(@repositories) == 1}
+            type="hidden"
+            name={@form[:repository_id].name}
+            value={hd(@repositories).id}
+          />
+          <.badge
+            :if={length(@repositories) == 1}
+            label={GitHubRepository.full_name(hd(@repositories))}
+            color="neutral"
+            style="light-fill"
+            size="large"
+          >
+            <:icon><.icon name="brand_github" /></:icon>
+          </.badge>
+          <.select
+            :if={length(@repositories) > 1}
+            id="forage-coding-run-repository"
+            name={@form[:repository_id].name}
+            value={Phoenix.HTML.Form.normalize_value("select", @form[:repository_id].value)}
+            label={dgettext("dashboard_forage", "Choose repository")}
+            disabled={!@can_start?}
+          >
+            <:item
+              :for={repository <- @repositories}
+              value={repository.id}
+              label={GitHubRepository.full_name(repository)}
+              icon="brand_github"
+            />
+          </.select>
+          <.button
+            label={
+              if @can_start?,
+                do: dgettext("dashboard_forage", "Start run"),
+                else: dgettext("dashboard_forage", "Run in progress")
+            }
+            size="medium"
+            variant="primary"
+            disabled={!@can_start?}
+          >
+            <:icon_left><.icon name="player_play" /></:icon_left>
+          </.button>
+        </.form>
+      </:actions>
+
+      <.card_section data-part="coding-runs-overview">
+        <p data-part="coding-runs-description">
+          {dgettext(
+            "dashboard_forage",
+            "Investigate this alert in an isolated repository. Each run returns a pull request or a written finding."
+          )}
+        </p>
+
+        <.alert
+          :if={@repositories == []}
+          status="warning"
+          size="large"
+          title={dgettext("dashboard_forage", "No linked repository")}
+          description={
+            dgettext(
+              "dashboard_forage",
+              "Link a GitHub repository to this alert's project before starting a coding run."
+            )
+          }
+        />
+
+        <div
+          :if={@repositories != [] and !@runner_enabled?}
+          data-part="coding-run-availability"
+        >
+          <.icon name="info_circle" />
+          <div>
+            <strong>{dgettext("dashboard_forage", "New runs are paused")}</strong>
+            <span>
+              {dgettext(
+              "dashboard_forage",
+                "Configure model inference, GitHub, and a sandbox provider to start another run. Existing results remain available below."
+              )}
+            </span>
+          </div>
+        </div>
+      </.card_section>
+
+      <.card_section data-part="coding-runs-history">
+        <div :if={@runs == []} data-part="empty-coding-runs">
+          <div data-part="empty-icon"><.icon name="history" /></div>
+          <div>
+            <strong>{dgettext("dashboard_forage", "No runs yet")}</strong>
+            <p>
+              {dgettext(
+                "dashboard_forage",
+                "Start a run to investigate this alert and keep its outcome here."
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div :if={@runs != []} data-part="coding-run-list">
+          <div data-part="coding-run-list-header">
+            <span>{dgettext("dashboard_forage", "Latest activity")}</span>
+            <span>{coding_run_count_label(length(@runs))}</span>
+          </div>
+          <article :for={run <- @runs} id={"coding-run-#{run.id}"} data-part="coding-run">
+            <% presentation = coding_run_presentation(run) %>
+            <div data-part="coding-run-status" data-status={presentation.status}>
+              <div data-part="icon"><.icon name={presentation.icon} /></div>
+            </div>
+
+            <div data-part="coding-run-main">
+              <div data-part="coding-run-heading">
+                <strong>{presentation.title}</strong>
+                <p>{coding_run_summary(run)}</p>
+              </div>
+
+              <div :if={coding_run_finding(run)} data-part="coding-run-finding">
+                <span>{dgettext("dashboard_forage", "Finding")}</span>
+                <p>{coding_run_finding(run)}</p>
+              </div>
+
+              <div data-part="coding-run-metadata">
+                <span>
+                  <.icon name="brand_github" />
+                  {run.repository_full_name}
+                </span>
+                <span>
+                  <.icon name="devices_code" />
+                  {coding_runner_label(run.runner)}
+                </span>
+                <span :if={coding_run_duration(run)}>
+                  <.icon name="history" />
+                  {coding_run_duration(run)}
+                </span>
+                <span>
+                  <.icon name="calendar_week" />
+                  {coding_run_date(run)}
+                </span>
+                <span :if={coding_run_requester(run)}>
+                  <.icon name="user" />
+                  {coding_run_requester(run)}
+                </span>
+                <span :if={coding_run_validation_count(run) > 0}>
+                  <.icon name="system_check" />
+                  {coding_run_validation_label(run)}
+                </span>
+              </div>
+            </div>
+
+            <div data-part="coding-run-actions">
+              <.badge
+                label={presentation.badge_label}
+                color={presentation.badge_color}
+                style="light-fill"
+                size="large"
+              />
+              <.button
+                :if={run.result && run.result["url"]}
+                label={dgettext("dashboard_forage", "View pull request")}
+                href={run.result["url"]}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="small"
+                variant="secondary"
+              >
+                <:icon_right><.icon name="external_link" /></:icon_right>
+              </.button>
+            </div>
+          </article>
+        </div>
+      </.card_section>
+    </.card>
+    """
+  end
+
+  defp coding_run_presentation(%{
+         status: :succeeded,
+         result: %{"type" => "pull_request"} = result
+       }) do
+    %{
+      title: result["title"] || dgettext("dashboard_forage", "Pull request ready"),
+      badge_label: dgettext("dashboard_forage", "Pull request"),
+      badge_color: "success",
+      icon: "git_merge",
+      status: "success"
+    }
+  end
+
+  defp coding_run_presentation(%{status: :succeeded, result: %{"type" => "report"}}) do
+    %{
+      title: dgettext("dashboard_forage", "No code change needed"),
+      badge_label: dgettext("dashboard_forage", "Report"),
+      badge_color: "neutral",
+      icon: "file_text",
+      status: "success"
+    }
+  end
+
+  defp coding_run_presentation(%{status: :succeeded}) do
+    %{
+      title: dgettext("dashboard_forage", "Investigation completed"),
+      badge_label: dgettext("dashboard_forage", "Completed"),
+      badge_color: "success",
+      icon: "circle_check",
+      status: "success"
+    }
+  end
+
+  defp coding_run_presentation(%{status: :failed}) do
+    %{
+      title: dgettext("dashboard_forage", "Run failed"),
+      badge_label: dgettext("dashboard_forage", "Failed"),
+      badge_color: "destructive",
+      icon: "alert_circle",
+      status: "failure"
+    }
+  end
+
+  defp coding_run_presentation(%{status: :running}) do
+    %{
+      title: dgettext("dashboard_forage", "Investigating alert"),
+      badge_label: dgettext("dashboard_forage", "Running"),
+      badge_color: "information",
+      icon: "circle_dashed",
+      status: "processing"
+    }
+  end
+
+  defp coding_run_presentation(%{status: :queued}) do
+    %{
+      title: dgettext("dashboard_forage", "Waiting for a runner"),
+      badge_label: dgettext("dashboard_forage", "Queued"),
+      badge_color: "neutral",
+      icon: "hourglass",
+      status: "queued"
+    }
+  end
+
+  defp coding_run_summary(%{status: :failed, error: error}) when is_binary(error), do: error
+
+  defp coding_run_summary(%{result: result}) when is_map(result),
+    do: result["summary"] || dgettext("dashboard_forage", "The run completed without a summary.")
+
+  defp coding_run_summary(%{status: :running}),
+    do: dgettext("dashboard_forage", "The coding harness is inspecting the linked repository.")
+
+  defp coding_run_summary(%{status: :queued}),
+    do: dgettext("dashboard_forage", "The run will begin when the sandbox is ready.")
+
+  defp coding_run_summary(_run),
+    do: dgettext("dashboard_forage", "No additional details are available.")
+
+  defp coding_run_finding(%{result: %{"type" => "report", "root_cause" => finding}})
+       when is_binary(finding) and finding != "",
+       do: finding
+
+  defp coding_run_finding(_run), do: nil
+
+  defp coding_runner_label(runner) when is_binary(runner) do
+    runner
+    |> String.replace(["_", "-"], " ")
+    |> String.split()
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp coding_runner_label(_runner), do: dgettext("dashboard_forage", "Unknown provider")
+
+  defp coding_run_duration(%{started_at: %DateTime{} = started_at} = run) do
+    completed_at = run.completed_at || DateTime.utc_now()
+    seconds = max(0, DateTime.diff(completed_at, started_at, :second))
+    duration_label(seconds)
+  end
+
+  defp coding_run_duration(_run), do: nil
+
+  defp duration_label(seconds) when seconds < 60,
+    do: dgettext("dashboard_forage", "Less than a minute")
+
+  defp duration_label(seconds) when seconds < 3_600 do
+    count = div(seconds, 60)
+    dngettext("dashboard_forage", "%{count} minute", "%{count} minutes", count, count: count)
+  end
+
+  defp duration_label(seconds) do
+    count = div(seconds, 3_600)
+    dngettext("dashboard_forage", "%{count} hour", "%{count} hours", count, count: count)
+  end
+
+  defp coding_run_date(%{inserted_at: %DateTime{} = inserted_at}),
+    do: Calendar.strftime(inserted_at, "%b %-d, %Y at %H:%M")
+
+  defp coding_run_date(_run), do: dgettext("dashboard_forage", "Unknown date")
+
+  defp coding_run_requester(%{requested_by: %{name: name}}) when is_binary(name) and name != "",
+    do: name
+
+  defp coding_run_requester(%{requested_by: %{email: email}}) when is_binary(email), do: email
+  defp coding_run_requester(_run), do: nil
+
+  defp coding_run_validation_count(%{result: %{"validation" => validation}})
+       when is_list(validation),
+       do: length(validation)
+
+  defp coding_run_validation_count(_run), do: 0
+
+  defp coding_run_validation_label(run) do
+    count = coding_run_validation_count(run)
+    dngettext("dashboard_forage", "%{count} check", "%{count} checks", count, count: count)
+  end
+
+  defp coding_run_count_label(count),
+    do: dngettext("dashboard_forage", "%{count} run", "%{count} runs", count, count: count)
 
   attr :item, :map, required: true
   attr :edit_comment_form, :any, required: true
