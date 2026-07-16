@@ -4,6 +4,7 @@ defmodule HiveWeb.ForageLive.Show do
   use HiveWeb, :live_view
 
   alias Hive.Forage
+  alias Hive.Forage.CodingRuns
   alias Hive.Forage.FeatureRequest
   alias Hive.Specs
   alias HiveWeb.ForageComponents
@@ -68,6 +69,11 @@ defmodule HiveWeb.ForageLive.Show do
      |> assign_comment_form(Forage.change_comment())
      |> assign(:editing_comment_id, nil)
      |> assign_edit_comment_form(Forage.change_comment())
+     |> assign(:coding_runs, [])
+     |> assign(:coding_repositories, [])
+     |> assign(:coding_runner_enabled?, false)
+     |> assign(:can_start_coding_run?, false)
+     |> assign(:coding_run_form, to_form(%{"repository_id" => ""}, as: :coding_run))
      |> assign(:atom_feed, %{
        title: dgettext("dashboard_forage", "Hive · Forage"),
        atom_href: "/forage/atom.xml",
@@ -82,6 +88,7 @@ defmodule HiveWeb.ForageLive.Show do
            Forage.get_item_for_user(item_id, socket.assigns.current_user,
              fetch_github_comments?: true
            ) do
+      if connected?(socket), do: CodingRuns.subscribe(item.id)
       {:noreply, assign_item(socket, item)}
     else
       {:error, :unauthorized} ->
@@ -283,6 +290,65 @@ defmodule HiveWeb.ForageLive.Show do
     {:noreply, clear_comment_edit(socket)}
   end
 
+  def handle_event(
+        "start_coding_run",
+        %{"coding_run" => %{"repository_id" => repository_id}},
+        socket
+      ) do
+    case socket.assigns.item do
+      %{origin: :grafana, source_record: alert} ->
+        case CodingRuns.create_for_grafana_alert(
+               alert,
+               repository_id,
+               socket.assigns.current_user
+             ) do
+          {:ok, _run} ->
+            {:noreply,
+             socket
+             |> put_flash(
+               :info,
+               dgettext("dashboard_forage", "Coding run queued. The result will appear here.")
+             )
+             |> assign_coding_runs(socket.assigns.item)}
+
+          {:error, :already_running} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext(
+                 "dashboard_forage",
+                 "A coding run is already active for that repository."
+               )
+             )}
+
+          {:error, :not_configured} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_forage", "The coding runner is not configured.")
+             )}
+
+          {:error, _reason} ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_forage", "The coding run could not be queued.")
+             )}
+        end
+
+      _item ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:coding_run_updated, _coding_run_id}, socket) do
+    {:noreply, assign_coding_runs(socket, socket.assigns.item)}
+  end
+
   defp assign_item(socket, item) do
     socket
     |> assign(
@@ -307,6 +373,41 @@ defmodule HiveWeb.ForageLive.Show do
     |> assign_comment_form(Forage.change_comment())
     |> assign(:editing_comment_id, nil)
     |> assign_edit_comment_form(Forage.change_comment())
+    |> assign_coding_runs(item)
+  end
+
+  defp assign_coding_runs(socket, %{origin: :grafana, source_record: alert} = item) do
+    repositories =
+      case alert.project do
+        %{github_repositories: repositories} when is_list(repositories) -> repositories
+        _other -> []
+      end
+
+    runs = CodingRuns.list_for_item(item.id)
+    runner_enabled? = CodingRuns.enabled?()
+    active? = Enum.any?(runs, &(&1.status in [:queued, :running]))
+    selected_repository_id = repositories |> List.first() |> then(&(&1 && &1.id))
+
+    socket
+    |> assign(:coding_runs, runs)
+    |> assign(:coding_repositories, repositories)
+    |> assign(:coding_runner_enabled?, runner_enabled?)
+    |> assign(
+      :can_start_coding_run?,
+      runner_enabled? and repositories != [] and !active?
+    )
+    |> assign(
+      :coding_run_form,
+      to_form(%{"repository_id" => selected_repository_id || ""}, as: :coding_run)
+    )
+  end
+
+  defp assign_coding_runs(socket, _item) do
+    socket
+    |> assign(:coding_runs, [])
+    |> assign(:coding_repositories, [])
+    |> assign(:coding_runner_enabled?, false)
+    |> assign(:can_start_coding_run?, false)
   end
 
   defp refresh_item(%{assigns: %{item: %{id: item_id}}} = socket) do
@@ -430,6 +531,11 @@ defmodule HiveWeb.ForageLive.Show do
         signed_in?={@signed_in?}
         current_path={@current_path}
         current_user={@current_user}
+        coding_runs={@coding_runs}
+        coding_repositories={@coding_repositories}
+        coding_runner_enabled?={@coding_runner_enabled?}
+        can_start_coding_run?={@can_start_coding_run?}
+        coding_run_form={@coding_run_form}
       />
     </Layouts.dashboard>
     """

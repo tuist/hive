@@ -4,9 +4,9 @@ defmodule Hive.Agents.Sessions do
 
   Wraps `Condukt.run/3`, `Condukt.stream/3`, and
   `Condukt.Operation.run/4`, merging in the LLM connection options
-  resolved by `Hive.Agents.client_opts/0` so
-  individual agents stay free of LLM plumbing. Caller-supplied options
-  win on key collision.
+  resolved by `Hive.Agents` so individual agents stay free of LLM plumbing.
+  Callers can select a dedicated runtime profile with `:inference_role`;
+  caller-supplied model options win on key collision.
 
   Each run also installs an audit actor that identifies the agent (see
   `Hive.Audit.agent_actor/2`) for the duration of the call, so any
@@ -35,7 +35,9 @@ defmodule Hive.Agents.Sessions do
   """
   def run(agent_module, prompt, opts \\ [])
       when is_atom(agent_module) and is_binary(prompt) and is_list(opts) do
-    with {:ok, llm_opts} <- Hive.Agents.client_opts() do
+    {inference_role, opts} = Keyword.pop(opts, :inference_role, :inference)
+
+    with {:ok, llm_opts} <- client_opts(inference_role) do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
         Condukt.run(agent_module, prompt, run_opts(llm_opts, opts))
       end)
@@ -53,7 +55,9 @@ defmodule Hive.Agents.Sessions do
   def stream(agent_module, prompt, opts, consume)
       when is_atom(agent_module) and is_binary(prompt) and is_list(opts) and
              is_function(consume, 1) do
-    with {:ok, llm_opts} <- Hive.Agents.client_opts() do
+    {inference_role, opts} = Keyword.pop(opts, :inference_role, :inference)
+
+    with {:ok, llm_opts} <- client_opts(inference_role) do
       run_opts = run_opts(llm_opts, opts)
 
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
@@ -67,9 +71,10 @@ defmodule Hive.Agents.Sessions do
   """
   def run_operation(agent_module, operation_name, args, opts \\ [])
       when is_atom(agent_module) and is_atom(operation_name) and is_map(args) and is_list(opts) do
+    {inference_role, opts} = Keyword.pop(opts, :inference_role, :inference)
     opts = Keyword.put_new(opts, :max_turns, @operation_max_turns)
 
-    with {:ok, llm_opts} <- Hive.Agents.client_opts() do
+    with {:ok, llm_opts} <- client_opts(inference_role) do
       Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
         Condukt.Operation.run(agent_module, operation_name, args, run_opts(llm_opts, opts))
       end)
@@ -81,6 +86,9 @@ defmodule Hive.Agents.Sessions do
     |> Keyword.merge(opts)
     |> Keyword.put_new(:timeout, @run_timeout)
   end
+
+  defp client_opts(:inference), do: Hive.Agents.client_opts()
+  defp client_opts(:coding), do: Hive.Agents.coding_client_opts()
 
   defp consume_stream(agent_module, prompt, run_opts, consume) do
     Condukt.Session.with_transient(agent_module, run_opts, fn agent ->

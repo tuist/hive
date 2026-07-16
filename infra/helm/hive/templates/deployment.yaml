@@ -49,6 +49,7 @@ spec:
             - name: HIVE_OPENDATA_VECTOR_URL
               value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
             {{- end }}
+            {{- include "hive.codingRunsEnv" . | nindent 12 }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
@@ -103,6 +104,7 @@ spec:
             - name: HIVE_OPENDATA_VECTOR_URL
               value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
             {{- end }}
+            {{- include "hive.codingRunsEnv" . | nindent 12 }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}

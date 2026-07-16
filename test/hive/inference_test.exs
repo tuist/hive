@@ -60,18 +60,22 @@ defmodule Hive.InferenceTest do
 
     test "keeps one Hive profile per runtime role" do
       inference_profile = model_binding!(name: "hive-inference", hive_inference: true)
+      coding_profile = model_binding!(name: "hive-coding", hive_coding: true)
       embedding_profile = model_binding!(name: "hive-embedding", hive_embedding: true)
       replacement_profile = model_binding!(name: "hive-replacement")
 
       assert {:ok, replacement_profile} =
                Inference.update_profile(replacement_profile, %{
                  hive_inference: true,
+                 hive_coding: true,
                  hive_embedding: true
                })
 
       refute Inference.get_profile!(inference_profile.id).hive_inference
+      refute Inference.get_profile!(coding_profile.id).hive_coding
       refute Inference.get_profile!(embedding_profile.id).hive_embedding
       assert replacement_profile.hive_inference
+      assert replacement_profile.hive_coding
       assert replacement_profile.hive_embedding
     end
   end

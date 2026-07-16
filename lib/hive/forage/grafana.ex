@@ -130,6 +130,18 @@ defmodule Hive.Forage.Grafana do
   end
 
   @doc """
+  Fetches one Grafana alert with the project repositories available to a
+  manually triggered coding run.
+  """
+  def get_alert(id) when is_binary(id) do
+    GrafanaAlert
+    |> preload([:domain, project: :github_repositories])
+    |> Repo.get(id)
+  rescue
+    Ecto.Query.CastError -> nil
+  end
+
+  @doc """
   Lists Grafana alerts classified into a single domain,
   most-recent-first.
   """

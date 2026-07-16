@@ -10,7 +10,7 @@ defmodule Hive.Inference.Token do
   alias Hive.Inference.ModelBinding
   alias Hive.Inference.Usage
 
-  @hive_roles ~w(inference embedding)
+  @hive_roles ~w(inference coding embedding)
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 

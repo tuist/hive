@@ -150,6 +150,10 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
       label: dgettext("dashboard_inference", "Hive inference"),
       color: "primary"
     })
+    |> maybe_add_hive_role(profile.hive_coding, %{
+      label: dgettext("dashboard_inference", "Hive coding"),
+      color: "primary"
+    })
     |> maybe_add_hive_role(profile.hive_embedding, %{
       label: dgettext("dashboard_inference", "Hive embeddings"),
       color: "secondary"
@@ -158,11 +162,15 @@ defmodule HiveWeb.OpsLive.InferenceHelpers do
   end
 
   def hive_usage_label(%ModelBinding{} = profile) do
-    case {profile.hive_inference, profile.hive_embedding} do
-      {true, true} -> dgettext("dashboard_inference", "Inference and embeddings")
-      {true, false} -> dgettext("dashboard_inference", "Inference")
-      {false, true} -> dgettext("dashboard_inference", "Embeddings")
-      {false, false} -> dgettext("dashboard_inference", "Not used by Hive")
+    case {profile.hive_inference, profile.hive_coding, profile.hive_embedding} do
+      {true, true, true} -> dgettext("dashboard_inference", "Inference, coding, and embeddings")
+      {true, true, false} -> dgettext("dashboard_inference", "Inference and coding")
+      {true, false, true} -> dgettext("dashboard_inference", "Inference and embeddings")
+      {false, true, true} -> dgettext("dashboard_inference", "Coding and embeddings")
+      {true, false, false} -> dgettext("dashboard_inference", "Inference")
+      {false, true, false} -> dgettext("dashboard_inference", "Coding")
+      {false, false, true} -> dgettext("dashboard_inference", "Embeddings")
+      {false, false, false} -> dgettext("dashboard_inference", "Not used by Hive")
     end
   end
 

@@ -41,6 +41,21 @@ defmodule Hive.Agents.SessionsTest do
     refute Map.has_key?(Audit.current_context(), :actor_kind)
   end
 
+  test "selects the coding profile without forwarding the internal role option" do
+    expect(Agents, :coding_client_opts, fn ->
+      {:ok, [model: "openai:hive-coding", api_key: "key"]}
+    end)
+
+    expect(Condukt, :run, fn NoopAgent, "fix the repository", opts ->
+      assert opts[:model] == "openai:hive-coding"
+      refute Keyword.has_key?(opts, :inference_role)
+      {:ok, "done"}
+    end)
+
+    assert {:ok, "done"} =
+             Sessions.run(NoopAgent, "fix the repository", inference_role: :coding)
+  end
+
   test "streams inside a transient session with the agent actor context" do
     stub(Agents, :client_opts, fn ->
       {:ok, [model: "anthropic:claude-haiku-4-5", api_key: "key"]}

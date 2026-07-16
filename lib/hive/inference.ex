@@ -24,7 +24,7 @@ defmodule Hive.Inference do
   @token_attr_keys Map.values(@token_attr_key_map)
   @default_profile_page_size 10
   @max_profile_page_size 100
-  @hive_roles [:inference, :embedding]
+  @hive_roles [:inference, :coding, :embedding]
 
   def list_model_bindings do
     ModelBinding
@@ -456,6 +456,7 @@ defmodule Hive.Inference do
   defp persist_model_binding(changeset, operation) do
     Multi.new()
     |> maybe_clear_hive_role(changeset, :inference)
+    |> maybe_clear_hive_role(changeset, :coding)
     |> maybe_clear_hive_role(changeset, :embedding)
     |> persist_model_binding_operation(changeset, operation)
     |> Repo.transaction()
@@ -559,14 +560,19 @@ defmodule Hive.Inference do
   end
 
   defp hive_token_name("inference"), do: "Hive inference"
+  defp hive_token_name("coding"), do: "Hive coding"
   defp hive_token_name("embedding"), do: "Hive embeddings"
 
   defp hive_role_field(:inference), do: :hive_inference
+  defp hive_role_field(:coding), do: :hive_coding
   defp hive_role_field(:embedding), do: :hive_embedding
 
   defp hive_token_allowed?(%Token{hive_role: nil}, %ModelBinding{}), do: true
 
   defp hive_token_allowed?(%Token{hive_role: "inference"}, %ModelBinding{hive_inference: true}),
+    do: true
+
+  defp hive_token_allowed?(%Token{hive_role: "coding"}, %ModelBinding{hive_coding: true}),
     do: true
 
   defp hive_token_allowed?(%Token{hive_role: "embedding"}, %ModelBinding{hive_embedding: true}),

@@ -5,8 +5,10 @@ alias Hive.Accounts.UserIdentity
 alias Hive.Audit
 alias Hive.Audit.Activity
 alias Hive.Forage
+alias Hive.Forage.CodingRun
 alias Hive.Forage.FeatureRequest
 alias Hive.Forage.Grafana
+alias Hive.Forage.GrafanaAlert
 alias Hive.Domains
 alias Hive.Domains.GitHubRepository
 alias Hive.Domains.Domain
@@ -131,6 +133,7 @@ defmodule Hive.Repo.Seeds do
     profile =
       seed.profile
       |> Map.put_new(:hive_inference, false)
+      |> Map.put_new(:hive_coding, false)
       |> Map.put_new(:hive_embedding, false)
       |> inference_profile!()
 
@@ -698,6 +701,26 @@ inference_profiles = [
         enabled: true,
         expires_at: nil,
         usage: Seeds.inference_usage_points(10, 2_400, 700, 16)
+      }
+    ]
+  },
+  %{
+    rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
+    profile: %{
+      name: "hive-coding-runtime",
+      description:
+        "Dedicated model profile for repository coding runs. Hive uses it for engineering work without changing the model used by other agentic workflows.",
+      upstream_provider: "fireworks",
+      upstream_model: "accounts/fireworks/models/kimi-k2p5",
+      input_cost_per_million: "0.15",
+      output_cost_per_million: "0.60",
+      enabled: true,
+      hive_coding: true
+    },
+    hive_tokens: [
+      %{
+        role: :coding,
+        usage: Seeds.inference_usage_points(14, 32_000, 8_600, 7)
       }
     ]
   },
@@ -1553,6 +1576,95 @@ Enum.each(grafana_alert_seeds, fn seed ->
       |> Repo.update!()
     end)
   end
+end)
+
+coding_run_alert = Repo.get_by!(GrafanaAlert, fingerprint: "seed-hive-latency")
+coding_run_repository = Repo.get_by!(GitHubRepository, owner: "tuist", name: "hive")
+coding_run_requester = Accounts.get_user_by_email("test@hive.dev")
+coding_run_now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+coding_run_input = %{
+  "kind" => "grafana_alert",
+  "alert_id" => coding_run_alert.id,
+  "title" => coding_run_alert.title,
+  "summary" => coding_run_alert.summary,
+  "status" => Atom.to_string(coding_run_alert.status),
+  "labels" => coding_run_alert.labels,
+  "generator_url" => coding_run_alert.generator_url,
+  "project" => "Hive",
+  "project_id" => coding_run_alert.project_id,
+  "repository" => "tuist/hive"
+}
+
+coding_run_seeds = [
+  %{
+    runner_id: "seed-coding-run-pull-request",
+    status: :succeeded,
+    inserted_at: DateTime.add(coding_run_now, -55, :minute),
+    started_at: DateTime.add(coding_run_now, -54, :minute),
+    completed_at: DateTime.add(coding_run_now, -38, :minute),
+    result: %{
+      "type" => "pull_request",
+      "number" => 128,
+      "title" => "fix(web): bound alert latency queries",
+      "url" => "https://github.com/tuist/hive/pull/128",
+      "repository" => "tuist/hive",
+      "summary" =>
+        "Bounded the alert query and added coverage for the slow request path that triggered the latency alert.",
+      "validation" => [
+        "mix test test/hive_web/live/forage_live/show_test.exs",
+        "mix compile --warnings-as-errors"
+      ]
+    }
+  },
+  %{
+    runner_id: "seed-coding-run-report",
+    status: :succeeded,
+    inserted_at: DateTime.add(coding_run_now, -150, :minute),
+    started_at: DateTime.add(coding_run_now, -149, :minute),
+    completed_at: DateTime.add(coding_run_now, -143, :minute),
+    result: %{
+      "type" => "report",
+      "repository" => "tuist/hive",
+      "outcome" => "no_change",
+      "summary" =>
+        "The alert had already recovered and the repository contained no evidence of a safe code change.",
+      "root_cause" =>
+        "The available alert context did not identify a repeatable application failure.",
+      "validation" => ["mix test test/hive/forage/grafana_test.exs"]
+    }
+  },
+  %{
+    runner_id: "seed-coding-run-failed",
+    status: :failed,
+    inserted_at: DateTime.add(coding_run_now, -240, :minute),
+    started_at: DateTime.add(coding_run_now, -239, :minute),
+    completed_at: DateTime.add(coding_run_now, -238, :minute),
+    error: "The sandbox setup command exited before the coding harness could start."
+  }
+]
+
+Enum.each(coding_run_seeds, fn seed ->
+  attrs =
+    seed
+    |> Map.merge(%{
+      forage_item_id: "grafana_alert:#{coding_run_alert.id}",
+      runner: "microsandbox",
+      repository_full_name: "tuist/hive",
+      repository_id: coding_run_repository.id,
+      requested_by_id: coding_run_requester.id,
+      input: coding_run_input,
+      updated_at: coding_run_now
+    })
+
+  case Repo.get_by(CodingRun, runner_id: seed.runner_id) do
+    nil -> %CodingRun{}
+    coding_run -> coding_run
+  end
+  |> CodingRun.changeset(attrs)
+  |> Ecto.Changeset.put_change(:inserted_at, seed.inserted_at)
+  |> Ecto.Changeset.put_change(:updated_at, coding_run_now)
+  |> Repo.insert_or_update!()
 end)
 
 # Demo audit activities. Idempotent: each entry is keyed by a stable

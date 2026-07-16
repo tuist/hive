@@ -107,7 +107,7 @@ Visibility for unfurls follows the dashboard's anonymous view: a Slack workspace
 
 ## Agents
 
-Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive. Prefer selecting it at runtime by marking an inference profile as **Use for Hive inference** under **Ops -> Inference -> Profiles**; Hive then uses an encrypted Hive-owned token to call its own `/inference/v1` gateway and records usage on that profile. If no profile is marked, Hive falls back to three launch-time env vars:
+Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. Most model-backed features share the profile marked **Use for Hive inference** under **Ops -> Inference -> Profiles**. Coding runs can instead use the profile marked **Use for Hive coding**, with the general inference profile as their fallback. Hive uses an encrypted Hive-owned token to call its own `/inference/v1` gateway and records usage on the selected profile. If no applicable profile is marked, Hive falls back to three launch-time environment variables:
 
 [Condukt]: https://github.com/tuist/condukt
 [ReqLLM]: https://hexdocs.pm/req_llm
@@ -157,7 +157,9 @@ mise exec -- git-cliff --include-path "infra/helm/**/*" \
 
 ## Tuist's production deployment
 
-`infra/helm/hive/values-production.yaml` is the overlay Tuist applies to the chart at deploy time via `.github/workflows/deploy.yml`. The production cluster assumes cert-manager, ingress-nginx, external-dns, the CloudNativePG operator, the External Secrets Operator with a `ClusterSecretStore` named `onepassword-hive` pointing at the `hive-k8s-production` 1Password vault, and Hetzner Cloud block storage (`hcloud-volumes`).
+`infra/helm/hive/values-production.yaml` is the overlay Tuist applies to the chart at deploy time via `.github/workflows/deploy.yml`. The production cluster assumes cert-manager, ingress-nginx, external-dns, the CloudNativePG operator, the External Secrets Operator with a `ClusterSecretStore` named `onepassword-hive` pointing at the `hive-k8s-production` 1Password vault, Hetzner Cloud block storage (`hcloud-volumes`), and dedicated Agent Sandbox workers with the `gvisor` RuntimeClass.
+
+Coding runs are scheduled only on Hetzner workers labeled and tainted with `hive.tuist.dev/workload=coding-sandbox`. Configure those nodes with gVisor as the `gvisor` runtime handler before deployment. The deploy workflow installs the pinned Kubernetes Agent Sandbox controller and refuses to deploy the production overlay when the RuntimeClass or matching worker capacity is missing. Sandbox pods run in the `hive-sandboxes` namespace with restricted Pod Security admission, no mounted service-account token, namespace-scoped permissions, public-web-only egress, and a four-pod resource quota.
 
 The 1Password vault must contain `kubeconfig: hive-production` (used by GitHub Actions), `hive-secret-key-base/password` (generated with `mix phx.gen.secret`), `hive-google-oauth/username` + `hive-google-oauth/credential` (Google OAuth client ID + secret, wired into `HIVE_GOOGLE_CLIENT_ID/_SECRET`), `hive-slack-oauth/username` + `hive-slack-oauth/credential` + `hive-slack-signing-secret/credential` + `hive-slack-allowed-team-ids/credential` (Slack app client ID, client secret, signing secret, and allowed workspace IDs), `hive-sentry/dsn` (Sentry [Data Source Name](https://docs.sentry.io/product/sentry-basics/dsn-explainer/)), `hive-ghcr-pull/notesPlain` (base64 Docker config JSON for GHCR), and `hive-postgres-backup/username` + `hive-postgres-backup/credential` (CNPG backup creds).
 

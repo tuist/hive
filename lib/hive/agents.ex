@@ -2,11 +2,11 @@ defmodule Hive.Agents do
   @moduledoc """
   Entry point for Hive's Condukt-backed agentic workflows.
 
-  Resolves Hive's own inference profile from the runtime model gateway,
-  falling back to the global LLM configuration in `:hive, :llm` (populated
-  by `config/runtime.exs` from `HIVE_LLM_API_KEY`, `HIVE_LLM_MODEL`, and
-  `HIVE_LLM_BASE_URL`). Every AI-backed feature shares the same
-  provider/model: when unconfigured, callers receive
+  Resolves Hive's own runtime profiles from the model gateway, falling back
+  to the global LLM configuration in `:hive, :llm` (populated by
+  `config/runtime.exs` from `HIVE_LLM_API_KEY`, `HIVE_LLM_MODEL`, and
+  `HIVE_LLM_BASE_URL`). Coding workflows can select a dedicated profile and
+  fall back to the general inference profile. When unconfigured, callers receive
   `{:error, :llm_not_configured}` and the feature stays dormant.
 
   Individual agents live under `lib/hive/<domain>/agents/` and call
@@ -41,6 +41,11 @@ defmodule Hive.Agents do
   def enabled?, do: Inference.get_hive_profile(:inference) != nil or config() != nil
 
   @doc """
+  Returns `true` when a dedicated coding profile or the general LLM is configured.
+  """
+  def coding_enabled?, do: Inference.get_hive_profile(:coding) != nil or enabled?()
+
+  @doc """
   Returns `{:ok, keyword}` with the options to pass to `Condukt.run/3`
   (`model`, `api_key`, `base_url`), or `{:error, :llm_not_configured}`
   when the LLM is unconfigured. `Hive.Agents.Sessions` calls this for
@@ -61,6 +66,20 @@ defmodule Hive.Agents do
     case hive_profile_client_opts(:embedding) do
       {:error, :hive_profile_not_configured} -> {:error, :llm_not_configured}
       result -> result
+    end
+  end
+
+  @doc """
+  Returns OpenAI-compatible client options for coding workflows.
+
+  A profile marked for Hive coding takes precedence. The general inference
+  profile and launch-time configuration remain compatible fallbacks.
+  """
+  def coding_client_opts(conf \\ Application.get_env(:hive, :llm, [])) do
+    case hive_profile_client_opts(:coding) do
+      {:ok, opts} -> {:ok, opts}
+      {:error, :hive_profile_not_configured} -> client_opts(conf)
+      {:error, :llm_not_configured} -> {:error, :llm_not_configured}
     end
   end
 

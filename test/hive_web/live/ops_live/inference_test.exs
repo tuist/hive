@@ -125,6 +125,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     assert html =~ "Tokens"
     assert html =~ ~s(id="inference-profile-actions")
     assert html =~ "Use for Hive inference"
+    assert html =~ "Use for Hive coding"
     assert html =~ "Use for Hive embeddings"
     assert html =~ "Edit profile"
     assert html =~ "Create token"
@@ -154,6 +155,22 @@ defmodule HiveWeb.OpsLive.InferenceTest do
 
     html =
       render_click(detail, "set_hive_role", %{
+        "role" => "coding",
+        "enabled" => "true"
+      })
+
+    profile = Inference.get_profile!(profile.id)
+
+    assert html =~ "Profile will be used for Hive coding."
+    assert html =~ "Inference and coding"
+    assert profile.hive_coding
+
+    assert Enum.any?(profile.tokens, fn token ->
+             token.name == "Hive coding" and token.hive_role == "coding"
+           end)
+
+    html =
+      render_click(detail, "set_hive_role", %{
         "role" => "embedding",
         "enabled" => "true"
       })
@@ -161,7 +178,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     profile = Inference.get_profile!(profile.id)
 
     assert html =~ "Profile will be used for Hive embeddings."
-    assert html =~ "Inference and embeddings"
+    assert html =~ "Inference, coding, and embeddings"
     assert profile.hive_embedding
 
     html =
@@ -173,7 +190,7 @@ defmodule HiveWeb.OpsLive.InferenceTest do
     profile = Inference.get_profile!(profile.id)
 
     assert html =~ "Profile is no longer used for Hive inference."
-    assert html =~ "Embeddings"
+    assert html =~ "Coding and embeddings"
     refute profile.hive_inference
 
     html =
