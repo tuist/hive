@@ -1,10 +1,10 @@
 defmodule Hive.Forage.Policy do
   @moduledoc """
-  Authorization rules for forage sources, expressed with LetMe.
+  Authorization rules for forage sources and coding runs, expressed with LetMe.
 
   The subject is the current user (or `nil` for an anonymous visitor) and
-  the object is a forage source (see `Hive.Forage.sources/0`). Checks
-  live in `Hive.Forage.Policy.Checks`.
+  the object is the relevant forage resource. Checks live in
+  `Hive.Forage.Policy.Checks`.
 
   - **read** — public sources are open to everyone; organization sources
     are restricted to org members.
@@ -24,6 +24,16 @@ defmodule Hive.Forage.Policy do
     action :create do
       allow([:creatable_source, :public_source, :authenticated])
       allow([:creatable_source, :org_member])
+    end
+  end
+
+  object :coding_run do
+    action :read do
+      allow(:org_member)
+    end
+
+    action :create do
+      allow(:org_member)
     end
   end
 end

@@ -236,9 +236,7 @@ defmodule Hive.Forage do
     source = get_source!(:grafana_alerts)
 
     if can_access?(source, user) do
-      list_grafana_alerts()
-      |> Enum.find(&(&1.id == id))
-      |> case do
+      case get_grafana_alert(id) do
         nil -> {:error, :not_found}
         alert -> {:ok, grafana_alert_item_entry(alert)}
       end
@@ -403,6 +401,7 @@ defmodule Hive.Forage do
   end
 
   defdelegate list_grafana_alerts, to: Grafana, as: :list_alerts
+  defdelegate get_grafana_alert(id), to: Grafana, as: :get_alert
 
   defp manual_item_entries(user) do
     list_manual_items()

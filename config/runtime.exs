@@ -165,6 +165,45 @@ case System.get_env("HIVE_LLM_API_KEY") do
       base_url: System.get_env("HIVE_LLM_BASE_URL")
 end
 
+coding_runner =
+  System.get_env(
+    "HIVE_CODING_RUNNER",
+    if(config_env() == :dev, do: "microsandbox", else: "disabled")
+  )
+  |> String.trim()
+  |> String.downcase()
+
+coding_sandbox_options =
+  case System.get_env("HIVE_CODING_SANDBOX_OPTIONS") do
+    value when is_binary(value) ->
+      if present?.(value) do
+        case JSON.decode(value) do
+          {:ok, options} when is_map(options) ->
+            options
+
+          _other ->
+            raise "environment variable HIVE_CODING_SANDBOX_OPTIONS must contain an object"
+        end
+      else
+        %{}
+      end
+
+    _other ->
+      %{}
+  end
+
+config :hive, :coding_runs,
+  runner: coding_runner,
+  sandbox_module: System.get_env("HIVE_CODING_SANDBOX_MODULE"),
+  sandbox_options: coding_sandbox_options,
+  image: System.get_env("HIVE_CODING_IMAGE", "ubuntu:24.04"),
+  cpus: System.get_env("HIVE_CODING_CPUS", "2") |> String.to_integer(),
+  memory: System.get_env("HIVE_CODING_MEMORY_MIB", "4096") |> String.to_integer(),
+  disk: System.get_env("HIVE_CODING_DISK_MIB", "8192") |> String.to_integer(),
+  timeout_minutes: System.get_env("HIVE_CODING_TIMEOUT_MINUTES", "30") |> String.to_integer(),
+  setup_command: System.get_env("HIVE_CODING_SETUP_COMMAND"),
+  microsandbox_home: System.get_env("HIVE_MICROSANDBOX_HOME")
+
 inference_providers =
   case System.get_env("HIVE_INFERENCE_PROVIDERS") do
     value when is_binary(value) ->

@@ -23,6 +23,8 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.CreateProjectWebhook,
       Hive.MCP.Components.Tools.DeleteProjectWebhook,
       Hive.MCP.Components.Tools.CreateForageItem,
+      Hive.MCP.Components.Tools.StartGrafanaAlertCodingRun,
+      Hive.MCP.Components.Tools.GetCodingRun,
       Hive.MCP.Components.Tools.ListSpecs,
       Hive.MCP.Components.Tools.GetSpec,
       Hive.MCP.Components.Tools.CreateSpec,

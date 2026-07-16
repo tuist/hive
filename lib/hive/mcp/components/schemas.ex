@@ -115,6 +115,39 @@ defmodule Hive.MCP.Components.Schemas do
     }
   end
 
+  def coding_run do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "forage_item_id" => %{"type" => "string"},
+        "status" => %{"type" => "string"},
+        "runner" => %{"type" => "string"},
+        "repository" => %{"type" => "string"},
+        "result" => %{"type" => ["object", "null"], "additionalProperties" => true},
+        "error" => %{"type" => ["string", "null"]},
+        "started_at" => %{"type" => ["string", "null"]},
+        "completed_at" => %{"type" => ["string", "null"]},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "forage_item_id",
+        "status",
+        "runner",
+        "repository",
+        "result",
+        "error",
+        "started_at",
+        "completed_at",
+        "inserted_at",
+        "updated_at"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
   def drop do
     %{
       "type" => "object",
