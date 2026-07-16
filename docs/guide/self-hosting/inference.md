@@ -103,13 +103,26 @@ Hive currently uses language models for:
 | Spec review requests | Produces focused Slack review prompts for the latest spec revision. |
 | Slack conversations | Replies to mentions and captures requested Forage items. |
 | GitHub issue classification | Links mirrored issues to the relevant project domains. |
+| Grafana alert coding runs | Investigates an alert in an isolated repository snapshot and returns a pull request or report after a member starts the run. |
 | Drop generation | Turns release evidence into user-facing shipped improvements. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
 
-These workflows start automatically when Hive inference is configured.
-When it is not configured, Hive continues to run and uses the documented
-non-model behavior for each feature.
+Most of these workflows start from their scheduled or event-driven trigger
+when Hive inference is configured. Grafana alert coding runs are different:
+an organization member must start each run from the alert or a connected
+client. When inference is not configured, Hive continues to run and uses the
+documented non-model behavior for each feature.
+
+Coding runs also require a [sandbox runner](/reference/configuration#coding-runs)
+and a GitHub App with permission to write repository contents and pull
+requests. The language model receives coding tools backed by the sandbox,
+while Hive retains the GitHub credential and publishes any returned changes
+afterward. Hive includes local microsandbox and Kubernetes Agent Sandbox
+providers. The Kubernetes provider uses Condukt's Kubernetes execution layer
+for file and command operations while Agent Sandbox owns isolated pod
+lifecycle and cleanup. Self-hosters can supply another provider through the
+runtime-configurable Condukt sandbox contract.
 
 Scheduled classification retries only revisit pending work. Permanent
 provider rejections, such as invalid credentials or exhausted credit, are

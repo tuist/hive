@@ -163,6 +163,125 @@ prefix together with `HIVE_LLM_BASE_URL`.
 Optional fallback provider endpoint override for OpenAI-compatible
 gateways or self-hosted providers.
 
+## Coding runs {#coding-runs}
+
+Coding runs require Hive inference, a configured GitHub App, and one of the
+sandbox runners below. They are disabled when any required part is missing.
+The GitHub credential stays in Hive and is never passed into the sandbox.
+
+### HIVE_CODING_RUNNER {#hive_coding_runner}
+
+Names the sandbox provider used for new coding runs. Use `microsandbox` for
+local development, `kubernetes` for production on
+[Kubernetes Agent Sandbox](https://agent-sandbox.sigs.k8s.io/), or `disabled`
+to turn coding runs off. The default is `microsandbox` in development and
+`disabled` in other environments.
+
+The local runner requires the `microsandbox` executable installed by
+`mise install`. The Kubernetes runner requires Agent Sandbox 0.5.1 or newer,
+a gVisor runtime class, and permission for Hive to create Sandbox resources
+and execute commands in their pods.
+
+Other names select a custom provider supplied through
+`HIVE_CODING_SANDBOX_MODULE`. The name is stored with each run, so keep it
+stable when changing that provider's implementation.
+
+### HIVE_CODING_SANDBOX_MODULE {#hive_coding_sandbox_module}
+
+Fully qualified Elixir module for a custom sandbox provider. The module must be
+compiled into the Hive release and implement the
+[Condukt sandbox behaviour](https://github.com/tuist/condukt/blob/main/lib/condukt/sandbox.ex).
+Hive validates the required file, search, and command operations before
+enabling coding runs. Built-in `microsandbox` and `kubernetes` providers ignore
+this setting.
+
+Hive creates the repository baseline after the custom provider starts. The
+provider is responsible only for creating the isolated environment and
+implementing the Condukt operations. It must provide a Unix-compatible shell
+and use `/workspace` as its working directory.
+
+### HIVE_CODING_SANDBOX_OPTIONS {#hive_coding_sandbox_options}
+
+JavaScript Object Notation
+([JSON](https://www.json.org/json-en.html)) object containing runner-specific
+options. Custom providers receive it unchanged, which allows adapters for
+services such as [Daytona](https://www.daytona.io/) or
+[E2B](https://e2b.dev/) without adding provider settings to Hive itself.
+Defaults to an empty object.
+
+Options may contain provider credentials. Keep them in the deployment secret
+manager and never commit them to the repository.
+
+The Kubernetes provider accepts:
+
+| Field | Behavior |
+| --- | --- |
+| `in_cluster` | Uses Hive's mounted Kubernetes service-account identity. Set this to `true` for normal deployments. |
+| `kubeconfig` | Uses a kubeconfig file instead of the in-cluster identity. Intended for development and diagnostics. |
+| `namespace` | Namespace where Sandbox resources are created. Defaults to `hive-sandboxes`. |
+| `runtime_class_name` | Runtime class enforced on every sandbox. Defaults to `gvisor`. |
+| `service_account` | Service account assigned to sandbox pods. Its token is never mounted. |
+| `image_pull_policy` | Kubernetes image-pull policy for the coding image. Defaults to `IfNotPresent`. |
+| `node_selector` | Labels that select dedicated sandbox worker nodes. |
+| `tolerations` | Tolerations required by dedicated, tainted sandbox workers. |
+| `image_pull_secrets` | Names of image-pull secrets available in the sandbox namespace. |
+| `ready_timeout_ms` | Maximum time to wait for Agent Sandbox to report ready. Defaults to `120000`. |
+
+The Hive chart produces this object from `codingRuns.kubernetes` values. It
+also creates the namespace-scoped permissions, service account, network
+policy, and resource quota. The cluster operator must install
+[Agent Sandbox](https://agent-sandbox.sigs.k8s.io/docs/getting_started/install_prerequisites/)
+and configure gVisor on the selected worker nodes before enabling the runner.
+
+### HIVE_MICROSANDBOX_HOME {#hive_microsandbox_home}
+
+Optional state directory for the local microsandbox runtime. Hive defaults to
+the short application-specific `/tmp/hive-msb` directory so Unix socket paths
+remain within operating-system limits and coding runs do not share runtime
+metadata with manually managed local sandboxes.
+
+### HIVE_CODING_IMAGE {#hive_coding_image}
+
+Open Container Initiative
+([OCI](https://opencontainers.org/)) image used for each isolated run.
+Defaults to `ubuntu:24.04`.
+
+The default image can inspect and edit code after the setup command installs
+Git and ripgrep. To run repository validation, use a pinned image containing
+that repository's build tools or extend `HIVE_CODING_SETUP_COMMAND` to install
+them. Production deployments should use an immutable image tag.
+
+### HIVE_CODING_CPUS {#hive_coding_cpus}
+
+Virtual processor count assigned to each sandbox. Defaults to `2`.
+
+### HIVE_CODING_MEMORY_MIB {#hive_coding_memory_mib}
+
+Sandbox memory in mebibytes. Defaults to `4096`.
+
+### HIVE_CODING_DISK_MIB {#hive_coding_disk_mib}
+
+Scratch-disk capacity in mebibytes. Defaults to `8192`. Kubernetes applies it
+as the workspace's ephemeral-volume size limit. The local microsandbox
+provider does not use this setting.
+
+### HIVE_CODING_TIMEOUT_MINUTES {#hive_coding_timeout_minutes}
+
+Maximum duration of one coding run in minutes. Defaults to `30`. Hive also
+sets the remote sandbox's automatic cleanup timer beyond this limit.
+
+### HIVE_CODING_SETUP_COMMAND {#hive_coding_setup_command}
+
+Shell command executed once after the sandbox starts and before the coding
+harness receives control. The default installs Git, ripgrep, and certificate
+authority data with Ubuntu's package manager. Set it to `true` when a custom
+image already contains every required tool.
+
+The setup command is operator-controlled. Alert content and model output are
+never interpolated into it. Kubernetes sandboxes run as a non-root user, so
+their image should already contain required system packages and normally use
+`true` as the setup command.
+
 ## Model Gateway {#model-gateway}
 
 ### HIVE_INFERENCE_PROVIDERS {#hive_inference_providers}
