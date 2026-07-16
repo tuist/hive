@@ -133,6 +133,7 @@ defmodule Hive.Repo.Seeds do
     profile =
       seed.profile
       |> Map.put_new(:hive_inference, false)
+      |> Map.put_new(:hive_coding, false)
       |> Map.put_new(:hive_embedding, false)
       |> inference_profile!()
 
@@ -700,6 +701,26 @@ inference_profiles = [
         enabled: true,
         expires_at: nil,
         usage: Seeds.inference_usage_points(10, 2_400, 700, 16)
+      }
+    ]
+  },
+  %{
+    rates: %{input_cost_per_million: "0.15", output_cost_per_million: "0.60"},
+    profile: %{
+      name: "hive-coding-runtime",
+      description:
+        "Dedicated model profile for repository coding runs. Hive uses it for engineering work without changing the model used by other agentic workflows.",
+      upstream_provider: "fireworks",
+      upstream_model: "accounts/fireworks/models/kimi-k2p5",
+      input_cost_per_million: "0.15",
+      output_cost_per_million: "0.60",
+      enabled: true,
+      hive_coding: true
+    },
+    hive_tokens: [
+      %{
+        role: :coding,
+        usage: Seeds.inference_usage_points(14, 32_000, 8_600, 7)
       }
     ]
   },

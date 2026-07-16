@@ -148,8 +148,9 @@ Optional GitHub application programming interface
 Fallback provider key for features backed by a
 [large language model](https://en.wikipedia.org/wiki/Large_language_model).
 Agentic workflows prefer the profile marked **Use for Hive inference** in
-the dashboard. When no profile is marked and this value is unset,
-agentic workflows stay dormant.
+the dashboard. Coding runs first prefer the profile marked **Use for Hive
+coding**, then fall back to the general inference profile. When no applicable
+profile is marked and this value is unset, agentic workflows stay dormant.
 
 ### HIVE_LLM_MODEL {#hive_llm_model}
 
@@ -165,9 +166,11 @@ gateways or self-hosted providers.
 
 ## Coding runs {#coding-runs}
 
-Coding runs require Hive inference, a configured GitHub App, and one of the
-sandbox runners below. They are disabled when any required part is missing.
-The GitHub credential stays in Hive and is never passed into the sandbox.
+Coding runs require a profile marked **Use for Hive coding**, a general Hive
+inference profile, or the launch-time model configuration. They also require a
+configured GitHub App and one of the sandbox runners below. They are disabled
+when any required part is missing. The model and GitHub credentials stay in
+Hive and are never passed into the sandbox.
 
 ### HIVE_CODING_RUNNER {#hive_coding_runner}
 

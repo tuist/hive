@@ -48,7 +48,8 @@ defmodule Hive.Forage.CodingRuns do
   def enabled?(conf \\ Application.get_env(:hive, :coding_runs, [])) do
     configured = config(conf)
 
-    Hive.Agents.enabled?() and Client.configured?() and SandboxContract.configured?(configured)
+    Hive.Agents.coding_enabled?() and Client.configured?() and
+      SandboxContract.configured?(configured)
   end
 
   def subscribe(forage_item_id) when is_binary(forage_item_id) do
@@ -227,6 +228,7 @@ defmodule Hive.Forage.CodingRuns do
              sessions_module.run(
                GrafanaAlertCodingAgent,
                prompt(run),
+               inference_role: :coding,
                sandbox: sandbox,
                cwd: Sandbox.cwd(sandbox),
                load_project_instructions: true,

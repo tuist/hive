@@ -56,6 +56,32 @@ defmodule Hive.AgentsTest do
     assert token.model_binding.id == embedding_profile.id
   end
 
+  test "uses a dedicated coding profile through the model gateway" do
+    _inference_profile = model_binding!(name: "hive-agent", hive_inference: true)
+    coding_profile = model_binding!(name: "hive-coding", hive_coding: true)
+
+    assert Agents.coding_enabled?()
+    assert {:ok, opts} = Agents.coding_client_opts([])
+
+    assert opts[:model] == "openai:hive-coding"
+    assert opts[:base_url] == HiveWeb.Endpoint.url() <> "/inference/v1"
+
+    assert {:ok, token} = Inference.authenticate_token(opts[:api_key])
+    assert token.hive_role == "coding"
+    assert token.model_binding.id == coding_profile.id
+  end
+
+  test "falls back to Hive inference when no coding profile is selected" do
+    inference_profile = model_binding!(name: "hive-agent", hive_inference: true)
+
+    assert {:ok, opts} = Agents.coding_client_opts([])
+    assert opts[:model] == "openai:hive-agent"
+
+    assert {:ok, token} = Inference.authenticate_token(opts[:api_key])
+    assert token.hive_role == "inference"
+    assert token.model_binding.id == inference_profile.id
+  end
+
   defp model_binding!(attrs) do
     {:ok, binding} =
       Inference.create_model_binding(

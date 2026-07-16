@@ -23,6 +23,7 @@ defmodule Hive.Inference.ModelBinding do
     field :output_cost_per_million, :decimal
     field :enabled, :boolean, default: true
     field :hive_inference, :boolean, default: false
+    field :hive_coding, :boolean, default: false
     field :hive_embedding, :boolean, default: false
     field :last_used_at, :utc_datetime
 
@@ -43,6 +44,7 @@ defmodule Hive.Inference.ModelBinding do
       :output_cost_per_million,
       :enabled,
       :hive_inference,
+      :hive_coding,
       :hive_embedding,
       :last_used_at
     ])
@@ -55,6 +57,10 @@ defmodule Hive.Inference.ModelBinding do
     |> unique_constraint(:name)
     |> unique_constraint(:hive_inference,
       name: :inference_model_bindings_single_hive_inference_index,
+      message: "is already assigned to another profile"
+    )
+    |> unique_constraint(:hive_coding,
+      name: :inference_model_bindings_single_hive_coding_index,
       message: "is already assigned to another profile"
     )
     |> unique_constraint(:hive_embedding,

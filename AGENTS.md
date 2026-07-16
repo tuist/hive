@@ -107,7 +107,7 @@ Visibility for unfurls follows the dashboard's anonymous view: a Slack workspace
 
 ## Agents
 
-Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. A single provider/model is shared by every AI-backed feature in Hive. Prefer selecting it at runtime by marking an inference profile as **Use for Hive inference** under **Ops -> Inference -> Profiles**; Hive then uses an encrypted Hive-owned token to call its own `/inference/v1` gateway and records usage on that profile. If no profile is marked, Hive falls back to three launch-time env vars:
+Agentic workflows are built on [Condukt], an Elixir agent framework that wraps [ReqLLM]. Most model-backed features share the profile marked **Use for Hive inference** under **Ops -> Inference -> Profiles**. Coding runs can instead use the profile marked **Use for Hive coding**, with the general inference profile as their fallback. Hive uses an encrypted Hive-owned token to call its own `/inference/v1` gateway and records usage on the selected profile. If no applicable profile is marked, Hive falls back to three launch-time environment variables:
 
 [Condukt]: https://github.com/tuist/condukt
 [ReqLLM]: https://hexdocs.pm/req_llm

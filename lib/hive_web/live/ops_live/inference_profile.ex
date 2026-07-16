@@ -502,6 +502,16 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
         <:right_icon :if={@profile.hive_inference}><.check /></:right_icon>
       </.dropdown_item>
       <.dropdown_item
+        label={dgettext("dashboard_inference", "Use for Hive coding")}
+        value="hive_coding"
+        on_click="set_hive_role"
+        phx-value-role="coding"
+        phx-value-enabled={if @profile.hive_coding, do: "false", else: "true"}
+        data-selected={@profile.hive_coding}
+      >
+        <:right_icon :if={@profile.hive_coding}><.check /></:right_icon>
+      </.dropdown_item>
+      <.dropdown_item
         label={dgettext("dashboard_inference", "Use for Hive embeddings")}
         value="hive_embeddings"
         on_click="set_hive_role"
@@ -811,6 +821,7 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
   defp with_query(path, query), do: path <> "?" <> query
 
   defp hive_role("inference"), do: {:ok, :inference, :hive_inference}
+  defp hive_role("coding"), do: {:ok, :coding, :hive_coding}
   defp hive_role("embedding"), do: {:ok, :embedding, :hive_embedding}
   defp hive_role(_role), do: {:error, :unknown_hive_role}
 
@@ -826,6 +837,14 @@ defmodule HiveWeb.OpsLive.InferenceProfile do
 
   defp hive_role_flash(:inference, false) do
     dgettext("dashboard_inference", "Profile is no longer used for Hive inference.")
+  end
+
+  defp hive_role_flash(:coding, true) do
+    dgettext("dashboard_inference", "Profile will be used for Hive coding.")
+  end
+
+  defp hive_role_flash(:coding, false) do
+    dgettext("dashboard_inference", "Profile is no longer used for Hive coding.")
   end
 
   defp hive_role_flash(:embedding, true) do

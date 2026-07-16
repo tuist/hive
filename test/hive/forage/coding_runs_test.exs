@@ -147,6 +147,7 @@ defmodule Hive.Forage.CodingRunsTest do
 
     assert_receive {:agent_run, Hive.Forage.Agents.GrafanaAlertCodingAgent, prompt, opts}
     assert prompt =~ "High latency"
+    assert opts[:inference_role] == :coding
     assert opts[:max_turns] == 80
     assert opts[:load_project_instructions]
 
