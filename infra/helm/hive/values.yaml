@@ -68,6 +68,38 @@ env:
   SENTRY_OBAN_REPORT_RETRIES: "false"
   SENTRY_OBAN_CRON_MONITORING: "true"
 
+codingRuns:
+  # disabled, microsandbox, kubernetes, or the stable name of a custom provider.
+  provider: disabled
+  image:
+    repository: ubuntu
+    tag: "24.04"
+    pullPolicy: IfNotPresent
+  setupCommand: ""
+  cpus: 2
+  memoryMi: 4096
+  diskMi: 8192
+  timeoutMinutes: 30
+  kubernetes:
+    namespace: hive-sandboxes
+    createNamespace: true
+    inCluster: true
+    runtimeClassName: gvisor
+    serviceAccountName: ""
+    imagePullSecretName: ""
+    readyTimeoutMilliseconds: 120000
+    nodeSelector: {}
+    tolerations: []
+    networkPolicy:
+      enabled: true
+    quota:
+      enabled: true
+      pods: "4"
+      requestsCpu: "8"
+      requestsMemory: 16Gi
+      limitsCpu: "8"
+      limitsMemory: 16Gi
+
 probes:
   readiness:
     initialDelaySeconds: 5

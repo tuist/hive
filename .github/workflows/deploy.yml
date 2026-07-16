@@ -26,9 +26,11 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: tuist/hive
+  SANDBOX_IMAGE_NAME: tuist/hive-coding-sandbox
   HELM_CHART_PATH: infra/helm/hive
   HELM_RELEASE_NAME: hive
   NAMESPACE: hive-production
+  AGENT_SANDBOX_VERSION: v0.5.1
   DEPLOY_SHA: ${{ inputs.commit_sha || github.sha }}
 
 jobs:
@@ -61,6 +63,15 @@ jobs:
             RUNTIME_PACKAGE_REFRESH=${{ env.DEPLOY_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./infra/coding-sandbox/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.REGISTRY }}/${{ env.SANDBOX_IMAGE_NAME }}:${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha,scope=coding-sandbox
+          cache-to: type=gha,mode=max,scope=coding-sandbox
 
   deploy:
     name: Deploy
@@ -97,6 +108,19 @@ jobs:
           API="$(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
           echo "Reaching apiserver at $API"
           kubectl --request-timeout=10s get --raw /version >/dev/null
+      - name: Install Agent Sandbox controller
+        run: |
+          kubectl apply --server-side \
+            -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/manifest.yaml"
+          kubectl -n agent-sandbox-system rollout status deploy/agent-sandbox-controller --timeout=5m
+      - name: Verify sandbox worker capacity
+        run: |
+          set -euo pipefail
+          kubectl get runtimeclass gvisor >/dev/null
+          test -n "$(kubectl get nodes -l hive.tuist.dev/workload=coding-sandbox -o name)"
+          kubectl get nodes -l hive.tuist.dev/workload=coding-sandbox \
+            -o jsonpath='{range .items[*]}{range .spec.taints[*]}{.key}={.value}:{.effect}{"\n"}{end}{end}' \
+            | grep -qx 'hive.tuist.dev/workload=coding-sandbox:NoSchedule'
       - name: Recover stuck release
         run: |
           status=$(helm status "$HELM_RELEASE_NAME" -n "$NAMESPACE" -o json 2>/dev/null \
@@ -118,6 +142,7 @@ jobs:
             --namespace "$NAMESPACE" --create-namespace \
             --values "$HELM_CHART_PATH/values-production.yaml" \
             --set image.tag="${{ needs.build.outputs.image_tag }}" \
+            --set codingRuns.image.tag="${{ needs.build.outputs.image_tag }}" \
             --set env.SENTRY_RELEASE="$DEPLOY_SHA" \
             --timeout 15m
       - name: Diagnostics on failure

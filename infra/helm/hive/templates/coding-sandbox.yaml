@@ -1,0 +1,148 @@
+{{- if eq .Values.codingRuns.provider "kubernetes" }}
+{{- $namespace := include "hive.codingSandboxNamespace" . -}}
+{{- $serviceAccount := include "hive.codingSandboxServiceAccount" . -}}
+{{- if .Values.codingRuns.kubernetes.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $namespace }}
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+{{- if .Values.codingRuns.kubernetes.imagePullSecretName }}
+imagePullSecrets:
+  - name: {{ .Values.codingRuns.kubernetes.imagePullSecretName }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hive.fullname" . }}-coding-sandbox
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["agents.x-k8s.io"]
+    resources: ["sandboxes"]
+    verbs: ["create", "get", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "hive.fullname" . }}-coding-sandbox
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "hive.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "hive.fullname" . }}-coding-sandbox
+{{- if .Values.codingRuns.kubernetes.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "hive.fullname" . }}-coding-sandbox
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hive-coding-sandbox
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+{{- end }}
+{{- if .Values.codingRuns.kubernetes.quota.enabled }}
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "hive.fullname" . }}-coding-sandbox
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+spec:
+  hard:
+    pods: {{ .Values.codingRuns.kubernetes.quota.pods | quote }}
+    requests.cpu: {{ .Values.codingRuns.kubernetes.quota.requestsCpu | quote }}
+    requests.memory: {{ .Values.codingRuns.kubernetes.quota.requestsMemory | quote }}
+    limits.cpu: {{ .Values.codingRuns.kubernetes.quota.limitsCpu | quote }}
+    limits.memory: {{ .Values.codingRuns.kubernetes.quota.limitsMemory | quote }}
+{{- end }}
+{{- if and .Values.externalSecrets.enabled .Values.externalSecrets.pullSecret.enabled .Values.codingRuns.kubernetes.imagePullSecretName }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ .Values.codingRuns.kubernetes.imagePullSecretName }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "hive.labels" . | nindent 4 }}
+spec:
+  refreshInterval: {{ .Values.externalSecrets.refreshInterval | quote }}
+  secretStoreRef:
+    name: {{ .Values.externalSecrets.storeRef.name }}
+    kind: {{ .Values.externalSecrets.storeRef.kind }}
+  target:
+    name: {{ .Values.codingRuns.kubernetes.imagePullSecretName }}
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/dockerconfigjson
+      engineVersion: v2
+      data:
+        .dockerconfigjson: "{{ `{{ .dockerconfigjson | b64dec }}` }}"
+  data:
+    - secretKey: dockerconfigjson
+      remoteRef:
+        key: "{{ .Values.externalSecrets.pullSecret.item }}/{{ .Values.externalSecrets.pullSecret.field }}"
+{{- end }}
+{{- end }}

@@ -6,6 +6,7 @@
 #   vault
 # - the CloudNativePG operator
 # - Hetzner Cloud block storage
+# - Kubernetes Agent Sandbox and a gVisor RuntimeClass on dedicated workers
 
 host: hive.tuist.dev
 
@@ -46,6 +47,25 @@ env:
   # LLM model identifier in ReqLLM `provider:model_id` form, shared by
   # every agentic feature. The API key is pulled from 1Password below.
   HIVE_LLM_MODEL: "fireworks_ai:accounts/fireworks/models/kimi-k2p7-code"
+
+codingRuns:
+  provider: kubernetes
+  image:
+    repository: ghcr.io/tuist/hive-coding-sandbox
+    tag: sha-set-by-deploy
+    pullPolicy: IfNotPresent
+  setupCommand: "true"
+  kubernetes:
+    namespace: hive-sandboxes
+    runtimeClassName: gvisor
+    imagePullSecretName: ghcr-pull
+    nodeSelector:
+      hive.tuist.dev/workload: coding-sandbox
+    tolerations:
+      - key: hive.tuist.dev/workload
+        operator: Equal
+        value: coding-sandbox
+        effect: NoSchedule
 
 externalSecrets:
   enabled: true
