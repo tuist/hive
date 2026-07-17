@@ -427,6 +427,7 @@ defmodule HiveWeb.AuditLive do
   defp target_label(_target), do: "-"
 
   defp interface_label("mcp"), do: dgettext("dashboard_audit", "MCP")
+  defp interface_label("mobile"), do: dgettext("dashboard_audit", "Mobile")
 
   defp interface_label(interface) when is_binary(interface) do
     interface
@@ -438,6 +439,7 @@ defmodule HiveWeb.AuditLive do
 
   defp interface_badge_color("dashboard"), do: "information"
   defp interface_badge_color("mcp"), do: "focus"
+  defp interface_badge_color("mobile"), do: "information"
   defp interface_badge_color("webhook"), do: "success"
   defp interface_badge_color("worker"), do: "warning"
   defp interface_badge_color(_interface), do: "neutral"

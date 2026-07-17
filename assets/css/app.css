@@ -6,6 +6,7 @@
 @import "./components/empty_card_section.css";
 @import "./components/feeds_dropdown.css";
 @import "./routes/login.css";
+@import "./routes/oauth_consent.css";
 @import "./routes/forage.css";
 @import "./routes/flights.css";
 @import "./routes/specs.css";

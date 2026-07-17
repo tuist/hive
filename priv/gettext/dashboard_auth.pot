@@ -21,17 +21,12 @@ msgstr ""
 msgid "%{provider} is connected to your account."
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:118
-#, elixir-autogen, elixir-format
-msgid "Allow"
-msgstr ""
-
 #: lib/hive_web/controllers/page_html.ex:109
 #, elixir-autogen, elixir-format
 msgid "Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:99
+#: lib/hive_web/controllers/oauth/authorize_html.ex:60
 #, elixir-autogen, elixir-format
 msgid "Authorize %{client}"
 msgstr ""
@@ -47,11 +42,6 @@ msgstr ""
 msgid "Continue without signing in"
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:119
-#, elixir-autogen, elixir-format
-msgid "Deny"
-msgstr ""
-
 #: lib/hive_web/controllers/page_html.ex:27
 #: lib/hive_web/controllers/page_html.ex:57
 #, elixir-autogen, elixir-format
@@ -61,16 +51,6 @@ msgstr ""
 #: lib/hive_web/controllers/page_html.ex:94
 #, elixir-autogen, elixir-format
 msgid "No identity provider is configured"
-msgstr ""
-
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:49
-#, elixir-autogen, elixir-format
-msgid "OAuth authorization was denied."
-msgstr ""
-
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:96
-#, elixir-autogen, elixir-format
-msgid "OAuth client"
 msgstr ""
 
 #: lib/hive_web/controllers/page_html.ex:21
@@ -86,16 +66,6 @@ msgstr ""
 #: lib/hive_web/controllers/page_html.ex:22
 #, elixir-autogen, elixir-format
 msgid "Public by default"
-msgstr ""
-
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:111
-#, elixir-autogen, elixir-format
-msgid "Redirect URI"
-msgstr ""
-
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:113
-#, elixir-autogen, elixir-format
-msgid "Scopes"
 msgstr ""
 
 #: lib/hive_web/controllers/page_html.ex:96
@@ -138,7 +108,7 @@ msgstr ""
 msgid "The login callback was missing required parameters."
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:86
+#: lib/hive_web/controllers/oauth/authorize_controller.ex:92
 #, elixir-autogen, elixir-format
 msgid "The state parameter must not exceed %{count} characters."
 msgstr ""
@@ -168,7 +138,107 @@ msgstr ""
 msgid "Your account isn't from an allowed domain for this instance."
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:102
+#: lib/hive_web/controllers/oauth/authorize_html.ex:87
 #, elixir-autogen, elixir-format
-msgid "Allow this client to access Hive as %{user}?"
+msgid "Access"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:20
+#, elixir-autogen, elixir-format
+msgid "Access can be revoked"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:141
+#, elixir-autogen, elixir-format
+msgid "Access not granted · Hive"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:150
+#, elixir-autogen, elixir-format
+msgid "Access was not granted"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:110
+#, elixir-autogen, elixir-format
+msgid "Allow access"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:58
+#, elixir-autogen, elixir-format
+msgid "Authorization request"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:43
+#, elixir-autogen, elixir-format
+msgid "Authorize %{client} · Hive"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:25
+#, elixir-autogen, elixir-format
+msgid "Authorize application access"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:121
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:33
+#, elixir-autogen, elixir-format
+msgid "Connected application"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:63
+#, elixir-autogen, elixir-format
+msgid "Continue as %{user}"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:163
+#, elixir-autogen, elixir-format
+msgid "Mobile app access"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:166
+#, elixir-autogen, elixir-format
+msgid "Model Context Protocol access"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:97
+#, elixir-autogen, elixir-format
+msgid "Only continue if you recognize this application. You can revoke access later from your account."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:91
+#, elixir-autogen, elixir-format
+msgid "Returns to"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:13
+#, elixir-autogen, elixir-format
+msgid "Review and approve a secure application access request."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:21
+#, elixir-autogen, elixir-format
+msgid "Secure browser handoff"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:77
+#, elixir-autogen, elixir-format
+msgid "This application will be able to access the Hive content available to your account."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:74
+#, elixir-autogen, elixir-format
+msgid "Use Hive on your behalf"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:151
+#, elixir-autogen, elixir-format
+msgid "You can close this window and return to the application."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:19
+#, elixir-autogen, elixir-format
+msgid "You stay in control"
 msgstr ""

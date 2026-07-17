@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/flight_live/index.ex:412
+#: lib/hive_web/live/flight_live/index.ex:398
 #, elixir-autogen, elixir-format
 msgid "%{count} hr"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/index.ex:411
+#: lib/hive_web/live/flight_live/index.ex:397
 #, elixir-autogen, elixir-format
 msgid "%{count} min"
 msgstr ""
@@ -26,7 +26,7 @@ msgstr ""
 msgid "%{title} · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:261
+#: lib/hive_web/live/flight_live/show.ex:258
 #, elixir-autogen, elixir-format
 msgid "Agent"
 msgstr ""
@@ -61,7 +61,7 @@ msgstr ""
 msgid "Continue locally"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:235
+#: lib/hive_web/live/flight_live/show.ex:232
 #, elixir-autogen, elixir-format
 msgid "Durable agent execution and continuation context."
 msgstr ""
@@ -140,7 +140,7 @@ msgstr ""
 msgid "Forage item"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:238
+#: lib/hive_web/live/flight_live/show.ex:235
 #, elixir-autogen, elixir-format
 msgid "Forage item unavailable"
 msgstr ""
@@ -161,7 +161,7 @@ msgstr ""
 msgid "Local continuation"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:263
+#: lib/hive_web/live/flight_live/show.ex:260
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -251,18 +251,18 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:299
+#: lib/hive_web/live/flight_live/show.ex:296
 #, elixir-autogen, elixir-format
 msgid "System"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/index.ex:393
-#: lib/hive_web/live/flight_live/show.ex:229
+#: lib/hive/flights.ex:108
+#: lib/hive_web/live/flight_live/show.ex:226
 #, elixir-autogen, elixir-format
 msgid "The agent is working in its sandbox."
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:262
+#: lib/hive_web/live/flight_live/show.ex:259
 #, elixir-autogen, elixir-format
 msgid "Tool result"
 msgstr ""
@@ -272,12 +272,12 @@ msgstr ""
 msgid "Unavailable"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/index.ex:410
+#: lib/hive_web/live/flight_live/index.ex:396
 #, elixir-autogen, elixir-format
 msgid "Under a minute"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:260
+#: lib/hive_web/live/flight_live/show.ex:257
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr ""
@@ -292,8 +292,8 @@ msgstr ""
 msgid "View pull request"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/index.ex:396
-#: lib/hive_web/live/flight_live/show.ex:232
+#: lib/hive/flights.ex:111
+#: lib/hive_web/live/flight_live/show.ex:229
 #, elixir-autogen, elixir-format
 msgid "Waiting for an available sandbox."
 msgstr ""

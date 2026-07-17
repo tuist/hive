@@ -1,0 +1,9 @@
+[package]
+name = "hive-mobile-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+
+[lib]
+name = "hive_mobile_core"
+crate-type = ["staticlib", "cdylib", "rlib"]

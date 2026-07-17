@@ -21,6 +21,17 @@ defmodule HiveWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :open_api do
+    plug :accepts, ["json"]
+    plug OpenApiSpex.Plug.PutApiSpec, module: HiveWeb.ApiSpec
+  end
+
+  pipeline :mobile_api do
+    plug :accepts, ["json"]
+    plug OpenApiSpex.Plug.PutApiSpec, module: HiveWeb.ApiSpec
+    plug HiveWeb.Plugs.MobileAPIAuthentication
+  end
+
   pipeline :feed do
     plug :accepts, ["xml"]
     plug :fetch_session
@@ -66,6 +77,26 @@ defmodule HiveWeb.Router do
     get "/flights/:id", FlightController, :show
   end
 
+  scope "/api" do
+    pipe_through :open_api
+
+    get "/openapi.json", OpenApiSpex.Plug.RenderSpec, []
+  end
+
+  scope "/api/v1", HiveWeb.Api.V1 do
+    pipe_through :mobile_api
+
+    get "/me", SessionController, :show
+    get "/forage", ForageController, :index
+    get "/forage/:item_id", ForageController, :show
+    get "/specs", SpecController, :index
+    get "/specs/:number", SpecController, :show
+    get "/drops", DropController, :index
+    get "/drops/digests", DropDigestController, :index
+    get "/drops/digests/:week_start", DropDigestController, :show
+    get "/drops/:number", DropController, :show
+  end
+
   scope "/", HiveWeb do
     get "/live", HealthController, :live
     get "/ready", HealthController, :ready
@@ -93,6 +124,7 @@ defmodule HiveWeb.Router do
       pipe_through [:json_api]
 
       post "/token", TokenController, :token
+      post "/revoke", RevokeController, :revoke
     end
 
     scope "/" do

@@ -14,3 +14,43 @@ yq = "latest"
 "1password-cli" = "latest"
 git-cliff = "latest"
 "github:superradcompany/microsandbox" = "0.6.6"
+rust = "1.88.0"
+java = "17.0.2"
+kotlin = "2.1.0"
+android-sdk = "21.0"
+"github:tuist/once" = { version = "0.28.0", exe = "once" }
+
+[env]
+ANDROID_HOME = "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0"
+ANDROID_SDK_ROOT = "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0"
+ANDROID_NDK_HOME = "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0/ndk/27.3.13750724"
+_.path = [
+  "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0/platform-tools",
+  "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0/emulator",
+]
+
+[tasks."mobile:toolchains"]
+description = "Install native mobile compiler targets"
+run = '''
+set -eu
+rustup target add aarch64-apple-ios-sim aarch64-linux-android
+'''
+
+[tasks."mobile:test"]
+description = "Run the shared Rust core tests through Once"
+depends = ["mobile:toolchains"]
+run = "once test SharedRustTests"
+
+[tasks."mobile:build:ios"]
+description = "Build the Swift iOS application through Once"
+depends = ["mobile:toolchains"]
+run = "once build AppleApp"
+
+[tasks."mobile:build:android"]
+description = "Build the Kotlin Android application through Once"
+depends = ["mobile:toolchains"]
+run = "once build AndroidApp"
+
+[tasks."mobile:build"]
+description = "Build both native mobile applications"
+depends = ["mobile:build:ios", "mobile:build:android"]

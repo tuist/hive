@@ -6,6 +6,7 @@ defmodule HiveWeb.WellKnownController do
   @mcp_path "/mcp"
   @oauth_authorize_path "/oauth2/authorize"
   @oauth_token_path "/oauth2/token"
+  @oauth_revoke_path "/oauth2/revoke"
   @oauth_registration_path "/oauth2/register"
 
   def mcp_server_card(conn, _params) do
@@ -34,12 +35,13 @@ defmodule HiveWeb.WellKnownController do
       issuer: issuer,
       authorization_endpoint: "#{issuer}#{@oauth_authorize_path}",
       token_endpoint: "#{issuer}#{@oauth_token_path}",
+      revocation_endpoint: "#{issuer}#{@oauth_revoke_path}",
       registration_endpoint: "#{issuer}#{@oauth_registration_path}",
       grant_types_supported: ["authorization_code", "refresh_token"],
       response_types_supported: ["code"],
       code_challenge_methods_supported: ["S256"],
       resource_parameter_supported: true,
-      scopes_supported: ["api", "mcp"],
+      scopes_supported: ["api", "mcp", "mobile"],
       token_endpoint_auth_methods_supported: [
         "none",
         "client_secret_basic",
@@ -55,7 +57,7 @@ defmodule HiveWeb.WellKnownController do
 
     case Map.get(params, "resource_path", []) do
       [] ->
-        json(conn, protected_resource_metadata(origin, "", "Hive", ["api", "mcp"]))
+        json(conn, protected_resource_metadata(origin, "", "Hive", ["api", "mcp", "mobile"]))
 
       ["api"] ->
         json(
@@ -70,6 +72,9 @@ defmodule HiveWeb.WellKnownController do
 
       ["mcp"] ->
         json(conn, protected_resource_metadata(origin, @mcp_path, "Hive MCP", ["mcp"]))
+
+      ["api", "v1"] ->
+        json(conn, protected_resource_metadata(origin, "/api/v1", "Hive Mobile", ["mobile"]))
 
       _ ->
         conn |> put_status(:not_found) |> json(%{error: "not_found"})

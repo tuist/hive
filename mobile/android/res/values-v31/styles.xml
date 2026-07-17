@@ -1,0 +1,6 @@
+<resources>
+    <style name="AppTheme.Starting" parent="AppTheme">
+        <item name="android:windowSplashScreenBackground">#FAF9FF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_hive</item>
+    </style>
+</resources>
