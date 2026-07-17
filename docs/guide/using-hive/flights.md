@@ -6,6 +6,12 @@ the sandbox, the outcome, and a portable copy of the agent session.
 
 Only organization members and administrators can start or inspect Flights.
 
+Flights run only after an operator configures three things: [model
+inference](/guide/self-hosting/inference), the [GitHub
+App](/guide/self-hosting/github), and a [sandbox
+runner](/reference/configuration#coding-runs). Until all three are in place,
+Forage shows the option to start a Flight as paused.
+
 ## Start a Flight
 
 Open a supported Grafana alert or GitHub issue in **Forage**, choose a linked
