@@ -55,87 +55,20 @@ defmodule Hive.Slack.FlightCommands do
            {:ok, repository} <- choose_repository(item, text),
            :ok <- ensure_no_active_flight(item, repository),
            {:ok, %{"ts" => message_ts}} <-
-             post_starting(installation, channel_id, thread_ts, objective),
-           trigger = %{
-             "source" => "slack",
-             "installation_id" => installation.id,
-             "channel_id" => channel_id,
-             "thread_ts" => thread_ts,
-             "message_ts" => message_ts
-           },
-           {:ok, flight} <-
-             Flights.start_for_item(item, repository.id, requester,
-               objective: objective,
-               trigger: trigger
-             ) do
-        _ = FlightMessages.update(flight)
-        {:handled, flight}
+             post_starting(installation, channel_id, thread_ts, objective) do
+        launch_flight(
+          objective,
+          item,
+          repository,
+          requester,
+          installation,
+          channel_id,
+          thread_ts,
+          message_ts
+        )
       else
-        {:error, :alert_not_found} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "I could not match this thread to a Grafana alert in Hive. Include the Hive Forage link or the original Grafana alert link."
-          )
-
-        {:error, :ambiguous_alert} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "This thread refers to more than one Grafana alert. Include the Hive Forage link for the alert to use."
-          )
-
-        {:error, {:choose_repository, repositories}} ->
-          choices = Enum.map_join(repositories, ", ", &"`#{&1}`")
-
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "Choose a repository by mentioning its full name: #{choices}."
-          )
-
-        {:error, :repository_not_found} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "No linked repository is available for this alert."
-          )
-
-        {:error, :already_running} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "A Flight is already active for this alert and repository."
-          )
-
-        {:error, {:active_flight, flight}} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "A Flight is already active for this alert and repository. <#{HiveWeb.Endpoint.url()}#{Flights.path(flight)}|View Flight>"
-          )
-
-        {:error, :not_configured} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "The Flight runner is not configured in Hive."
-          )
-
         {:error, reason} ->
-          post_reply(
-            installation,
-            channel_id,
-            thread_ts,
-            "The Flight could not be started: `#{inspect(reason)}`."
-          )
+          post_reply(installation, channel_id, thread_ts, failure_text(reason))
       end
     else
       post_reply(
@@ -146,6 +79,75 @@ defmodule Hive.Slack.FlightCommands do
       )
     end
   end
+
+  defp launch_flight(
+         objective,
+         item,
+         repository,
+         requester,
+         installation,
+         channel_id,
+         thread_ts,
+         message_ts
+       ) do
+    trigger = %{
+      "source" => "slack",
+      "installation_id" => installation.id,
+      "channel_id" => channel_id,
+      "thread_ts" => thread_ts,
+      "message_ts" => message_ts
+    }
+
+    case Flights.start_for_item(item, repository.id, requester,
+           objective: objective,
+           trigger: trigger
+         ) do
+      {:ok, flight} ->
+        _ = FlightMessages.update(flight)
+        {:handled, flight}
+
+      {:error, reason} ->
+        # The "Starting..." message was already posted, so update it in place to
+        # the failure state instead of leaving it falsely stuck at "Starting".
+        _ =
+          API.update_message(installation, %{
+            "channel" => channel_id,
+            "ts" => message_ts,
+            "text" => failure_text(reason)
+          })
+
+        {:handled, nil}
+    end
+  end
+
+  defp failure_text(:alert_not_found),
+    do:
+      "I could not match this thread to a Grafana alert in Hive. Include the Hive Forage link or the original Grafana alert link."
+
+  defp failure_text(:ambiguous_alert),
+    do:
+      "This thread refers to more than one Grafana alert. Include the Hive Forage link for the alert to use."
+
+  defp failure_text({:choose_repository, repositories}) do
+    choices = Enum.map_join(repositories, ", ", &"`#{&1}`")
+    "Choose a repository by mentioning its full name: #{choices}."
+  end
+
+  defp failure_text(:repository_not_found),
+    do: "No linked repository is available for this alert."
+
+  defp failure_text(:already_running),
+    do: "A Flight is already active for this alert and repository."
+
+  defp failure_text({:active_flight, flight}),
+    do:
+      "A Flight is already active for this alert and repository. <#{HiveWeb.Endpoint.url()}#{Flights.path(flight)}|View Flight>"
+
+  defp failure_text(:not_configured),
+    do: "The Flight runner is not configured in Hive."
+
+  defp failure_text(reason),
+    do: "The Flight could not be started: `#{inspect(reason)}`."
 
   defp correlate_item(thread, requester) do
     urls = thread |> Enum.flat_map(&(&1["urls"] || [])) |> Enum.uniq()

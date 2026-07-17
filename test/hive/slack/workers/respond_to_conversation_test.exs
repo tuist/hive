@@ -237,6 +237,93 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
              })
   end
 
+  test "perform/1 updates the Slack status message when the Flight fails to start" do
+    installation = installation!()
+    channel = channel!(installation, "C-flight-fail")
+    installation_id = installation.id
+    generator_url = "https://grafana.example/alerting/grafana/flight-fail/view"
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-flight-fail@example.com",
+        provider: "test",
+        provider_uid: "slack-flight-fail"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-flight-fail", linked_user_id: user.id})
+
+    {:ok, project} = Projects.create_project(%{name: "Slack Flight Fail"})
+
+    {:ok, repository} =
+      Projects.create_repository_for_project(project, %{owner: "tuist", name: unique_repo()})
+
+    {:ok, {webhook, _token}} =
+      Hive.Projects.Webhooks.create(project, %{"name" => "Grafana", "source" => "grafana"})
+
+    {:ok, [_alert]} =
+      Grafana.ingest(project, webhook, %{
+        "alerts" => [
+          %{
+            "status" => "firing",
+            "fingerprint" => "slack-flight-fail-#{System.unique_integer([:positive])}",
+            "generatorURL" => generator_url,
+            "labels" => %{"alertname" => "HighLatency"},
+            "annotations" => %{"summary" => "High latency"}
+          }
+        ]
+      })
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-flight-fail",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{
+             "bot_id" => "B-grafana",
+             "text" => "High latency",
+             "ts" => "1.0",
+             "blocks" => [%{"type" => "actions", "elements" => [%{"url" => generator_url}]}]
+           },
+           %{
+             "user" => "U-flight-fail",
+             "text" => "<@U-bot> reproduce this",
+             "ts" => "2.0"
+           }
+         ]
+       }}
+    end)
+
+    # Exactly one post_message (the "Starting..." message); no separate failure reply.
+    expect(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["text"] == "Starting a *Reproduce* Flight..."
+      {:ok, %{"ok" => true, "ts" => "3.0"}}
+    end)
+
+    expect(Flights, :start_for_item, fn _item, _repository_id, _requester, _opts ->
+      {:error, :not_configured}
+    end)
+
+    expect(API, :update_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-flight-fail"
+      assert params["ts"] == "3.0"
+      assert params["text"] == "The Flight runner is not configured in Hive."
+      {:ok, %{"ok" => true}}
+    end)
+
+    reject(&Sessions.stream/4)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
   test "perform/1 returns the active Flight for a repeated Slack command without spending again" do
     installation = installation!()
     channel = channel!(installation, "C-active-flight")
