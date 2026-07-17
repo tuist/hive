@@ -11,8 +11,12 @@ defmodule Hive.Slack.Workers.UpdateFlightMessage do
   alias Hive.Flights
   alias Hive.Slack.FlightMessages
 
-  def enqueue(flight_id) when is_binary(flight_id) do
-    %{"flight_id" => flight_id}
+  # The status is part of the args so uniqueness keys on it: each state
+  # transition enqueues a distinct job instead of being deduplicated against a
+  # still-pending update for an earlier state. The worker always reads the
+  # latest flight state, so the value only discriminates transitions.
+  def enqueue(flight_id, status) when is_binary(flight_id) do
+    %{"flight_id" => flight_id, "status" => to_string(status)}
     |> new()
     |> Oban.insert()
   end

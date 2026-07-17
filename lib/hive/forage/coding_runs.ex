@@ -9,6 +9,8 @@ defmodule Hive.Forage.CodingRuns do
 
   import Ecto.Query
 
+  require Logger
+
   alias Condukt.Sandbox
   alias Hive.Accounts.User
   alias Hive.Agents.Errors
@@ -364,9 +366,17 @@ defmodule Hive.Forage.CodingRuns do
   defp finish_result(run, source, _changes, agent_result, _source_module, opts) do
     result = report_result(run, source, agent_result)
 
-    with :ok <- publish_report_to_source(run, result, opts) do
-      {:ok, result}
+    case publish_report_to_source(run, result, opts) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "Flight #{run.id} produced a report but publishing it to the source failed: #{inspect(reason)}"
+        )
     end
+
+    {:ok, result}
   end
 
   defp report_result(run, source, agent_result) do
@@ -674,7 +684,7 @@ defmodule Hive.Forage.CodingRuns do
   end
 
   defp notify_slack(%Flight{trigger: %{"source" => "slack"}} = run) do
-    _ = Hive.Slack.Workers.UpdateFlightMessage.enqueue(run.id)
+    _ = Hive.Slack.Workers.UpdateFlightMessage.enqueue(run.id, run.status)
     :ok
   end
 

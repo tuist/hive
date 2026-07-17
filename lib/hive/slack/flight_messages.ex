@@ -29,11 +29,17 @@ defmodule Hive.Slack.FlightMessages do
 
   defp message(%Flight{} = flight) do
     label = Flights.objective_label(flight.objective)
-    forage_url = HiveWeb.Endpoint.url() <> Flights.forage_item_path(%{id: flight.forage_item_id})
     flight_url = HiveWeb.Endpoint.url() <> Flights.path(flight)
     title = flight.input["title"] || "Forage item"
 
-    "#{status_prefix(flight)} *#{label} Flight #{status_word(flight)}* for <#{forage_url}|#{title}> in `#{flight.repository_full_name}`.#{result_suffix(flight)} <#{flight_url}|View Flight>"
+    "#{status_prefix(flight)} *#{label} Flight #{status_word(flight)}* for #{forage_link(flight, title)} in `#{flight.repository_full_name}`.#{result_suffix(flight)} <#{flight_url}|View Flight>"
+  end
+
+  defp forage_link(%Flight{forage_item_id: forage_item_id}, title) do
+    case Flights.forage_item_path(%{id: forage_item_id}) do
+      nil -> title
+      path -> "<#{HiveWeb.Endpoint.url()}#{path}|#{title}>"
+    end
   end
 
   defp status_prefix(%Flight{status: :queued}), do: ":hourglass_flowing_sand:"

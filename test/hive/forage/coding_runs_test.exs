@@ -78,6 +78,13 @@ defmodule Hive.Forage.CodingRunsTest do
     end
   end
 
+  defmodule FailingIssuePublisher do
+    def create_comment(_repository, _issue_number, _body, opts) do
+      send(Keyword.fetch!(opts, :test_pid), :issue_comment_attempted)
+      {:error, :rate_limited}
+    end
+  end
+
   setup do
     suffix = System.unique_integer([:positive])
 
@@ -318,6 +325,65 @@ defmodule Hive.Forage.CodingRunsTest do
     assert body =~ "/flights/#{run.id}"
 
     assert CodingRuns.get(run.id).status == :succeeded
+
+    assert_receive {:workspace, directory}
+    File.rm_rf(directory)
+  end
+
+  test "persists a completed report even when publishing it to GitHub fails", ctx do
+    issue_id = Ecto.UUID.generate()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    item = %Item{
+      id: "github_issue:#{issue_id}",
+      type: :github_issue,
+      origin: :github,
+      source_record_id: issue_id,
+      source_record: %GitHubIssue{id: issue_id, number: 42},
+      title: "Intermittent latency",
+      body: "The request occasionally exceeds its budget.",
+      status: :open,
+      source_label: "tuist/#{ctx.repository.name}",
+      repository_id: ctx.repository.id,
+      updated_at: now
+    }
+
+    assert {:ok, run} =
+             CodingRuns.create_for_item(item, ctx.repository.id, ctx.user,
+               objective: :reproduce,
+               enabled?: fn -> true end,
+               config: [runner: :microsandbox]
+             )
+
+    source = source_snapshot()
+    test_pid = self()
+    Process.put(:coding_runs_test_pid, test_pid)
+
+    sandbox_builder = fn opts ->
+      {:ok, directory} =
+        Workspace.prepare_local(opts[:source_archive], opts[:base_branch])
+
+      send(test_pid, {:workspace, directory})
+      Sandbox.new(Condukt.Sandbox.Local, cwd: Path.join(directory, "workspace"))
+    end
+
+    assert :ok =
+             CodingRuns.execute(run.id,
+               source_module: Source,
+               sessions_module: ReproductionSessions,
+               issues_module: FailingIssuePublisher,
+               sandbox_builder: sandbox_builder,
+               source: source,
+               test_pid: test_pid
+             )
+
+    assert_receive :issue_comment_attempted
+
+    completed = CodingRuns.get(run.id)
+    assert completed.status == :succeeded
+    assert completed.objective_outcome == :not_reproduced
+    assert completed.result["type"] == "report"
+    assert completed.result["summary"] == "The latency path stayed within budget."
 
     assert_receive {:workspace, directory}
     File.rm_rf(directory)
