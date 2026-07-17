@@ -154,3 +154,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You do not have access to the audit trail."
 msgstr ""
+
+#: lib/hive_web/live/audit_live.ex:430
+#, elixir-autogen, elixir-format
+msgid "Mobile"
+msgstr ""
