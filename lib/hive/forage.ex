@@ -248,6 +248,72 @@ defmodule Hive.Forage do
   def get_item_for_user(_item_id, _user, _opts), do: {:error, :not_found}
 
   @doc """
+  Resolves many forage item ids for a user in a single pass, returning a map of
+  `item_id => Item` for those that are visible to the user. Missing or hidden
+  ids are omitted.
+
+  This avoids the N+1 that per-id `get_item_for_user/2` incurs, where each
+  GitHub-issue lookup otherwise re-lists every accessible issue.
+  """
+  def get_items_for_user(item_ids, user) when is_list(item_ids) do
+    ids = Enum.uniq(item_ids)
+
+    github_ids = for "github_issue:" <> id <- ids, do: id
+    grafana_ids = for "grafana_alert:" <> id <- ids, do: id
+    manual_ids = for "manual:" <> id <- ids, do: id
+
+    %{}
+    |> Map.merge(resolve_github_issue_items(github_ids, user))
+    |> Map.merge(resolve_grafana_alert_items(grafana_ids, user))
+    |> Map.merge(resolve_manual_items(manual_ids, user))
+  end
+
+  defp resolve_github_issue_items([], _user), do: %{}
+
+  defp resolve_github_issue_items(ids, user) do
+    wanted = MapSet.new(ids)
+
+    user
+    |> list_github_issues_for_user(state: nil)
+    |> Enum.filter(fn {_repository, issue, _domains} -> MapSet.member?(wanted, issue.id) end)
+    |> Map.new(fn {repository, issue, domains} ->
+      entry = github_issue_item_entry(repository, issue, domains)
+      {entry.id, entry}
+    end)
+  end
+
+  defp resolve_grafana_alert_items([], _user), do: %{}
+
+  defp resolve_grafana_alert_items(ids, user) do
+    source = get_source!(:grafana_alerts)
+
+    if can_access?(source, user) do
+      ids
+      |> Enum.map(&get_grafana_alert/1)
+      |> Enum.reject(&is_nil/1)
+      |> Map.new(fn alert ->
+        entry = grafana_alert_item_entry(alert)
+        {entry.id, entry}
+      end)
+    else
+      %{}
+    end
+  end
+
+  defp resolve_manual_items([], _user), do: %{}
+
+  defp resolve_manual_items(ids, user) do
+    ids
+    |> Enum.map(&get_manual_item/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.filter(&can_view_item?(&1, user))
+    |> Map.new(fn request ->
+      entry = manual_item_entry(request)
+      {entry.id, entry}
+    end)
+  end
+
+  @doc """
   Returns `{domain, repository}` tuples that the user is allowed to see.
   Effective visibility is the most restrictive of the two: a private
   repository hides the pair from anyone outside the organization, even if

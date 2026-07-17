@@ -209,8 +209,8 @@ defmodule HiveWeb.FlightLive.Index do
                 <:col :let={flight} label={dgettext("dashboard_flights", "Flight") }>
                   <.link navigate={Flights.path(flight)} data-part="flight-link">
                     <.text_and_description_cell
-                      label={flight_title(flight)}
-                      description={flight_summary(flight)}
+                      label={Flights.title(flight)}
+                      description={Flights.summary(flight)}
                     />
                   </.link>
                 </:col>
@@ -382,20 +382,6 @@ defmodule HiveWeb.FlightLive.Index do
   end
 
   defp page_link(uri, page), do: "?" <> Query.put(uri.query, "page", page)
-
-  defp flight_title(%{input: %{"title" => title}}) when is_binary(title), do: title
-  defp flight_title(flight), do: "Flight #{String.slice(flight.id, 0, 8)}"
-
-  defp flight_summary(%{result: %{"summary" => summary}}) when is_binary(summary), do: summary
-  defp flight_summary(%{error: error}) when is_binary(error), do: error
-
-  defp flight_summary(%{status: :running}),
-    do: dgettext("dashboard_flights", "The agent is working in its sandbox.")
-
-  defp flight_summary(%{status: :queued}),
-    do: dgettext("dashboard_flights", "Waiting for an available sandbox.")
-
-  defp flight_summary(_flight), do: nil
 
   defp format_date(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
   defp format_date(_datetime), do: "-"

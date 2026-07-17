@@ -437,7 +437,7 @@ defmodule HiveWeb.FeedController do
   defp flight_entry(conn, flight) do
     %{
       id: "urn:hive:flight:#{flight.id}",
-      title: flight.input["title"] || "Flight #{String.slice(flight.id, 0, 8)}",
+      title: Flights.title(flight),
       updated: flight.updated_at,
       url: page_url(conn, Flights.path(flight)),
       summary: flight_summary(flight)

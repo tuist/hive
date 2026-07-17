@@ -22,7 +22,7 @@ defmodule HiveWeb.FlightLive.Show do
       ],
       id: "flight-#{flight.id}",
       path: Flights.path(flight),
-      title: flight_title(flight)
+      title: Flights.title(flight)
     }
   end
 
@@ -45,7 +45,7 @@ defmodule HiveWeb.FlightLive.Show do
          |> assign(
            :page_title,
            dgettext("dashboard_flights", "%{title} · %{product}",
-             title: flight_title(flight),
+             title: Flights.title(flight),
              product: socket.assigns.product_name
            )
          )
@@ -81,7 +81,7 @@ defmodule HiveWeb.FlightLive.Show do
               />
               <span>{@flight.repository_full_name}</span>
             </div>
-            <h1>{flight_title(@flight)}</h1>
+            <h1>{Flights.title(@flight)}</h1>
             <p>{flight_description(@flight)}</p>
           </div>
           <div data-part="header-actions">
@@ -218,9 +218,6 @@ defmodule HiveWeb.FlightLive.Show do
     </div>
     """
   end
-
-  defp flight_title(%{input: %{"title" => title}}) when is_binary(title), do: title
-  defp flight_title(flight), do: "Flight #{String.slice(flight.id, 0, 8)}"
 
   defp flight_description(%{result: %{"summary" => summary}}) when is_binary(summary), do: summary
   defp flight_description(%{error: error}) when is_binary(error), do: error

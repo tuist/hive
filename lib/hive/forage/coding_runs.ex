@@ -166,16 +166,6 @@ defmodule Hive.Forage.CodingRuns do
       fail_run(coding_run_id, {kind, reason})
   end
 
-  def status_label(:queued), do: "Queued"
-  def status_label(:running), do: "Running"
-  def status_label(:succeeded), do: "Succeeded"
-  def status_label(:failed), do: "Failed"
-
-  def status_color(:queued), do: "neutral"
-  def status_color(:running), do: "information"
-  def status_color(:succeeded), do: "success"
-  def status_color(:failed), do: "destructive"
-
   defp create_for_repository(item, repository_id, user, opts) do
     repository = Enum.find(repositories_for_item(item), &(&1.id == repository_id))
 

@@ -6,6 +6,8 @@ defmodule Hive.Flights do
 
   import Ecto.Query
 
+  use Gettext, backend: HiveWeb.Gettext
+
   alias Hive.Flights.Flight
   alias Hive.Flights.Policy
   alias Hive.Forage
@@ -23,27 +25,19 @@ defmodule Hive.Flights do
   end
 
   def start_for_grafana_alert(alert, repository_id, user, opts \\ []) do
-    with {:ok, item} <- Hive.Forage.get_item_for_user("grafana_alert:#{alert.id}", user) do
-      start_for_item(item, repository_id, user, opts)
-    end
+    Hive.Forage.CodingRuns.create_for_grafana_alert(alert, repository_id, user, opts)
   end
 
   def list_flights_for_user(user, opts \\ []) do
     if Policy.authorize?(:flight_read, user, nil) do
       {flights, meta} = list_flights(opts)
-      {Enum.map(flights, &attach_forage_item(&1, user)), meta}
+      {attach_forage_items(flights, user), meta}
     else
       {[], pagination_meta(0, 1, normalize_page_size(opts[:page_size]))}
     end
   end
 
-  def get_flight(id) when is_binary(id) do
-    Flight
-    |> preload([:repository, :requested_by])
-    |> Repo.get(id)
-  rescue
-    Ecto.Query.CastError -> nil
-  end
+  def get_flight(id) when is_binary(id), do: Hive.Forage.CodingRuns.get(id)
 
   def get_flight_for_user(id, user) when is_binary(id) do
     if Policy.authorize?(:flight_read, user, nil) do
@@ -103,6 +97,20 @@ defmodule Hive.Flights do
 
   def path(%Flight{id: id}), do: "/flights/#{id}"
   def path(id) when is_binary(id), do: "/flights/#{id}"
+
+  def title(%{input: %{"title" => title}}) when is_binary(title), do: title
+  def title(flight), do: "Flight #{String.slice(flight.id, 0, 8)}"
+
+  def summary(%{result: %{"summary" => summary}}) when is_binary(summary), do: summary
+  def summary(%{error: error}) when is_binary(error), do: error
+
+  def summary(%{status: :running}),
+    do: dgettext("dashboard_flights", "The agent is working in its sandbox.")
+
+  def summary(%{status: :queued}),
+    do: dgettext("dashboard_flights", "Waiting for an available sandbox.")
+
+  def summary(_flight), do: nil
 
   def forage_item_path(%{id: "manual:" <> id}), do: "/forage/items/manual/#{id}"
   def forage_item_path(%{id: "github_issue:" <> id}), do: "/forage/items/github-issue/#{id}"
@@ -180,6 +188,17 @@ defmodule Hive.Flights do
 
         {flights, pagination_meta(total_count, current_page, page_size)}
     end
+  end
+
+  defp attach_forage_items(flights, user) do
+    items = Forage.get_items_for_user(Enum.map(flights, & &1.forage_item_id), user)
+
+    Enum.map(flights, fn flight ->
+      case Map.fetch(items, flight.forage_item_id) do
+        {:ok, item} -> %{flight | forage_item: item}
+        :error -> flight
+      end
+    end)
   end
 
   defp attach_forage_item(flight, user) do
