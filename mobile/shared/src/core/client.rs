@@ -137,20 +137,46 @@ fn continue_resource_refresh(
 
 fn continue_resource_response(values: &BTreeMap<String, Value>, response: &str) -> Result<String> {
     let resource = Resource::parse(&json::required_string(values, "resource")?)?;
-    let data = validate_resource_response(resource, response)?;
+    let session = json::required_string(values, "session")?;
+    let page = json::required_string(values, "page")?
+        .parse::<i64>()
+        .map_err(|_| invalid_resource_response())?;
+    let (data, pagination) = validate_resource_response(resource, response, page)?;
+    let data = append_resource_data(values, resource, data)?;
+
+    if let Some(Pagination { page, total_pages }) = pagination {
+        if page < total_pages {
+            return resource_page_request(&session, resource, page + 1, &data);
+        }
+    }
+
     Ok(format!(
         "{{\"effect\":\"resource\",\"resource\":\"{}\",\"session\":\"{}\",\"data\":{data}}}",
         resource.name(),
-        json::escape(&json::required_string(values, "session")?)
+        json::escape(&session),
+        data = data.encode()
     ))
 }
 
 fn resource_request(session: &str, resource: Resource) -> Result<String> {
-    let request = api_request(session, resource.path())?;
+    resource_page_request(session, resource, 1, &Value::Array(Vec::new()))
+}
+
+fn resource_page_request(
+    session: &str,
+    resource: Resource,
+    page: i64,
+    accumulated: &Value,
+) -> Result<String> {
+    let request = api_request(session, &resource.path(page))?;
+    let page = page.to_string();
+    let accumulated = accumulated.encode();
     let continuation = encode_strings(&[
         ("operation", "resource_response"),
         ("session", session),
         ("resource", resource.name()),
+        ("page", &page),
+        ("accumulated", &accumulated),
     ]);
     Ok(http_effect(&request, &continuation))
 }
@@ -177,7 +203,11 @@ fn ensure_success(response: &str, status: &str) -> Result<()> {
     Err(description.unwrap_or_else(|| format!("Hive returned status {status}.")))
 }
 
-fn validate_resource_response(resource: Resource, response: &str) -> Result<String> {
+fn validate_resource_response(
+    resource: Resource,
+    response: &str,
+    expected_page: i64,
+) -> Result<(Value, Option<Pagination>)> {
     let response = Value::object(response)?;
     let data = response.get("data").ok_or_else(invalid_resource_response)?;
     match resource {
@@ -187,7 +217,68 @@ fn validate_resource_response(resource: Resource, response: &str) -> Result<Stri
         Resource::Drops => validate_list(data, validate_drop)?,
         Resource::DropDigests => validate_list(data, validate_digest)?,
     }
-    Ok(data.encode())
+    let pagination = if resource.paginated() {
+        Some(validate_pagination(&response, expected_page)?)
+    } else {
+        None
+    };
+    Ok((data.clone(), pagination))
+}
+
+fn append_resource_data(
+    values: &BTreeMap<String, Value>,
+    resource: Resource,
+    data: Value,
+) -> Result<Value> {
+    if !resource.paginated() {
+        return Ok(data);
+    }
+
+    let accumulated = json::required_string(values, "accumulated")?;
+    let Value::Array(mut accumulated) = Value::parse(&accumulated)? else {
+        return Err(invalid_resource_response());
+    };
+    let Value::Array(mut data) = data else {
+        return Err(invalid_resource_response());
+    };
+    accumulated.append(&mut data);
+    Ok(Value::Array(accumulated))
+}
+
+fn validate_pagination(
+    response: &BTreeMap<String, Value>,
+    expected_page: i64,
+) -> Result<Pagination> {
+    let pagination = response
+        .get("pagination")
+        .ok_or_else(invalid_resource_response)
+        .and_then(object)?;
+    let page = positive_number(pagination, "page")?;
+    positive_number(pagination, "page_size")?;
+    nonnegative_number(pagination, "total_count")?;
+    let total_pages = nonnegative_number(pagination, "total_pages")?;
+
+    if page != expected_page || (total_pages > 0 && page > total_pages) {
+        return Err(invalid_resource_response());
+    }
+
+    Ok(Pagination { page, total_pages })
+}
+
+fn positive_number(value: &BTreeMap<String, Value>, key: &str) -> Result<i64> {
+    value
+        .get(key)
+        .and_then(Value::number)
+        .filter(|number| *number > 0)
+        .ok_or_else(invalid_resource_response)
+}
+
+fn nonnegative_number(value: &BTreeMap<String, Value>, key: &str) -> Result<i64> {
+    value
+        .get(key)
+        .and_then(Value::number)
+        .filter(|number| *number >= 0)
+        .ok_or_else(invalid_resource_response)
 }
 
 fn validate_list(
@@ -325,6 +416,11 @@ enum Resource {
     DropDigests,
 }
 
+struct Pagination {
+    page: i64,
+    total_pages: i64,
+}
+
 impl Resource {
     fn parse(value: &str) -> Result<Self> {
         match value {
@@ -347,13 +443,17 @@ impl Resource {
         }
     }
 
-    fn path(self) -> &'static str {
+    fn paginated(self) -> bool {
+        !matches!(self, Self::CurrentUser)
+    }
+
+    fn path(self, page: i64) -> String {
         match self {
-            Self::CurrentUser => "/me",
-            Self::Forage => "/forage?page_size=100",
-            Self::Specs => "/specs?page_size=100",
-            Self::Drops => "/drops?page_size=100",
-            Self::DropDigests => "/drops/digests?page_size=100",
+            Self::CurrentUser => "/me".to_string(),
+            Self::Forage => format!("/forage?page_size=100&page={page}"),
+            Self::Specs => format!("/specs?page_size=100&page={page}"),
+            Self::Drops => format!("/drops?page_size=100&page={page}"),
+            Self::DropDigests => format!("/drops/digests?page_size=100&page={page}"),
         }
     }
 }
@@ -448,7 +548,7 @@ mod tests {
             "1000",
         )
         .unwrap();
-        assert!(request(&drops).contains("/drops?page_size=100"));
+        assert!(request(&drops).contains("/drops?page_size=100&page=1"));
         assert!(continue_client(
             &continuation(&drops),
             "{\"data\":[{\"id\":\"drop\"}]}",
@@ -456,6 +556,49 @@ mod tests {
             "1000"
         )
         .is_err());
+    }
+
+    #[test]
+    fn loads_every_resource_page() {
+        let session = concat!(
+            "{\"server\":\"https://hive.example.com\",",
+            "\"token_endpoint\":\"https://hive.example.com/oauth2/token\",",
+            "\"revocation_endpoint\":\"https://hive.example.com/oauth2/revoke\",",
+            "\"client_id\":\"client\",\"resource\":\"https://hive.example.com/api/v1\",",
+            "\"access_token\":\"access\",\"refresh_token\":\"refresh\",\"expires_at\":5000}"
+        );
+        let first_request = resource_start(session, "drops", "1000").unwrap();
+        let second_request = continue_client(
+            &continuation(&first_request),
+            &drops_page("first", 1, 2, 2),
+            "200",
+            "1000",
+        )
+        .unwrap();
+
+        assert!(request(&second_request).contains("/drops?page_size=100&page=2"));
+
+        let result = continue_client(
+            &continuation(&second_request),
+            &drops_page("second", 2, 2, 2),
+            "200",
+            "1000",
+        )
+        .unwrap();
+        let result = Value::object(&result).unwrap();
+        let Value::Array(drops) = result.get("data").unwrap() else {
+            panic!("expected combined drops")
+        };
+
+        assert_eq!(drops.len(), 2);
+        assert_eq!(
+            json::required_string(object(&drops[0]).unwrap(), "id").unwrap(),
+            "first"
+        );
+        assert_eq!(
+            json::required_string(object(&drops[1]).unwrap(), "id").unwrap(),
+            "second"
+        );
     }
 
     #[test]
@@ -479,5 +622,11 @@ mod tests {
     fn request(effect: &str) -> String {
         let effect = Value::object(effect).unwrap();
         effect.get("request").unwrap().encode()
+    }
+
+    fn drops_page(id: &str, page: i64, total_count: i64, total_pages: i64) -> String {
+        format!(
+            "{{\"data\":[{{\"id\":\"{id}\",\"title\":\"Drop\",\"source_type\":\"rss\",\"url\":\"https://example.com/{id}\",\"number\":{page},\"domains\":[]}}],\"pagination\":{{\"page\":{page},\"page_size\":1,\"total_count\":{total_count},\"total_pages\":{total_pages}}}}}"
+        )
     }
 }
