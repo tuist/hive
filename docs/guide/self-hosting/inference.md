@@ -95,9 +95,9 @@ chat-completion profile and select **Use for Hive inference**. Only one enabled
 profile can hold this role, and moving the role changes Hive's general model
 without a redeployment.
 
-Coding runs can use a separate model selected with **Use for Hive coding**.
+Flights can use a separate model selected with **Use for Hive coding**.
 Only one enabled profile can hold the coding role. When no coding profile is
-selected, coding runs fall back to the general Hive inference profile and then
+selected, Flights fall back to the general Hive inference profile and then
 to the launch-time configuration described below.
 
 Hive currently uses language models for:
@@ -106,20 +106,20 @@ Hive currently uses language models for:
 |---|---|
 | Domain evolution | Suggests durable domains and improves domain descriptions from recent product work. |
 | Spec review requests | Produces focused Slack review prompts for the latest spec revision. |
-| Slack conversations | Replies to mentions and captures requested Forage items. |
+| Slack conversations | Replies to mentions, captures requested Forage items, and starts objective-specific Flights from Grafana alert threads. |
 | GitHub issue classification | Links mirrored issues to the relevant project domains. |
-| Grafana alert coding runs | Investigates an alert in an isolated repository snapshot and returns a pull request or report after a member starts the run. |
+| Forage Flights | Investigates, reproduces, or fixes a Grafana alert or GitHub issue in an isolated repository snapshot, preserves the portable agent session, and returns a pull request or report after a member starts the Flight. |
 | Drop generation | Turns release evidence into user-facing shipped improvements. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
 
 Most of these workflows start from their scheduled or event-driven trigger
-when Hive inference is configured. Grafana alert coding runs are different:
-an organization member must start each run from the alert or a connected
-client. When inference is not configured, Hive continues to run and uses the
-documented non-model behavior for each feature.
+when Hive inference is configured. Flights are different: an organization
+member must start each Flight from the Forage item, a Grafana alert thread in
+Slack, or a connected client. When inference is not configured, Hive continues
+to run and uses the documented non-model behavior for each feature.
 
-Coding runs also require a [sandbox runner](/reference/configuration#coding-runs)
+Flights also require a [sandbox runner](/reference/configuration#coding-runs)
 and a GitHub App with permission to write repository contents and pull
 requests. Hive calls the selected coding profile through its own gateway and
 keeps both the model token and GitHub credential outside the sandbox. The
@@ -157,5 +157,5 @@ deployment.
 - Revoke one token to stop a single client.
 - Move **Use for Hive inference** to another enabled profile to retarget
   Hive's own workflows.
-- Move **Use for Hive coding** to another enabled profile to retarget repository
-  coding runs independently.
+- Move **Use for Hive coding** to another enabled profile to retarget Flights
+  independently.

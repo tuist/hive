@@ -14,6 +14,7 @@ const docsSidebar = [
       { text: "Projects", link: "/guide/using-hive/projects" },
       { text: "Domains", link: "/guide/using-hive/domains" },
       { text: "Forage", link: "/guide/using-hive/forage" },
+      { text: "Flights", link: "/guide/using-hive/flights" },
       { text: "Specs", link: "/guide/using-hive/specs" },
       { text: "Drops", link: "/guide/self-hosting/drops" },
     ],
@@ -37,6 +38,7 @@ const docsSidebar = [
     text: "Reference",
     items: [
       { text: "Configuration", link: "/reference/configuration" },
+      { text: "Application programming interface", link: "/reference/api" },
       { text: "Feeds", link: "/reference/feeds" },
     ],
   },

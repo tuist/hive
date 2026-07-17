@@ -7,6 +7,7 @@ Once connected, Hive can:
 
 - Reply in threads where the bot is mentioned.
 - Capture a Slack message as a Forage item.
+- Start an Investigate, Reproduce, or Fix Flight from a Grafana alert thread.
 - Preview public Hive links inside Slack.
 - Notify a channel about new specs, comments, and review requests.
 - Mention the correct person after they link their Slack and Hive
@@ -166,6 +167,26 @@ After an administrator connects the workspace, signed-in users can open
 An explicit link is useful when the person's Slack and Hive email
 addresses differ. Hive uses the link for captures, replies, and targeted
 notifications.
+
+## Start a Flight from a Grafana alert
+
+Reply in a Grafana alert thread and mention Hive with one of these commands:
+
+```text
+@Hive investigate this
+@Hive reproduce this
+@Hive fix this
+```
+
+Hive uses the original Grafana link or a Hive Forage link in the thread to find
+the alert. The person issuing the command must link their Slack profile to an
+organization-member Hive account. If the alert's project has more than one
+repository, include the full repository name, such as
+`@Hive reproduce this in tuist/hive`.
+
+Hive posts one progress message in the thread and updates it when the Flight is
+queued, running, completed, or failed. Repeating a command while a Flight is
+active returns the existing Flight instead of starting another agent session.
 
 ## Preview Hive links
 

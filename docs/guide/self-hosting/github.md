@@ -1,8 +1,9 @@
 # GitHub
 
 Hive uses a GitHub App to list repositories, mirror issues, ingest releases,
-optionally create issues from Forage, and publish the result of a Grafana
-alert coding run. This connection is separate from GitHub sign-in, which is configured under
+optionally create issues from Forage, publish Flight reports as issue comments,
+and publish pull requests from Fix Flights. This connection is separate from
+GitHub sign-in, which is configured under
 [Authentication](./authentication#github).
 
 ## Create and install the GitHub App
@@ -17,7 +18,8 @@ Grant these repository permissions:
 - **Contents: read-only** to read published releases. Choose **read and
   write** when members will run the coding harness, because Hive creates the
   resulting branch and commit.
-- **Issues: read and write** to mirror issues and create Forage issues.
+- **Issues: read and write** to mirror issues, create Forage issues, and publish
+  Flight reports as comments.
 - **Pull requests: read-only** so release evidence can include referenced
   pull requests. Choose **read and write** when members will run the coding
   harness, because Hive opens the resulting pull request.
@@ -49,8 +51,8 @@ After linking:
 - Published releases feed Drops.
 - Repository labels become available when GitHub is the Forage intake
   destination.
-- Grafana alerts can run the coding harness against the repository when the
-  coding runner and Hive inference are also configured.
+- Grafana alerts and mirrored GitHub issues can start a Flight against the
+  repository when the Flight runner and Hive inference are also configured.
 
 Hive synchronizes issues and releases every fifteen minutes. It also
 runs synchronization when the application starts.
