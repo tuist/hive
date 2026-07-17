@@ -48,6 +48,19 @@ defmodule HiveWeb.OAuth.RegistrationControllerTest do
              }
     end
 
+    test "rejects malformed grant types for public clients", %{conn: conn} do
+      conn =
+        post(conn, ~p"/oauth2/register", %{
+          "client_name" => "Hive Mobile",
+          "redirect_uris" => ["dev.tuist.hive://oauth2redirect"],
+          "grant_types" => "authorization_code",
+          "response_types" => ["code"],
+          "token_endpoint_auth_method" => "none"
+        })
+
+      assert %{"error" => "invalid_client_metadata"} = json_response(conn, 400)
+    end
+
     test "ignores malformed metadata for public clients instead of crashing", %{conn: conn} do
       conn =
         post(conn, ~p"/oauth2/register", %{

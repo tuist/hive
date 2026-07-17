@@ -88,7 +88,10 @@ defmodule HiveWeb.OAuth.RegistrationController do
     |> Map.put(:pkce, true)
     |> Map.put(:public_refresh_token, true)
     |> Map.put(:public_revoke, true)
-    |> Map.update(:supported_grant_types, ["revoke"], &Enum.uniq(&1 ++ ["revoke"]))
+    |> Map.update(:supported_grant_types, ["revoke"], fn
+      grant_types when is_list(grant_types) -> Enum.uniq(grant_types ++ ["revoke"])
+      grant_types -> grant_types
+    end)
   end
 
   defp normalize_public_client_auth(params), do: params
