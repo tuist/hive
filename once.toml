@@ -35,7 +35,6 @@ bundle_id = "dev.tuist.hive"
 minimum_os = "17.0"
 families = ["iphone", "ipad"]
 product_name = "Hive"
-entitlements = "mobile/ios/Hive/Hive.entitlements"
 sdk_frameworks = ["AuthenticationServices", "Foundation", "Security", "SwiftUI", "UIKit"]
 
 [[target]]
