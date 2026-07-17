@@ -87,6 +87,44 @@ https://hive.example.com/auth/oidc/callback
 The issuer must expose its discovery document at
 `<issuer>/.well-known/openid-configuration`.
 
+## Mobile application
+
+The Hive mobile application starts by asking for the address of the Hive
+deployment. It discovers the deployment's authorization endpoints and
+registers that installation as a public client through Open Authorization
+2.0 ([OAuth 2.0](https://oauth.net/2/)) Dynamic Client Registration, as
+defined by Request for Comments 7591
+([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)).
+Operators do not need to create or distribute a mobile client secret.
+
+The application opens the system browser for sign-in and returns through
+the `dev.tuist.hive://oauth2redirect` application address. Authorization
+codes are protected with Proof Key for Code Exchange
+as defined by Request for Comments 7636
+([RFC 7636](https://www.rfc-editor.org/rfc/rfc7636)), and Hive requires it for
+every dynamically registered public client.
+
+The application requests the `mobile` scope for the protected resource at
+`https://hive.example.com/api/v1`. That resource offers read-only access to
+the signed-in account, visible Forage items, visible specs, visible Drops, and published
+Drops weekly digests. It follows
+the same role and visibility rules as the dashboard.
+
+The public application programming interface
+([API](https://developer.mozilla.org/en-US/docs/Glossary/API)) contract is
+available at `/api/openapi.json` in the OpenAPI format. This document
+describes the versioned `/api/v1` routes, query parameters, response shapes,
+and authorization flow used by both native applications.
+
+After sign-in, the native application stores the renewable session in the
+platform's secure credential store. It refreshes that session when the
+application launches and before an access token expires. Signing out revokes
+the renewable token on Hive and removes the local credentials.
+
+Production deployments must use an `https` Hive address. Plain `http`
+addresses are accepted only for loopback development addresses so the
+native applications can be exercised against a local Hive server.
+
 ## Test before requiring sign-in
 
 After restarting Hive:

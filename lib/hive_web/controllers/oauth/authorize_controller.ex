@@ -10,6 +10,7 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   alias Boruta.Oauth.AuthorizationSuccess
   alias Boruta.Oauth.ResourceOwner
   alias Hive.Auth
+  alias HiveWeb.OAuth.AuthorizeHTML
 
   @max_state_length 10_000
 
@@ -46,7 +47,7 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   def approve(conn, _params) do
     conn
     |> put_status(:forbidden)
-    |> html(dgettext("dashboard_auth", "OAuth authorization was denied."))
+    |> html(Phoenix.HTML.Safe.to_iodata(AuthorizeHTML.denied_page()))
   end
 
   @impl AuthorizeApplication
@@ -67,9 +68,14 @@ defmodule HiveWeb.OAuth.AuthorizeController do
 
   @impl AuthorizeApplication
   def preauthorize_success(conn, %AuthorizationSuccess{} = authorization) do
-    conn
-    |> put_resp_content_type("text/html")
-    |> html(consent_page(conn, authorization))
+    html(
+      conn,
+      Phoenix.HTML.Safe.to_iodata(
+        AuthorizeHTML.consent_page(conn, authorization,
+          csrf_token: Plug.CSRFProtection.get_csrf_token()
+        )
+      )
+    )
   end
 
   @impl AuthorizeApplication
@@ -91,40 +97,4 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   defp validate_state_length!(_params), do: :ok
 
   defp resource_owner(user), do: %ResourceOwner{sub: user.id, username: user.email}
-
-  defp consent_page(conn, authorization) do
-    client_name = authorization.client.name || dgettext("dashboard_auth", "OAuth client")
-    redirect_uri = authorization.redirect_uri || ""
-    scope = authorization.scope || ""
-    title = dgettext("dashboard_auth", "Authorize %{client}", client: client_name)
-
-    description =
-      dgettext("dashboard_auth", "Allow this client to access Hive MCP as %{user}?",
-        user: authorization.resource_owner.username
-      )
-
-    """
-    <main id="oauth-consent">
-      <h1 data-part="title">#{html_escape(title)}</h1>
-      <p data-part="description">#{html_escape(description)}</p>
-      <dl data-part="client-info">
-        <dt data-part="client-info-label">#{html_escape(dgettext("dashboard_auth", "Redirect URI"))}</dt>
-        <dd data-part="client-info-value">#{html_escape(redirect_uri)}</dd>
-        <dt data-part="client-info-label">#{html_escape(dgettext("dashboard_auth", "Scopes"))}</dt>
-        <dd data-part="client-info-value">#{html_escape(scope)}</dd>
-      </dl>
-      <form data-part="form" method="post" action="#{html_escape(current_path(conn))}">
-        <input type="hidden" name="_csrf_token" value="#{html_escape(Plug.CSRFProtection.get_csrf_token())}" />
-        <button data-part="approve-button" type="submit" name="decision" value="approve">#{html_escape(dgettext("dashboard_auth", "Allow"))}</button>
-        <button data-part="deny-button" type="submit" name="decision" value="deny">#{html_escape(dgettext("dashboard_auth", "Deny"))}</button>
-      </form>
-    </main>
-    """
-  end
-
-  defp html_escape(value) do
-    value
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end

@@ -206,7 +206,13 @@ defmodule Hive.Forage do
   def get_item_for_user(item_id, user, opts \\ [])
 
   def get_item_for_user("manual:" <> id, user, _opts) do
-    case get_manual_item(id) do
+    item =
+      case Ecto.UUID.cast(id) do
+        {:ok, id} -> get_manual_item(id)
+        :error -> nil
+      end
+
+    case item do
       nil ->
         {:error, :not_found}
 

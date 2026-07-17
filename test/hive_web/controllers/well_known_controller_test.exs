@@ -22,8 +22,9 @@ defmodule HiveWeb.WellKnownControllerTest do
       assert response["issuer"] == "http://www.example.com"
       assert response["authorization_endpoint"] == "http://www.example.com/oauth2/authorize"
       assert response["token_endpoint"] == "http://www.example.com/oauth2/token"
+      assert response["revocation_endpoint"] == "http://www.example.com/oauth2/revoke"
       assert response["registration_endpoint"] == "http://www.example.com/oauth2/register"
-      assert response["scopes_supported"] == ["mcp"]
+      assert response["scopes_supported"] == ["mcp", "mobile"]
       assert "S256" in response["code_challenge_methods_supported"]
     end
   end
@@ -39,6 +40,20 @@ defmodule HiveWeb.WellKnownControllerTest do
       assert response["authorization_servers"] == ["http://www.example.com"]
       assert response["bearer_methods_supported"] == ["header"]
       assert response["scopes_supported"] == ["mcp"]
+    end
+  end
+
+  describe "GET /.well-known/oauth-protected-resource/api/v1" do
+    test "returns mobile protected resource metadata", %{conn: conn} do
+      conn = get(conn, ~p"/.well-known/oauth-protected-resource/api/v1")
+
+      response = json_response(conn, 200)
+
+      assert response["resource"] == "http://www.example.com/api/v1"
+      assert response["resource_name"] == "Hive Mobile"
+      assert response["authorization_servers"] == ["http://www.example.com"]
+      assert response["bearer_methods_supported"] == ["header"]
+      assert response["scopes_supported"] == ["mobile"]
     end
   end
 end

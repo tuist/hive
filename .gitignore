@@ -33,3 +33,8 @@ npm-debug.log
 /assets/node_modules/
 
 .elixir_ls
+
+# Once build outputs.
+/.once/
+/mobile/shared/Cargo.lock
+/mobile/shared/target/

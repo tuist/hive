@@ -35,16 +35,16 @@ defmodule HiveWeb.OAuth.RegistrationController do
 
   @impl DynamicRegistrationApplication
   def client_registered(conn, %Client{} = client) do
-    response = %{
-      client_id: client.id,
-      client_secret: client.secret,
-      client_id_issued_at: DateTime.to_unix(DateTime.utc_now()),
-      client_secret_expires_at: 0,
-      client_name: client.name,
-      redirect_uris: client.redirect_uris,
-      grant_types: client.supported_grant_types,
-      token_endpoint_auth_method: token_endpoint_auth_method(client)
-    }
+    response =
+      %{
+        client_id: client.id,
+        client_id_issued_at: DateTime.to_unix(DateTime.utc_now()),
+        client_name: client.name,
+        redirect_uris: client.redirect_uris,
+        grant_types: Enum.reject(client.supported_grant_types, &(&1 == "revoke")),
+        token_endpoint_auth_method: token_endpoint_auth_method(client)
+      }
+      |> maybe_put_client_secret(client)
 
     conn |> put_status(:created) |> json(response)
   end
@@ -85,8 +85,13 @@ defmodule HiveWeb.OAuth.RegistrationController do
     |> Map.delete(:token_endpoint_auth_method)
     |> Map.put(:metadata, metadata)
     |> Map.put(:confidential, false)
+    |> Map.put(:pkce, true)
     |> Map.put(:public_refresh_token, true)
     |> Map.put(:public_revoke, true)
+    |> Map.update(:supported_grant_types, ["revoke"], fn
+      grant_types when is_list(grant_types) -> Enum.uniq(grant_types ++ ["revoke"])
+      grant_types -> grant_types
+    end)
   end
 
   defp normalize_public_client_auth(params), do: params
@@ -103,6 +108,14 @@ defmodule HiveWeb.OAuth.RegistrationController do
        do: List.first(methods)
 
   defp token_endpoint_auth_method(_client), do: nil
+
+  defp maybe_put_client_secret(response, %Client{confidential: false}), do: response
+
+  defp maybe_put_client_secret(response, %Client{} = client) do
+    response
+    |> Map.put(:client_secret, client.secret)
+    |> Map.put(:client_secret_expires_at, 0)
+  end
 
   defp format_registration_errors(changeset) do
     changeset
