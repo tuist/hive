@@ -2,6 +2,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   @moduledoc false
 
   defmodule Error do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -17,6 +19,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule Domain do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -32,6 +36,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule Pagination do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -49,6 +55,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule User do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -66,6 +74,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule UserResponse do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -78,6 +88,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule ForageItem do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -103,6 +115,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule ForageListResponse do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -118,6 +132,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule ForageItemResponse do
+    @moduledoc false
+
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
@@ -129,6 +145,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule Spec do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -164,6 +182,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule SpecListResponse do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -179,6 +199,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule SpecResponse do
+    @moduledoc false
+
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
@@ -190,6 +212,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule Drop do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -212,6 +236,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule DropListResponse do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -227,6 +253,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule DropResponse do
+    @moduledoc false
+
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
@@ -238,6 +266,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule DropDigest do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -268,6 +298,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule DropDigestListResponse do
+    @moduledoc false
+
     require OpenApiSpex
     alias OpenApiSpex.Schema
 
@@ -283,6 +315,8 @@ defmodule HiveWeb.Api.V1.Schemas do
   end
 
   defmodule DropDigestResponse do
+    @moduledoc false
+
     require OpenApiSpex
 
     OpenApiSpex.schema(%{

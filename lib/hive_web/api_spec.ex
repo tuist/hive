@@ -1,4 +1,6 @@
 defmodule HiveWeb.ApiSpec do
+  @moduledoc false
+
   @behaviour OpenApiSpex.OpenApi
 
   alias OpenApiSpex.Components
