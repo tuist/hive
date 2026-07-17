@@ -4,66 +4,42 @@ data class OAuthSession(val raw: String)
 
 data class PendingAuthorization(val raw: String)
 
+enum class HiveResource(val wireValue: String) {
+    CURRENT_USER("current_user"),
+    FORAGE("forage"),
+    SPECS("specs"),
+    DROPS("drops"),
+    DROP_DIGESTS("drop_digests"),
+}
+
 object SharedCore {
     init {
         System.loadLibrary("hive_mobile_core")
     }
 
-    fun discoveryRequest(serverInput: String): String = unwrap(mobileDiscoveryRequest(serverInput))
-
-    fun registrationRequest(
-        serverInput: String,
-        discoveryResponse: String,
-        redirectUri: String,
-    ): String = unwrap(mobileRegistrationRequest(serverInput, discoveryResponse, redirectUri))
-
-    fun authorizationPlan(
-        serverInput: String,
-        discoveryResponse: String,
-        registrationResponse: String,
+    fun authorizationStart(
+        server: String,
         redirectUri: String,
         state: String,
         verifier: String,
+    ): String = unwrap(mobileAuthorizationStart(server, redirectUri, state, verifier))
+
+    fun callbackStart(callbackUrl: String, pending: PendingAuthorization): String =
+        unwrap(mobileCallbackStart(callbackUrl, pending.raw))
+
+    fun resourceStart(session: OAuthSession, resource: HiveResource, now: Long): String =
+        unwrap(mobileResourceStart(session.raw, resource.wireValue, now.toString()))
+
+    fun continueClient(
+        continuation: String,
+        response: String,
+        status: Int,
+        now: Long,
     ): String = unwrap(
-        mobileAuthorizationPlan(
-            serverInput,
-            discoveryResponse,
-            registrationResponse,
-            redirectUri,
-            state,
-            verifier,
-        ),
+        mobileClientContinue(continuation, response, status.toString(), now.toString()),
     )
 
-    fun tokenRequest(callbackUrl: String, pending: PendingAuthorization): String =
-        unwrap(mobileTokenRequest(callbackUrl, pending.raw))
-
-    fun sessionFromToken(
-        pending: PendingAuthorization,
-        response: String,
-        now: Long,
-    ): OAuthSession = OAuthSession(
-        unwrap(mobileSessionFromToken(pending.raw, response, now.toString())),
-    )
-
-    fun refreshRequest(session: OAuthSession): String =
-        unwrap(mobileRefreshRequest(session.raw))
-
-    fun sessionFromRefresh(
-        session: OAuthSession,
-        response: String,
-        now: Long,
-    ): OAuthSession = OAuthSession(
-        unwrap(mobileSessionFromRefresh(session.raw, response, now.toString())),
-    )
-
-    fun revokeRequest(session: OAuthSession): String = unwrap(mobileRevokeRequest(session.raw))
-
-    fun apiRequest(session: OAuthSession, path: String): String =
-        unwrap(mobileApiRequest(session.raw, path))
-
-    fun shouldRefresh(session: OAuthSession, now: Long): Boolean =
-        unwrap(mobileSessionShouldRefresh(session.raw, now.toString())) == "true"
+    fun signOutStart(session: OAuthSession): String = unwrap(mobileSignOutStart(session.raw))
 
     fun server(session: OAuthSession): String = unwrap(mobileSessionServer(session.raw))
 
@@ -76,53 +52,33 @@ object SharedCore {
     }
 
     @JvmStatic
-    private external fun mobileDiscoveryRequest(serverInput: String): String
-
-    @JvmStatic
-    private external fun mobileRegistrationRequest(
-        serverInput: String,
-        discoveryResponse: String,
-        redirectUri: String,
-    ): String
-
-    @JvmStatic
-    private external fun mobileAuthorizationPlan(
-        serverInput: String,
-        discoveryResponse: String,
-        registrationResponse: String,
+    private external fun mobileAuthorizationStart(
+        server: String,
         redirectUri: String,
         state: String,
         verifier: String,
     ): String
 
     @JvmStatic
-    private external fun mobileTokenRequest(callbackUrl: String, pending: String): String
+    private external fun mobileCallbackStart(callbackUrl: String, pending: String): String
 
     @JvmStatic
-    private external fun mobileSessionFromToken(
-        pending: String,
-        response: String,
-        now: String,
-    ): String
-
-    @JvmStatic
-    private external fun mobileRefreshRequest(session: String): String
-
-    @JvmStatic
-    private external fun mobileSessionFromRefresh(
+    private external fun mobileResourceStart(
         session: String,
-        response: String,
+        resource: String,
         now: String,
     ): String
 
     @JvmStatic
-    private external fun mobileRevokeRequest(session: String): String
+    private external fun mobileClientContinue(
+        continuation: String,
+        response: String,
+        status: String,
+        now: String,
+    ): String
 
     @JvmStatic
-    private external fun mobileApiRequest(session: String, path: String): String
-
-    @JvmStatic
-    private external fun mobileSessionShouldRefresh(session: String, now: String): String
+    private external fun mobileSignOutStart(session: String): String
 
     @JvmStatic
     private external fun mobileSessionServer(session: String): String

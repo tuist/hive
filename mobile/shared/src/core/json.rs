@@ -13,8 +13,12 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn parse(input: &str) -> Result<Self> {
+        Parser::new(input).parse()
+    }
+
     pub fn object(input: &str) -> Result<BTreeMap<String, Value>> {
-        match Parser::new(input).parse()? {
+        match Self::parse(input)? {
             Self::Object(value) => Ok(value),
             _ => Err(invalid_response()),
         }
@@ -31,6 +35,31 @@ impl Value {
         match self {
             Self::Number(value) => Some(*value),
             _ => None,
+        }
+    }
+
+    pub fn encode(&self) -> String {
+        match self {
+            Self::Null => "null".to_string(),
+            Self::Boolean(value) => value.to_string(),
+            Self::Number(value) => value.to_string(),
+            Self::String(value) => format!("\"{}\"", escape(value)),
+            Self::Array(values) => format!(
+                "[{}]",
+                values
+                    .iter()
+                    .map(Self::encode)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+            Self::Object(values) => format!(
+                "{{{}}}",
+                values
+                    .iter()
+                    .map(|(key, value)| format!("\"{}\":{}", escape(key), value.encode()))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
         }
     }
 }
@@ -293,6 +322,10 @@ mod tests {
             Value::object(r#"{"name":"Hive \uD83D\uDC1D","nested":{"ok":true},"items":[1,null]}"#)
                 .unwrap();
         assert_eq!(required_string(&parsed, "name").unwrap(), "Hive 🐝");
+        assert_eq!(
+            Value::Object(parsed).encode(),
+            r#"{"items":[1,null],"name":"Hive 🐝","nested":{"ok":true}}"#
+        );
     }
 
     #[test]

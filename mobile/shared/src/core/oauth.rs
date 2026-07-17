@@ -4,7 +4,7 @@ use super::sha256;
 use super::Result;
 
 pub fn discovery_url(server: &str) -> Result<String> {
-    let server = super::normalize_server_url(server)?;
+    let server = super::url::normalize_server_url(server)?;
     Ok(format!("{server}/.well-known/oauth-authorization-server"))
 }
 

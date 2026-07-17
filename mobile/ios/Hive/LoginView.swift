@@ -8,7 +8,7 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
     @Published var errorMessage: String?
     @Published var isLoading = false
 
-    private let client = OAuthClient()
+    private let client = MobileClient()
     private let onSignedIn: (OAuthSession) async throws -> Void
     private var authenticationSession: ASWebAuthenticationSession?
 
@@ -23,7 +23,7 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
 
         Task {
             do {
-                let prepared = try await client.prepare(serverInput: serverAddress)
+                let prepared = try await client.prepare(server: serverAddress)
                 beginBrowserAuthorization(prepared)
             } catch {
                 finish(error: error)
@@ -51,7 +51,7 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
                     return
                 }
                 guard let callbackURL else {
-                    self.finish(error: OAuthClientError("Hive did not return to the application."))
+                    self.finish(error: MobileClientError("Hive did not return to the application."))
                     return
                 }
 
@@ -72,7 +72,7 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
         authenticationSession = session
 
         if !session.start() {
-            finish(error: OAuthClientError("The system browser could not start sign-in."))
+            finish(error: MobileClientError("The system browser could not start sign-in."))
         }
     }
 

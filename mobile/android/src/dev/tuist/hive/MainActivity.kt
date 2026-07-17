@@ -47,8 +47,7 @@ class MainActivity : Activity() {
         val content: () -> View,
     )
 
-    private val oauthClient = OAuthClient()
-    private val apiClient = HiveApiClient()
+    private val client = MobileClient()
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var credentialStore: CredentialStore
     private lateinit var addressInput: EditText
@@ -126,11 +125,9 @@ class MainActivity : Activity() {
                     runOnUiThread(::showLogin)
                     return@execute
                 }
-                val refreshed = oauthClient.refresh(saved)
-                credentialStore.save(refreshed)
-                val currentUser = apiClient.currentUser(refreshed)
-                session = refreshed
-                user = currentUser
+                val current = client.currentUser(saved)
+                saveSession(current.session)
+                user = current.value
                 runOnUiThread { showTab(Tab.FORAGE) }
             } catch (_error: Exception) {
                 credentialStore.clear()
@@ -238,7 +235,7 @@ class MainActivity : Activity() {
 
         executor.execute {
             try {
-                val prepared = oauthClient.prepare(address)
+                val prepared = client.prepare(address)
                 pending = prepared.pending
                 runOnUiThread {
                     setLoginLoading(false)
@@ -256,7 +253,7 @@ class MainActivity : Activity() {
         val current = pending
         if (current == null) {
             if (session == null) {
-                showLoginError(OAuthClientException("The sign-in session expired. Please try again."))
+                showLoginError(MobileClientException("The sign-in session expired. Please try again."))
             }
             return
         }
@@ -264,12 +261,11 @@ class MainActivity : Activity() {
 
         executor.execute {
             try {
-                val newSession = oauthClient.exchange(uri.toString(), current)
-                val currentUser = apiClient.currentUser(newSession)
-                credentialStore.save(newSession)
+                val newSession = client.exchange(uri.toString(), current)
+                val currentUser = client.currentUser(newSession)
+                saveSession(currentUser.session)
                 pending = null
-                session = newSession
-                user = currentUser
+                user = currentUser.value
                 runOnUiThread { showTab(Tab.FORAGE) }
             } catch (error: Exception) {
                 runOnUiThread { showLoginError(error) }
@@ -348,8 +344,9 @@ class MainActivity : Activity() {
         showLoading(container, "Loading Forage…")
         executor.execute {
             try {
-                val credentials = validSession()
-                val items = apiClient.forage(credentials)
+                val result = client.forage(requiredSession())
+                saveSession(result.session)
+                val items = result.value
                 runOnUiThread {
                     if (selectedTab == Tab.FORAGE && !showingDetail) {
                         showForageList(container, items)
@@ -406,8 +403,9 @@ class MainActivity : Activity() {
         showLoading(container, "Loading Specs…")
         executor.execute {
             try {
-                val credentials = validSession()
-                val specs = apiClient.specs(credentials)
+                val result = client.specs(requiredSession())
+                saveSession(result.session)
+                val specs = result.value
                 runOnUiThread {
                     if (selectedTab == Tab.SPECS && !showingDetail) showSpecList(container, specs)
                 }
@@ -469,8 +467,9 @@ class MainActivity : Activity() {
         showLoading(container, "Loading Drops…")
         executor.execute {
             try {
-                val credentials = validSession()
-                val drops = apiClient.drops(credentials)
+                val result = client.drops(requiredSession())
+                saveSession(result.session)
+                val drops = result.value
                 runOnUiThread {
                     if (selectedTab == Tab.DROPS && !showingDetail) showDropList(container, drops)
                 }
@@ -541,8 +540,9 @@ class MainActivity : Activity() {
         showLoading(content, "Loading weekly digests…")
         executor.execute {
             try {
-                val credentials = validSession()
-                val digests = apiClient.dropDigests(credentials)
+                val result = client.dropDigests(requiredSession())
+                saveSession(result.session)
+                val digests = result.value
                 runOnUiThread {
                     if (selectedTab == Tab.DROPS && showingDetail) {
                         showDropDigestList(content, digests)
@@ -606,7 +606,7 @@ class MainActivity : Activity() {
                     listOf(
                         "Email" to currentUser.email,
                         "Role" to readable(currentUser.role),
-                        "Hive" to oauthClient.server(currentSession),
+                        "Hive" to client.server(currentSession),
                     ),
                 ),
                 matchWidth(),
@@ -622,7 +622,7 @@ class MainActivity : Activity() {
     private fun signOut() {
         showLaunch()
         executor.execute {
-            session?.let { runCatching { oauthClient.revoke(it) } }
+            session?.let { runCatching { client.signOut(it) } }
             credentialStore.clear()
             session = null
             user = null
@@ -630,14 +630,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun validSession(): OAuthSession {
-        var credentials = session ?: throw OAuthClientException("The sign-in session is missing.")
-        if (oauthClient.shouldRefresh(credentials)) {
-            credentials = oauthClient.refresh(credentials)
-            credentialStore.save(credentials)
-            session = credentials
-        }
-        return credentials
+    private fun requiredSession(): OAuthSession =
+        session ?: throw MobileClientException("The sign-in session is missing.")
+
+    private fun saveSession(updated: OAuthSession) {
+        credentialStore.save(updated)
+        session = updated
     }
 
     private fun showLoading(container: FrameLayout, label: String) {

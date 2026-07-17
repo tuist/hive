@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use super::json::{self, Value};
-use super::{normalize_server_url, oauth, validate_discovery, Result};
+use super::url::{normalize_server_url, validate_discovery};
+use super::{oauth, Result};
 
 struct Metadata {
     authorization_endpoint: String,

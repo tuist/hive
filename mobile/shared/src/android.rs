@@ -12,134 +12,65 @@ const GET_STRING_UTF_CHARS: usize = 169;
 const RELEASE_STRING_UTF_CHARS: usize = 170;
 
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileDiscoveryRequest(
-    env: JniEnv,
-    _class: *mut c_void,
-    input: JString,
-) -> JString {
-    unary(env, input, core::discovery_request)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileRegistrationRequest(
+pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileAuthorizationStart(
     env: JniEnv,
     _class: *mut c_void,
     server: JString,
-    discovery_response: JString,
-    redirect_uri: JString,
-) -> JString {
-    many(env, &[server, discovery_response, redirect_uri], |values| {
-        core::registration_request(&values[0], &values[1], &values[2])
-    })
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileAuthorizationPlan(
-    env: JniEnv,
-    _class: *mut c_void,
-    server: JString,
-    discovery_response: JString,
-    registration_response: JString,
     redirect_uri: JString,
     state: JString,
     verifier: JString,
 ) -> JString {
-    many(
-        env,
-        &[
-            server,
-            discovery_response,
-            registration_response,
-            redirect_uri,
-            state,
-            verifier,
-        ],
-        |values| {
-            core::authorization_plan(
-                &values[0], &values[1], &values[2], &values[3], &values[4], &values[5],
-            )
-        },
-    )
+    many(env, &[server, redirect_uri, state, verifier], |values| {
+        core::authorization_start(&values[0], &values[1], &values[2], &values[3])
+    })
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileTokenRequest(
+pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileCallbackStart(
     env: JniEnv,
     _class: *mut c_void,
     callback_url: JString,
     pending: JString,
 ) -> JString {
     many(env, &[callback_url, pending], |values| {
-        core::token_request(&values[0], &values[1])
+        core::callback_start(&values[0], &values[1])
     })
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileSessionFromToken(
+pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileResourceStart(
     env: JniEnv,
     _class: *mut c_void,
-    pending: JString,
-    token_response: JString,
+    session: JString,
+    resource: JString,
     now: JString,
 ) -> JString {
-    many(env, &[pending, token_response, now], |values| {
-        core::session_from_token(&values[0], &values[1], &values[2])
+    many(env, &[session, resource, now], |values| {
+        core::resource_start(&values[0], &values[1], &values[2])
     })
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileRefreshRequest(
+pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileClientContinue(
     env: JniEnv,
     _class: *mut c_void,
-    session: JString,
-) -> JString {
-    unary(env, session, core::refresh_request)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileSessionFromRefresh(
-    env: JniEnv,
-    _class: *mut c_void,
-    session: JString,
-    token_response: JString,
+    continuation: JString,
+    response: JString,
+    status: JString,
     now: JString,
 ) -> JString {
-    many(env, &[session, token_response, now], |values| {
-        core::session_from_refresh(&values[0], &values[1], &values[2])
+    many(env, &[continuation, response, status, now], |values| {
+        core::continue_client(&values[0], &values[1], &values[2], &values[3])
     })
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileRevokeRequest(
+pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileSignOutStart(
     env: JniEnv,
     _class: *mut c_void,
     session: JString,
 ) -> JString {
-    unary(env, session, core::revoke_request)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileApiRequest(
-    env: JniEnv,
-    _class: *mut c_void,
-    session: JString,
-    path: JString,
-) -> JString {
-    many(env, &[session, path], |values| {
-        core::api_request(&values[0], &values[1])
-    })
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileSessionShouldRefresh(
-    env: JniEnv,
-    _class: *mut c_void,
-    session: JString,
-    now: JString,
-) -> JString {
-    many(env, &[session, now], |values| {
-        core::session_should_refresh(&values[0], &values[1])
-    })
+    unary(env, session, core::sign_out_start)
 }
 
 #[no_mangle]
@@ -149,144 +80,6 @@ pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_mobileSessionServer
     session: JString,
 ) -> JString {
     unary(env, session, core::session_server)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_normalizeServerUrl(
-    env: JniEnv,
-    _class: *mut c_void,
-    input: JString,
-) -> JString {
-    unary(env, input, core::normalize_server_url)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_discoveryUrl(
-    env: JniEnv,
-    _class: *mut c_void,
-    server: JString,
-) -> JString {
-    unary(env, server, core::discovery_url)
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_registrationBody(
-    env: JniEnv,
-    _class: *mut c_void,
-    client_name: JString,
-    redirect_uri: JString,
-) -> JString {
-    many(env, &[client_name, redirect_uri], |values| {
-        core::registration_body(&values[0], &values[1])
-    })
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_validateDiscovery(
-    env: JniEnv,
-    _class: *mut c_void,
-    server: JString,
-    issuer: JString,
-    authorization_endpoint: JString,
-    token_endpoint: JString,
-    registration_endpoint: JString,
-    revocation_endpoint: JString,
-) -> JString {
-    many(
-        env,
-        &[
-            server,
-            issuer,
-            authorization_endpoint,
-            token_endpoint,
-            registration_endpoint,
-            revocation_endpoint,
-        ],
-        |values| {
-            core::validate_discovery(
-                &values[0], &values[1], &values[2], &values[3], &values[4], &values[5],
-            )
-        },
-    )
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_authorizationUrl(
-    env: JniEnv,
-    _class: *mut c_void,
-    endpoint: JString,
-    client_id: JString,
-    redirect_uri: JString,
-    resource: JString,
-    state: JString,
-    verifier: JString,
-) -> JString {
-    many(
-        env,
-        &[endpoint, client_id, redirect_uri, resource, state, verifier],
-        |values| {
-            core::authorization_url(
-                &values[0], &values[1], &values[2], &values[3], &values[4], &values[5],
-            )
-        },
-    )
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_tokenBody(
-    env: JniEnv,
-    _class: *mut c_void,
-    code: JString,
-    client_id: JString,
-    redirect_uri: JString,
-    resource: JString,
-    verifier: JString,
-) -> JString {
-    many(
-        env,
-        &[code, client_id, redirect_uri, resource, verifier],
-        |values| core::token_body(&values[0], &values[1], &values[2], &values[3], &values[4]),
-    )
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_callbackCode(
-    env: JniEnv,
-    _class: *mut c_void,
-    callback_url: JString,
-    redirect_uri: JString,
-    expected_state: JString,
-) -> JString {
-    many(
-        env,
-        &[callback_url, redirect_uri, expected_state],
-        |values| core::callback_code(&values[0], &values[1], &values[2]),
-    )
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_refreshTokenBody(
-    env: JniEnv,
-    _class: *mut c_void,
-    refresh_token: JString,
-    client_id: JString,
-    resource: JString,
-) -> JString {
-    many(env, &[refresh_token, client_id, resource], |values| {
-        core::refresh_token_body(&values[0], &values[1], &values[2])
-    })
-}
-
-#[no_mangle]
-pub unsafe extern "system" fn Java_dev_tuist_hive_SharedCore_revokeTokenBody(
-    env: JniEnv,
-    _class: *mut c_void,
-    token: JString,
-    client_id: JString,
-) -> JString {
-    many(env, &[token, client_id], |values| {
-        core::revoke_token_body(&values[0], &values[1])
-    })
 }
 
 unsafe fn unary(

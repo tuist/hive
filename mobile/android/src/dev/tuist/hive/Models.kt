@@ -61,22 +61,28 @@ data class DropDigest(
     val publishedAt: String,
 )
 
-class HiveApiClient {
-    private val transport = NativeHttpTransport()
+data class ResourceResult<Value>(val session: OAuthSession, val value: Value)
 
-    fun currentUser(session: OAuthSession): HiveUser {
-        val data = get(session, "/me").getJSONObject("data")
-        return HiveUser(
+fun MobileClient.currentUser(session: OAuthSession): ResourceResult<HiveUser> {
+    val result = resource(session, HiveResource.CURRENT_USER)
+    val data = result.data as? JSONObject ?: throw invalidResource()
+    return ResourceResult(
+        result.session,
+        HiveUser(
             id = data.requiredString("id"),
             email = data.requiredString("email"),
             name = data.nullableString("name"),
             role = data.requiredString("role"),
-        )
-    }
+        ),
+    )
+}
 
-    fun forage(session: OAuthSession): List<ForageItem> {
-        val data = get(session, "/forage?page_size=100").getJSONArray("data")
-        return data.objects().map { item ->
+fun MobileClient.forage(session: OAuthSession): ResourceResult<List<ForageItem>> {
+    val result = resource(session, HiveResource.FORAGE)
+    val data = result.data as? JSONArray ?: throw invalidResource()
+    return ResourceResult(
+        result.session,
+        data.objects().map { item ->
             ForageItem(
                 id = item.requiredString("id"),
                 type = item.requiredString("type"),
@@ -89,12 +95,16 @@ class HiveApiClient {
                 externalUrl = item.nullableString("external_url"),
                 domains = item.getJSONArray("domains").domains(),
             )
-        }
-    }
+        },
+    )
+}
 
-    fun specs(session: OAuthSession): List<HiveSpec> {
-        val data = get(session, "/specs?page_size=100").getJSONArray("data")
-        return data.objects().map { spec ->
+fun MobileClient.specs(session: OAuthSession): ResourceResult<List<HiveSpec>> {
+    val result = resource(session, HiveResource.SPECS)
+    val data = result.data as? JSONArray ?: throw invalidResource()
+    return ResourceResult(
+        result.session,
+        data.objects().map { spec ->
             HiveSpec(
                 id = spec.requiredString("id"),
                 number = spec.getInt("number"),
@@ -107,12 +117,16 @@ class HiveApiClient {
                 hasNewActivity = spec.optBoolean("has_new_activity"),
                 domains = spec.getJSONArray("domains").domains(),
             )
-        }
-    }
+        },
+    )
+}
 
-    fun drops(session: OAuthSession): List<HiveDrop> {
-        val data = get(session, "/drops?page_size=100").getJSONArray("data")
-        return data.objects().map { drop ->
+fun MobileClient.drops(session: OAuthSession): ResourceResult<List<HiveDrop>> {
+    val result = resource(session, HiveResource.DROPS)
+    val data = result.data as? JSONArray ?: throw invalidResource()
+    return ResourceResult(
+        result.session,
+        data.objects().map { drop ->
             HiveDrop(
                 id = drop.requiredString("id"),
                 number = drop.getInt("number"),
@@ -124,12 +138,16 @@ class HiveApiClient {
                 publishedAt = drop.nullableString("published_at"),
                 domains = drop.getJSONArray("domains").domains(),
             )
-        }
-    }
+        },
+    )
+}
 
-    fun dropDigests(session: OAuthSession): List<DropDigest> {
-        val data = get(session, "/drops/digests?page_size=100").getJSONArray("data")
-        return data.objects().map { digest ->
+fun MobileClient.dropDigests(session: OAuthSession): ResourceResult<List<DropDigest>> {
+    val result = resource(session, HiveResource.DROP_DIGESTS)
+    val data = result.data as? JSONArray ?: throw invalidResource()
+    return ResourceResult(
+        result.session,
+        data.objects().map { digest ->
             DropDigest(
                 id = digest.requiredString("id"),
                 weekStart = digest.requiredString("week_start"),
@@ -140,16 +158,8 @@ class HiveApiClient {
                 dropCount = digest.getInt("drop_count"),
                 publishedAt = digest.requiredString("published_at"),
             )
-        }
-    }
-
-    private fun get(session: OAuthSession, path: String): JSONObject {
-        try {
-            return JSONObject(transport.send(SharedCore.apiRequest(session, path)))
-        } catch (error: OAuthClientException) {
-            throw HiveApiException(error.message ?: "Hive request failed.", error.statusCode)
-        }
-    }
+        },
+    )
 }
 
 private fun JSONObject.nullableString(key: String): String? {
@@ -163,4 +173,5 @@ private fun JSONArray.objects(): List<JSONObject> =
 private fun JSONArray.domains(): List<HiveDomain> =
     objects().map { HiveDomain(it.requiredString("id"), it.requiredString("name")) }
 
-class HiveApiException(message: String, val statusCode: Int? = null) : Exception(message)
+private fun invalidResource() =
+    MobileClientException("The shared core returned an invalid resource action.")

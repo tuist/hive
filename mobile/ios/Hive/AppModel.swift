@@ -13,8 +13,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var server: String?
 
     private let credentialStore = CredentialStore()
-    private let oauthClient = OAuthClient()
-    private let apiClient = HiveAPIClient()
+    private let client = MobileClient()
     private var credentials: OAuthSession?
 
     func bootstrap() async {
@@ -25,12 +24,14 @@ final class AppModel: ObservableObject {
                 phase = .signedOut
                 return
             }
-            let refreshed = try await oauthClient.refresh(saved)
-            try credentialStore.save(refreshed)
-            let currentUser = try await apiClient.currentUser(using: refreshed)
-            credentials = refreshed
-            user = currentUser
-            server = try oauthClient.server(refreshed)
+            let current: ResourceResult<HiveUser> = try await client.resource(
+                .currentUser,
+                session: saved
+            )
+            try credentialStore.save(current.session)
+            credentials = current.session
+            user = current.value
+            server = try client.server(current.session)
             phase = .signedIn
         } catch {
             try? credentialStore.clear()
@@ -42,37 +43,36 @@ final class AppModel: ObservableObject {
     }
 
     func completeSignIn(_ session: OAuthSession) async throws {
-        let currentUser = try await apiClient.currentUser(using: session)
-        try credentialStore.save(session)
-        credentials = session
-        user = currentUser
-        server = try oauthClient.server(session)
+        let current: ResourceResult<HiveUser> = try await client.resource(
+            .currentUser,
+            session: session
+        )
+        try credentialStore.save(current.session)
+        credentials = current.session
+        user = current.value
+        server = try client.server(current.session)
         phase = .signedIn
     }
 
     func loadForage() async throws -> [ForageItem] {
-        let session = try await validSession()
-        return try await apiClient.forage(using: session)
+        try await load(.forage, as: [ForageItem].self)
     }
 
     func loadSpecs() async throws -> [HiveSpec] {
-        let session = try await validSession()
-        return try await apiClient.specs(using: session)
+        try await load(.specs, as: [HiveSpec].self)
     }
 
     func loadDrops() async throws -> [HiveDrop] {
-        let session = try await validSession()
-        return try await apiClient.drops(using: session)
+        try await load(.drops, as: [HiveDrop].self)
     }
 
     func loadDropDigests() async throws -> [DropDigest] {
-        let session = try await validSession()
-        return try await apiClient.dropDigests(using: session)
+        try await load(.dropDigests, as: [DropDigest].self)
     }
 
     func signOut() async {
         if let credentials {
-            try? await oauthClient.revoke(credentials)
+            try? await client.signOut(credentials)
         }
         try? credentialStore.clear()
         credentials = nil
@@ -81,15 +81,16 @@ final class AppModel: ObservableObject {
         phase = .signedOut
     }
 
-    private func validSession() async throws -> OAuthSession {
-        guard var credentials else {
-            throw OAuthClientError("The sign-in session is missing.")
+    private func load<Value: Decodable>(
+        _ resource: HiveResource,
+        as type: Value.Type
+    ) async throws -> Value {
+        guard let credentials else {
+            throw MobileClientError("The sign-in session is missing.")
         }
-        if try oauthClient.shouldRefresh(credentials) {
-            credentials = try await oauthClient.refresh(credentials)
-            try credentialStore.save(credentials)
-            self.credentials = credentials
-        }
-        return credentials
+        let result = try await client.resource(resource, session: credentials, as: type)
+        try credentialStore.save(result.session)
+        self.credentials = result.session
+        return result.value
     }
 }
