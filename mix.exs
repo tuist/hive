@@ -65,6 +65,7 @@ defmodule Hive.MixProject do
       {:emcp,
        github: "addstar34/emcp", ref: "c687e279cf4f550f69934549a1303312ed3a23b5", override: true},
       {:ex_json_schema, "~> 0.11"},
+      {:open_api_spex, "~> 3.22"},
       {:boruta, git: "https://github.com/malach-it/boruta_auth", branch: "master"},
       {:condukt, github: "tuist/condukt", tag: "1.7.0", override: true},
       {:oban, "~> 2.23"},

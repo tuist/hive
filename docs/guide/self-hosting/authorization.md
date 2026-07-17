@@ -28,6 +28,7 @@ Changing the configured domains later does not change existing roles.
 | Capability | Anonymous | Collaborator | Member | Administrator |
 |---|---|---|---|---|
 | View public projects, domains, specs, and drops | yes | yes | yes | yes |
+| Use the mobile application to view visible Forage items, specs, and Drops | no | yes | yes | yes |
 | Submit Forage items | no | yes | yes | yes |
 | Comment on visible Forage items and specs | no | yes | yes | yes |
 | Create Forage items as GitHub issues | no | no | yes | yes |

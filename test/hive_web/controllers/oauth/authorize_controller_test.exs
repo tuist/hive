@@ -28,7 +28,10 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert response =~ "Authorize MCP test client"
       assert response =~ "alice@example.com"
       assert response =~ "http://client.example/callback"
-      assert response =~ "mcp"
+      assert response =~ "Model Context Protocol access"
+      assert response =~ ~s(id="oauth-consent")
+      assert response =~ ~s(name="viewport")
+      assert response =~ ~s(/assets/js/app.css)
       assert response =~ ~s(data-part="client-info")
       assert response =~ ~s(data-part="form")
       assert response =~ ~s(data-part="approve-button")
@@ -78,7 +81,7 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
           %{"decision" => "deny"}
         )
 
-      assert html_response(conn, 403) =~ "OAuth authorization was denied."
+      assert html_response(conn, 403) =~ "Access was not granted"
       refute Repo.exists?(Token)
     end
 
