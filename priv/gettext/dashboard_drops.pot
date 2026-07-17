@@ -120,8 +120,8 @@ msgstr ""
 msgid "Drop not found."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:191
-#: lib/hive_web/components/layouts.ex:291
+#: lib/hive_web/components/layouts.ex:197
+#: lib/hive_web/components/layouts.ex:297
 #: lib/hive_web/live/drops_live/digest.ex:26
 #: lib/hive_web/live/drops_live/digest.ex:245
 #: lib/hive_web/live/drops_live/index.ex:29
@@ -187,17 +187,17 @@ msgstr ""
 msgid "GitHub releases"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:238
+#: lib/hive_web/controllers/feed_controller.ex:271
 #, elixir-autogen, elixir-format
 msgid "Hive · %{domain} drops"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:265
+#: lib/hive_web/controllers/feed_controller.ex:298
 #, elixir-autogen, elixir-format
 msgid "Hive · %{project} drops"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:193
+#: lib/hive_web/controllers/feed_controller.ex:226
 #: lib/hive_web/live/drops_live/index.ex:60
 #: lib/hive_web/live/drops_live/index.ex:289
 #: lib/hive_web/live/drops_live/show.ex:48
@@ -387,18 +387,18 @@ msgstr ""
 msgid "Search title or body..."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:195
+#: lib/hive_web/controllers/feed_controller.ex:228
 #: lib/hive_web/live/drops_live/index.ex:157
 #, elixir-autogen, elixir-format
 msgid "Shipped updates from GitHub releases and changelog feeds across every domain."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:241
+#: lib/hive_web/controllers/feed_controller.ex:274
 #, elixir-autogen, elixir-format
 msgid "Shipped updates from the %{domain} domain."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:268
+#: lib/hive_web/controllers/feed_controller.ex:301
 #, elixir-autogen, elixir-format
 msgid "Shipped updates from the %{project} project."
 msgstr ""
@@ -586,7 +586,7 @@ msgstr ""
 msgid "1 public drop"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:213
+#: lib/hive_web/controllers/feed_controller.ex:246
 #, elixir-autogen, elixir-format
 msgid "A weekly narration connecting the most meaningful public updates shipped across Hive."
 msgstr ""
@@ -606,7 +606,7 @@ msgstr ""
 msgid "Browse narrated weekly editions connecting the most meaningful updates shipped across Hive."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:201
+#: lib/hive_web/components/layouts.ex:207
 #, elixir-autogen, elixir-format
 msgid "Digests"
 msgstr ""
@@ -626,7 +626,7 @@ msgstr ""
 msgid "Editions"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:211
+#: lib/hive_web/controllers/feed_controller.ex:244
 #: lib/hive_web/live/drops_live/digest.ex:368
 #, elixir-autogen, elixir-format
 msgid "Hive · Drops weekly digest"

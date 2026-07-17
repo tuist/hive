@@ -5,6 +5,7 @@ defmodule HiveWeb.FeedControllerTest do
 
   alias Hive.Accounts
   alias Hive.Drops
+  alias Hive.Flights.Flight
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Forage.GrafanaAlert
@@ -13,6 +14,50 @@ defmodule HiveWeb.FeedControllerTest do
   alias Hive.Projects.Webhooks
   alias Hive.Repo
   alias Hive.Specs
+
+  describe "GET /flights feeds" do
+    test "members can subscribe through Atom and RSS while anonymous visitors cannot", %{
+      conn: conn
+    } do
+      member = member_user("flight-feed@example.com")
+      {:ok, project} = Projects.create_project(%{name: "Flight feed"})
+
+      {:ok, repository} =
+        Projects.create_repository_for_project(project, %{
+          owner: "tuist",
+          name: "hive-#{System.unique_integer([:positive])}"
+        })
+
+      %Flight{}
+      |> Flight.changeset(%{
+        forage_item_id: "grafana_alert:#{Ecto.UUID.generate()}",
+        status: :succeeded,
+        runner: "microsandbox",
+        repository_full_name: "tuist/#{repository.name}",
+        repository_id: repository.id,
+        requested_by_id: member.id,
+        input: %{"title" => "High latency"},
+        result: %{"summary" => "Bounded the slow query."}
+      })
+      |> Repo.insert!()
+
+      assert conn |> get(~p"/flights/atom.xml") |> response(404) =~ "<error/>"
+      assert conn |> get(~p"/flights/rss.xml") |> response(404) =~ "<error/>"
+
+      {conn, _user} = sign_in(conn, "flight-feed@example.com")
+      atom = conn |> get(~p"/flights/atom.xml") |> response(200)
+      {rss_conn, _user} = sign_in(build_conn(), "flight-feed@example.com")
+      rss = rss_conn |> get(~p"/flights/rss.xml") |> response(200)
+
+      assert atom =~ ~s(<feed xmlns="http://www.w3.org/2005/Atom">)
+      assert atom =~ "<title>Hive · Flights</title>"
+      assert atom =~ "High latency"
+      assert atom =~ "Bounded the slow query."
+      assert rss =~ ~s(<rss version="2.0")
+      assert rss =~ "<title>Hive · Flights</title>"
+      assert rss =~ "High latency"
+    end
+  end
 
   defp user(email) do
     {:ok, user} =

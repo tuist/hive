@@ -2,7 +2,7 @@ defmodule Hive.Forage.CodingRuns.SandboxContractTest do
   use ExUnit.Case, async: true
 
   alias Condukt.Sandbox
-  alias Hive.Forage.CodingRun
+  alias Hive.Flights.Flight
   alias Hive.Forage.CodingRuns
   alias Hive.Forage.CodingRuns.SandboxContract
   alias Hive.Forage.CodingRuns.Sandboxes.Kubernetes
@@ -78,7 +78,7 @@ defmodule Hive.Forage.CodingRuns.SandboxContractTest do
         setup_command: "true"
       )
 
-    run = %CodingRun{id: Ecto.UUID.generate(), runner: "daytona"}
+    run = %Flight{id: Ecto.UUID.generate(), runner: "daytona"}
     source = %{archive: "archive", base_branch: "main"}
 
     assert SandboxContract.configured?(conf)
@@ -111,7 +111,7 @@ defmodule Hive.Forage.CodingRuns.SandboxContractTest do
         sandbox_options: %{"test_pid" => self(), "token" => "placeholder-token"}
       )
 
-    run = %CodingRun{id: Ecto.UUID.generate(), runner: "e2b"}
+    run = %Flight{id: Ecto.UUID.generate(), runner: "e2b"}
     source = %{archive: "archive", base_branch: "main"}
 
     assert {:error, :sandbox_provider_changed} = SandboxContract.new(run, source, conf)

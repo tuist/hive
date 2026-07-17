@@ -23,8 +23,22 @@ defmodule HiveWeb.WellKnownControllerTest do
       assert response["authorization_endpoint"] == "http://www.example.com/oauth2/authorize"
       assert response["token_endpoint"] == "http://www.example.com/oauth2/token"
       assert response["registration_endpoint"] == "http://www.example.com/oauth2/register"
-      assert response["scopes_supported"] == ["mcp"]
+      assert response["scopes_supported"] == ["api", "mcp"]
       assert "S256" in response["code_challenge_methods_supported"]
+    end
+  end
+
+  describe "GET /.well-known/oauth-protected-resource/api" do
+    test "returns application programming interface protected resource metadata", %{conn: conn} do
+      conn = get(conn, ~p"/.well-known/oauth-protected-resource/api")
+
+      response = json_response(conn, 200)
+
+      assert response["resource"] == "http://www.example.com/api"
+      assert response["resource_name"] == "Hive application programming interface"
+      assert response["authorization_servers"] == ["http://www.example.com"]
+      assert response["bearer_methods_supported"] == ["header"]
+      assert response["scopes_supported"] == ["api"]
     end
   end
 

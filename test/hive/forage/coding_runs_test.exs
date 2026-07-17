@@ -4,11 +4,14 @@ defmodule Hive.Forage.CodingRunsTest do
 
   alias Condukt.Sandbox
   alias Hive.Accounts
-  alias Hive.Forage.CodingRun
+  alias Hive.Flights.Flight
+  alias Hive.Forage
   alias Hive.Forage.CodingRunWorker
   alias Hive.Forage.CodingRuns
   alias Hive.Forage.CodingRuns.Workspace
+  alias Hive.Forage.GitHubIssue
   alias Hive.Forage.Grafana
+  alias Hive.Forage.Item
   alias Hive.Projects
   alias Hive.Projects.Webhooks
 
@@ -28,17 +31,50 @@ defmodule Hive.Forage.CodingRunsTest do
   end
 
   defmodule Sessions do
-    def run(agent, prompt, opts) do
+    def run_with_session(agent, prompt, opts) do
       send(Process.get(:coding_runs_test_pid), {:agent_run, agent, prompt, opts})
       :ok = Sandbox.write(opts[:sandbox], "lib/example.ex", "defmodule Example.Fixed do\nend\n")
 
       {:ok,
        %{
-         outcome: "changed",
-         summary: "Handled the alert.",
-         root_cause: "The example module was incomplete.",
-         validation: ["mix test test/example_test.exs"]
+         result: %{
+           outcome: "changed",
+           summary: "Handled the alert.",
+           root_cause: "The example module was incomplete.",
+           validation: ["mix test test/example_test.exs"]
+         },
+         session: %{
+           "id" => "flight-session",
+           "messages" => [%{"role" => "assistant", "content" => "Handled the alert."}]
+         }
        }}
+    end
+  end
+
+  defmodule ReproductionSessions do
+    def run_with_session(agent, prompt, opts) do
+      send(Process.get(:coding_runs_test_pid), {:agent_run, agent, prompt, opts})
+
+      {:ok,
+       %{
+         result: %{
+           outcome: "not_reproduced",
+           summary: "The latency path stayed within budget.",
+           root_cause: "The available fixture did not exhibit the production timing.",
+           validation: ["mix test test/latency_test.exs"]
+         },
+         session: %{
+           "id" => "reproduction-session",
+           "messages" => [%{"role" => "assistant", "content" => "Could not reproduce."}]
+         }
+       }}
+    end
+  end
+
+  defmodule IssuePublisher do
+    def create_comment(repository, issue_number, body, opts) do
+      send(Keyword.fetch!(opts, :test_pid), {:issue_comment, repository, issue_number, body})
+      {:ok, %{id: 1}}
     end
   end
 
@@ -115,7 +151,7 @@ defmodule Hive.Forage.CodingRunsTest do
     assert {:error, :already_running} = create_run(ctx)
 
     first
-    |> CodingRun.changeset(%{status: :succeeded, result: %{"type" => "report"}})
+    |> Flight.changeset(%{status: :succeeded, result: %{"type" => "report"}})
     |> Repo.update!()
 
     assert {:ok, second} = create_run(ctx)
@@ -163,6 +199,10 @@ defmodule Hive.Forage.CodingRunsTest do
     assert completed.status == :succeeded
     assert completed.result["type"] == "pull_request"
     assert completed.result["number"] == 42
+    assert completed.result["base_revision"] == "base-sha"
+    assert completed.session["id"] == "flight-session"
+    assert completed.session["source"]["repository"] == completed.repository_full_name
+    assert completed.session["source"]["base_revision"] == "base-sha"
 
     assert :ok =
              CodingRuns.execute(run.id,
@@ -172,6 +212,112 @@ defmodule Hive.Forage.CodingRunsTest do
              )
 
     refute_receive {:published, _, _, _, _}
+
+    assert_receive {:workspace, directory}
+    File.rm_rf(directory)
+  end
+
+  test "treats a not-reproduced objective outcome as a successful Flight", ctx do
+    {:ok, item} = Forage.get_item_for_user("grafana_alert:#{ctx.alert.id}", ctx.user)
+
+    assert {:ok, run} =
+             CodingRuns.create_for_item(item, ctx.repository.id, ctx.user,
+               objective: :reproduce,
+               enabled?: fn -> true end,
+               config: [runner: :microsandbox]
+             )
+
+    source = source_snapshot()
+    test_pid = self()
+    Process.put(:coding_runs_test_pid, test_pid)
+
+    sandbox_builder = fn opts ->
+      {:ok, directory} =
+        Workspace.prepare_local(opts[:source_archive], opts[:base_branch])
+
+      send(test_pid, {:workspace, directory})
+      Sandbox.new(Condukt.Sandbox.Local, cwd: Path.join(directory, "workspace"))
+    end
+
+    assert :ok =
+             CodingRuns.execute(run.id,
+               source_module: Source,
+               sessions_module: ReproductionSessions,
+               sandbox_builder: sandbox_builder,
+               source: source,
+               test_pid: test_pid
+             )
+
+    assert_receive {:agent_run, Hive.Forage.Agents.ReproductionAgent, prompt, _opts}
+    assert prompt =~ "Try to reproduce this Forage item"
+    refute_receive {:published, _, _, _, _}
+
+    completed = CodingRuns.get(run.id)
+    assert completed.status == :succeeded
+    assert completed.objective == :reproduce
+    assert completed.objective_outcome == :not_reproduced
+    assert completed.result["type"] == "report"
+    assert completed.result["objective_outcome"] == "not_reproduced"
+    assert completed.result["base_revision"] == "base-sha"
+
+    assert_receive {:workspace, directory}
+    File.rm_rf(directory)
+  end
+
+  test "publishes a reproduction report back to a GitHub issue", ctx do
+    issue_id = Ecto.UUID.generate()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    item = %Item{
+      id: "github_issue:#{issue_id}",
+      type: :github_issue,
+      origin: :github,
+      source_record_id: issue_id,
+      source_record: %GitHubIssue{id: issue_id, number: 42},
+      title: "Intermittent latency",
+      body: "The request occasionally exceeds its budget.",
+      status: :open,
+      source_label: "tuist/#{ctx.repository.name}",
+      repository_id: ctx.repository.id,
+      updated_at: now
+    }
+
+    assert {:ok, run} =
+             CodingRuns.create_for_item(item, ctx.repository.id, ctx.user,
+               objective: :reproduce,
+               enabled?: fn -> true end,
+               config: [runner: :microsandbox]
+             )
+
+    source = source_snapshot()
+    test_pid = self()
+    Process.put(:coding_runs_test_pid, test_pid)
+
+    sandbox_builder = fn opts ->
+      {:ok, directory} =
+        Workspace.prepare_local(opts[:source_archive], opts[:base_branch])
+
+      send(test_pid, {:workspace, directory})
+      Sandbox.new(Condukt.Sandbox.Local, cwd: Path.join(directory, "workspace"))
+    end
+
+    assert :ok =
+             CodingRuns.execute(run.id,
+               source_module: Source,
+               sessions_module: ReproductionSessions,
+               issues_module: IssuePublisher,
+               sandbox_builder: sandbox_builder,
+               source: source,
+               test_pid: test_pid
+             )
+
+    assert_receive {:issue_comment, repository, 42, body}
+    assert repository.id == ctx.repository.id
+    assert body =~ "**Reproduce** Flight"
+    assert body =~ "**Not reproduced**"
+    assert body =~ "/flights/#{run.id}"
+
+    assert CodingRuns.get(run.id).status == :succeeded
 
     assert_receive {:workspace, directory}
     File.rm_rf(directory)
@@ -187,7 +333,7 @@ defmodule Hive.Forage.CodingRunsTest do
     assert {:ok, run} = create_run(ctx)
 
     run
-    |> CodingRun.changeset(%{status: :running, started_at: DateTime.utc_now()})
+    |> Flight.changeset(%{status: :running, started_at: DateTime.utc_now()})
     |> Repo.update!()
 
     Process.put(:coding_runs_test_pid, self())

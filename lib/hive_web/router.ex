@@ -35,6 +35,11 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.MCPAuthentication
   end
 
+  pipeline :api do
+    plug :accepts, ["json"]
+    plug HiveWeb.Plugs.APIAuthentication
+  end
+
   pipeline :inference do
     plug :accepts, ["json", "event-stream"]
     plug HiveWeb.Plugs.InferenceAuthentication
@@ -52,6 +57,13 @@ defmodule HiveWeb.Router do
 
     post "/events", SlackController, :events
     post "/interactions", SlackController, :interactions
+  end
+
+  scope "/api", HiveWeb.API do
+    pipe_through :api
+
+    get "/flights", FlightController, :index
+    get "/flights/:id", FlightController, :show
   end
 
   scope "/", HiveWeb do
@@ -94,6 +106,8 @@ defmodule HiveWeb.Router do
       get "/forage/github-issues/rss.xml", FeedController, :github_issues_rss
       get "/forage/grafana-alerts/atom.xml", FeedController, :grafana_alerts_atom
       get "/forage/grafana-alerts/rss.xml", FeedController, :grafana_alerts_rss
+      get "/flights/atom.xml", FeedController, :flights_atom
+      get "/flights/rss.xml", FeedController, :flights_rss
       get "/specs/atom.xml", FeedController, :specs_atom
       get "/specs/rss.xml", FeedController, :specs_rss
       get "/drops/atom.xml", FeedController, :drops_atom
@@ -152,6 +166,13 @@ defmodule HiveWeb.Router do
       live "/drops/digest", DropsLive.Digest
       live "/drops/digest/:week", DropsLive.Digest
       live "/drops/:number", DropsLive.Show
+    end
+
+    live_session :flights,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/flights", FlightLive.Index, :index
+      live "/flights/:id", FlightLive.Show, :show
     end
 
     live_session :domains,

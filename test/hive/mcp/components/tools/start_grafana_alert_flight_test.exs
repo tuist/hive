@@ -1,16 +1,16 @@
-defmodule Hive.MCP.Components.Tools.StartGrafanaAlertCodingRunTest do
+defmodule Hive.MCP.Components.Tools.StartGrafanaAlertFlightTest do
   use Hive.MCPToolCase
   use Mimic
 
-  alias Hive.Forage.CodingRun
-  alias Hive.Forage.CodingRuns
+  alias Hive.Flights
+  alias Hive.Flights.Flight
   alias Hive.Forage.Grafana
-  alias Hive.MCP.Components.Tools.StartGrafanaAlertCodingRun
+  alias Hive.MCP.Components.Tools.StartGrafanaAlertFlight
   alias Hive.Projects
   alias Hive.Projects.Webhooks
 
-  test "starts a coding run for an organization member" do
-    user = mcp_user("coding-run-member@example.com", :member)
+  test "starts a Flight for an organization member" do
+    user = mcp_user("flight-member@example.com", :member)
     {:ok, project} = Projects.create_project(%{name: unique_name("Hive")})
 
     {:ok, repository} =
@@ -20,49 +20,51 @@ defmodule Hive.MCP.Components.Tools.StartGrafanaAlertCodingRunTest do
       Webhooks.create(project, %{"name" => "Grafana", "source" => "grafana"})
 
     {:ok, [alert]} = Grafana.ingest(project, webhook, alert_payload())
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    run = %CodingRun{
-      id: Ecto.UUID.generate(),
-      forage_item_id: "grafana_alert:#{alert.id}",
-      status: :queued,
-      runner: "kubernetes",
-      repository_full_name: "tuist/#{repository.name}",
-      repository_id: repository.id,
-      requested_by_id: user.id,
-      input: %{},
-      inserted_at: now,
-      updated_at: now
-    }
+    flight =
+      %Flight{}
+      |> Flight.changeset(%{
+        forage_item_id: "grafana_alert:#{alert.id}",
+        status: :queued,
+        runner: "kubernetes",
+        repository_full_name: "tuist/#{repository.name}",
+        repository_id: repository.id,
+        requested_by_id: user.id,
+        input: %{"title" => "High latency"}
+      })
+      |> Repo.insert!()
 
-    expect(CodingRuns, :create_for_grafana_alert, fn fetched_alert, repository_id, caller ->
+    expect(Flights, :start_for_grafana_alert, fn fetched_alert, repository_id, caller, opts ->
       assert fetched_alert.id == alert.id
       assert repository_id == repository.id
       assert caller.id == user.id
-      {:ok, run}
+      assert opts[:objective] == "reproduce"
+      assert opts[:trigger] == %{"source" => "mcp"}
+      {:ok, flight}
     end)
 
     response =
       user
       |> mcp_conn()
-      |> StartGrafanaAlertCodingRun.call(%{
+      |> StartGrafanaAlertFlight.call(%{
         "alert_id" => "grafana_alert:#{alert.id}",
-        "repository_id" => repository.id
+        "repository_id" => repository.id,
+        "objective" => "reproduce"
       })
       |> response_json()
 
-    assert response["coding_run"]["id"] == run.id
-    assert response["coding_run"]["status"] == "queued"
-    assert response["coding_run"]["runner"] == "kubernetes"
+    assert response["flight"]["id"] == flight.id
+    assert response["flight"]["status"] == "queued"
+    assert response["flight"]["forage_item"]["id"] == "grafana_alert:#{alert.id}"
   end
 
   test "rejects collaborators" do
-    user = mcp_user("coding-run-collaborator@example.com", :collaborator)
+    user = mcp_user("flight-collaborator@example.com", :collaborator)
 
     response =
       user
       |> mcp_conn()
-      |> StartGrafanaAlertCodingRun.call(%{
+      |> StartGrafanaAlertFlight.call(%{
         "alert_id" => Ecto.UUID.generate(),
         "repository_id" => Ecto.UUID.generate()
       })

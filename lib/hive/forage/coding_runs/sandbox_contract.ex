@@ -2,7 +2,7 @@ defmodule Hive.Forage.CodingRuns.SandboxContract do
   @moduledoc false
 
   alias Condukt.Sandbox
-  alias Hive.Forage.CodingRun
+  alias Hive.Flights.Flight
   alias Hive.Forage.CodingRuns.Sandboxes.Kubernetes
   alias Hive.Forage.CodingRuns.Sandboxes.KubernetesClient
   alias Hive.Forage.CodingRuns.Sandboxes.Microsandbox
@@ -36,7 +36,7 @@ defmodule Hive.Forage.CodingRuns.SandboxContract do
     _error -> false
   end
 
-  def new(%CodingRun{} = run, source, conf, opts \\ []) do
+  def new(%Flight{} = run, source, conf, opts \\ []) do
     with :ok <- ensure_current_provider(run.runner, conf),
          {:ok, module} <- resolve(%{conf | runner: run.runner}),
          true <- valid_module?(module),

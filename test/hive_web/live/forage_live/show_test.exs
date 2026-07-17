@@ -2,9 +2,13 @@ defmodule HiveWeb.ForageLive.ShowTest do
   use HiveWeb.ConnCase, async: true
   use Mimic
 
-  alias Hive.Forage.CodingRun
+  alias Hive.Flights
+  alias Hive.Flights.Flight
+  alias Hive.Domains
   alias Hive.Forage.CodingRuns
+  alias Hive.Forage.GitHubIssue
   alias Hive.Forage.Grafana
+  alias Hive.GitHub.Issues
   alias Hive.Projects
   alias Hive.Projects.Webhooks
   alias Hive.Repo
@@ -22,7 +26,7 @@ defmodule HiveWeb.ForageLive.ShowTest do
     {:ok, [alert]} = Grafana.ingest(project, webhook, alert_payload())
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    run = %CodingRun{
+    run = %Flight{
       id: Ecto.UUID.generate(),
       forage_item_id: "grafana_alert:#{alert.id}",
       status: :queued,
@@ -37,25 +41,29 @@ defmodule HiveWeb.ForageLive.ShowTest do
 
     stub(CodingRuns, :enabled?, fn -> true end)
 
-    expect(CodingRuns, :create_for_grafana_alert, fn fetched_alert, repository_id, caller ->
-      assert fetched_alert.id == alert.id
+    expect(Flights, :start_for_item, fn item, repository_id, caller, opts ->
+      assert item.source_record.id == alert.id
       assert repository_id == repository.id
       assert caller.id == user.id
+      assert opts[:objective] == "reproduce"
+      assert opts[:trigger] == %{"source" => "dashboard"}
       {:ok, run}
     end)
 
     {:ok, view, html} = live(conn, ~p"/forage/items/grafana-alert/#{alert.id}")
 
-    assert html =~ "Coding runs"
+    assert html =~ "Flights"
     assert html =~ "tuist/#{repository.name}"
-    assert html =~ "Start run"
+    assert html =~ "Start Flight"
 
     html =
       view
-      |> form("#forage-coding-run-form", coding_run: %{repository_id: repository.id})
+      |> form("#forage-coding-run-form",
+        coding_run: %{repository_id: repository.id, objective: "reproduce"}
+      )
       |> render_submit()
 
-    assert html =~ "Coding run queued. The result will appear here."
+    assert html =~ "Flight queued. The result will appear here."
   end
 
   test "explains when the coding runner is not configured", %{conn: conn} do
@@ -73,8 +81,82 @@ defmodule HiveWeb.ForageLive.ShowTest do
 
     {:ok, _view, html} = live(conn, ~p"/forage/items/grafana-alert/#{alert.id}")
 
-    assert html =~ "New runs are paused"
-    refute html =~ ">Start run<"
+    assert html =~ "New Flights are paused"
+    refute html =~ ">Start Flight<"
+  end
+
+  test "starts an objective-specific Flight from a GitHub issue detail page", %{conn: conn} do
+    {conn, user} = sign_in(conn, "github-issue-flight@example.com")
+    suffix = System.unique_integer([:positive])
+    {:ok, project} = Projects.create_project(%{name: "Issue Flight #{suffix}"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Issue Flight #{suffix}",
+        project_id: project.id,
+        github_repository_owner: "tuist",
+        github_repository_name: "issue-flight-#{suffix}"
+      })
+
+    repository = github_repository_for_domain!(domain)
+
+    issue =
+      %GitHubIssue{}
+      |> GitHubIssue.changeset(%{
+        github_repository_id: repository.id,
+        number: 42,
+        title: "Intermittent latency",
+        body: "The request occasionally exceeds its budget.",
+        state: :open
+      })
+      |> Repo.insert!()
+
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    flight = %Flight{
+      id: Ecto.UUID.generate(),
+      forage_item_id: "github_issue:#{issue.id}",
+      status: :queued,
+      objective: :investigate,
+      runner: "microsandbox",
+      repository_full_name: "tuist/#{repository.name}",
+      repository_id: repository.id,
+      requested_by_id: user.id,
+      input: %{},
+      inserted_at: now,
+      updated_at: now
+    }
+
+    stub(Issues, :list_comments, fn fetched_repository, 42, _opts ->
+      assert fetched_repository.id == repository.id
+      {:ok, []}
+    end)
+
+    stub(CodingRuns, :enabled?, fn -> true end)
+
+    expect(Flights, :start_for_item, fn item, repository_id, caller, opts ->
+      assert item.id == "github_issue:#{issue.id}"
+      assert repository_id == repository.id
+      assert caller.id == user.id
+      assert opts[:objective] == "investigate"
+      {:ok, flight}
+    end)
+
+    {:ok, view, html} = live(conn, ~p"/forage/items/github-issue/#{issue.id}")
+
+    assert html =~ "Flights"
+    assert html =~ "Investigate"
+    assert html =~ "Start Flight"
+    assert has_element?(view, "#forage-coding-run-objective")
+
+    html =
+      view
+      |> form("#forage-coding-run-form",
+        coding_run: %{repository_id: repository.id, objective: "investigate"}
+      )
+      |> render_submit()
+
+    assert html =~ "Flight queued. The result will appear here."
   end
 
   test "presents pull requests, reports, and failures as distinct run outcomes", %{conn: conn} do
@@ -128,7 +210,7 @@ defmodule HiveWeb.ForageLive.ShowTest do
     {:ok, view, html} = live(conn, ~p"/forage/items/grafana-alert/#{alert.id}")
 
     assert html =~ "Latest activity"
-    assert html =~ "3 runs"
+    assert html =~ "3 Flights"
     assert html =~ "fix(web): bound alert latency queries"
     assert html =~ "Pull request"
     assert html =~ "2 checks"
@@ -156,8 +238,8 @@ defmodule HiveWeb.ForageLive.ShowTest do
       input: %{"kind" => "grafana_alert"}
     }
 
-    %CodingRun{}
-    |> CodingRun.changeset(Map.merge(defaults, attrs))
+    %Flight{}
+    |> Flight.changeset(Map.merge(defaults, attrs))
     |> Repo.insert!()
   end
 

@@ -33,6 +33,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   alias Hive.Slack
   alias Hive.Slack.Agents.ConversationAgent
   alias Hive.Slack.API
+  alias Hive.Slack.FlightCommands
   alias Hive.Slack.Message
   alias Hive.Slack.Installation
 
@@ -102,7 +103,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
            "can_create_forage_item" => not is_nil(requester_user)
          },
          {:ok, _reply} <-
-           run_conversation_agent(
+           handle_request(
              input,
              requester_user,
              installation,
@@ -256,7 +257,10 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp thread_size(messages) do
     Enum.reduce(messages, 0, fn message, total ->
-      total + String.length(message["user"] || "") + String.length(message["text"] || "") + 32
+      urls_size = Enum.reduce(message["urls"] || [], 0, &(String.length(&1) + &2))
+
+      total + String.length(message["user"] || "") + String.length(message["text"] || "") +
+        urls_size + 32
     end)
   end
 
@@ -264,7 +268,8 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     %{
       "user" => message.slack_user_id || "",
       "text" => message.text || "",
-      "ts" => message.slack_ts || ""
+      "ts" => message.slack_ts || "",
+      "urls" => evidence_urls(message.raw_payload || %{})
     }
   end
 
@@ -272,9 +277,28 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     %{
       "user" => message["user"] || message["bot_id"] || "",
       "text" => message["text"] || "",
-      "ts" => message["ts"] || ""
+      "ts" => message["ts"] || "",
+      "urls" => evidence_urls(message)
     }
   end
+
+  defp evidence_urls(payload) do
+    payload
+    |> collect_strings()
+    |> Enum.flat_map(&Regex.scan(~r{https?://[^\s<>"|\\]+}, &1))
+    |> Enum.map(&hd/1)
+    |> Enum.map(&Regex.replace(~r/[.,)\]]+\z/, &1, ""))
+    |> Enum.uniq()
+    |> Enum.take(20)
+  end
+
+  defp collect_strings(value) when is_binary(value), do: [value]
+  defp collect_strings(value) when is_list(value), do: Enum.flat_map(value, &collect_strings/1)
+
+  defp collect_strings(value) when is_map(value),
+    do: value |> Map.values() |> Enum.flat_map(&collect_strings/1)
+
+  defp collect_strings(_value), do: []
 
   defp slack_ts_sort_key(slack_ts) when is_binary(slack_ts) do
     case String.split(slack_ts, ".", parts: 2) do
@@ -304,6 +328,31 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp maybe_put_arg(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put_arg(map, key, value), do: Map.put(map, key, value)
+
+  defp handle_request(input, requester_user, installation, slack_channel_id, thread_ts) do
+    case FlightCommands.handle(
+           input["thread"],
+           requester_user,
+           installation,
+           slack_channel_id,
+           thread_ts
+         ) do
+      :not_a_command ->
+        run_conversation_agent(
+          input,
+          requester_user,
+          installation,
+          slack_channel_id,
+          thread_ts
+        )
+
+      {:handled, flight} ->
+        {:ok, flight || :handled}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 
   defp run_conversation_agent(input, nil, installation, slack_channel_id, thread_ts) do
     stream_conversation_agent(input, installation, slack_channel_id, thread_ts)

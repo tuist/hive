@@ -13,6 +13,7 @@ defmodule HiveWeb.ForageComponents do
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
   alias Hive.Forage.GrafanaAlert
+  alias Hive.Flights
   alias Hive.Domains.GitHubRepository
   alias HiveWeb.Layouts
   alias HiveWeb.Markdown
@@ -388,7 +389,7 @@ defmodule HiveWeb.ForageComponents do
       </.card>
 
       <.coding_runs_card
-        :if={@item.origin == :grafana}
+        :if={@item.origin in [:grafana, :github]}
         runs={@coding_runs}
         repositories={@coding_repositories}
         runner_enabled?={@coding_runner_enabled?}
@@ -466,7 +467,7 @@ defmodule HiveWeb.ForageComponents do
   defp coding_runs_card(assigns) do
     ~H"""
     <.card
-      title={dgettext("dashboard_forage", "Coding runs")}
+      title={dgettext("dashboard_forage", "Flights")}
       icon="devices_code"
       data-part="coding-runs-card"
     >
@@ -493,6 +494,20 @@ defmodule HiveWeb.ForageComponents do
             <:icon><.icon name="brand_github" /></:icon>
           </.badge>
           <.select
+            id="forage-coding-run-objective"
+            name={@form[:objective].name}
+            value={Phoenix.HTML.Form.normalize_value("select", @form[:objective].value)}
+            label={dgettext("dashboard_forage", "Choose objective")}
+            disabled={!@can_start?}
+          >
+            <:item
+              :for={objective <- Flights.objectives()}
+              value={Atom.to_string(objective)}
+              label={Flights.objective_label(objective)}
+              icon={objective_icon(objective)}
+            />
+          </.select>
+          <.select
             :if={length(@repositories) > 1}
             id="forage-coding-run-repository"
             name={@form[:repository_id].name}
@@ -510,8 +525,8 @@ defmodule HiveWeb.ForageComponents do
           <.button
             label={
               if @can_start?,
-                do: dgettext("dashboard_forage", "Start run"),
-                else: dgettext("dashboard_forage", "Run in progress")
+                do: dgettext("dashboard_forage", "Start Flight"),
+                else: dgettext("dashboard_forage", "Flight in progress")
             }
             size="medium"
             variant="primary"
@@ -526,7 +541,7 @@ defmodule HiveWeb.ForageComponents do
         <p data-part="coding-runs-description">
           {dgettext(
             "dashboard_forage",
-            "Investigate this alert in an isolated repository. Each run returns a pull request or a written finding."
+            "Investigate, reproduce, or fix this item in an isolated repository. Each Flight preserves its outcome and agent session."
           )}
         </p>
 
@@ -538,7 +553,7 @@ defmodule HiveWeb.ForageComponents do
           description={
             dgettext(
               "dashboard_forage",
-              "Link a GitHub repository to this alert's project before starting a coding run."
+              "Link a GitHub repository to this item's project before starting a Flight."
             )
           }
         />
@@ -549,11 +564,11 @@ defmodule HiveWeb.ForageComponents do
         >
           <.icon name="info_circle" />
           <div>
-            <strong>{dgettext("dashboard_forage", "New runs are paused")}</strong>
+            <strong>{dgettext("dashboard_forage", "New Flights are paused")}</strong>
             <span>
               {dgettext(
               "dashboard_forage",
-                "Configure model inference, GitHub, and a sandbox provider to start another run. Existing results remain available below."
+                "Configure model inference, GitHub, and a sandbox provider to start another Flight. Existing results remain available below."
               )}
             </span>
           </div>
@@ -564,11 +579,11 @@ defmodule HiveWeb.ForageComponents do
         <div :if={@runs == []} data-part="empty-coding-runs">
           <div data-part="empty-icon"><.icon name="history" /></div>
           <div>
-            <strong>{dgettext("dashboard_forage", "No runs yet")}</strong>
+            <strong>{dgettext("dashboard_forage", "No Flights yet")}</strong>
             <p>
               {dgettext(
                 "dashboard_forage",
-                "Start a run to investigate this alert and keep its outcome here."
+                "Start a Flight and preserve its objective, outcome, and session here."
               )}
             </p>
           </div>
@@ -587,7 +602,7 @@ defmodule HiveWeb.ForageComponents do
 
             <div data-part="coding-run-main">
               <div data-part="coding-run-heading">
-                <strong>{presentation.title}</strong>
+                <strong>{Flights.objective_label(run.objective)} · {presentation.title}</strong>
                 <p>{coding_run_summary(run)}</p>
               </div>
 
@@ -626,11 +641,27 @@ defmodule HiveWeb.ForageComponents do
 
             <div data-part="coding-run-actions">
               <.badge
+                :if={run.objective_outcome}
+                label={Flights.objective_outcome_label(run.objective_outcome)}
+                color={Flights.objective_outcome_color(run.objective_outcome)}
+                style="light-fill"
+                size="large"
+              />
+              <.badge
                 label={presentation.badge_label}
                 color={presentation.badge_color}
                 style="light-fill"
                 size="large"
               />
+              <.link navigate={Flights.path(run)}>
+                <.button
+                  label={dgettext("dashboard_forage", "View Flight")}
+                  size="small"
+                  variant="secondary"
+                >
+                  <:icon_right><.icon name="arrow_right" /></:icon_right>
+                </.button>
+              </.link>
               <.button
                 :if={run.result && run.result["url"]}
                 label={dgettext("dashboard_forage", "View pull request")}
@@ -685,7 +716,7 @@ defmodule HiveWeb.ForageComponents do
 
   defp coding_run_presentation(%{status: :failed}) do
     %{
-      title: dgettext("dashboard_forage", "Run failed"),
+      title: dgettext("dashboard_forage", "Flight failed"),
       badge_label: dgettext("dashboard_forage", "Failed"),
       badge_color: "destructive",
       icon: "alert_circle",
@@ -695,7 +726,7 @@ defmodule HiveWeb.ForageComponents do
 
   defp coding_run_presentation(%{status: :running}) do
     %{
-      title: dgettext("dashboard_forage", "Investigating alert"),
+      title: dgettext("dashboard_forage", "Working in the sandbox"),
       badge_label: dgettext("dashboard_forage", "Running"),
       badge_color: "information",
       icon: "circle_dashed",
@@ -705,7 +736,7 @@ defmodule HiveWeb.ForageComponents do
 
   defp coding_run_presentation(%{status: :queued}) do
     %{
-      title: dgettext("dashboard_forage", "Waiting for a runner"),
+      title: dgettext("dashboard_forage", "Waiting for a sandbox"),
       badge_label: dgettext("dashboard_forage", "Queued"),
       badge_color: "neutral",
       icon: "hourglass",
@@ -716,16 +747,21 @@ defmodule HiveWeb.ForageComponents do
   defp coding_run_summary(%{status: :failed, error: error}) when is_binary(error), do: error
 
   defp coding_run_summary(%{result: result}) when is_map(result),
-    do: result["summary"] || dgettext("dashboard_forage", "The run completed without a summary.")
+    do:
+      result["summary"] || dgettext("dashboard_forage", "The Flight completed without a summary.")
 
   defp coding_run_summary(%{status: :running}),
-    do: dgettext("dashboard_forage", "The coding harness is inspecting the linked repository.")
+    do: dgettext("dashboard_forage", "The agent is working in the linked repository.")
 
   defp coding_run_summary(%{status: :queued}),
-    do: dgettext("dashboard_forage", "The run will begin when the sandbox is ready.")
+    do: dgettext("dashboard_forage", "The Flight will begin when the sandbox is ready.")
 
   defp coding_run_summary(_run),
     do: dgettext("dashboard_forage", "No additional details are available.")
+
+  defp objective_icon(:investigate), do: "search"
+  defp objective_icon(:reproduce), do: "history"
+  defp objective_icon(:fix), do: "settings"
 
   defp coding_run_finding(%{result: %{"type" => "report", "root_cause" => finding}})
        when is_binary(finding) and finding != "",
@@ -786,7 +822,7 @@ defmodule HiveWeb.ForageComponents do
   end
 
   defp coding_run_count_label(count),
-    do: dngettext("dashboard_forage", "%{count} run", "%{count} runs", count, count: count)
+    do: dngettext("dashboard_forage", "%{count} Flight", "%{count} Flights", count, count: count)
 
   attr :item, :map, required: true
   attr :edit_comment_form, :any, required: true

@@ -173,6 +173,12 @@ defmodule HiveWeb.Layouts do
             selected={String.starts_with?(@current_path, ~p"/forage")}
           />
           <.sidebar_item
+            label={dgettext("dashboard_flights", "Flights")}
+            icon="player_play"
+            href={~p"/flights"}
+            selected={String.starts_with?(@current_path, ~p"/flights")}
+          />
+          <.sidebar_item
             label={dgettext("dashboard_specs", "Specs")}
             icon="file_text"
             href={~p"/specs"}

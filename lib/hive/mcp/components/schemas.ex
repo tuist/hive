@@ -115,35 +115,81 @@ defmodule Hive.MCP.Components.Schemas do
     }
   end
 
-  def coding_run do
+  def flight do
     %{
       "type" => "object",
       "properties" => %{
         "id" => %{"type" => "string"},
-        "forage_item_id" => %{"type" => "string"},
         "status" => %{"type" => "string"},
+        "objective" => %{"type" => "string"},
+        "objective_outcome" => %{"type" => ["string", "null"]},
         "runner" => %{"type" => "string"},
+        "runner_id" => %{"type" => ["string", "null"]},
         "repository" => %{"type" => "string"},
+        "forage_item" => nullable_flight_forage_item(),
+        "input" => %{"type" => "object", "additionalProperties" => true},
+        "trigger" => %{"type" => "object", "additionalProperties" => true},
+        "session" => %{"type" => ["object", "null"], "additionalProperties" => true},
         "result" => %{"type" => ["object", "null"], "additionalProperties" => true},
         "error" => %{"type" => ["string", "null"]},
+        "requested_by" => nullable_flight_requester(),
+        "parent_flight_id" => %{"type" => ["string", "null"]},
         "started_at" => %{"type" => ["string", "null"]},
         "completed_at" => %{"type" => ["string", "null"]},
         "inserted_at" => %{"type" => "string"},
-        "updated_at" => %{"type" => "string"}
+        "updated_at" => %{"type" => "string"},
+        "path" => %{"type" => "string"}
       },
       "required" => [
         "id",
-        "forage_item_id",
         "status",
+        "objective",
+        "objective_outcome",
         "runner",
+        "runner_id",
         "repository",
+        "forage_item",
+        "input",
+        "trigger",
+        "session",
         "result",
         "error",
+        "requested_by",
+        "parent_flight_id",
         "started_at",
         "completed_at",
         "inserted_at",
-        "updated_at"
+        "updated_at",
+        "path"
       ],
+      "additionalProperties" => false
+    }
+  end
+
+  defp nullable_flight_forage_item do
+    %{
+      "type" => ["object", "null"],
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "type" => %{"type" => "string"},
+        "title" => %{"type" => "string"},
+        "status" => %{"type" => "string"},
+        "path" => %{"type" => ["string", "null"]}
+      },
+      "required" => ["id", "type", "title", "status", "path"],
+      "additionalProperties" => false
+    }
+  end
+
+  defp nullable_flight_requester do
+    %{
+      "type" => ["object", "null"],
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "email" => %{"type" => "string"},
+        "name" => %{"type" => ["string", "null"]}
+      },
+      "required" => ["id", "email", "name"],
       "additionalProperties" => false
     }
   end

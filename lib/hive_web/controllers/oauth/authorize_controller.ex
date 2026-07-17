@@ -99,7 +99,7 @@ defmodule HiveWeb.OAuth.AuthorizeController do
     title = dgettext("dashboard_auth", "Authorize %{client}", client: client_name)
 
     description =
-      dgettext("dashboard_auth", "Allow this client to access Hive MCP as %{user}?",
+      dgettext("dashboard_auth", "Allow this client to access Hive as %{user}?",
         user: authorization.resource_owner.username
       )
 

@@ -39,7 +39,7 @@ defmodule HiveWeb.WellKnownController do
       response_types_supported: ["code"],
       code_challenge_methods_supported: ["S256"],
       resource_parameter_supported: true,
-      scopes_supported: ["mcp"],
+      scopes_supported: ["api", "mcp"],
       token_endpoint_auth_methods_supported: [
         "none",
         "client_secret_basic",
@@ -54,19 +54,35 @@ defmodule HiveWeb.WellKnownController do
     origin = RequestOrigin.from_conn(conn)
 
     case Map.get(params, "resource_path", []) do
-      [] -> json(conn, protected_resource_metadata(origin, "", "Hive"))
-      ["mcp"] -> json(conn, protected_resource_metadata(origin, @mcp_path, "Hive MCP"))
-      _ -> conn |> put_status(:not_found) |> json(%{error: "not_found"})
+      [] ->
+        json(conn, protected_resource_metadata(origin, "", "Hive", ["api", "mcp"]))
+
+      ["api"] ->
+        json(
+          conn,
+          protected_resource_metadata(
+            origin,
+            "/api",
+            "Hive application programming interface",
+            ["api"]
+          )
+        )
+
+      ["mcp"] ->
+        json(conn, protected_resource_metadata(origin, @mcp_path, "Hive MCP", ["mcp"]))
+
+      _ ->
+        conn |> put_status(:not_found) |> json(%{error: "not_found"})
     end
   end
 
-  defp protected_resource_metadata(origin, path, name) do
+  defp protected_resource_metadata(origin, path, name, scopes) do
     %{
       resource: "#{origin}#{path}",
       resource_name: name,
       authorization_servers: [origin],
       bearer_methods_supported: ["header"],
-      scopes_supported: ["mcp"]
+      scopes_supported: scopes
     }
   end
 end

@@ -26,11 +26,6 @@ msgstr ""
 msgid "Allow"
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_controller.ex:102
-#, elixir-autogen, elixir-format
-msgid "Allow this client to access Hive MCP as %{user}?"
-msgstr ""
-
 #: lib/hive_web/controllers/page_html.ex:109
 #, elixir-autogen, elixir-format
 msgid "Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
@@ -108,7 +103,7 @@ msgstr ""
 msgid "Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:412
+#: lib/hive_web/components/layouts.ex:418
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
@@ -171,4 +166,9 @@ msgstr ""
 #: lib/hive_web/auth_controller.ex:55
 #, elixir-autogen, elixir-format
 msgid "Your account isn't from an allowed domain for this instance."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_controller.ex:102
+#, elixir-autogen, elixir-format
+msgid "Allow this client to access Hive as %{user}?"
 msgstr ""

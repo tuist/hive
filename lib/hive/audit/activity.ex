@@ -10,7 +10,7 @@ defmodule Hive.Audit.Activity do
 
   alias Hive.Accounts.User
 
-  @interfaces ~w(dashboard inference mcp webhook worker system)
+  @interfaces ~w(api dashboard inference mcp webhook worker system)
   @actor_kinds ~w(user agent system)
   @string_fields [
     :action,

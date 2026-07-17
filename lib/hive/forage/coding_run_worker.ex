@@ -1,6 +1,6 @@
 defmodule Hive.Forage.CodingRunWorker do
   @moduledoc """
-  Executes one durable coding run outside the dashboard request process.
+  Executes one durable Flight outside the dashboard request process.
   """
 
   use Oban.Worker,
