@@ -126,7 +126,7 @@ msgstr ""
 msgid "Feed"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:165
+#: lib/hive_web/controllers/feed_controller.ex:198
 #: lib/hive_web/live/domain_live/show.ex:58
 #, elixir-autogen, elixir-format
 msgid "Hive · %{domain}"
@@ -215,7 +215,7 @@ msgstr ""
 msgid "This action cannot be undone."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:168
+#: lib/hive_web/controllers/feed_controller.ex:201
 #, elixir-autogen, elixir-format
 msgid "Updates belonging to the %{domain} domain."
 msgstr ""

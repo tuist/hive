@@ -70,6 +70,30 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert client_id == client.id
     end
 
+    test "issues a code for the application programming interface resource", %{conn: conn} do
+      {conn, user} = sign_in(conn, "api-user@example.com")
+      client = oauth_client!()
+
+      conn =
+        post(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=api&resource=http://www.example.com/api&state=state",
+          %{"decision" => "approve"}
+        )
+
+      uri = redirected_to(conn) |> URI.parse()
+      query = URI.decode_query(uri.query)
+
+      assert %Token{
+               type: "code",
+               sub: sub,
+               scope: "api",
+               resource: "http://www.example.com/api"
+             } = Repo.get_by(Token, value: query["code"])
+
+      assert sub == user.id
+    end
+
     test "does not issue an authorization code when consent is denied", %{conn: conn} do
       {conn, _user} = sign_in(conn, "alice@example.com")
       client = oauth_client!()

@@ -41,7 +41,7 @@ defmodule HiveWeb.WellKnownController do
       response_types_supported: ["code"],
       code_challenge_methods_supported: ["S256"],
       resource_parameter_supported: true,
-      scopes_supported: ["mcp", "mobile"],
+      scopes_supported: ["api", "mcp", "mobile"],
       token_endpoint_auth_methods_supported: [
         "none",
         "client_secret_basic",
@@ -57,7 +57,18 @@ defmodule HiveWeb.WellKnownController do
 
     case Map.get(params, "resource_path", []) do
       [] ->
-        json(conn, protected_resource_metadata(origin, "", "Hive", ["mcp", "mobile"]))
+        json(conn, protected_resource_metadata(origin, "", "Hive", ["api", "mcp", "mobile"]))
+
+      ["api"] ->
+        json(
+          conn,
+          protected_resource_metadata(
+            origin,
+            "/api",
+            "Hive application programming interface",
+            ["api"]
+          )
+        )
 
       ["mcp"] ->
         json(conn, protected_resource_metadata(origin, @mcp_path, "Hive MCP", ["mcp"]))

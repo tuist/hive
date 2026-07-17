@@ -42,34 +42,38 @@ Organization members can select **Create spec** from a Forage item. The
 new spec keeps a link to the source so readers can move between the
 reported signal and the proposal that addresses it.
 
-## Address a Grafana alert with a coding run
+## Act on an item with a Flight
 
-Organization members can open a Grafana alert, choose one of the
-repositories linked to its project, and select **Start coding run**. The
-action is always manual. Hive does not start coding work just because an
-alert was received.
+Organization members can open a Grafana alert or GitHub issue, choose a linked
+repository and an **Investigate**, **Reproduce**, or **Fix** objective, and
+select **Start Flight**. The action is always manual.
 
-Hive gives the coding harness an isolated snapshot of the selected
-repository and the alert context. The run can inspect and change files and
-execute commands inside that sandbox. It cannot receive the GitHub App
-credential, push a branch, or open a pull request itself.
+Hive gives the agent an isolated snapshot of the selected repository and item
+context. The run can inspect files and execute commands inside that sandbox.
+Only a Fix Flight can publish returned file changes. The sandbox cannot receive
+the GitHub App credential, push a branch, or open a pull request itself.
 
-When the run finishes, Hive shows one of two results on the alert:
+When the Flight finishes, Hive shows the result on the item:
 
-- A pull request when the harness changed files. Hive publishes the branch,
-  commit, and pull request after the sandbox has stopped.
-- A report when no safe code change was available. The report explains the
-  outcome and any validation the harness completed.
+- A report for an investigation or reproduction attempt. A reproduction can
+  succeed with a `Not reproduced` outcome.
+- A pull request when a Fix Flight returned changed files. Hive publishes the
+  branch, commit, and pull request after the sandbox has stopped.
+- A report when a Fix Flight could not make a safe change.
 
-![Coding run results on a Grafana alert](../../screenshots/forage-coding-runs.png)
+Reports for GitHub issue Flights are also posted as issue comments.
 
-Only one run can be queued or running for the same alert and repository at a
-time. Completed and failed runs remain on the alert so members can inspect
-the history. The same actions are available to connected clients through
-the [Model Context Protocol](https://modelcontextprotocol.io/).
+![Flight results on a Grafana alert](../../screenshots/forage-coding-runs.png)
+
+Only one Flight can be queued or running for the same item and repository at a
+time. Completed and failed Flights remain on the item and in the global
+[Flights history](./flights). The same actions are available to connected
+clients through the [Model Context Protocol](https://modelcontextprotocol.io/)
+with `start_forage_item_flight`. Flight history and continuation context are
+available through the [application programming interface](/reference/api).
 
 The action appears as unavailable until an operator configures Hive
-inference, the GitHub App, and a [coding runner](/reference/configuration#coding-runs).
+inference, the GitHub App, and a [Flight runner](/reference/configuration#coding-runs).
 
 ## Understand visibility
 

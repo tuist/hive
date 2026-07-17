@@ -131,7 +131,7 @@ defmodule Hive.Forage.Grafana do
 
   @doc """
   Fetches one Grafana alert with the project repositories available to a
-  manually triggered coding run.
+  manually triggered Flight.
   """
   def get_alert(id) when is_binary(id) do
     GrafanaAlert
@@ -139,6 +139,19 @@ defmodule Hive.Forage.Grafana do
     |> Repo.get(id)
   rescue
     Ecto.Query.CastError -> nil
+  end
+
+  def find_alerts_by_generator_urls(urls) when is_list(urls) do
+    urls = urls |> Enum.filter(&is_binary/1) |> Enum.uniq()
+
+    if urls == [] do
+      []
+    else
+      GrafanaAlert
+      |> where([alert], alert.generator_url in ^urls)
+      |> preload([:domain, project: :github_repositories])
+      |> Repo.all()
+    end
   end
 
   @doc """

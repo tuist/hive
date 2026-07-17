@@ -45,6 +45,24 @@ defmodule Hive.Agents.Sessions do
   end
 
   @doc """
+  Runs an agent and returns the portable conversation that was created during
+  the run. Thinking blocks are deliberately omitted from the durable session;
+  user prompts, assistant text, tool calls, and tool results are preserved.
+  """
+  def run_with_session(agent_module, prompt, opts \\ [])
+      when is_atom(agent_module) and is_binary(prompt) and is_list(opts) do
+    {inference_role, opts} = Keyword.pop(opts, :inference_role, :inference)
+
+    with {:ok, llm_opts} <- client_opts(inference_role) do
+      run_opts = run_opts(llm_opts, opts)
+
+      Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
+        run_transient_session(agent_module, prompt, run_opts, llm_opts)
+      end)
+    end
+  end
+
+  @doc """
   Streams an agent module with the given prompt and consumes the stream
   inside the transient Condukt session.
   """
@@ -98,6 +116,18 @@ defmodule Hive.Agents.Sessions do
     end)
   end
 
+  defp run_transient_session(agent_module, prompt, run_opts, llm_opts) do
+    Condukt.Session.with_transient(agent_module, run_opts, fn agent ->
+      result = Condukt.run(agent, prompt, run_opts)
+      session = portable_session(agent, agent_module, llm_opts)
+
+      case result do
+        {:ok, response} -> {:ok, %{result: response, session: session}}
+        {:error, reason} -> {:error, reason, session}
+      end
+    end)
+  end
+
   defp agent_actor_context(agent_module, llm_opts) do
     %{actor: Audit.agent_actor(agent_name(agent_module), model: Keyword.get(llm_opts, :model))}
   end
@@ -108,4 +138,53 @@ defmodule Hive.Agents.Sessions do
     |> List.last()
     |> to_string()
   end
+
+  defp portable_session(agent, agent_module, llm_opts) do
+    %{
+      "id" => Condukt.Session.id(agent),
+      "agent" => inspect(agent_module),
+      "model" => Keyword.get(llm_opts, :model),
+      "messages" => agent |> Condukt.history() |> Enum.map(&portable_message/1)
+    }
+  end
+
+  defp portable_message(%Condukt.Message{} = message) do
+    %{
+      "role" => Atom.to_string(message.role),
+      "content" => portable_content(message.content),
+      "tool_call_id" => message.tool_call_id,
+      "timestamp" => message.timestamp && DateTime.to_iso8601(message.timestamp)
+    }
+  end
+
+  defp portable_content(content) when is_binary(content), do: content
+
+  defp portable_content(blocks) when is_list(blocks) do
+    blocks
+    |> Enum.flat_map(fn
+      {:text, text} ->
+        [%{"type" => "text", "text" => text}]
+
+      {:tool_call, id, name, args} ->
+        [%{"type" => "tool_call", "id" => id, "name" => name, "arguments" => json_value(args)}]
+
+      {:thinking, _thinking} ->
+        []
+
+      block ->
+        [%{"type" => "unknown", "value" => inspect(block, limit: 50, printable_limit: 10_000)}]
+    end)
+  end
+
+  defp portable_content(content), do: json_value(content)
+
+  defp json_value(value) when is_map(value) do
+    Map.new(value, fn {key, nested} -> {to_string(key), json_value(nested)} end)
+  end
+
+  defp json_value(value) when is_list(value), do: Enum.map(value, &json_value/1)
+  defp json_value(nil), do: nil
+  defp json_value(value) when is_atom(value), do: Atom.to_string(value)
+  defp json_value(value) when is_binary(value) or is_number(value) or is_boolean(value), do: value
+  defp json_value(value), do: inspect(value, limit: 50, printable_limit: 10_000)
 end

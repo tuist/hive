@@ -17,6 +17,15 @@ without requiring readers to construct it manually.
 | GitHub issues | `/forage/github-issues/atom.xml` | `/forage/github-issues/rss.xml` |
 | Grafana alerts | `/forage/grafana-alerts/atom.xml` | `/forage/grafana-alerts/rss.xml` |
 
+## Flights
+
+| Content | Atom 1.0 | Really Simple Syndication 2.0 |
+|---|---|---|
+| Member-visible Flight history | `/flights/atom.xml` | `/flights/rss.xml` |
+
+Flight feeds require an organization-member session and never expose portable
+agent sessions. Each entry links to its Flight detail page.
+
 ## Specs and Drops
 
 | Content | Atom 1.0 | Really Simple Syndication 2.0 |

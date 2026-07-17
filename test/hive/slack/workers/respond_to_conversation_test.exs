@@ -5,6 +5,9 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
   alias Hive.Audit.Activity
   alias Hive.Domains
+  alias Hive.Flights
+  alias Hive.Flights.Flight
+  alias Hive.Forage.Grafana
   alias Hive.Forage.Intake
   alias Hive.GitHub.Issues
   alias Hive.Projects
@@ -121,6 +124,300 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
 
+  test "perform/1 starts a reproduction Flight from a Grafana alert thread without running the conversation agent" do
+    installation = installation!()
+    channel = channel!(installation, "C-flight")
+    installation_id = installation.id
+    generator_url = "https://grafana.example/alerting/grafana/high-latency/view"
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-flight@example.com",
+        provider: "test",
+        provider_uid: "slack-flight"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-flight", linked_user_id: user.id})
+
+    {:ok, project} = Projects.create_project(%{name: "Slack Flight"})
+
+    {:ok, repository} =
+      Projects.create_repository_for_project(project, %{owner: "tuist", name: unique_repo()})
+
+    {:ok, {webhook, _token}} =
+      Hive.Projects.Webhooks.create(project, %{"name" => "Grafana", "source" => "grafana"})
+
+    {:ok, [alert]} =
+      Grafana.ingest(project, webhook, %{
+        "alerts" => [
+          %{
+            "status" => "firing",
+            "fingerprint" => "slack-flight-#{System.unique_integer([:positive])}",
+            "generatorURL" => generator_url,
+            "labels" => %{"alertname" => "HighLatency"},
+            "annotations" => %{"summary" => "High latency"}
+          }
+        ]
+      })
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id}, "C-flight", "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{
+             "bot_id" => "B-grafana",
+             "text" => "High latency",
+             "ts" => "1.0",
+             "blocks" => [%{"type" => "actions", "elements" => [%{"url" => generator_url}]}]
+           },
+           %{
+             "user" => "U-flight",
+             "text" => "<@U-bot> reproduce this",
+             "ts" => "2.0"
+           }
+         ]
+       }}
+    end)
+
+    expect(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-flight"
+      assert params["thread_ts"] == "1.0"
+      assert params["text"] == "Starting a *Reproduce* Flight..."
+      {:ok, %{"ok" => true, "ts" => "3.0"}}
+    end)
+
+    flight_id = Ecto.UUID.generate()
+
+    expect(Flights, :start_for_item, fn item, repository_id, requester, opts ->
+      assert item.id == "grafana_alert:#{alert.id}"
+      assert repository_id == repository.id
+      assert requester.id == user.id
+      assert opts[:objective] == :reproduce
+
+      assert opts[:trigger] == %{
+               "source" => "slack",
+               "installation_id" => installation.id,
+               "channel_id" => "C-flight",
+               "thread_ts" => "1.0",
+               "message_ts" => "3.0"
+             }
+
+      {:ok,
+       %Flight{
+         id: flight_id,
+         forage_item_id: item.id,
+         status: :queued,
+         objective: :reproduce,
+         runner: "microsandbox",
+         repository_full_name: "tuist/#{repository.name}",
+         repository_id: repository.id,
+         trigger: opts[:trigger],
+         input: %{"title" => item.title}
+       }}
+    end)
+
+    expect(API, :update_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-flight"
+      assert params["ts"] == "3.0"
+      assert params["text"] =~ "*Reproduce Flight queued*"
+      assert params["text"] =~ "/flights/#{flight_id}"
+      {:ok, %{"ok" => true}}
+    end)
+
+    reject(&Sessions.stream/4)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
+  test "perform/1 updates the Slack status message when the Flight fails to start" do
+    installation = installation!()
+    channel = channel!(installation, "C-flight-fail")
+    installation_id = installation.id
+    generator_url = "https://grafana.example/alerting/grafana/flight-fail/view"
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-flight-fail@example.com",
+        provider: "test",
+        provider_uid: "slack-flight-fail"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{slack_user_id: "U-flight-fail", linked_user_id: user.id})
+
+    {:ok, project} = Projects.create_project(%{name: "Slack Flight Fail"})
+
+    {:ok, repository} =
+      Projects.create_repository_for_project(project, %{owner: "tuist", name: unique_repo()})
+
+    {:ok, {webhook, _token}} =
+      Hive.Projects.Webhooks.create(project, %{"name" => "Grafana", "source" => "grafana"})
+
+    {:ok, [_alert]} =
+      Grafana.ingest(project, webhook, %{
+        "alerts" => [
+          %{
+            "status" => "firing",
+            "fingerprint" => "slack-flight-fail-#{System.unique_integer([:positive])}",
+            "generatorURL" => generator_url,
+            "labels" => %{"alertname" => "HighLatency"},
+            "annotations" => %{"summary" => "High latency"}
+          }
+        ]
+      })
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-flight-fail",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{
+             "bot_id" => "B-grafana",
+             "text" => "High latency",
+             "ts" => "1.0",
+             "blocks" => [%{"type" => "actions", "elements" => [%{"url" => generator_url}]}]
+           },
+           %{
+             "user" => "U-flight-fail",
+             "text" => "<@U-bot> reproduce this",
+             "ts" => "2.0"
+           }
+         ]
+       }}
+    end)
+
+    # Exactly one post_message (the "Starting..." message); no separate failure reply.
+    expect(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["text"] == "Starting a *Reproduce* Flight..."
+      {:ok, %{"ok" => true, "ts" => "3.0"}}
+    end)
+
+    expect(Flights, :start_for_item, fn _item, _repository_id, _requester, _opts ->
+      {:error, :not_configured}
+    end)
+
+    expect(API, :update_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["channel"] == "C-flight-fail"
+      assert params["ts"] == "3.0"
+      assert params["text"] == "The Flight runner is not configured in Hive."
+      {:ok, %{"ok" => true}}
+    end)
+
+    reject(&Sessions.stream/4)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
+  test "perform/1 returns the active Flight for a repeated Slack command without spending again" do
+    installation = installation!()
+    channel = channel!(installation, "C-active-flight")
+    installation_id = installation.id
+    generator_url = "https://grafana.example/alerting/grafana/active-flight/view"
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-active-flight@example.com",
+        provider: "test",
+        provider_uid: "slack-active-flight"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{
+        slack_user_id: "U-active-flight",
+        linked_user_id: user.id
+      })
+
+    {:ok, project} = Projects.create_project(%{name: "Slack Active Flight"})
+
+    {:ok, repository} =
+      Projects.create_repository_for_project(project, %{owner: "tuist", name: unique_repo()})
+
+    {:ok, {webhook, _token}} =
+      Hive.Projects.Webhooks.create(project, %{"name" => "Grafana", "source" => "grafana"})
+
+    {:ok, [alert]} =
+      Grafana.ingest(project, webhook, %{
+        "alerts" => [
+          %{
+            "status" => "firing",
+            "fingerprint" => "active-flight-#{System.unique_integer([:positive])}",
+            "generatorURL" => generator_url,
+            "labels" => %{"alertname" => "HighLatency"},
+            "annotations" => %{"summary" => "High latency"}
+          }
+        ]
+      })
+
+    active_flight =
+      %Flight{}
+      |> Flight.changeset(%{
+        forage_item_id: "grafana_alert:#{alert.id}",
+        status: :running,
+        objective: :reproduce,
+        runner: "microsandbox",
+        repository_full_name: "tuist/#{repository.name}",
+        repository_id: repository.id,
+        requested_by_id: user.id,
+        input: %{"title" => "High latency"}
+      })
+      |> Repo.insert!()
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-active-flight",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{
+             "bot_id" => "B-grafana",
+             "text" => "High latency",
+             "ts" => "1.0",
+             "attachments" => [%{"title_link" => generator_url}]
+           },
+           %{
+             "user" => "U-active-flight",
+             "text" => "<@U-bot> reproduce this",
+             "ts" => "2.0"
+           }
+         ]
+       }}
+    end)
+
+    expect(API, :post_message, fn %Installation{id: ^installation_id}, params ->
+      assert params["text"] =~ "already active"
+      assert params["text"] =~ "/flights/#{active_flight.id}"
+      {:ok, %{"ok" => true, "ts" => "3.0"}}
+    end)
+
+    reject(&Flights.start_for_item/4)
+    reject(&Sessions.stream/4)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0",
+               "message_ts" => "2.0"
+             })
+  end
+
   test "perform/1 keeps streamed text when the agent finishes without a submitted result" do
     installation = installation!()
     channel = channel!(installation, "C-no-result")
@@ -180,6 +477,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
   end
+
+  defp unique_repo, do: "hive-#{System.unique_integer([:positive])}"
 
   test "perform/1 leaves configured GitHub labels out until the agent asks for them" do
     installation = installation!()

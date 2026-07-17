@@ -4,6 +4,7 @@ defmodule HiveWeb.ForageLive.Show do
   use HiveWeb, :live_view
 
   alias Hive.Forage
+  alias Hive.Flights
   alias Hive.Forage.CodingRuns
   alias Hive.Forage.FeatureRequest
   alias Hive.Specs
@@ -73,7 +74,10 @@ defmodule HiveWeb.ForageLive.Show do
      |> assign(:coding_repositories, [])
      |> assign(:coding_runner_enabled?, false)
      |> assign(:can_start_coding_run?, false)
-     |> assign(:coding_run_form, to_form(%{"repository_id" => ""}, as: :coding_run))
+     |> assign(
+       :coding_run_form,
+       to_form(%{"repository_id" => "", "objective" => "investigate"}, as: :coding_run)
+     )
      |> assign(:atom_feed, %{
        title: dgettext("dashboard_forage", "Hive · Forage"),
        atom_href: "/forage/atom.xml",
@@ -292,22 +296,29 @@ defmodule HiveWeb.ForageLive.Show do
 
   def handle_event(
         "start_coding_run",
-        %{"coding_run" => %{"repository_id" => repository_id}},
+        %{
+          "coding_run" => %{
+            "repository_id" => repository_id,
+            "objective" => objective
+          }
+        },
         socket
       ) do
     case socket.assigns.item do
-      %{origin: :grafana, source_record: alert} ->
-        case CodingRuns.create_for_grafana_alert(
-               alert,
+      %{origin: origin} = item when origin in [:grafana, :github] ->
+        case Flights.start_for_item(
+               item,
                repository_id,
-               socket.assigns.current_user
+               socket.assigns.current_user,
+               objective: objective,
+               trigger: %{"source" => "dashboard"}
              ) do
           {:ok, _run} ->
             {:noreply,
              socket
              |> put_flash(
                :info,
-               dgettext("dashboard_forage", "Coding run queued. The result will appear here.")
+               dgettext("dashboard_forage", "Flight queued. The result will appear here.")
              )
              |> assign_coding_runs(socket.assigns.item)}
 
@@ -318,7 +329,7 @@ defmodule HiveWeb.ForageLive.Show do
                :error,
                dgettext(
                  "dashboard_forage",
-                 "A coding run is already active for that repository."
+                 "A Flight is already active for that repository."
                )
              )}
 
@@ -327,7 +338,7 @@ defmodule HiveWeb.ForageLive.Show do
              put_flash(
                socket,
                :error,
-               dgettext("dashboard_forage", "The coding runner is not configured.")
+               dgettext("dashboard_forage", "The Flight runner is not configured.")
              )}
 
           {:error, _reason} ->
@@ -335,7 +346,7 @@ defmodule HiveWeb.ForageLive.Show do
              put_flash(
                socket,
                :error,
-               dgettext("dashboard_forage", "The coding run could not be queued.")
+               dgettext("dashboard_forage", "The Flight could not be queued.")
              )}
         end
 
@@ -376,13 +387,8 @@ defmodule HiveWeb.ForageLive.Show do
     |> assign_coding_runs(item)
   end
 
-  defp assign_coding_runs(socket, %{origin: :grafana, source_record: alert} = item) do
-    repositories =
-      case alert.project do
-        %{github_repositories: repositories} when is_list(repositories) -> repositories
-        _other -> []
-      end
-
+  defp assign_coding_runs(socket, %{origin: origin} = item) when origin in [:grafana, :github] do
+    repositories = CodingRuns.repositories_for_item(item)
     runs = CodingRuns.list_for_item(item.id)
     runner_enabled? = CodingRuns.enabled?()
     active? = Enum.any?(runs, &(&1.status in [:queued, :running]))
@@ -398,7 +404,10 @@ defmodule HiveWeb.ForageLive.Show do
     )
     |> assign(
       :coding_run_form,
-      to_form(%{"repository_id" => selected_repository_id || ""}, as: :coding_run)
+      to_form(
+        %{"repository_id" => selected_repository_id || "", "objective" => "investigate"},
+        as: :coding_run
+      )
     )
   end
 

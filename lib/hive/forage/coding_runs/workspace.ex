@@ -31,7 +31,7 @@ defmodule Hive.Forage.CodingRuns.Workspace do
     git config user.name Hive
     git config user.email hive@example.invalid
     git add --all
-    git commit --quiet -m 'Hive coding run baseline'
+    git commit --quiet -m 'Hive Flight baseline'
     git tag #{@base_tag}
     """
   end
@@ -73,7 +73,7 @@ defmodule Hive.Forage.CodingRuns.Workspace do
       ["config", "user.name", "Hive"],
       ["config", "user.email", "hive@example.invalid"],
       ["add", "--all"],
-      ["commit", "--quiet", "-m", "Hive coding run baseline"],
+      ["commit", "--quiet", "-m", "Hive Flight baseline"],
       ["tag", @base_tag]
     ]
 

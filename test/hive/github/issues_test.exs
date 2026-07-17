@@ -139,6 +139,39 @@ defmodule Hive.GitHub.IssuesTest do
     end
   end
 
+  describe "create_comment/4" do
+    test "publishes an issue comment" do
+      request = fn request ->
+        assert request[:method] == :post
+        assert request[:url] == "https://api.github.test/repos/tuist/hive/issues/42/comments"
+        assert request[:json] == %{"body" => "Could not reproduce this issue."}
+
+        {:ok,
+         %{
+           status: 201,
+           body: %{
+             "id" => 2,
+             "body" => "Could not reproduce this issue.",
+             "html_url" => "https://github.com/tuist/hive/issues/42#issuecomment-2",
+             "user" => %{"login" => "hive", "avatar_url" => "https://avatar/hive"},
+             "created_at" => "2026-07-17T00:00:00Z",
+             "updated_at" => "2026-07-17T00:00:00Z"
+           }
+         }}
+      end
+
+      assert {:ok, comment} =
+               Issues.create_comment(repository(), 42, "Could not reproduce this issue.",
+                 config: config(),
+                 installation_token: "installation-token",
+                 request: request
+               )
+
+      assert comment.id == 2
+      assert comment.body == "Could not reproduce this issue."
+    end
+  end
+
   describe "list_labels/2" do
     test "fetches repository labels" do
       request = fn request ->

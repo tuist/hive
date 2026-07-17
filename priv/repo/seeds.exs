@@ -5,7 +5,7 @@ alias Hive.Accounts.UserIdentity
 alias Hive.Audit
 alias Hive.Audit.Activity
 alias Hive.Forage
-alias Hive.Forage.CodingRun
+alias Hive.Flights.Flight
 alias Hive.Forage.FeatureRequest
 alias Hive.Forage.Grafana
 alias Hive.Forage.GrafanaAlert
@@ -709,7 +709,7 @@ inference_profiles = [
     profile: %{
       name: "hive-coding-runtime",
       description:
-        "Dedicated model profile for repository coding runs. Hive uses it for engineering work without changing the model used by other agentic workflows.",
+        "Dedicated model profile for Flights. Hive uses it for engineering work without changing the model used by other agentic workflows.",
       upstream_provider: "fireworks",
       upstream_model: "accounts/fireworks/models/kimi-k2p5",
       input_cost_per_million: "0.15",
@@ -1578,36 +1578,85 @@ Enum.each(grafana_alert_seeds, fn seed ->
   end
 end)
 
-coding_run_alert = Repo.get_by!(GrafanaAlert, fingerprint: "seed-hive-latency")
-coding_run_repository = Repo.get_by!(GitHubRepository, owner: "tuist", name: "hive")
-coding_run_requester = Accounts.get_user_by_email("test@hive.dev")
-coding_run_now = DateTime.utc_now() |> DateTime.truncate(:second)
+flight_alert = Repo.get_by!(GrafanaAlert, fingerprint: "seed-hive-latency")
+flight_repository = Repo.get_by!(GitHubRepository, owner: "tuist", name: "hive")
+flight_requester = Accounts.get_user_by_email("test@hive.dev")
+flight_now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-coding_run_input = %{
+flight_input = %{
   "kind" => "grafana_alert",
-  "alert_id" => coding_run_alert.id,
-  "title" => coding_run_alert.title,
-  "summary" => coding_run_alert.summary,
-  "status" => Atom.to_string(coding_run_alert.status),
-  "labels" => coding_run_alert.labels,
-  "generator_url" => coding_run_alert.generator_url,
+  "alert_id" => flight_alert.id,
+  "title" => flight_alert.title,
+  "summary" => flight_alert.summary,
+  "status" => Atom.to_string(flight_alert.status),
+  "labels" => flight_alert.labels,
+  "generator_url" => flight_alert.generator_url,
   "project" => "Hive",
-  "project_id" => coding_run_alert.project_id,
+  "project_id" => flight_alert.project_id,
   "repository" => "tuist/hive"
 }
 
-coding_run_seeds = [
+flight_source = %{
+  "repository" => "tuist/hive",
+  "base_branch" => "main",
+  "base_revision" => "9f83d21"
+}
+
+flight_seeds = [
   %{
-    runner_id: "seed-coding-run-pull-request",
+    runner_id: "seed-flight-pull-request",
+    legacy_runner_id: "seed-coding-run-pull-request",
     status: :succeeded,
-    inserted_at: DateTime.add(coding_run_now, -55, :minute),
-    started_at: DateTime.add(coding_run_now, -54, :minute),
-    completed_at: DateTime.add(coding_run_now, -38, :minute),
+    inserted_at: DateTime.add(flight_now, -55, :minute),
+    started_at: DateTime.add(flight_now, -54, :minute),
+    completed_at: DateTime.add(flight_now, -38, :minute),
+    session: %{
+      "id" => "seed-flight-pull-request",
+      "agent" => "Hive.Forage.Agents.GrafanaAlertCodingAgent",
+      "model" => "openai:hive-coding",
+      "source" => flight_source,
+      "messages" => [
+        %{
+          "role" => "user",
+          "content" =>
+            "Investigate the Hive request latency alert and make a safe repository change when justified."
+        },
+        %{
+          "role" => "assistant",
+          "content" => [
+            %{
+              "type" => "tool_call",
+              "id" => "seed-read-router",
+              "name" => "read",
+              "arguments" => %{"path" => "lib/hive_web/router.ex"}
+            },
+            %{
+              "type" => "text",
+              "text" =>
+                "The alert query is unbounded. I will add a limit and cover the slow request path."
+            }
+          ]
+        },
+        %{
+          "role" => "tool_result",
+          "tool_call_id" => "seed-read-router",
+          "content" => %{"path" => "lib/hive_web/router.ex", "status" => "read"}
+        },
+        %{
+          "role" => "assistant",
+          "content" =>
+            "The query is bounded and the targeted tests pass. The changes are ready for Hive to publish."
+        }
+      ]
+    },
     result: %{
       "type" => "pull_request",
       "number" => 128,
       "title" => "fix(web): bound alert latency queries",
       "url" => "https://github.com/tuist/hive/pull/128",
+      "branch" => "hive/flight-bound-latency",
+      "base_branch" => "main",
+      "base_revision" => "9f83d21",
       "repository" => "tuist/hive",
       "summary" =>
         "Bounded the alert query and added coverage for the slow request path that triggered the latency alert.",
@@ -1618,11 +1667,26 @@ coding_run_seeds = [
     }
   },
   %{
-    runner_id: "seed-coding-run-report",
+    runner_id: "seed-flight-report",
+    legacy_runner_id: "seed-coding-run-report",
     status: :succeeded,
-    inserted_at: DateTime.add(coding_run_now, -150, :minute),
-    started_at: DateTime.add(coding_run_now, -149, :minute),
-    completed_at: DateTime.add(coding_run_now, -143, :minute),
+    inserted_at: DateTime.add(flight_now, -150, :minute),
+    started_at: DateTime.add(flight_now, -149, :minute),
+    completed_at: DateTime.add(flight_now, -143, :minute),
+    session: %{
+      "id" => "seed-flight-report",
+      "agent" => "Hive.Forage.Agents.GrafanaAlertCodingAgent",
+      "model" => "openai:hive-coding",
+      "source" => flight_source,
+      "messages" => [
+        %{"role" => "user", "content" => "Investigate the recovered alert."},
+        %{
+          "role" => "assistant",
+          "content" =>
+            "The alert recovered and the available evidence does not justify a repository change."
+        }
+      ]
+    },
     result: %{
       "type" => "report",
       "repository" => "tuist/hive",
@@ -1635,35 +1699,38 @@ coding_run_seeds = [
     }
   },
   %{
-    runner_id: "seed-coding-run-failed",
+    runner_id: "seed-flight-failed",
+    legacy_runner_id: "seed-coding-run-failed",
     status: :failed,
-    inserted_at: DateTime.add(coding_run_now, -240, :minute),
-    started_at: DateTime.add(coding_run_now, -239, :minute),
-    completed_at: DateTime.add(coding_run_now, -238, :minute),
+    inserted_at: DateTime.add(flight_now, -240, :minute),
+    started_at: DateTime.add(flight_now, -239, :minute),
+    completed_at: DateTime.add(flight_now, -238, :minute),
     error: "The sandbox setup command exited before the coding harness could start."
   }
 ]
 
-Enum.each(coding_run_seeds, fn seed ->
+Enum.each(flight_seeds, fn seed ->
   attrs =
     seed
+    |> Map.delete(:legacy_runner_id)
     |> Map.merge(%{
-      forage_item_id: "grafana_alert:#{coding_run_alert.id}",
+      forage_item_id: "grafana_alert:#{flight_alert.id}",
       runner: "microsandbox",
       repository_full_name: "tuist/hive",
-      repository_id: coding_run_repository.id,
-      requested_by_id: coding_run_requester.id,
-      input: coding_run_input,
-      updated_at: coding_run_now
+      repository_id: flight_repository.id,
+      requested_by_id: flight_requester.id,
+      input: flight_input,
+      updated_at: flight_now
     })
 
-  case Repo.get_by(CodingRun, runner_id: seed.runner_id) do
-    nil -> %CodingRun{}
-    coding_run -> coding_run
+  case Repo.get_by(Flight, runner_id: seed.runner_id) ||
+         Repo.get_by(Flight, runner_id: seed.legacy_runner_id) do
+    nil -> %Flight{}
+    flight -> flight
   end
-  |> CodingRun.changeset(attrs)
+  |> Flight.changeset(attrs)
   |> Ecto.Changeset.put_change(:inserted_at, seed.inserted_at)
-  |> Ecto.Changeset.put_change(:updated_at, coding_run_now)
+  |> Ecto.Changeset.put_change(:updated_at, flight_now)
   |> Repo.insert_or_update!()
 end)
 

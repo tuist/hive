@@ -95,6 +95,14 @@ defmodule Hive.Slack.UnfurlerTest do
     assert button_url(payload) == app_url("/ops/slack")
   end
 
+  test "uses generic metadata for the Flights index and skips Flight details" do
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/flights"))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Flights"))
+    assert button_url(payload) == app_url("/flights")
+
+    assert Unfurler.unfurl(app_url("/flights/#{Ecto.UUID.generate()}")) == :skip
+  end
+
   test "delegates spec detail links to the owning route" do
     spec = spec!()
     assert {:ok, payload} = Unfurler.unfurl(app_url("/specs/#{spec.number}"))

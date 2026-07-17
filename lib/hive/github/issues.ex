@@ -57,6 +57,14 @@ defmodule Hive.GitHub.Issues do
     end
   end
 
+  def create_comment(repository, issue_number, body, opts \\ [])
+      when is_integer(issue_number) and is_binary(body) do
+    with {:ok, config} <- Client.config(opts),
+         {:ok, token} <- Client.installation_token(config, opts) do
+      create_comment(config, token, repository, issue_number, body, opts)
+    end
+  end
+
   def list_labels(repository, opts \\ []) do
     with {:ok, config} <- Client.config(opts),
          {:ok, token} <- Client.installation_token(config, opts) do
@@ -237,6 +245,30 @@ defmodule Hive.GitHub.Issues do
 
   defp fetch_comments(config, token, %{owner: owner, name: name}, issue_number, opts) do
     fetch_comments(config, token, owner, name, issue_number, opts, 1, [])
+  end
+
+  defp create_comment(config, token, %{owner: owner, name: name}, issue_number, body, opts) do
+    url = "#{config.api_url}/repos/#{owner}/#{name}/issues/#{issue_number}/comments"
+
+    Client.request(
+      [
+        method: :post,
+        url: url,
+        headers: Client.headers(token),
+        json: %{"body" => body}
+      ],
+      opts
+    )
+    |> case do
+      {:ok, %{status: status, body: response}} when status in [200, 201] and is_map(response) ->
+        {:ok, comment_from_api(response)}
+
+      {:ok, %{status: status, body: response}} ->
+        {:error, {:unexpected_status, status, response}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   defp fetch_comments(_config, _token, _owner, _name, _issue_number, _opts, page, acc)

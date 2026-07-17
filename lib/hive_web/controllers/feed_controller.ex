@@ -14,6 +14,8 @@ defmodule HiveWeb.FeedController do
   alias Hive.Auth
   alias Hive.Drops
   alias Hive.Drops.WeeklyDigests
+  alias Hive.Flights
+  alias Hive.Flights.Policy, as: FlightsPolicy
   alias Hive.Forage
   alias Hive.Forage.Grafana
   alias Hive.Domains
@@ -37,6 +39,9 @@ defmodule HiveWeb.FeedController do
 
   def grafana_alerts_atom(conn, _params), do: serve_grafana(conn, :atom)
   def grafana_alerts_rss(conn, _params), do: serve_grafana(conn, :rss)
+
+  def flights_atom(conn, _params), do: serve_flights(conn, :atom)
+  def flights_rss(conn, _params), do: serve_flights(conn, :rss)
 
   def specs_atom(conn, _params), do: send_feed(conn, :atom, specs_feed(conn))
   def specs_rss(conn, _params), do: send_feed(conn, :rss, specs_feed(conn))
@@ -132,6 +137,34 @@ defmodule HiveWeb.FeedController do
       self_url: feed_url(conn),
       alternate_url: page_url(conn, "/forage/grafana-alerts"),
       entries: Enum.map(alerts, &grafana_alert_entry(conn, &1))
+    }
+  end
+
+  defp serve_flights(conn, format) do
+    user = Auth.current_user(conn)
+
+    if FlightsPolicy.authorize?(:flight_read, user, nil) do
+      send_feed(conn, format, flights_feed(conn, user))
+    else
+      not_found(conn, format)
+    end
+  end
+
+  defp flights_feed(conn, user) do
+    {flights, _meta} = Flights.list_flights_for_user(user, page_size: :all)
+
+    %{
+      id: feed_id(conn),
+      title: dgettext("dashboard_flights", "Hive · Flights"),
+      subtitle:
+        dgettext(
+          "dashboard_flights",
+          "Durable agent executions with their Forage context and outcomes."
+        ),
+      updated: latest_updated(flights, fn flight -> flight.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/flights"),
+      entries: Enum.map(flights, &flight_entry(conn, &1))
     }
   end
 
@@ -400,6 +433,20 @@ defmodule HiveWeb.FeedController do
       summary: alert.summary
     }
   end
+
+  defp flight_entry(conn, flight) do
+    %{
+      id: "urn:hive:flight:#{flight.id}",
+      title: Flights.title(flight),
+      updated: flight.updated_at,
+      url: page_url(conn, Flights.path(flight)),
+      summary: flight_summary(flight)
+    }
+  end
+
+  defp flight_summary(%{result: %{"summary" => summary}}) when is_binary(summary), do: summary
+  defp flight_summary(%{error: error}) when is_binary(error), do: error
+  defp flight_summary(_flight), do: nil
 
   defp spec_entry(conn, spec) do
     url = page_url(conn, "/specs/#{spec.number}")

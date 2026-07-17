@@ -32,7 +32,7 @@ Changing the configured domains later does not change existing roles.
 | Submit Forage items | no | yes | yes | yes |
 | Comment on visible Forage items and specs | no | yes | yes | yes |
 | Create Forage items as GitHub issues | no | no | yes | yes |
-| Start and inspect Grafana alert coding runs | no | no | yes | yes |
+| Start and inspect Flights | no | no | yes | yes |
 | View private product work | no | no | yes | yes |
 | Create and manage projects, domains, and specs | no | no | yes | yes |
 | Manage Forage intake | no | no | no | yes |

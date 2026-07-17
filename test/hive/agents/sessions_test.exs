@@ -56,6 +56,52 @@ defmodule Hive.Agents.SessionsTest do
              Sessions.run(NoopAgent, "fix the repository", inference_role: :coding)
   end
 
+  test "returns a portable session without model thinking blocks" do
+    expect(Agents, :coding_client_opts, fn ->
+      {:ok, [model: "openai:hive-coding", api_key: "key"]}
+    end)
+
+    expect(Condukt.Session, :with_transient, fn NoopAgent, opts, fun ->
+      assert opts[:id] == "flight-id"
+      fun.(:agent_pid)
+    end)
+
+    expect(Condukt, :run, fn :agent_pid, "fix the repository", _opts ->
+      {:ok, %{summary: "done"}}
+    end)
+
+    expect(Condukt.Session, :id, fn :agent_pid -> "flight-id" end)
+
+    expect(Condukt, :history, fn :agent_pid ->
+      [
+        Condukt.Message.user("fix the repository"),
+        Condukt.Message.assistant([
+          {:thinking, "private reasoning"},
+          {:tool_call, "call-1", "read", %{path: "lib/hive.ex"}},
+          {:text, "I found the issue."}
+        ]),
+        Condukt.Message.tool_result("call-1", %{content: "source"})
+      ]
+    end)
+
+    assert {:ok, %{result: %{summary: "done"}, session: session}} =
+             Sessions.run_with_session(NoopAgent, "fix the repository",
+               inference_role: :coding,
+               id: "flight-id"
+             )
+
+    assert session["id"] == "flight-id"
+    assert session["model"] == "openai:hive-coding"
+    assert [user_message, assistant_message, tool_result] = session["messages"]
+    assert user_message["content"] == "fix the repository"
+    refute inspect(assistant_message) =~ "private reasoning"
+
+    assert [%{"arguments" => %{"path" => "lib/hive.ex"}}, %{"text" => "I found the issue."}] =
+             assistant_message["content"]
+
+    assert tool_result["content"] == %{"content" => "source"}
+  end
+
   test "streams inside a transient session with the agent actor context" do
     stub(Agents, :client_opts, fn ->
       {:ok, [model: "anthropic:claude-haiku-4-5", api_key: "key"]}

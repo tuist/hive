@@ -148,7 +148,7 @@ Optional GitHub application programming interface
 Fallback provider key for features backed by a
 [large language model](https://en.wikipedia.org/wiki/Large_language_model).
 Agentic workflows prefer the profile marked **Use for Hive inference** in
-the dashboard. Coding runs first prefer the profile marked **Use for Hive
+the dashboard. Flights first prefer the profile marked **Use for Hive
 coding**, then fall back to the general inference profile. When no applicable
 profile is marked and this value is unset, agentic workflows stay dormant.
 
@@ -164,9 +164,9 @@ prefix together with `HIVE_LLM_BASE_URL`.
 Optional fallback provider endpoint override for OpenAI-compatible
 gateways or self-hosted providers.
 
-## Coding runs {#coding-runs}
+## Flight runners {#coding-runs}
 
-Coding runs require a profile marked **Use for Hive coding**, a general Hive
+Flights require a profile marked **Use for Hive coding**, a general Hive
 inference profile, or the launch-time model configuration. They also require a
 configured GitHub App and one of the sandbox runners below. They are disabled
 when any required part is missing. The model and GitHub credentials stay in
@@ -174,10 +174,10 @@ Hive and are never passed into the sandbox.
 
 ### HIVE_CODING_RUNNER {#hive_coding_runner}
 
-Names the sandbox provider used for new coding runs. Use `microsandbox` for
+Names the sandbox provider used for new Flights. Use `microsandbox` for
 local development, `kubernetes` for production on
 [Kubernetes Agent Sandbox](https://agent-sandbox.sigs.k8s.io/), or `disabled`
-to turn coding runs off. The default is `microsandbox` in development and
+to turn Flights off. The default is `microsandbox` in development and
 `disabled` in other environments.
 
 The local runner requires the `microsandbox` executable installed by
@@ -186,7 +186,7 @@ a gVisor runtime class, and permission for Hive to create Sandbox resources
 and execute commands in their pods.
 
 Other names select a custom provider supplied through
-`HIVE_CODING_SANDBOX_MODULE`. The name is stored with each run, so keep it
+`HIVE_CODING_SANDBOX_MODULE`. The name is stored with each Flight, so keep it
 stable when changing that provider's implementation.
 
 ### HIVE_CODING_SANDBOX_MODULE {#hive_coding_sandbox_module}
@@ -195,7 +195,7 @@ Fully qualified Elixir module for a custom sandbox provider. The module must be
 compiled into the Hive release and implement the
 [Condukt sandbox behaviour](https://github.com/tuist/condukt/blob/main/lib/condukt/sandbox.ex).
 Hive validates the required file, search, and command operations before
-enabling coding runs. Built-in `microsandbox` and `kubernetes` providers ignore
+enabling Flights. Built-in `microsandbox` and `kubernetes` providers ignore
 this setting.
 
 Hive creates the repository baseline after the custom provider starts. The
@@ -240,7 +240,7 @@ and configure gVisor on the selected worker nodes before enabling the runner.
 
 Optional state directory for the local microsandbox runtime. Hive defaults to
 the short application-specific `/tmp/hive-msb` directory so Unix socket paths
-remain within operating-system limits and coding runs do not share runtime
+remain within operating-system limits and Flights do not share runtime
 metadata with manually managed local sandboxes.
 
 ### HIVE_CODING_IMAGE {#hive_coding_image}
@@ -270,7 +270,7 @@ provider does not use this setting.
 
 ### HIVE_CODING_TIMEOUT_MINUTES {#hive_coding_timeout_minutes}
 
-Maximum duration of one coding run in minutes. Defaults to `30`. Hive also
+Maximum duration of one Flight in minutes. Defaults to `30`. Hive also
 sets the remote sandbox's automatic cleanup timer beyond this limit.
 
 ### HIVE_CODING_SETUP_COMMAND {#hive_coding_setup_command}
