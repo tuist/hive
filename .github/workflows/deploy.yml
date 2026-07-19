@@ -30,7 +30,7 @@ env:
   HELM_CHART_PATH: infra/helm/hive
   HELM_RELEASE_NAME: hive
   NAMESPACE: hive-production
-  AGENT_SANDBOX_VERSION: v0.5.1
+  AGENT_SANDBOX_VERSION: v0.5.2
   DEPLOY_SHA: ${{ inputs.commit_sha || github.sha }}
 
 jobs:
@@ -111,8 +111,10 @@ jobs:
       - name: Install Agent Sandbox controller
         run: |
           kubectl apply --server-side \
-            -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/manifest.yaml"
+            -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/sandbox.yaml"
           kubectl -n agent-sandbox-system rollout status deploy/agent-sandbox-controller --timeout=5m
+      - name: Install gVisor RuntimeClass
+        run: kubectl apply --server-side -f infra/k8s/gvisor-runtime-class.yaml
       - name: Verify sandbox worker capacity
         run: |
           set -euo pipefail
@@ -121,6 +123,39 @@ jobs:
           kubectl get nodes -l hive.tuist.dev/workload=coding-sandbox \
             -o jsonpath='{range .items[*]}{range .spec.taints[*]}{.key}={.value}:{.effect}{"\n"}{end}{end}' \
             | grep -qx 'hive.tuist.dev/workload=coding-sandbox:NoSchedule'
+      - name: Verify gVisor runtime
+        run: |
+          set -euo pipefail
+          preflight_pod="gvisor-preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'kubectl delete pod "$preflight_pod" --ignore-not-found --wait=false' EXIT
+          kubectl create -f - <<YAML
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: ${preflight_pod}
+          spec:
+            automountServiceAccountToken: false
+            restartPolicy: Never
+            runtimeClassName: gvisor
+            containers:
+              - name: verify
+                image: busybox:1.37.0
+                command:
+                  - sh
+                  - -ec
+                  - dmesg | grep -q "Starting gVisor"
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - ALL
+          YAML
+          if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            "pod/${preflight_pod}" --timeout=2m; then
+            kubectl describe "pod/${preflight_pod}"
+            kubectl logs "pod/${preflight_pod}" || true
+            exit 1
+          fi
       - name: Recover stuck release
         run: |
           status=$(helm status "$HELM_RELEASE_NAME" -n "$NAMESPACE" -o json 2>/dev/null \
