@@ -80,7 +80,7 @@ jobs:
     environment:
       name: production
       url: https://hive.tuist.dev
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       KUBECONFIG: ${{ github.workspace }}/.kube/config
     steps:
@@ -128,6 +128,10 @@ jobs:
           set -euo pipefail
           preflight_pod="gvisor-preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           trap 'kubectl delete pod "$preflight_pod" --ignore-not-found --wait=false' EXIT
+          # runsc always answers syslog(2) with its "Starting gVisor" banner for
+          # any process, so the check needs no capabilities. The securityContext
+          # is written to satisfy the restricted Pod Security Standard (nonroot,
+          # seccomp, no caps) so admission can never reject the preflight itself.
           kubectl create -f - <<YAML
           apiVersion: v1
           kind: Pod
@@ -137,6 +141,12 @@ jobs:
             automountServiceAccountToken: false
             restartPolicy: Never
             runtimeClassName: gvisor
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
             containers:
               - name: verify
                 image: busybox:1.37.0
@@ -144,18 +154,48 @@ jobs:
                   - sh
                   - -ec
                   - dmesg | grep -q "Starting gVisor"
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 16Mi
+                  limits:
+                    cpu: 100m
+                    memory: 32Mi
                 securityContext:
                   allowPrivilegeEscalation: false
                   capabilities:
                     drop:
                       - ALL
           YAML
-          if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
-            "pod/${preflight_pod}" --timeout=2m; then
-            kubectl describe "pod/${preflight_pod}"
-            kubectl logs "pod/${preflight_pod}" || true
-            exit 1
-          fi
+          # Poll the phase directly instead of `kubectl wait ...=Succeeded`: that
+          # cannot short-circuit on a Failed pod (it would block the full deadline
+          # on a genuinely broken runtime), and it cannot tell a slow cold-node
+          # schedule or image pull apart from a real gVisor failure. A Pending pod
+          # is capacity, not a runtime verdict, so it gets the whole deadline.
+          deadline=$(( SECONDS + 300 ))
+          while :; do
+            phase="$(kubectl get "pod/${preflight_pod}" \
+              -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+            case "$phase" in
+              Succeeded)
+                echo "gVisor verified: runsc sandboxed the preflight pod on coding-sandbox capacity."
+                exit 0
+                ;;
+              Failed)
+                echo "::error::gVisor preflight ran but did not report a gVisor kernel; runsc is not sandboxing workloads on the coding-sandbox pool."
+                kubectl describe "pod/${preflight_pod}" || true
+                kubectl logs "pod/${preflight_pod}" || true
+                exit 1
+                ;;
+            esac
+            if (( SECONDS >= deadline )); then
+              echo "::error::gVisor preflight pod never ran (still ${phase:-Pending} after 5m). This is almost always coding-sandbox scheduling or busybox image-pull capacity, not a runtime failure; check the events below."
+              kubectl describe "pod/${preflight_pod}" || true
+              kubectl logs "pod/${preflight_pod}" 2>/dev/null || true
+              exit 1
+            fi
+            sleep 3
+          done
       - name: Recover stuck release
         run: |
           status=$(helm status "$HELM_RELEASE_NAME" -n "$NAMESPACE" -o json 2>/dev/null \
