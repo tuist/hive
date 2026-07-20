@@ -1,0 +1,13 @@
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+handler: runsc
+scheduling:
+  nodeSelector:
+    hive.tuist.dev/workload: coding-sandbox
+  tolerations:
+    - key: hive.tuist.dev/workload
+      operator: Equal
+      value: coding-sandbox
+      effect: NoSchedule

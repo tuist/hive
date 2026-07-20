@@ -30,7 +30,7 @@ env:
   HELM_CHART_PATH: infra/helm/hive
   HELM_RELEASE_NAME: hive
   NAMESPACE: hive-production
-  AGENT_SANDBOX_VERSION: v0.5.1
+  AGENT_SANDBOX_VERSION: v0.5.2
   DEPLOY_SHA: ${{ inputs.commit_sha || github.sha }}
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
     environment:
       name: production
       url: https://hive.tuist.dev
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       KUBECONFIG: ${{ github.workspace }}/.kube/config
     steps:
@@ -89,7 +89,7 @@ jobs:
           ref: ${{ env.DEPLOY_SHA }}
       - uses: jdx/mise-action@v4
         with:
-          install_args: "helm kubectl"
+          install_args: "helm kubectl yq"
           cache: "false"
       - uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3
         with:
@@ -108,12 +108,33 @@ jobs:
           API="$(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
           echo "Reaching apiserver at $API"
           kubectl --request-timeout=10s get --raw /version >/dev/null
+      # The production overlay is the single source of truth for whether coding
+      # sandboxes ship. Keying the Agent Sandbox install and the gVisor gates off
+      # it means flipping `codingRuns.provider` back to `kubernetes` restores the
+      # preflight automatically, with no second flag to keep in sync.
+      - name: Resolve coding sandbox mode
+        id: sandboxes
+        run: |
+          set -euo pipefail
+          provider="$(yq '.codingRuns.provider' "$HELM_CHART_PATH/values-production.yaml")"
+          echo "Coding sandbox provider in the production overlay: ${provider}"
+          if [ "$provider" = "kubernetes" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping Agent Sandbox install and gVisor preflight: coding runs are not scheduled on this cluster."
+          fi
       - name: Install Agent Sandbox controller
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: |
           kubectl apply --server-side \
-            -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/manifest.yaml"
+            -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/sandbox.yaml"
           kubectl -n agent-sandbox-system rollout status deploy/agent-sandbox-controller --timeout=5m
+      - name: Install gVisor RuntimeClass
+        if: steps.sandboxes.outputs.enabled == 'true'
+        run: kubectl apply --server-side -f infra/k8s/gvisor-runtime-class.yaml
       - name: Verify sandbox worker capacity
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           kubectl get runtimeclass gvisor >/dev/null
@@ -121,6 +142,80 @@ jobs:
           kubectl get nodes -l hive.tuist.dev/workload=coding-sandbox \
             -o jsonpath='{range .items[*]}{range .spec.taints[*]}{.key}={.value}:{.effect}{"\n"}{end}{end}' \
             | grep -qx 'hive.tuist.dev/workload=coding-sandbox:NoSchedule'
+      - name: Verify gVisor runtime
+        if: steps.sandboxes.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          preflight_pod="gvisor-preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'kubectl delete pod "$preflight_pod" --ignore-not-found --wait=false' EXIT
+          # runsc always answers syslog(2) with its "Starting gVisor" banner for
+          # any process, so the check needs no capabilities. The securityContext
+          # is written to satisfy the restricted Pod Security Standard (nonroot,
+          # seccomp, no caps) so admission can never reject the preflight itself.
+          kubectl create -f - <<YAML
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: ${preflight_pod}
+          spec:
+            automountServiceAccountToken: false
+            restartPolicy: Never
+            runtimeClassName: gvisor
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: verify
+                image: busybox:1.37.0
+                command:
+                  - sh
+                  - -ec
+                  - dmesg | grep -q "Starting gVisor"
+                resources:
+                  requests:
+                    cpu: 10m
+                    memory: 16Mi
+                  limits:
+                    cpu: 100m
+                    memory: 32Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - ALL
+          YAML
+          # Poll the phase directly instead of `kubectl wait ...=Succeeded`: that
+          # cannot short-circuit on a Failed pod (it would block the full deadline
+          # on a genuinely broken runtime), and it cannot tell a slow cold-node
+          # schedule or image pull apart from a real gVisor failure. A Pending pod
+          # is capacity, not a runtime verdict, so it gets the whole deadline.
+          deadline=$(( SECONDS + 300 ))
+          while :; do
+            phase="$(kubectl get "pod/${preflight_pod}" \
+              -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+            case "$phase" in
+              Succeeded)
+                echo "gVisor verified: runsc sandboxed the preflight pod on coding-sandbox capacity."
+                exit 0
+                ;;
+              Failed)
+                echo "::error::gVisor preflight ran but did not report a gVisor kernel; runsc is not sandboxing workloads on the coding-sandbox pool."
+                kubectl describe "pod/${preflight_pod}" || true
+                kubectl logs "pod/${preflight_pod}" || true
+                exit 1
+                ;;
+            esac
+            if (( SECONDS >= deadline )); then
+              echo "::error::gVisor preflight pod never ran (still ${phase:-Pending} after 5m). This is almost always coding-sandbox scheduling or busybox image-pull capacity, not a runtime failure; check the events below."
+              kubectl describe "pod/${preflight_pod}" || true
+              kubectl logs "pod/${preflight_pod}" 2>/dev/null || true
+              exit 1
+            fi
+            sleep 3
+          done
       - name: Recover stuck release
         run: |
           status=$(helm status "$HELM_RELEASE_NAME" -n "$NAMESPACE" -o json 2>/dev/null \
