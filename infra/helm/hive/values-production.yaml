@@ -49,7 +49,16 @@ env:
   HIVE_LLM_MODEL: "fireworks_ai:accounts/fireworks/models/kimi-k2p7-code"
 
 codingRuns:
-  provider: kubernetes
+  # Temporarily disabled to unblock deploys. The coding-sandbox pool is a
+  # single fixed cpx42 node (~4 concurrent sandboxes) with no autoscaler, and
+  # the gVisor preflight gate was blocking every production deploy. Re-enable
+  # by flipping this back to `kubernetes`: the deploy workflow keys its Agent
+  # Sandbox and gVisor verification off this value, so the gates come back
+  # automatically. Owner: @pepicrft. Removal condition: coding-sandbox node
+  # capacity scales with demand (autoscaler bounds on the `coding-sandbox`
+  # MachineDeployment in tuist/tuist, plus a hive-production autoscaler
+  # instance) so runs no longer contend for one node's worth of capacity.
+  provider: disabled
   image:
     repository: ghcr.io/tuist/hive-coding-sandbox
     tag: sha-set-by-deploy

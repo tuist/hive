@@ -89,7 +89,7 @@ jobs:
           ref: ${{ env.DEPLOY_SHA }}
       - uses: jdx/mise-action@v4
         with:
-          install_args: "helm kubectl"
+          install_args: "helm kubectl yq"
           cache: "false"
       - uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3
         with:
@@ -108,14 +108,33 @@ jobs:
           API="$(kubectl config view --minify --raw -o jsonpath='{.clusters[0].cluster.server}')"
           echo "Reaching apiserver at $API"
           kubectl --request-timeout=10s get --raw /version >/dev/null
+      # The production overlay is the single source of truth for whether coding
+      # sandboxes ship. Keying the Agent Sandbox install and the gVisor gates off
+      # it means flipping `codingRuns.provider` back to `kubernetes` restores the
+      # preflight automatically, with no second flag to keep in sync.
+      - name: Resolve coding sandbox mode
+        id: sandboxes
+        run: |
+          set -euo pipefail
+          provider="$(yq '.codingRuns.provider' "$HELM_CHART_PATH/values-production.yaml")"
+          echo "Coding sandbox provider in the production overlay: ${provider}"
+          if [ "$provider" = "kubernetes" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping Agent Sandbox install and gVisor preflight: coding runs are not scheduled on this cluster."
+          fi
       - name: Install Agent Sandbox controller
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: |
           kubectl apply --server-side \
             -f "https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${AGENT_SANDBOX_VERSION}/sandbox.yaml"
           kubectl -n agent-sandbox-system rollout status deploy/agent-sandbox-controller --timeout=5m
       - name: Install gVisor RuntimeClass
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: kubectl apply --server-side -f infra/k8s/gvisor-runtime-class.yaml
       - name: Verify sandbox worker capacity
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           kubectl get runtimeclass gvisor >/dev/null
@@ -124,6 +143,7 @@ jobs:
             -o jsonpath='{range .items[*]}{range .spec.taints[*]}{.key}={.value}:{.effect}{"\n"}{end}{end}' \
             | grep -qx 'hive.tuist.dev/workload=coding-sandbox:NoSchedule'
       - name: Verify gVisor runtime
+        if: steps.sandboxes.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           preflight_pod="gvisor-preflight-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
