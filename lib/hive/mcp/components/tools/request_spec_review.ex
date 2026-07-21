@@ -65,14 +65,8 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
       {:ok, spec} ->
         json_response(%{ok: true, spec: SpecTool.spec_json(Specs.get_spec!(spec.id))})
 
-      {:error, :slack_notifications_not_configured} ->
-        json_response(%{error: "slack_notifications_not_configured"})
-
       {:error, :unauthorized} ->
         json_response(%{error: "unauthorized"})
-
-      {:error, _reason} ->
-        json_response(%{error: "failed"})
     end
   end
 end

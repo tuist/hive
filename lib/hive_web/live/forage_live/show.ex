@@ -7,6 +7,7 @@ defmodule HiveWeb.ForageLive.Show do
   alias Hive.Flights
   alias Hive.Forage.CodingRuns
   alias Hive.Forage.FeatureRequest
+  alias Hive.Notifications
   alias Hive.Specs
   alias HiveWeb.ForageComponents
   alias HiveWeb.Layouts
@@ -62,6 +63,7 @@ defmodule HiveWeb.ForageLive.Show do
        )
      )
      |> assign(:item, nil)
+     |> assign(:following?, false)
      |> assign(:can_create_spec?, Specs.can_create?(socket.assigns.current_user))
      |> assign(:can_edit_item?, false)
      |> assign(:can_comment_item?, false)
@@ -107,6 +109,37 @@ defmodule HiveWeb.ForageLive.Show do
          |> put_flash(:error, dgettext("dashboard_forage", "Forage item not found."))
          |> push_navigate(to: ~p"/forage")}
     end
+  end
+
+  @impl true
+  def handle_event("follow", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_forage", "Sign in to follow this item."))}
+  end
+
+  def handle_event("follow", _params, socket) do
+    {:ok, _subscription} =
+      Notifications.follow_forage_item(socket.assigns.current_user, socket.assigns.item.id,
+        cadence: :immediate
+      )
+
+    {:noreply,
+     socket
+     |> assign(:following?, true)
+     |> put_flash(:info, dgettext("dashboard_forage", "You are following this item."))}
+  end
+
+  def handle_event("unfollow", _params, socket) do
+    Notifications.unsubscribe(
+      socket.assigns.current_user,
+      :forage_item_updates,
+      socket.assigns.item.id
+    )
+
+    {:noreply,
+     socket
+     |> assign(:following?, false)
+     |> put_flash(:info, dgettext("dashboard_forage", "You are no longer following this item."))}
   end
 
   @impl true
@@ -372,6 +405,10 @@ defmodule HiveWeb.ForageLive.Show do
     |> assign(OpenGraph.assigns(open_graph(item)))
     |> assign(:item, item)
     |> assign(
+      :following?,
+      Notifications.subscribed?(socket.assigns.current_user, :forage_item_updates, item.id)
+    )
+    |> assign(
       :can_edit_item?,
       Forage.can_edit_item?(item.source_record, socket.assigns.current_user)
     )
@@ -529,6 +566,7 @@ defmodule HiveWeb.ForageLive.Show do
       <ForageComponents.item_detail
         :if={@item}
         item={@item}
+        following?={@following?}
         can_create_spec?={@can_create_spec?}
         can_edit_item?={@can_edit_item?}
         can_comment_item?={@can_comment_item?}

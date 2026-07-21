@@ -24,6 +24,8 @@ config :hive, HiveWeb.Endpoint,
 config :hive, dev_routes: true
 config :hive, :og_images, start_browser_pool: false
 config :hive, Oban, testing: :manual
+config :hive, :email, from: {"Hive", "notifications@hive.test"}
+config :hive, Hive.Notifications.Mailer, adapter: Swoosh.Adapters.Test
 
 config :boruta, Boruta.Oauth, issuer: "http://www.example.com"
 

@@ -1,0 +1,25 @@
+<Layouts.app title={@page_title} open_graph={@open_graph}>
+  <main id="notification-unsubscribe">
+    <.card title={dgettext("dashboard_account", "Unsubscribe from email updates")} icon="mail">
+      <.card_section>
+        <div data-part="content">
+          <h1>{dgettext("dashboard_account", "Stop %{topic}?", topic: @topic_label)}</h1>
+          <p>
+            {dgettext(
+              "dashboard_account",
+              "Hive will stop sending this category of email. Other notification preferences stay unchanged."
+            )}
+          </p>
+          <form method="post" action={~p"/notifications/unsubscribe?token=#{@token}"}>
+            <.button
+              label={dgettext("dashboard_account", "Unsubscribe")}
+              type="submit"
+              variant="destructive"
+              size="medium"
+            />
+          </form>
+        </div>
+      </.card_section>
+    </.card>
+  </main>
+</Layouts.app>

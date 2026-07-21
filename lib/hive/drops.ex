@@ -31,6 +31,7 @@ defmodule Hive.Drops do
   alias Hive.Forage.GitHubIssue
   alias Hive.Projects.Project
   alias Hive.Projects.ProjectDomain
+  alias Hive.Notifications
   alias Hive.Repo
 
   @default_page_size 20
@@ -357,6 +358,16 @@ defmodule Hive.Drops do
           classification_failed_at: nil
         ]
       )
+
+      if is_nil(drop.classified_at) do
+        Notifications.publish!(%{
+          deduplication_key: "drop_published:#{drop.id}",
+          type: :drop_published,
+          resource_type: "drop",
+          resource_id: drop.id,
+          data: %{"domain_ids" => selected}
+        })
+      end
     end)
 
     selected

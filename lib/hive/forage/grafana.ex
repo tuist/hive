@@ -26,6 +26,7 @@ defmodule Hive.Forage.Grafana do
   import Ecto.Query
 
   alias Hive.Forage.GrafanaAlert
+  alias Hive.Notifications
   alias Hive.Projects.Project
   alias Hive.Projects.Webhook
   alias Hive.Repo
@@ -51,6 +52,14 @@ defmodule Hive.Forage.Grafana do
   defp extract_alerts(_payload), do: []
 
   defp upsert_alert(%Project{} = project, %Webhook{} = webhook, alert) when is_map(alert) do
+    Repo.transaction(fn -> upsert_alert_transaction(project, webhook, alert) end)
+    |> case do
+      {:ok, alert} -> alert
+      {:error, reason} -> raise "failed to ingest Grafana alert: #{inspect(reason)}"
+    end
+  end
+
+  defp upsert_alert_transaction(%Project{} = project, %Webhook{} = webhook, alert) do
     fingerprint = Map.get(alert, "fingerprint") || derive_fingerprint(alert)
     status = parse_status(Map.get(alert, "status"))
     labels = alert |> Map.get("labels") || %{}
@@ -71,12 +80,28 @@ defmodule Hive.Forage.Grafana do
       webhook_id: webhook.id
     }
 
-    case Repo.get_by(GrafanaAlert, project_id: project.id, fingerprint: fingerprint) do
-      nil -> %GrafanaAlert{}
-      existing -> existing
+    existing = Repo.get_by(GrafanaAlert, project_id: project.id, fingerprint: fingerprint)
+    changeset = GrafanaAlert.changeset(existing || %GrafanaAlert{}, attrs)
+
+    meaningful_change? =
+      is_nil(existing) or Map.keys(changeset.changes) -- [:last_received_at] != []
+
+    stored_alert = Repo.insert_or_update!(changeset)
+
+    if meaningful_change? do
+      item_id = "grafana_alert:#{stored_alert.id}"
+      type = if is_nil(existing), do: :forage_item_created, else: :forage_item_updated
+
+      Notifications.publish!(%{
+        deduplication_key: "#{type}:#{item_id}:#{Ecto.UUID.generate()}",
+        type: type,
+        resource_type: "forage_item",
+        resource_id: item_id,
+        data: %{"description" => stored_alert.summary || stored_alert.title}
+      })
     end
-    |> GrafanaAlert.changeset(attrs)
-    |> Repo.insert_or_update!()
+
+    stored_alert
   end
 
   defp parse_status("firing"), do: :firing

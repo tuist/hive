@@ -79,9 +79,14 @@ config :hive, Oban,
        {"@reboot", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper},
-       {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper}
+       {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper},
+       {"* * * * *", Hive.Notifications.DispatcherWorker}
      ]}
   ]
+
+config :hive, :email, from: nil
+
+config :hive, Hive.Notifications.Mailer, adapter: Swoosh.Adapters.Local
 
 # Ueberauth's plug reads the providers list at plug-init time (which is
 # compile-time in prod). Declare every possible provider here with just

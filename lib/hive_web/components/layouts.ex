@@ -252,6 +252,12 @@ defmodule HiveWeb.Layouts do
             href={~p"/account/identities"}
             selected={String.starts_with?(@current_path, ~p"/account/identities")}
           />
+          <.sidebar_item
+            label={dgettext("dashboard_account", "Notifications")}
+            icon="mail"
+            href={~p"/account/notifications"}
+            selected={String.starts_with?(@current_path, ~p"/account/notifications")}
+          />
         </.sidebar>
         <section data-part="content">
           <.flash_group flash={@flash} />

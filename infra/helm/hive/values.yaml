@@ -58,6 +58,9 @@ env:
   # none: object storage is disabled. s3: configure HIVE_S3_* env vars
   # below, usually with credentials coming from `externalSecrets.items`.
   HIVE_OBJECT_STORAGE_PROVIDER: "none"
+  # none disables account email notifications. Set to postmark or smtp
+  # and provide the matching credentials through a Secret.
+  HIVE_EMAIL_PROVIDER: "none"
   HIVE_S3_FORCE_PATH_STYLE: "false"
   # When the Sentry Data Source Name is present, events are tagged with
   # this deployment environment. SENTRY_RELEASE is usually set per deploy.

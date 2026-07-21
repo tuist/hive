@@ -384,7 +384,7 @@ defmodule HiveWeb.SpecLive.ShowTest do
 
     html = render_click(view, "request_review")
 
-    assert html =~ "Review request posted to Slack."
+    assert html =~ "Review requested."
   end
 
   test "rejects status changes from non-members", %{conn: conn} do

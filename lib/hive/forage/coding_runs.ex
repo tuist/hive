@@ -30,6 +30,7 @@ defmodule Hive.Forage.CodingRuns do
   alias Hive.GitHub.Client
   alias Hive.GitHub.CodeChanges
   alias Hive.GitHub.Issues
+  alias Hive.Notifications
   alias Hive.Repo
 
   @topic_prefix "forage:coding_runs:"
@@ -204,6 +205,7 @@ defmodule Hive.Forage.CodingRuns do
                %{"coding_run_id" => run.id}
                |> CodingRunWorker.new()
                |> Oban.insert() do
+          Notifications.ensure_forage_item_follow(user, item.id)
           run
         else
           {:error, reason} -> Repo.rollback(reason)
@@ -521,16 +523,23 @@ defmodule Hive.Forage.CodingRuns do
     run = Repo.get!(Flight, id)
 
     run =
-      run
-      |> Flight.changeset(%{
-        status: :succeeded,
-        objective_outcome: result["objective_outcome"],
-        result: result,
-        session: session,
-        completed_at: now(),
-        error: nil
-      })
-      |> Repo.update!()
+      Repo.transaction(fn ->
+        completed_run =
+          run
+          |> Flight.changeset(%{
+            status: :succeeded,
+            objective_outcome: result["objective_outcome"],
+            result: result,
+            session: session,
+            completed_at: now(),
+            error: nil
+          })
+          |> Repo.update!()
+
+        publish_flight_event(completed_run)
+        completed_run
+      end)
+      |> then(fn {:ok, completed_run} -> completed_run end)
 
     Audit.record(
       "flight.completed",
@@ -554,14 +563,21 @@ defmodule Hive.Forage.CodingRuns do
         error = format_error(reason)
 
         run =
-          run
-          |> Flight.changeset(%{
-            status: :failed,
-            error: error,
-            session: session || run.session,
-            completed_at: now()
-          })
-          |> Repo.update!()
+          Repo.transaction(fn ->
+            failed_run =
+              run
+              |> Flight.changeset(%{
+                status: :failed,
+                error: error,
+                session: session || run.session,
+                completed_at: now()
+              })
+              |> Repo.update!()
+
+            publish_flight_event(failed_run)
+            failed_run
+          end)
+          |> then(fn {:ok, failed_run} -> failed_run end)
 
         Audit.record("flight.failed", audit_attrs(run, %{"error" => error}))
         broadcast(run)
@@ -573,6 +589,17 @@ defmodule Hive.Forage.CodingRuns do
   defp fail_run(id, reason) do
     mark_failed(id, reason)
     :ok
+  end
+
+  defp publish_flight_event(run) do
+    Notifications.publish!(%{
+      deduplication_key: "forage_flight_completed:#{run.id}",
+      type: :forage_flight_completed,
+      resource_type: "forage_item",
+      resource_id: run.forage_item_id,
+      actor_id: run.requested_by_id,
+      data: %{"flight_id" => run.id, "status" => Atom.to_string(run.status)}
+    })
   end
 
   defp audit_attrs(run, metadata) do

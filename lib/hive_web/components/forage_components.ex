@@ -235,6 +235,7 @@ defmodule HiveWeb.ForageComponents do
   end
 
   attr :item, :map, required: true
+  attr :following?, :boolean, required: true
   attr :can_create_spec?, :boolean, required: true
   attr :can_edit_item?, :boolean, required: true
   attr :can_comment_item?, :boolean, required: true
@@ -262,6 +263,15 @@ defmodule HiveWeb.ForageComponents do
           </div>
 
           <div data-part="header-actions">
+          <.button
+            :if={@signed_in?}
+            label={if @following?, do: dgettext("dashboard_forage", "Following"), else: dgettext("dashboard_forage", "Follow")}
+            size="medium"
+            variant="secondary"
+            phx-click={if @following?, do: "unfollow", else: "follow"}
+          >
+            <:icon_left><.bell /></:icon_left>
+          </.button>
           <.button
             :if={@can_edit_item? and !@editing_item?}
             label={dgettext("dashboard_forage", "Edit")}
