@@ -66,6 +66,12 @@ The weekly digest has its own feed for readers who prefer one connected
 summary instead of individual drops. See the [feed reference](/reference/feeds)
 for all available addresses.
 
+Signed-in users can also open **Account → Notifications** to receive new drops
+from selected domains by email, either immediately or in a daily summary. The
+published weekly digest can be delivered as one email per edition. Email
+delivery requires an operator to configure an
+[email provider](/reference/configuration#email-notifications).
+
 ## Manage changelog feeds
 
 Administrators can open **Ops (Operations) → Drops** to:

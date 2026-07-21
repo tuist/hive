@@ -43,9 +43,10 @@ Signed-in users can comment on visible specs. Comment authors can edit or
 delete their own comments, and each comment has a stable link for sharing
 review context.
 
-When Slack notifications are configured, an organization member can
-select **Ask for review**. Hive posts the latest proposal and focused
-review prompts to the configured channel.
+An organization member can select **Ask for review** independently of the
+configured delivery channels. Followers receive the request by email, and Hive
+also posts the latest proposal and focused review prompts when Slack
+notifications are configured.
 
 ## Understand visibility
 
@@ -61,3 +62,12 @@ link previews.
 
 The Specs page exposes Atom 1.0 and Really Simple Syndication feeds for
 visible specs. See the [feed reference](/reference/feeds) for details.
+
+Signed-in users can select **Follow** on a spec to receive its edits, comments,
+and review requests by email. Creating or commenting on a spec follows it
+automatically. Followers of a source Forage item also follow a spec created
+from it when they are allowed to view that spec.
+
+Open **Account → Notifications** to choose immediate delivery, a daily summary,
+or to unfollow. The same page can subscribe to every new spec visible to the
+account.
