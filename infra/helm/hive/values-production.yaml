@@ -42,6 +42,10 @@ env:
   # Accounts on these domains are org members (see organization-only
   # forage sources); everyone else who signs in is an external contributor.
   HIVE_ORG_DOMAINS: "tuist.dev"
+  HIVE_EMAIL_PROVIDER: "smtp"
+  HIVE_EMAIL_FROM: "Hive <hive@mail.tuist.dev>"
+  HIVE_SMTP_RELAY: "smtp.eu.mailgun.org"
+  HIVE_SMTP_PORT: "587"
   HIVE_OBJECT_STORAGE_PROVIDER: "s3"
   HIVE_S3_FORCE_PATH_STYLE: "true"
   # LLM model identifier in ReqLLM `provider:model_id` form, shared by
@@ -108,6 +112,10 @@ externalSecrets:
       remoteRef: "hive-slack-signing-secret/credential"
     HIVE_SLACK_ALLOWED_TEAM_IDS:
       remoteRef: "hive-slack-allowed-team-ids/credential"
+    HIVE_SMTP_USERNAME:
+      remoteRef: "hive-mailgun-smtp/username"
+    HIVE_SMTP_PASSWORD:
+      remoteRef: "hive-mailgun-smtp/credential"
     HIVE_S3_BUCKET:
       remoteRef: "hive-object-storage/bucket"
     HIVE_S3_REGION:
