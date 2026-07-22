@@ -16,7 +16,7 @@ msgstr ""
 msgid "%{count} %{state}"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:506
+#: lib/hive_web/live/forage_live/show.ex:548
 #, elixir-autogen, elixir-format
 msgid "%{count} comments"
 msgstr ""
@@ -63,12 +63,12 @@ msgstr ""
 msgid "%{source} · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:367
+#: lib/hive_web/live/forage_live/show.ex:405
 #, elixir-autogen, elixir-format
 msgid "%{title} · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:494
+#: lib/hive_web/live/forage_live/show.ex:536
 #, elixir-autogen, elixir-format
 msgid "%{type} from %{source}."
 msgstr ""
@@ -78,7 +78,7 @@ msgstr ""
 msgid "%{type}: %{title}"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:504
+#: lib/hive_web/live/forage_live/show.ex:546
 #, elixir-autogen, elixir-format
 msgid "1 comment"
 msgstr ""
@@ -108,92 +108,92 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1141
+#: lib/hive_web/components/forage_components.ex:1151
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:422
+#: lib/hive_web/components/forage_components.ex:432
 #, elixir-autogen, elixir-format
 msgid "Add context or feedback with Markdown"
 msgstr ""
 
-#: lib/hive/forage.ex:147
+#: lib/hive/forage.ex:148
 #, elixir-autogen, elixir-format
 msgid "Bug report"
 msgstr ""
 
-#: lib/hive/forage.ex:55
+#: lib/hive/forage.ex:56
 #: lib/hive_web/live/forage_live/index.ex:71
 #: lib/hive_web/live/forage_live/index.ex:77
 #, elixir-autogen, elixir-format
 msgid "Bug reports"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:328
-#: lib/hive_web/components/forage_components.ex:909
+#: lib/hive_web/components/forage_components.ex:338
+#: lib/hive_web/components/forage_components.ex:919
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1074
+#: lib/hive_web/components/forage_components.ex:1084
 #: lib/hive_web/live/forage_live/new_feature_request.ex:16
 #, elixir-autogen, elixir-format
 msgid "Capture a public feature request, bug report, or feedback item."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1435
+#: lib/hive_web/components/forage_components.ex:1445
 #, elixir-autogen, elixir-format
 msgid "Choose type"
 msgstr ""
 
-#: lib/hive/forage.ex:157
-#: lib/hive_web/components/forage_components.ex:1502
+#: lib/hive/forage.ex:158
+#: lib/hive_web/components/forage_components.ex:1512
 #: lib/hive_web/live/forage_live/github_issues.ex:234
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1510
+#: lib/hive_web/components/forage_components.ex:1520
 #, elixir-autogen, elixir-format
 msgid "Closed issues"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:421
-#: lib/hive_web/components/forage_components.ex:430
+#: lib/hive_web/components/forage_components.ex:431
+#: lib/hive_web/components/forage_components.ex:440
 #, elixir-autogen, elixir-format
 msgid "Comment"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:313
-#: lib/hive_web/live/forage_live/show.ex:202
+#: lib/hive_web/live/forage_live/show.ex:240
 #, elixir-autogen, elixir-format
 msgid "Comment added."
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:399
-#: lib/hive_web/live/forage_live/show.ex:288
+#: lib/hive_web/live/forage_live/show.ex:326
 #, elixir-autogen, elixir-format
 msgid "Comment not found."
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:381
-#: lib/hive_web/live/forage_live/show.ex:270
+#: lib/hive_web/live/forage_live/show.ex:308
 #, elixir-autogen, elixir-format
 msgid "Comment updated."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:401
+#: lib/hive_web/components/forage_components.ex:411
 #, elixir-autogen, elixir-format
 msgid "Comments"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:445
+#: lib/hive_web/components/forage_components.ex:455
 #, elixir-autogen, elixir-format
 msgid "Comments are available to authenticated users."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1273
+#: lib/hive_web/components/forage_components.ex:1283
 #, elixir-autogen, elixir-format
 msgid "Connect a GitHub repository to a domain in"
 msgstr ""
@@ -208,35 +208,35 @@ msgstr ""
 msgid "Contributor submissions"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1001
+#: lib/hive_web/components/forage_components.ex:1011
 #, elixir-autogen, elixir-format
 msgid "Contributors"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:190
-#: lib/hive_web/components/forage_components.ex:276
-#: lib/hive_web/components/forage_components.ex:1050
+#: lib/hive_web/components/forage_components.ex:286
+#: lib/hive_web/components/forage_components.ex:1060
 #, elixir-autogen, elixir-format
 msgid "Create spec"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1018
+#: lib/hive_web/components/forage_components.ex:1028
 #, elixir-autogen, elixir-format
 msgid "Create the first request"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1092
+#: lib/hive_web/components/forage_components.ex:1102
 #, elixir-autogen, elixir-format
 msgid "Describe the item in one sentence"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:320
-#: lib/hive_web/components/forage_components.ex:1098
+#: lib/hive_web/components/forage_components.ex:330
+#: lib/hive_web/components/forage_components.ex:1108
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:380
+#: lib/hive_web/components/forage_components.ex:390
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr ""
@@ -249,41 +249,41 @@ msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:88
 #: lib/hive_web/components/forage_components.ex:163
-#: lib/hive_web/components/forage_components.ex:362
-#: lib/hive_web/components/forage_components.ex:1246
-#: lib/hive_web/components/forage_components.ex:1274
+#: lib/hive_web/components/forage_components.ex:372
+#: lib/hive_web/components/forage_components.ex:1256
+#: lib/hive_web/components/forage_components.ex:1284
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:267
+#: lib/hive_web/components/forage_components.ex:277
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:871
-#: lib/hive_web/components/forage_components.ex:872
-#: lib/hive_web/components/forage_components.ex:901
+#: lib/hive_web/components/forage_components.ex:881
+#: lib/hive_web/components/forage_components.ex:882
+#: lib/hive_web/components/forage_components.ex:911
 #, elixir-autogen, elixir-format
 msgid "Edit comment"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:296
+#: lib/hive_web/components/forage_components.ex:306
 #, elixir-autogen, elixir-format
 msgid "Edit item"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1100
+#: lib/hive_web/components/forage_components.ex:1110
 #, elixir-autogen, elixir-format
 msgid "Explain the problem, who needs it, and why it matters."
 msgstr ""
 
-#: lib/hive/forage.ex:146
+#: lib/hive/forage.ex:147
 #, elixir-autogen, elixir-format
 msgid "Feature request"
 msgstr ""
 
-#: lib/hive/forage.ex:42
+#: lib/hive/forage.ex:43
 #: lib/hive_web/live/forage_live/feature_requests.ex:26
 #: lib/hive_web/live/forage_live/index.ex:52
 #: lib/hive_web/live/forage_live/index.ex:58
@@ -302,8 +302,8 @@ msgstr ""
 msgid "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue."
 msgstr ""
 
-#: lib/hive/forage.ex:68
-#: lib/hive/forage.ex:148
+#: lib/hive/forage.ex:69
+#: lib/hive/forage.ex:149
 #: lib/hive_web/live/forage_live/index.ex:90
 #: lib/hive_web/live/forage_live/index.ex:96
 #, elixir-autogen, elixir-format
@@ -311,12 +311,12 @@ msgid "Feedback"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:99
-#: lib/hive_web/components/forage_components.ex:1257
+#: lib/hive_web/components/forage_components.ex:1267
 #, elixir-autogen, elixir-format
 msgid "Filter"
 msgstr ""
 
-#: lib/hive/forage.ex:158
+#: lib/hive/forage.ex:159
 #: lib/hive/forage/grafana_alert.ex:40
 #, elixir-autogen, elixir-format
 msgid "Firing"
@@ -324,7 +324,7 @@ msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:40
 #: lib/hive_web/components/layouts.ex:170
-#: lib/hive_web/components/layouts.ex:303
+#: lib/hive_web/components/layouts.ex:309
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
@@ -344,7 +344,7 @@ msgid "Forage"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:606
-#: lib/hive_web/live/forage_live/show.ex:107
+#: lib/hive_web/live/forage_live/show.ex:109
 #, elixir-autogen, elixir-format
 msgid "Forage item not found."
 msgstr ""
@@ -355,12 +355,12 @@ msgid "Forage item submitted."
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:278
-#: lib/hive_web/live/forage_live/show.ex:167
+#: lib/hive_web/live/forage_live/show.ex:205
 #, elixir-autogen, elixir-format
 msgid "Forage item updated."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:60
+#: lib/hive_web/live/forage_live/show.ex:61
 #, elixir-autogen, elixir-format
 msgid "Forage item · %{product}"
 msgstr ""
@@ -382,41 +382,41 @@ msgstr ""
 msgid "Forage · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1163
+#: lib/hive_web/components/forage_components.ex:1173
 #, elixir-autogen, elixir-format
 msgid "Generate a webhook on a project and point a Grafana contact point at it. Firing and resolved deliveries will thread into one item per alert."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:950
+#: lib/hive_web/components/forage_components.ex:960
 #, elixir-autogen, elixir-format
 msgid "GitHub"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:839
+#: lib/hive_web/components/forage_components.ex:849
 #, elixir-autogen, elixir-format
 msgid "GitHub comments unavailable"
 msgstr ""
 
-#: lib/hive/forage.ex:149
+#: lib/hive/forage.ex:150
 #: lib/hive_web/live/ops_live/forage.ex:139
 #: lib/hive_web/live/ops_live/forage.ex:226
 #, elixir-autogen, elixir-format
 msgid "GitHub issue"
 msgstr ""
 
-#: lib/hive/forage.ex:81
+#: lib/hive/forage.ex:82
 #: lib/hive_web/live/forage_live/index.ex:106
 #: lib/hive_web/live/forage_live/index.ex:112
 #, elixir-autogen, elixir-format
 msgid "GitHub issues"
 msgstr ""
 
-#: lib/hive/forage.ex:150
+#: lib/hive/forage.ex:151
 #, elixir-autogen, elixir-format
 msgid "Grafana alert"
 msgstr ""
 
-#: lib/hive/forage.ex:97
+#: lib/hive/forage.ex:98
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:26
 #: lib/hive_web/live/forage_live/index.ex:122
 #: lib/hive_web/live/forage_live/index.ex:128
@@ -437,7 +437,7 @@ msgstr ""
 
 #: lib/hive_web/controllers/feed_controller.ex:73
 #: lib/hive_web/live/forage_live/index.ex:161
-#: lib/hive_web/live/forage_live/show.ex:82
+#: lib/hive_web/live/forage_live/show.ex:84
 #, elixir-autogen, elixir-format
 msgid "Hive · Forage"
 msgstr ""
@@ -459,7 +459,7 @@ msgstr ""
 msgid "Item"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1085
+#: lib/hive_web/components/forage_components.ex:1095
 #, elixir-autogen, elixir-format
 msgid "Item details"
 msgstr ""
@@ -474,13 +474,13 @@ msgstr ""
 msgid "Items that match the active filters will appear here."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1217
+#: lib/hive_web/components/forage_components.ex:1227
 #, elixir-autogen, elixir-format
 msgid "Last received %{date}"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1019
-#: lib/hive_web/components/forage_components.ex:1385
+#: lib/hive_web/components/forage_components.ex:1029
+#: lib/hive_web/components/forage_components.ex:1395
 #, elixir-autogen, elixir-format
 msgid "Log in to request"
 msgstr ""
@@ -495,12 +495,12 @@ msgstr ""
 msgid "Log in to submit forage items."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:297
+#: lib/hive_web/components/forage_components.ex:307
 #, elixir-autogen, elixir-format
 msgid "Metadata"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1072
+#: lib/hive_web/components/forage_components.ex:1082
 #: lib/hive_web/live/forage_live/new_feature_request.ex:28
 #, elixir-autogen, elixir-format
 msgid "New forage item"
@@ -516,7 +516,7 @@ msgstr ""
 msgid "New item"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1384
+#: lib/hive_web/components/forage_components.ex:1394
 #, elixir-autogen, elixir-format
 msgid "New request"
 msgstr ""
@@ -526,27 +526,27 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1270
+#: lib/hive_web/components/forage_components.ex:1280
 #, elixir-autogen, elixir-format
 msgid "No %{state} to show"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:970
+#: lib/hive_web/components/forage_components.ex:980
 #, elixir-autogen, elixir-format
 msgid "No GitHub comments yet."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1161
+#: lib/hive_web/components/forage_components.ex:1171
 #, elixir-autogen, elixir-format
 msgid "No Grafana alerts yet"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:975
+#: lib/hive_web/components/forage_components.ex:985
 #, elixir-autogen, elixir-format
 msgid "No comments available."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:973
+#: lib/hive_web/components/forage_components.ex:983
 #, elixir-autogen, elixir-format
 msgid "No comments yet."
 msgstr ""
@@ -556,7 +556,7 @@ msgstr ""
 msgid "No domains"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1011
+#: lib/hive_web/components/forage_components.ex:1021
 #, elixir-autogen, elixir-format
 msgid "No feature requests yet"
 msgstr ""
@@ -569,9 +569,9 @@ msgstr ""
 #: lib/hive_web/live/forage_live/index.ex:338
 #: lib/hive_web/live/forage_live/index.ex:366
 #: lib/hive_web/live/forage_live/index.ex:389
-#: lib/hive_web/live/forage_live/show.ex:227
-#: lib/hive_web/live/forage_live/show.ex:255
-#: lib/hive_web/live/forage_live/show.ex:278
+#: lib/hive_web/live/forage_live/show.ex:265
+#: lib/hive_web/live/forage_live/show.ex:293
+#: lib/hive_web/live/forage_live/show.ex:316
 #, elixir-autogen, elixir-format
 msgid "Only the comment author can edit this comment."
 msgstr ""
@@ -579,35 +579,35 @@ msgstr ""
 #: lib/hive_web/live/forage_live/index.ex:237
 #: lib/hive_web/live/forage_live/index.ex:261
 #: lib/hive_web/live/forage_live/index.ex:286
-#: lib/hive_web/live/forage_live/show.ex:126
-#: lib/hive_web/live/forage_live/show.ex:150
-#: lib/hive_web/live/forage_live/show.ex:175
+#: lib/hive_web/live/forage_live/show.ex:164
+#: lib/hive_web/live/forage_live/show.ex:188
+#: lib/hive_web/live/forage_live/show.ex:213
 #, elixir-autogen, elixir-format
 msgid "Only the item author can edit this item."
 msgstr ""
 
-#: lib/hive/forage.ex:155
-#: lib/hive_web/components/forage_components.ex:996
-#: lib/hive_web/components/forage_components.ex:1468
-#: lib/hive_web/components/forage_components.ex:1500
+#: lib/hive/forage.ex:156
+#: lib/hive_web/components/forage_components.ex:1006
+#: lib/hive_web/components/forage_components.ex:1478
+#: lib/hive_web/components/forage_components.ex:1510
 #: lib/hive_web/live/forage_live/github_issues.ex:233
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:882
-#: lib/hive_web/components/forage_components.ex:883
+#: lib/hive_web/components/forage_components.ex:892
+#: lib/hive_web/components/forage_components.ex:893
 #, elixir-autogen, elixir-format
 msgid "Open comment"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1194
-#: lib/hive_web/components/forage_components.ex:1466
+#: lib/hive_web/components/forage_components.ex:1204
+#: lib/hive_web/components/forage_components.ex:1476
 #, elixir-autogen, elixir-format
 msgid "Open in Grafana"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1509
+#: lib/hive_web/components/forage_components.ex:1519
 #: lib/hive_web/live/forage_live/index.ex:72
 #, elixir-autogen, elixir-format
 msgid "Open issues"
@@ -618,12 +618,12 @@ msgstr ""
 msgid "Open issues from GitHub repositories connected to domains."
 msgstr ""
 
-#: lib/hive/forage.ex:83
+#: lib/hive/forage.ex:84
 #, elixir-autogen, elixir-format
 msgid "Open issues from the GitHub repositories connected to your projects."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1463
+#: lib/hive_web/components/forage_components.ex:1473
 #, elixir-autogen, elixir-format
 msgid "Open on GitHub"
 msgstr ""
@@ -633,12 +633,12 @@ msgstr ""
 msgid "Open signals"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:841
+#: lib/hive_web/components/forage_components.ex:851
 #, elixir-autogen, elixir-format
 msgid "Open the issue on GitHub to read or add comments."
 msgstr ""
 
-#: lib/hive/forage.ex:99
+#: lib/hive/forage.ex:100
 #: lib/hive_web/controllers/feed_controller.ex:135
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:17
 #, elixir-autogen, elixir-format
@@ -651,8 +651,8 @@ msgstr ""
 msgid "Organization visible"
 msgstr ""
 
-#: lib/hive/forage.ex:156
-#: lib/hive_web/components/forage_components.ex:1501
+#: lib/hive/forage.ex:157
+#: lib/hive_web/components/forage_components.ex:1511
 #, elixir-autogen, elixir-format
 msgid "Planned"
 msgstr ""
@@ -662,34 +662,34 @@ msgstr ""
 msgid "Prev"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1151
+#: lib/hive_web/components/forage_components.ex:1161
 #, elixir-autogen, elixir-format
 msgid "Projects"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1043
+#: lib/hive_web/components/forage_components.ex:1053
 #, elixir-autogen, elixir-format
 msgid "Public"
 msgstr ""
 
-#: lib/hive/forage.ex:57
+#: lib/hive/forage.ex:58
 #, elixir-autogen, elixir-format
 msgid "Public defects that should become actionable work."
 msgstr ""
 
-#: lib/hive/forage.ex:44
+#: lib/hive/forage.ex:45
 #: lib/hive_web/controllers/feed_controller.ex:93
 #: lib/hive_web/live/forage_live/feature_requests.ex:17
 #, elixir-autogen, elixir-format
 msgid "Public domain ideas submitted by authenticated users."
 msgstr ""
 
-#: lib/hive/forage.ex:70
+#: lib/hive/forage.ex:71
 #, elixir-autogen, elixir-format
 msgid "Public feedback that helps shape the domain direction."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1013
+#: lib/hive_web/components/forage_components.ex:1023
 #, elixir-autogen, elixir-format
 msgid "Public ideas submitted here will appear as forage for Hive."
 msgstr ""
@@ -711,7 +711,7 @@ msgstr ""
 msgid "Read-only signals"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1241
+#: lib/hive_web/components/forage_components.ex:1251
 #, elixir-autogen, elixir-format
 msgid "Repositories"
 msgstr ""
@@ -722,29 +722,29 @@ msgstr ""
 msgid "Repository"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:351
+#: lib/hive_web/components/forage_components.ex:361
 #, elixir-autogen, elixir-format
 msgid "Requester"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1080
+#: lib/hive_web/components/forage_components.ex:1090
 #, elixir-autogen, elixir-format
 msgid "Requesting as %{user}"
 msgstr ""
 
-#: lib/hive/forage.ex:159
+#: lib/hive/forage.ex:160
 #: lib/hive/forage/grafana_alert.ex:41
-#: lib/hive_web/components/forage_components.ex:1146
+#: lib/hive_web/components/forage_components.ex:1156
 #, elixir-autogen, elixir-format
 msgid "Resolved"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:916
+#: lib/hive_web/components/forage_components.ex:926
 #, elixir-autogen, elixir-format
 msgid "Save comment"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:335
+#: lib/hive_web/components/forage_components.ex:345
 #, elixir-autogen, elixir-format
 msgid "Save item"
 msgstr ""
@@ -754,24 +754,24 @@ msgstr ""
 msgid "Search forage..."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:448
+#: lib/hive_web/components/forage_components.ex:458
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:442
+#: lib/hive_web/components/forage_components.ex:452
 #, elixir-autogen, elixir-format
 msgid "Sign in to comment"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:317
-#: lib/hive_web/live/forage_live/show.ex:206
+#: lib/hive_web/live/forage_live/show.ex:244
 #, elixir-autogen, elixir-format
 msgid "Sign in to comment."
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:177
-#: lib/hive_web/components/forage_components.ex:345
+#: lib/hive_web/components/forage_components.ex:355
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr ""
@@ -787,72 +787,72 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1112
+#: lib/hive_web/components/forage_components.ex:1122
 #, elixir-autogen, elixir-format
 msgid "Submit item"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1517
+#: lib/hive_web/components/forage_components.ex:1527
 #, elixir-autogen, elixir-format
 msgid "Submitted anonymously"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1514
+#: lib/hive_web/components/forage_components.ex:1524
 #, elixir-autogen, elixir-format
 msgid "Submitted by %{email}"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1352
+#: lib/hive_web/components/forage_components.ex:1362
 #, elixir-autogen, elixir-format
 msgid "The source is modeled so access can be gated before ingestion is implemented."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1350
+#: lib/hive_web/components/forage_components.ex:1360
 #, elixir-autogen, elixir-format
 msgid "This forage source is not connected yet"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:314
-#: lib/hive_web/components/forage_components.ex:1091
+#: lib/hive_web/components/forage_components.ex:324
+#: lib/hive_web/components/forage_components.ex:1101
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:991
+#: lib/hive_web/components/forage_components.ex:1001
 #, elixir-autogen, elixir-format
 msgid "Total requests"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:149
-#: lib/hive_web/components/forage_components.ex:1430
+#: lib/hive_web/components/forage_components.ex:1440
 #: lib/hive_web/live/forage_live/index.ex:627
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:938
+#: lib/hive_web/components/forage_components.ex:948
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:183
-#: lib/hive_web/components/forage_components.ex:355
+#: lib/hive_web/components/forage_components.ex:365
 #, elixir-autogen, elixir-format
 msgid "Updated"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1321
+#: lib/hive_web/components/forage_components.ex:1331
 #, elixir-autogen, elixir-format
 msgid "View on GitHub"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:604
-#: lib/hive_web/live/forage_live/show.ex:101
+#: lib/hive_web/live/forage_live/show.ex:103
 #, elixir-autogen, elixir-format
 msgid "You cannot view that forage item."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:1275
+#: lib/hive_web/components/forage_components.ex:1285
 #, elixir-autogen, elixir-format
 msgid "and matching issues will appear here once they have been synced."
 msgstr ""
@@ -868,7 +868,7 @@ msgstr ""
 msgid "open issues"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:515
+#: lib/hive_web/components/forage_components.ex:525
 #: lib/hive_web/live/ops_live/forage.ex:181
 #: lib/hive_web/live/ops_live/forage.ex:232
 #: lib/hive_web/live/ops_live/forage.ex:237
@@ -1031,220 +1031,246 @@ msgstr ""
 msgid "Repository signal"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:821
+#: lib/hive_web/components/forage_components.ex:831
 #, elixir-autogen, elixir-format
 msgid "%{count} check"
 msgid_plural "%{count} checks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/hive_web/components/forage_components.ex:799
+#: lib/hive_web/components/forage_components.ex:809
 #, elixir-autogen, elixir-format
 msgid "%{count} hour"
 msgid_plural "%{count} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/hive_web/components/forage_components.ex:794
+#: lib/hive_web/components/forage_components.ex:804
 #, elixir-autogen, elixir-format
 msgid "%{count} minute"
 msgid_plural "%{count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/hive_web/components/forage_components.ex:710
+#: lib/hive_web/components/forage_components.ex:720
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:720
+#: lib/hive_web/components/forage_components.ex:730
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:610
+#: lib/hive_web/components/forage_components.ex:620
 #, elixir-autogen, elixir-format
 msgid "Finding"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:709
+#: lib/hive_web/components/forage_components.ex:719
 #, elixir-autogen, elixir-format
 msgid "Investigation completed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:594
+#: lib/hive_web/components/forage_components.ex:604
 #, elixir-autogen, elixir-format
 msgid "Latest activity"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:790
+#: lib/hive_web/components/forage_components.ex:800
 #, elixir-autogen, elixir-format
 msgid "Less than a minute"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:760
+#: lib/hive_web/components/forage_components.ex:770
 #, elixir-autogen, elixir-format
 msgid "No additional details are available."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:699
+#: lib/hive_web/components/forage_components.ex:709
 #, elixir-autogen, elixir-format
 msgid "No code change needed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:552
+#: lib/hive_web/components/forage_components.ex:562
 #, elixir-autogen, elixir-format
 msgid "No linked repository"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:690
+#: lib/hive_web/components/forage_components.ex:700
 #, elixir-autogen, elixir-format
 msgid "Pull request"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:689
+#: lib/hive_web/components/forage_components.ex:699
 #, elixir-autogen, elixir-format
 msgid "Pull request ready"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:740
+#: lib/hive_web/components/forage_components.ex:750
 #, elixir-autogen, elixir-format
 msgid "Queued"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:700
+#: lib/hive_web/components/forage_components.ex:710
 #, elixir-autogen, elixir-format
 msgid "Report"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:730
+#: lib/hive_web/components/forage_components.ex:740
 #, elixir-autogen, elixir-format
 msgid "Running"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:805
+#: lib/hive_web/components/forage_components.ex:815
 #, elixir-autogen, elixir-format
 msgid "Unknown date"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:779
+#: lib/hive_web/components/forage_components.ex:789
 #, elixir-autogen, elixir-format
 msgid "Unknown provider"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:667
+#: lib/hive_web/components/forage_components.ex:677
 #, elixir-autogen, elixir-format
 msgid "View pull request"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:825
+#: lib/hive_web/components/forage_components.ex:835
 #, elixir-autogen, elixir-format
 msgid "%{count} Flight"
 msgid_plural "%{count} Flights"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/hive_web/live/forage_live/show.ex:330
+#: lib/hive_web/live/forage_live/show.ex:368
 #, elixir-autogen, elixir-format
 msgid "A Flight is already active for that repository."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:569
+#: lib/hive_web/components/forage_components.ex:579
 #, elixir-autogen, elixir-format
 msgid "Configure model inference, GitHub, and a sandbox provider to start another Flight. Existing results remain available below."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:719
+#: lib/hive_web/components/forage_components.ex:729
 #, elixir-autogen, elixir-format
 msgid "Flight failed"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:529
+#: lib/hive_web/components/forage_components.ex:539
 #, elixir-autogen, elixir-format
 msgid "Flight in progress"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:321
+#: lib/hive_web/live/forage_live/show.ex:359
 #, elixir-autogen, elixir-format
 msgid "Flight queued. The result will appear here."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:470
+#: lib/hive_web/components/forage_components.ex:480
 #, elixir-autogen, elixir-format
 msgid "Flights"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:567
+#: lib/hive_web/components/forage_components.ex:577
 #, elixir-autogen, elixir-format
 msgid "New Flights are paused"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:582
+#: lib/hive_web/components/forage_components.ex:592
 #, elixir-autogen, elixir-format
 msgid "No Flights yet"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:528
+#: lib/hive_web/components/forage_components.ex:538
 #, elixir-autogen, elixir-format
 msgid "Start Flight"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:751
+#: lib/hive_web/components/forage_components.ex:761
 #, elixir-autogen, elixir-format
 msgid "The Flight completed without a summary."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:349
+#: lib/hive_web/live/forage_live/show.ex:387
 #, elixir-autogen, elixir-format
 msgid "The Flight could not be queued."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/show.ex:341
+#: lib/hive_web/live/forage_live/show.ex:379
 #, elixir-autogen, elixir-format
 msgid "The Flight runner is not configured."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:757
+#: lib/hive_web/components/forage_components.ex:767
 #, elixir-autogen, elixir-format
 msgid "The Flight will begin when the sandbox is ready."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:658
+#: lib/hive_web/components/forage_components.ex:668
 #, elixir-autogen, elixir-format
 msgid "View Flight"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:739
+#: lib/hive_web/components/forage_components.ex:749
 #, elixir-autogen, elixir-format
 msgid "Waiting for a sandbox"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:500
+#: lib/hive_web/components/forage_components.ex:510
 #, elixir-autogen, elixir-format
 msgid "Choose objective"
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:542
+#: lib/hive_web/components/forage_components.ex:552
 #, elixir-autogen, elixir-format
 msgid "Investigate, reproduce, or fix this item in an isolated repository. Each Flight preserves its outcome and agent session."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:554
+#: lib/hive_web/components/forage_components.ex:564
 #, elixir-autogen, elixir-format
 msgid "Link a GitHub repository to this item's project before starting a Flight."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:584
+#: lib/hive_web/components/forage_components.ex:594
 #, elixir-autogen, elixir-format
 msgid "Start a Flight and preserve its objective, outcome, and session here."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:754
+#: lib/hive_web/components/forage_components.ex:764
 #, elixir-autogen, elixir-format
 msgid "The agent is working in the linked repository."
 msgstr ""
 
-#: lib/hive_web/components/forage_components.ex:729
+#: lib/hive_web/components/forage_components.ex:739
 #, elixir-autogen, elixir-format
 msgid "Working in the sandbox"
+msgstr ""
+
+#: lib/hive_web/components/forage_components.ex:268
+#, elixir-autogen, elixir-format
+msgid "Follow"
+msgstr ""
+
+#: lib/hive_web/components/forage_components.ex:268
+#, elixir-autogen, elixir-format
+msgid "Following"
+msgstr ""
+
+#: lib/hive_web/live/forage_live/show.ex:117
+#: lib/hive_web/live/forage_live/show.ex:134
+#, elixir-autogen, elixir-format
+msgid "Sign in to follow this item."
+msgstr ""
+
+#: lib/hive_web/live/forage_live/show.ex:129
+#, elixir-autogen, elixir-format
+msgid "You are following this item."
+msgstr ""
+
+#: lib/hive_web/live/forage_live/show.ex:147
+#, elixir-autogen, elixir-format
+msgid "You are no longer following this item."
 msgstr ""
