@@ -61,6 +61,56 @@ dashboard page loads.
 Comma-separated email domains that become organization members at
 signup. When unset, every signed-in user becomes a member.
 
+## Email notifications
+
+Email delivery is disabled by default. People can still save notification
+preferences while it is disabled, but Hive does not send messages until a
+provider and sender are configured. Daily summaries are sent at 08:00
+Coordinated Universal Time.
+
+### HIVE_EMAIL_PROVIDER {#hive_email_provider}
+
+Selects the outgoing email provider. Use `none` to disable delivery,
+`postmark` for [Postmark](https://postmarkapp.com/), or `smtp` for a
+[Simple Mail Transfer Protocol](https://www.cloudflare.com/learning/email-security/what-is-smtp/)
+server. Defaults to `none`.
+
+### HIVE_EMAIL_FROM {#hive_email_from}
+
+Verified sender address used for notification email. Write it on its own
+(`notifications@example.com`) or with a display name
+(`Hive <notifications@example.com>`); readers see the display name and the
+mail server receives the address. Required when email delivery is enabled,
+and Hive refuses to start when the value is not an email address.
+
+### HIVE_POSTMARK_SERVER_TOKEN {#hive_postmark_server_token}
+
+Postmark server token. Required when `HIVE_EMAIL_PROVIDER=postmark`.
+
+### HIVE_EMAIL_MESSAGE_STREAM {#hive_email_message_stream}
+
+Optional Postmark message stream. Leave it unset to use the server's default
+transactional stream.
+
+### HIVE_SMTP_RELAY {#hive_smtp_relay}
+
+Host name of the outgoing Simple Mail Transfer Protocol server. Required when
+`HIVE_EMAIL_PROVIDER=smtp`.
+
+### HIVE_SMTP_PORT {#hive_smtp_port}
+
+Port for the outgoing mail server. Defaults to `587`. Port `465` enables
+implicit Transport Layer Security; other ports require the server to upgrade
+the connection with Transport Layer Security.
+
+### HIVE_SMTP_USERNAME {#hive_smtp_username}
+
+Optional outgoing mail username. Set it together with `HIVE_SMTP_PASSWORD`.
+
+### HIVE_SMTP_PASSWORD {#hive_smtp_password}
+
+Optional outgoing mail password. Set it together with `HIVE_SMTP_USERNAME`.
+
 ## Authentication providers
 
 ### HIVE_GOOGLE_CLIENT_ID {#hive_google_client_id}

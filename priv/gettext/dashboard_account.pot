@@ -11,35 +11,36 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:53
-#: lib/hive_web/components/layouts.ex:402
+#: lib/hive_web/components/account_components.ex:55
+#: lib/hive_web/components/layouts.ex:408
 #: lib/hive_web/live/account_live/identities.ex:17
+#: lib/hive_web/live/account_live/notifications.ex:33
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:67
+#: lib/hive_web/components/account_components.ex:69
 #, elixir-autogen, elixir-format
 msgid "Connect %{provider}"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:99
+#: lib/hive_web/components/account_components.ex:101
 #, elixir-autogen, elixir-format
 msgid "Connect Slack profile"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:116
+#: lib/hive_web/components/account_components.ex:118
 #, elixir-autogen, elixir-format
 msgid "Connect your Slack profile so Hive can send targeted notifications instead of posting every update to a channel."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:173
+#: lib/hive_web/components/account_components.ex:484
 #, elixir-autogen, elixir-format
 msgid "Connect your Slack profile to receive targeted notifications."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:59
-#: lib/hive_web/components/account_components.ex:138
+#: lib/hive_web/components/account_components.ex:61
+#: lib/hive_web/components/account_components.ex:140
 #, elixir-autogen, elixir-format
 msgid "Connected"
 msgstr ""
@@ -54,7 +55,7 @@ msgstr ""
 msgid "Connected providers"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:221
+#: lib/hive_web/components/account_components.ex:532
 #, elixir-autogen, elixir-format
 msgid "Connected to this account"
 msgstr ""
@@ -64,7 +65,7 @@ msgstr ""
 msgid "GitHub sign-in"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:230
+#: lib/hive_web/components/account_components.ex:541
 #, elixir-autogen, elixir-format
 msgid "GitHub sign-in is not enabled for this Hive instance"
 msgstr ""
@@ -74,7 +75,7 @@ msgstr ""
 msgid "Google sign-in"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:22
+#: lib/hive_web/components/account_components.ex:24
 #: lib/hive_web/components/layouts.ex:250
 #: lib/hive_web/live/account_live/identities.ex:25
 #, elixir-autogen, elixir-format
@@ -92,16 +93,17 @@ msgid "Log in to connect your Slack profile."
 msgstr ""
 
 #: lib/hive_web/live/account_live/identities.ex:51
+#: lib/hive_web/live/account_live/notifications.ex:51
 #, elixir-autogen, elixir-format
 msgid "Log in to manage your account."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:410
+#: lib/hive_web/components/layouts.ex:416
 #, elixir-autogen, elixir-format
 msgid "Log out"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:24
+#: lib/hive_web/components/account_components.ex:26
 #, elixir-autogen, elixir-format
 msgid "Manage the sign-in providers connected to %{email}. Any connected provider can be used to access this account."
 msgstr ""
@@ -111,27 +113,27 @@ msgstr ""
 msgid "Manage the sign-in providers connected to your Hive user."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:146
+#: lib/hive_web/components/account_components.ex:148
 #, elixir-autogen, elixir-format
 msgid "No Slack profile connected"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:81
+#: lib/hive_web/components/account_components.ex:83
 #, elixir-autogen, elixir-format
 msgid "Not configured"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:233
+#: lib/hive_web/components/account_components.ex:544
 #, elixir-autogen, elixir-format
 msgid "Not enabled for this Hive instance"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:45
+#: lib/hive_web/components/account_components.ex:47
 #, elixir-autogen, elixir-format
 msgid "Provider"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:35
+#: lib/hive_web/components/account_components.ex:37
 #, elixir-autogen, elixir-format
 msgid "Sign-in providers"
 msgstr ""
@@ -146,12 +148,12 @@ msgstr ""
 msgid "Slack isn't configured on this Hive instance."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:108
+#: lib/hive_web/components/account_components.ex:110
 #, elixir-autogen, elixir-format
 msgid "Slack not configured"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:93
+#: lib/hive_web/components/account_components.ex:95
 #, elixir-autogen, elixir-format
 msgid "Slack profile"
 msgstr ""
@@ -161,7 +163,7 @@ msgstr ""
 msgid "Slack profile link was cancelled."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:180
+#: lib/hive_web/components/account_components.ex:491
 #, elixir-autogen, elixir-format
 msgid "Slack profile linking is not enabled for this Hive instance."
 msgstr ""
@@ -176,8 +178,8 @@ msgstr ""
 msgid "Slack rejected the profile link: %{reason}."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:56
-#: lib/hive_web/components/account_components.ex:136
+#: lib/hive_web/components/account_components.ex:58
+#: lib/hive_web/components/account_components.ex:138
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
@@ -203,12 +205,290 @@ msgstr ""
 msgid "The Slack profile link was created for a different Hive session. Try again."
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:225
+#: lib/hive_web/components/account_components.ex:536
 #, elixir-autogen, elixir-format
 msgid "Use your %{provider} account to sign in to Hive"
 msgstr ""
 
-#: lib/hive_web/components/account_components.ex:129
+#: lib/hive_web/components/account_components.ex:131
 #, elixir-autogen, elixir-format
 msgid "Workspace"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:193
+#, elixir-autogen, elixir-format
+msgid "Activity"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:179
+#, elixir-autogen, elixir-format
+msgid "Choose the updates Hive sends to your account email. Daily summaries are sent at 08:00 Coordinated Universal Time. You can also follow individual Forage items and specs from their pages."
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:32
+#, elixir-autogen, elixir-format
+msgid "Choose which Hive updates arrive by email."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:240
+#, elixir-autogen, elixir-format
+msgid "Creators and commenters automatically follow the conversation. You can change the timing or unfollow at any time."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:382
+#: lib/hive_web/components/account_components.ex:420
+#, elixir-autogen, elixir-format
+msgid "Daily"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:208
+#: lib/hive_web/live/account_live/notifications.ex:37
+#, elixir-autogen, elixir-format
+msgid "Domain drops"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:291
+#, elixir-autogen, elixir-format
+msgid "Email delivery"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:187
+#, elixir-autogen, elixir-format
+msgid "Email delivery is not configured"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/success.html.heex:3
+#, elixir-autogen, elixir-format
+msgid "Email updates disabled"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:390
+#, elixir-autogen, elixir-format
+msgid "Every edition"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:317
+#, elixir-autogen, elixir-format
+msgid "Follow a Forage item or spec to receive updates about its conversation and progress."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:237
+#, elixir-autogen, elixir-format
+msgid "Following"
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:280
+#: lib/hive_web/live/account_live/notifications.ex:391
+#, elixir-autogen, elixir-format
+msgid "Forage item"
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:35
+#, elixir-autogen, elixir-format
+msgid "Forage updates"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/success.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "Hive will no longer email you about that item. The other items you follow are unaffected."
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/success.html.heex:15
+#, elixir-autogen, elixir-format
+msgid "Hive will no longer send %{topic}. You can enable it again from your account notification preferences."
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:14
+#, elixir-autogen, elixir-format
+msgid "Hive will stop sending email about the item this message was about. Everything else you follow stays unchanged."
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:19
+#, elixir-autogen, elixir-format
+msgid "Hive will stop sending this category of email. Other notification preferences stay unchanged."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:390
+#: lib/hive_web/components/account_components.ex:429
+#, elixir-autogen, elixir-format
+msgid "Immediately"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/invalid.html.heex:3
+#, elixir-autogen, elixir-format
+msgid "Invalid unsubscribe link"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:282
+#, elixir-autogen, elixir-format
+msgid "Item"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/invalid.html.heex:15
+#: lib/hive_web/controllers/notification_unsubscribe_html/success.html.heex:23
+#, elixir-autogen, elixir-format
+msgid "Manage notifications"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:449
+#, elixir-autogen, elixir-format
+msgid "New Forage items"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:458
+#, elixir-autogen, elixir-format
+msgid "New feature requests, feedback, issues, and alerts visible to you."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:451
+#, elixir-autogen, elixir-format
+msgid "New specs"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:464
+#, elixir-autogen, elixir-format
+msgid "New specs visible to you."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:230
+#, elixir-autogen, elixir-format
+msgid "No domains available"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:307
+#, elixir-autogen, elixir-format
+msgid "No followed items"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:177
+#: lib/hive_web/components/layouts.ex:256
+#: lib/hive_web/live/account_live/notifications.ex:41
+#, elixir-autogen, elixir-format
+msgid "Notifications"
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:59
+#, elixir-autogen, elixir-format
+msgid "Notifications · %{product}"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:373
+#: lib/hive_web/components/account_components.ex:411
+#, elixir-autogen, elixir-format
+msgid "Off"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:39
+#, elixir-autogen, elixir-format
+msgid "Rather stop every email of this kind, including the other items you follow?"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/invalid.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Sign in and open account notification preferences to manage email updates."
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:299
+#, elixir-autogen, elixir-format
+msgid "Spec %{number}"
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:36
+#, elixir-autogen, elixir-format
+msgid "Spec updates"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "Stop %{topic}"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Stop %{topic}?"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Stop updates about this one?"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:211
+#, elixir-autogen, elixir-format
+msgid "Subscribe only to the domains whose shipped updates you want to follow."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:467
+#, elixir-autogen, elixir-format
+msgid "The published weekly summary of shipped updates."
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/invalid.html.heex:6
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:26
+#, elixir-autogen, elixir-format
+msgid "Unsubscribe"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/show.html.heex:3
+#, elixir-autogen, elixir-format
+msgid "Unsubscribe from email updates"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:231
+#, elixir-autogen, elixir-format
+msgid "Visible domains will appear here."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:454
+#, elixir-autogen, elixir-format
+msgid "Weekly drop digest"
+msgstr ""
+
+#: lib/hive_web/controllers/notification_unsubscribe_html/success.html.heex:6
+#, elixir-autogen, elixir-format
+msgid "You are unsubscribed"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:312
+#, elixir-autogen, elixir-format
+msgid "Adjust the search or filter to find another followed item."
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:249
+#, elixir-autogen, elixir-format
+msgid "Filter"
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:387
+#, elixir-autogen, elixir-format
+msgid "Kind"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:339
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:306
+#, elixir-autogen, elixir-format
+msgid "No followed items found"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:329
+#, elixir-autogen, elixir-format
+msgid "Prev"
+msgstr ""
+
+#: lib/hive_web/components/account_components.ex:267
+#, elixir-autogen, elixir-format
+msgid "Search followed items..."
+msgstr ""
+
+#: lib/hive_web/live/account_live/notifications.ex:392
+#, elixir-autogen, elixir-format
+msgid "Spec"
 msgstr ""

@@ -11,6 +11,7 @@ defmodule Hive.Drops.WeeklyDigests do
   alias Hive.Drops
   alias Hive.Drops.Agents.WeeklyDigestAgent
   alias Hive.Drops.WeeklyDigest
+  alias Hive.Notifications
   alias Hive.Repo
 
   @max_drops 40
@@ -351,7 +352,27 @@ defmodule Hive.Drops.WeeklyDigests do
       |> Map.put(:published_at, DateTime.utc_now() |> DateTime.truncate(:second))
       |> Map.put(:failure_reason, nil)
 
-    update_digest(digest, attrs)
+    Repo.transaction(fn ->
+      case update_digest(digest, attrs) do
+        {:ok, published_digest} ->
+          Notifications.publish!(%{
+            deduplication_key: "weekly_drop_digest_published:#{published_digest.id}",
+            type: :weekly_drop_digest_published,
+            resource_type: "drop_digest",
+            resource_id: published_digest.id,
+            data: %{"week_start" => Date.to_iso8601(published_digest.week_start)}
+          })
+
+          {:ok, published_digest}
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp mark_failed(week_start, reason) do

@@ -122,6 +122,7 @@ defmodule HiveWeb.SpecComponents do
   end
 
   attr :spec, :map, required: true
+  attr :following?, :boolean, required: true
   attr :comment_form, :any, required: true
   attr :edit_comment_form, :any, required: true
   attr :mention_suggestions, :list, default: []
@@ -158,6 +159,15 @@ defmodule HiveWeb.SpecComponents do
           </div>
         </div>
         <div data-part="header-actions">
+          <.button
+            :if={@signed_in?}
+            label={if @following?, do: dgettext("dashboard_specs", "Following"), else: dgettext("dashboard_specs", "Follow")}
+            size="medium"
+            variant="secondary"
+            phx-click={if @following?, do: "unfollow", else: "follow"}
+          >
+            <:icon_left><.bell /></:icon_left>
+          </.button>
           <Layouts.feeds_dropdown
             id="spec-show-feeds-dropdown"
             atom_href="/specs/atom.xml"

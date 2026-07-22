@@ -6,6 +6,8 @@ defmodule Hive.MCP.Server do
     version: "0.2.0",
     tools: [
       Hive.MCP.Components.Tools.Whoami,
+      Hive.MCP.Components.Tools.ListNotificationPreferences,
+      Hive.MCP.Components.Tools.SetNotificationPreference,
       Hive.MCP.Components.Tools.ListProjects,
       Hive.MCP.Components.Tools.GetProject,
       Hive.MCP.Components.Tools.CreateProject,

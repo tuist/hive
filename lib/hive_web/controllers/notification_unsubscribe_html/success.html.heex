@@ -1,0 +1,32 @@
+<Layouts.app title={@page_title} open_graph={@open_graph}>
+  <main id="notification-unsubscribe">
+    <.card title={dgettext("dashboard_account", "Email updates disabled")} icon="mail">
+      <.card_section>
+        <div data-part="content">
+          <h1>{dgettext("dashboard_account", "You are unsubscribed")}</h1>
+          <p>
+            {if @scoped?,
+              do:
+                dgettext(
+                  "dashboard_account",
+                  "Hive will no longer email you about that item. The other items you follow are unaffected."
+                ),
+              else:
+                dgettext(
+                  "dashboard_account",
+                  "Hive will no longer send %{topic}. You can enable it again from your account notification preferences.",
+                  topic: @topic_label
+                )}
+          </p>
+          <.link href={~p"/account/notifications"}>
+            <.button
+              label={dgettext("dashboard_account", "Manage notifications")}
+              variant="secondary"
+              size="medium"
+            />
+          </.link>
+        </div>
+      </.card_section>
+    </.card>
+  </main>
+</Layouts.app>

@@ -8,6 +8,7 @@ defmodule Hive.ForageTest do
   alias Hive.Forage.GitHubIssue
   alias Hive.GitHub.Issues
   alias Hive.Domains
+  alias Hive.Notifications.Event
   alias Hive.Projects
 
   defp user(attrs \\ %{}) do
@@ -380,6 +381,32 @@ defmodule Hive.ForageTest do
 
       assert Forage.update_comment(comment, %{"body" => "Hijacked."}, other_user) ==
                {:error, :unauthorized}
+    end
+  end
+
+  describe "reconcile_repository_github_issues/2" do
+    test "does not announce the issues a repository is first filled with" do
+      domain = domain_with_repo!([])
+      repository = github_repository_for_domain!(domain)
+
+      Forage.reconcile_repository_github_issues(repository, [
+        %{number: 1, title: "Crash on launch", body: "Detail"},
+        %{number: 2, title: "Slow startup", body: "Detail"}
+      ])
+
+      assert Repo.all(from(event in Event, where: event.type == :forage_item_created)) == []
+
+      Forage.reconcile_repository_github_issues(repository, [
+        %{number: 1, title: "Crash on launch", body: "Detail"},
+        %{number: 2, title: "Slow startup", body: "Detail"},
+        %{number: 3, title: "Wrong icon", body: "Detail"}
+      ])
+
+      assert [%Event{resource_id: resource_id}] =
+               Repo.all(from(event in Event, where: event.type == :forage_item_created))
+
+      issue = Repo.get_by!(GitHubIssue, github_repository_id: repository.id, number: 3)
+      assert resource_id == "github_issue:#{issue.id}"
     end
   end
 

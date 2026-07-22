@@ -7,6 +7,7 @@ defmodule Hive.SpecsTest do
   alias Hive.Auth
   alias Hive.Forage
   alias Hive.Domains
+  alias Hive.Notifications.Event
   alias Hive.Projects
   alias Hive.Repo
   alias Hive.Slack.Installation
@@ -405,11 +406,29 @@ defmodule Hive.SpecsTest do
       )
     end
 
-    test "returns a configuration error when no Slack review target is enabled" do
+    test "records a review request when no Slack review target is enabled" do
       user = user()
       {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
 
-      assert Specs.request_review(spec, user) == {:error, :slack_notifications_not_configured}
+      assert {:ok, ^spec} = Specs.request_review(spec, user)
+
+      assert %Event{type: :spec_review_requested, resource_id: resource_id, actor_id: actor_id} =
+               Repo.get_by(Event, type: :spec_review_requested, resource_id: spec.id)
+
+      assert resource_id == spec.id
+      assert actor_id == user.id
+
+      refute_enqueued(worker: Hive.Slack.Workers.SendNotification)
+    end
+
+    test "reports a configuration error when no channel can carry the request" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      stub(Hive.Notifications, :email_enabled?, fn -> false end)
+
+      assert Specs.request_review(spec, user) == {:error, :notifications_not_configured}
+      assert Repo.get_by(Event, type: :spec_review_requested, resource_id: spec.id) == nil
     end
   end
 

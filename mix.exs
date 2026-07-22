@@ -73,6 +73,8 @@ defmodule Hive.MixProject do
       {:bandit, "~> 1.5"},
       {:saxy, "~> 1.5"},
       {:sentry, "~> 13.0"},
+      {:swoosh, "~> 1.18"},
+      {:gen_smtp, "~> 1.2"},
       {:hackney, "~> 4.5", override: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mimic, "~> 1.7", only: :test}

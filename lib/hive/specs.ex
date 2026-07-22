@@ -5,11 +5,14 @@ defmodule Hive.Specs do
 
   import Ecto.Query
 
+  require Logger
+
   alias Ecto.Changeset
   alias Hive.Accounts.User
   alias Hive.Audit
   alias Hive.Auth
   alias Hive.Domains.Domain
+  alias Hive.Notifications
   alias Hive.Projects.Project
   alias Hive.Projects.ProjectDomain
   alias Hive.Repo
@@ -311,7 +314,7 @@ defmodule Hive.Specs do
       |> case do
         {:ok, spec} ->
           record_spec_event("spec.created", spec, user)
-          SendNotification.enqueue("spec.created", %{"spec_id" => spec.id})
+          enqueue_slack_notification("spec.created", %{"spec_id" => spec.id})
           Hive.Domains.schedule_evolution()
           {:ok, spec}
 
@@ -349,28 +352,50 @@ defmodule Hive.Specs do
       not can_request_review?(spec, user) ->
         {:error, :unauthorized}
 
-      not Slack.notification_enabled_for?("spec.review.requested") ->
-        {:error, :slack_notifications_not_configured}
+      # Without a channel the request would be recorded and then reach
+      # nobody, so say so instead of reporting a review that never went out.
+      not review_request_deliverable?() ->
+        {:error, :notifications_not_configured}
 
       true ->
-        case SendNotification.enqueue("spec.review.requested", %{
-               "spec_id" => spec.id,
-               "requester_id" => user.id
-             }) do
-          {:ok, _job} ->
-            record_spec_event("spec.review.requested", spec, user)
-            {:ok, spec}
+        Notifications.ensure_spec_follow(user, spec.id)
 
-          :skipped ->
-            {:error, :slack_notifications_not_configured}
+        Notifications.publish!(%{
+          deduplication_key: "spec_review_requested:#{spec.id}:#{Ecto.UUID.generate()}",
+          type: :spec_review_requested,
+          resource_type: "spec",
+          resource_id: spec.id,
+          actor_id: user.id
+        })
 
-          {:error, reason} ->
-            {:error, reason}
-        end
+        enqueue_slack_notification("spec.review.requested", %{
+          "spec_id" => spec.id,
+          "requester_id" => user.id
+        })
+
+        record_spec_event("spec.review.requested", spec, user)
+        {:ok, spec}
     end
   end
 
   def request_review(_spec, _user), do: {:error, :unauthorized}
+
+  defp review_request_deliverable? do
+    Slack.notification_enabled_for?("spec.review.requested") or Notifications.email_enabled?()
+  end
+
+  defp enqueue_slack_notification(event, args) do
+    case SendNotification.enqueue(event, args) do
+      {:error, reason} ->
+        Logger.warning(
+          "Slack notification for #{event} could not be enqueued: #{inspect(reason)}. " <>
+            "Args: #{inspect(args)}"
+        )
+
+      _enqueued_or_skipped ->
+        :ok
+    end
+  end
 
   # Runs a spec write inside a transaction that fails fast on lock contention
   # instead of hanging. lock_timeout bounds both the numbering advisory lock and
@@ -403,10 +428,48 @@ defmodule Hive.Specs do
            |> Repo.insert(),
          {:ok, spec} <- put_domains(spec, attrs),
          {:ok, _revision} <- create_revision(spec, user) do
+      publish_spec_creation(spec, user)
       spec
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  defp publish_spec_creation(spec, user) do
+    Notifications.ensure_spec_follow(user, spec.id)
+
+    Notifications.publish!(%{
+      deduplication_key: "spec_created:#{spec.id}",
+      type: :spec_created,
+      resource_type: "spec",
+      resource_id: spec.id,
+      actor_id: user.id,
+      data: %{"title" => spec.title}
+    })
+
+    if spec.source_feature_request_id, do: publish_source_spec_creation(spec, user)
+  end
+
+  # Runs inside the transaction that holds the spec-numbering advisory lock,
+  # so the fan-out stays at a fixed number of queries no matter how many
+  # people follow the item.
+  defp publish_source_spec_creation(spec, user) do
+    item_id = "manual:#{spec.source_feature_request_id}"
+    spec_with_project = Repo.preload(spec, :project)
+
+    Notifications.followers(:forage_item_updates, item_id)
+    |> Enum.filter(&can_view?(spec_with_project, &1.user))
+    |> Enum.map(&{&1.user_id, &1.cadence})
+    |> Notifications.ensure_spec_follows(spec.id)
+
+    Notifications.publish!(%{
+      deduplication_key: "forage_spec_created:#{spec.id}",
+      type: :forage_spec_created,
+      resource_type: "forage_item",
+      resource_id: item_id,
+      actor_id: user.id,
+      data: %{"spec_id" => spec.id, "spec_title" => spec.title}
+    })
   end
 
   defp put_next_spec_number(%Changeset{valid?: true} = changeset) do
@@ -508,7 +571,16 @@ defmodule Hive.Specs do
            |> Changeset.put_change(:updated_by_user_id, user.id)
            |> Repo.update(stale_error_field: :lock_version),
          {:ok, spec} <- put_domains(spec, attrs),
-         {:ok, _revision} <- create_revision(spec, user) do
+         {:ok, revision} <- create_revision(spec, user) do
+      Notifications.publish!(%{
+        deduplication_key: "spec_updated:#{spec.id}:#{revision.id}",
+        type: :spec_updated,
+        resource_type: "spec",
+        resource_id: spec.id,
+        actor_id: user.id,
+        data: %{"description" => spec.summary || spec.body}
+      })
+
       spec
     else
       {:error, reason} -> Repo.rollback(reason)
@@ -527,11 +599,7 @@ defmodule Hive.Specs do
 
   def add_comment(%Spec{} = spec, attrs, %User{} = user) do
     if can_comment?(spec, user) do
-      %Comment{}
-      |> Comment.changeset(attrs)
-      |> Changeset.put_change(:spec_id, spec.id)
-      |> Changeset.put_change(:user_id, user.id)
-      |> Repo.insert()
+      add_comment_transaction(spec, attrs, user)
       |> case do
         {:ok, comment} ->
           SendNotification.enqueue("spec.comment.created", %{"comment_id" => comment.id})
@@ -546,6 +614,31 @@ defmodule Hive.Specs do
   end
 
   def add_comment(_spec, _attrs, _user), do: {:error, :unauthorized}
+
+  defp add_comment_transaction(spec, attrs, user) do
+    Repo.transaction(fn ->
+      comment =
+        %Comment{}
+        |> Comment.changeset(attrs)
+        |> Changeset.put_change(:spec_id, spec.id)
+        |> Changeset.put_change(:user_id, user.id)
+        |> Repo.insert()
+        |> unwrap_or_rollback()
+
+      Notifications.ensure_spec_follow(user, spec.id)
+
+      Notifications.publish!(%{
+        deduplication_key: "spec_comment_created:#{comment.id}",
+        type: :spec_comment_created,
+        resource_type: "spec",
+        resource_id: spec.id,
+        actor_id: user.id,
+        data: %{"comment_preview" => String.slice(comment.body, 0, 500)}
+      })
+
+      comment
+    end)
+  end
 
   def update_comment(%Comment{} = comment, attrs, %User{} = user) do
     if can_edit_comment?(comment, user) do
@@ -673,6 +766,9 @@ defmodule Hive.Specs do
   end
 
   defp present?(value), do: is_binary(value) and value != ""
+
+  defp unwrap_or_rollback({:ok, value}), do: value
+  defp unwrap_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp record_spec_event(action, %Spec{} = spec, %User{} = user) do
     Audit.record(action, %{

@@ -111,6 +111,93 @@ config :hive, :slack,
   scopes: System.get_env("HIVE_SLACK_BOT_SCOPES"),
   allowed_team_ids: System.get_env("HIVE_SLACK_ALLOWED_TEAM_IDS")
 
+email_provider =
+  System.get_env("HIVE_EMAIL_PROVIDER", "none")
+  |> String.trim()
+  |> String.downcase()
+
+email_from = System.get_env("HIVE_EMAIL_FROM")
+email_message_stream = System.get_env("HIVE_EMAIL_MESSAGE_STREAM")
+
+# The sender may carry a display name (`Hive <notifications@example.com>`),
+# but only the address inside it reaches the mail server. Checking it here
+# turns a typo into a failed boot instead of email that is accepted by Hive
+# and then rejected by every relay.
+require_email_from = fn value ->
+  address =
+    case Regex.run(~r/\A(.*?)<([^<>]+)>\s*\z/, value || "") do
+      [_match, _name, address] -> String.trim(address)
+      nil -> String.trim(value || "")
+    end
+
+  cond do
+    address == "" ->
+      raise "environment variable HIVE_EMAIL_FROM is required when email delivery is enabled"
+
+    not Regex.match?(~r/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/, address) ->
+      raise "environment variable HIVE_EMAIL_FROM must be an email address, optionally " <>
+              "with a display name, for example: Hive <notifications@example.com>"
+
+    true ->
+      :ok
+  end
+end
+
+case email_provider do
+  provider when provider in ["", "none"] ->
+    :ok
+
+  "postmark" ->
+    postmark_token =
+      System.get_env("HIVE_POSTMARK_SERVER_TOKEN") ||
+        raise "environment variable HIVE_POSTMARK_SERVER_TOKEN is required for Postmark email"
+
+    require_email_from.(email_from)
+
+    config :hive, :email, from: email_from, message_stream: email_message_stream
+
+    config :hive, Hive.Notifications.Mailer,
+      adapter: Swoosh.Adapters.Postmark,
+      api_key: postmark_token
+
+  "smtp" ->
+    relay =
+      System.get_env("HIVE_SMTP_RELAY") ||
+        raise "environment variable HIVE_SMTP_RELAY is required for SMTP email"
+
+    require_email_from.(email_from)
+
+    smtp_port = System.get_env("HIVE_SMTP_PORT", "587") |> String.to_integer()
+
+    config :hive, :email, from: email_from
+
+    smtp_username = System.get_env("HIVE_SMTP_USERNAME")
+    smtp_password = System.get_env("HIVE_SMTP_PASSWORD")
+    implicit_tls? = smtp_port == 465
+
+    smtp_options = [
+      adapter: Swoosh.Adapters.SMTP,
+      relay: relay,
+      port: smtp_port,
+      auth: if(present?.(smtp_username) and present?.(smtp_password), do: :always, else: :never),
+      tls: if(implicit_tls?, do: :never, else: :always),
+      ssl: implicit_tls?,
+      retries: 2
+    ]
+
+    smtp_options =
+      if present?.(smtp_username) and present?.(smtp_password) do
+        Keyword.merge(smtp_options, username: smtp_username, password: smtp_password)
+      else
+        smtp_options
+      end
+
+    config :hive, Hive.Notifications.Mailer, smtp_options
+
+  provider ->
+    raise "unsupported HIVE_EMAIL_PROVIDER=#{provider}. Supported values are: none, postmark, smtp"
+end
+
 if opendata_vector_url = System.get_env("HIVE_OPENDATA_VECTOR_URL") do
   config :hive, :opendata_vector, base_url: opendata_vector_url
 end

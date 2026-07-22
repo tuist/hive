@@ -20,6 +20,7 @@ defmodule Hive.Forage do
   alias Hive.Forage.Item
   alias Hive.Forage.Policy
   alias Hive.GitHub.Issues
+  alias Hive.Notifications
   alias Hive.Repo
 
   @default_item_page_size 20
@@ -399,10 +400,28 @@ defmodule Hive.Forage do
   end
 
   def create_forage_item(attrs, %User{} = user) do
-    %FeatureRequest{}
-    |> FeatureRequest.changeset(attrs)
-    |> Ecto.Changeset.put_change(:user_id, user.id)
-    |> Repo.insert()
+    Repo.transaction(fn ->
+      feature_request =
+        %FeatureRequest{}
+        |> FeatureRequest.changeset(attrs)
+        |> Ecto.Changeset.put_change(:user_id, user.id)
+        |> Repo.insert()
+        |> unwrap_or_rollback()
+
+      item_id = "manual:#{feature_request.id}"
+      Notifications.ensure_forage_item_follow(user, item_id)
+
+      Notifications.publish!(%{
+        deduplication_key: "forage_item_created:#{item_id}",
+        type: :forage_item_created,
+        resource_type: "forage_item",
+        resource_id: item_id,
+        actor_id: user.id,
+        data: %{"title" => feature_request.title}
+      })
+
+      feature_request
+    end)
     |> case do
       {:ok, feature_request} ->
         Hive.Domains.schedule_evolution()
@@ -415,9 +434,7 @@ defmodule Hive.Forage do
 
   def update_forage_item(%FeatureRequest{} = item, attrs, %User{} = user) do
     if can_edit_item?(item, user) do
-      item
-      |> FeatureRequest.update_changeset(attrs)
-      |> Repo.update()
+      update_forage_item_transaction(item, attrs, user)
       |> case do
         {:ok, item} ->
           Hive.Domains.schedule_evolution()
@@ -433,6 +450,29 @@ defmodule Hive.Forage do
 
   def update_forage_item(_item, _attrs, _user), do: {:error, :unauthorized}
 
+  defp update_forage_item_transaction(item, attrs, user) do
+    Repo.transaction(fn ->
+      updated_item =
+        item
+        |> FeatureRequest.update_changeset(attrs)
+        |> Repo.update()
+        |> unwrap_or_rollback()
+
+      item_id = "manual:#{updated_item.id}"
+
+      Notifications.publish!(%{
+        deduplication_key: "forage_item_updated:#{item_id}:#{Ecto.UUID.generate()}",
+        type: :forage_item_updated,
+        resource_type: "forage_item",
+        resource_id: item_id,
+        actor_id: user.id,
+        data: %{"description" => updated_item.description}
+      })
+
+      updated_item
+    end)
+  end
+
   def change_comment(comment \\ %Comment{}, attrs \\ %{}) do
     Comment.changeset(comment, attrs)
   end
@@ -441,17 +481,39 @@ defmodule Hive.Forage do
 
   def add_comment(%FeatureRequest{} = item, attrs, %User{} = user) do
     if can_comment_item?(item, user) do
-      %Comment{}
-      |> Comment.changeset(attrs)
-      |> Ecto.Changeset.put_change(:forage_feature_request_id, item.id)
-      |> Ecto.Changeset.put_change(:user_id, user.id)
-      |> Repo.insert()
+      add_comment_transaction(item, attrs, user)
     else
       {:error, :unauthorized}
     end
   end
 
   def add_comment(_item, _attrs, _user), do: {:error, :unauthorized}
+
+  defp add_comment_transaction(item, attrs, user) do
+    Repo.transaction(fn ->
+      comment =
+        %Comment{}
+        |> Comment.changeset(attrs)
+        |> Ecto.Changeset.put_change(:forage_feature_request_id, item.id)
+        |> Ecto.Changeset.put_change(:user_id, user.id)
+        |> Repo.insert()
+        |> unwrap_or_rollback()
+
+      item_id = "manual:#{item.id}"
+      Notifications.ensure_forage_item_follow(user, item_id)
+
+      Notifications.publish!(%{
+        deduplication_key: "forage_comment_created:#{comment.id}",
+        type: :forage_comment_created,
+        resource_type: "forage_item",
+        resource_id: item_id,
+        actor_id: user.id,
+        data: %{"comment_preview" => String.slice(comment.body, 0, 500)}
+      })
+
+      comment
+    end)
+  end
 
   def update_comment(%Comment{} = comment, attrs, %User{} = user) do
     if can_edit_comment?(comment, user) do
@@ -872,11 +934,16 @@ defmodule Hive.Forage do
   def reconcile_repository_github_issues(%GitHubRepository{id: repository_id}, entries) do
     incoming_numbers = entries |> Enum.map(& &1.number) |> Enum.uniq()
 
+    # A repository with nothing cached yet is being filled in for the first
+    # time, so every issue looks new. Announcing them would mail one message
+    # per open issue to everyone following new Forage items.
+    notify? = repository_cached?(repository_id)
+
     dirty_issue_ids =
       Repo.transaction(fn ->
         dirty_ids =
           entries
-          |> Enum.map(&dirty_issue_id(repository_id, &1))
+          |> Enum.map(&dirty_issue_id(repository_id, &1, notify?: notify?))
           |> Enum.reject(&is_nil/1)
 
         delete_missing(repository_id, incoming_numbers)
@@ -898,8 +965,14 @@ defmodule Hive.Forage do
     :ok
   end
 
-  defp dirty_issue_id(repository_id, entry) do
-    case upsert_entry(repository_id, entry) do
+  defp repository_cached?(repository_id) do
+    GitHubIssue
+    |> where([issue], issue.github_repository_id == ^repository_id)
+    |> Repo.exists?()
+  end
+
+  defp dirty_issue_id(repository_id, entry, opts) do
+    case upsert_entry(repository_id, entry, opts) do
       {:ok, %GitHubIssue{id: id}, true} -> id
       {:ok, %GitHubIssue{}, false} -> nil
       {:error, changeset} -> Repo.rollback(changeset)
@@ -917,7 +990,15 @@ defmodule Hive.Forage do
     |> Repo.all()
   end
 
-  defp upsert_entry(repository_id, entry) do
+  defp upsert_entry(repository_id, entry, opts \\ []) do
+    Repo.transaction(fn -> upsert_entry_transaction(repository_id, entry, opts) end)
+    |> case do
+      {:ok, result} -> result
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp upsert_entry_transaction(repository_id, entry, opts) do
     attrs = %{
       github_repository_id: repository_id,
       number: entry.number,
@@ -944,8 +1025,30 @@ defmodule Hive.Forage do
       |> GitHubIssue.changeset(attrs)
 
     case Repo.insert_or_update(changeset) do
-      {:ok, issue} -> {:ok, issue, content_changed?}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, issue} ->
+        if Keyword.get(opts, :notify?, true) do
+          maybe_publish_issue_event(issue, existing, content_changed?)
+        end
+
+        {:ok, issue, content_changed?}
+
+      {:error, changeset} ->
+        Repo.rollback(changeset)
+    end
+  end
+
+  defp maybe_publish_issue_event(issue, existing, content_changed?) do
+    if is_nil(existing) or content_changed? do
+      item_id = "github_issue:#{issue.id}"
+      type = if is_nil(existing), do: :forage_item_created, else: :forage_item_updated
+
+      Notifications.publish!(%{
+        deduplication_key: "#{type}:#{item_id}:#{Ecto.UUID.generate()}",
+        type: type,
+        resource_type: "forage_item",
+        resource_id: item_id,
+        data: %{"description" => issue.body || issue.title}
+      })
     end
   end
 
@@ -954,6 +1057,9 @@ defmodule Hive.Forage do
   defp content_changed?(%GitHubIssue{title: title, body: body}, entry) do
     title != entry.title or body != Map.get(entry, :body)
   end
+
+  defp unwrap_or_rollback({:ok, value}), do: value
+  defp unwrap_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp classify_issue(issue_id) do
     case GitHubIssueClassificationWorker.enqueue(issue_id) do

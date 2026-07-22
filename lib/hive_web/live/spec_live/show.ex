@@ -4,6 +4,7 @@ defmodule HiveWeb.SpecLive.Show do
   use HiveWeb, :live_view
 
   alias Hive.Accounts.User
+  alias Hive.Notifications
   alias Hive.Specs
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -61,6 +62,10 @@ defmodule HiveWeb.SpecLive.Show do
          rss_href: "/specs/rss.xml"
        })
        |> assign_spec(spec)
+       |> assign(
+         :following?,
+         Notifications.subscribed?(socket.assigns.current_user, :spec_updates, spec.id)
+       )
        |> assign(:can_edit?, Specs.can_edit?(spec, socket.assigns.current_user))
        |> assign(
          :can_request_review?,
@@ -83,22 +88,42 @@ defmodule HiveWeb.SpecLive.Show do
   end
 
   @impl true
+  def handle_event("follow", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_specs", "Sign in to follow this spec."))}
+  end
+
+  def handle_event("follow", _params, socket) do
+    {:ok, _subscription} =
+      Notifications.follow_spec(socket.assigns.current_user, socket.assigns.spec.id,
+        cadence: :immediate
+      )
+
+    {:noreply,
+     socket
+     |> assign(:following?, true)
+     |> put_flash(:info, dgettext("dashboard_specs", "You are following this spec."))}
+  end
+
+  def handle_event("unfollow", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_specs", "Sign in to follow this spec."))}
+  end
+
+  def handle_event("unfollow", _params, socket) do
+    Notifications.unsubscribe(socket.assigns.current_user, :spec_updates, socket.assigns.spec.id)
+
+    {:noreply,
+     socket
+     |> assign(:following?, false)
+     |> put_flash(:info, dgettext("dashboard_specs", "You are no longer following this spec."))}
+  end
+
+  @impl true
   def handle_event("request_review", _params, socket) do
     case Specs.request_review(socket.assigns.spec, socket.assigns.current_user) do
       {:ok, _spec} ->
-        {:noreply,
-         put_flash(socket, :info, dgettext("dashboard_specs", "Review request posted to Slack."))}
-
-      {:error, :slack_notifications_not_configured} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           dgettext(
-             "dashboard_specs",
-             "Configure a Slack notification channel with spec review requests enabled first."
-           )
-         )}
+        {:noreply, put_flash(socket, :info, dgettext("dashboard_specs", "Review requested."))}
 
       {:error, :unauthorized} ->
         {:noreply,
@@ -108,12 +133,15 @@ defmodule HiveWeb.SpecLive.Show do
            dgettext("dashboard_specs", "Only organization members can request review.")
          )}
 
-      {:error, _reason} ->
+      {:error, :notifications_not_configured} ->
         {:noreply,
          put_flash(
            socket,
            :error,
-           dgettext("dashboard_specs", "Couldn't request review for this spec.")
+           dgettext(
+             "dashboard_specs",
+             "Configure email delivery or a Slack notification channel before requesting review."
+           )
          )}
     end
   end
@@ -205,6 +233,7 @@ defmodule HiveWeb.SpecLive.Show do
         {:noreply,
          socket
          |> put_flash(:info, dgettext("dashboard_specs", "Comment added."))
+         |> assign(:following?, true)
          |> assign_spec(spec)
          |> assign(OpenGraph.assigns(open_graph(spec)))
          |> assign_comment_form(Specs.change_comment())}
@@ -494,6 +523,7 @@ defmodule HiveWeb.SpecLive.Show do
     >
       <SpecComponents.show
         spec={@spec}
+        following?={@following?}
         comment_form={@comment_form}
         edit_comment_form={@edit_comment_form}
         mention_suggestions={@comment_mention_suggestions}

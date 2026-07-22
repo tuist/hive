@@ -13,6 +13,11 @@ defmodule HiveWeb.Router do
     plug :fetch_session
   end
 
+  pipeline :notification_unsubscribe do
+    plug :accepts, ["html"]
+    plug :put_secure_browser_headers
+  end
+
   pipeline :oauth do
     plug Ueberauth
   end
@@ -61,6 +66,13 @@ defmodule HiveWeb.Router do
 
     post "/github", GitHubWebhookController, :create
     post "/projects/:project_id/:source/:token", ProjectWebhookController, :create
+  end
+
+  scope "/notifications", HiveWeb do
+    pipe_through :notification_unsubscribe
+
+    get "/unsubscribe", NotificationUnsubscribeController, :show
+    post "/unsubscribe", NotificationUnsubscribeController, :create
   end
 
   scope "/api/slack", HiveWeb do
@@ -225,6 +237,7 @@ defmodule HiveWeb.Router do
       on_mount: HiveWeb.DashboardLive.Hooks,
       root_layout: {HiveWeb.Layouts, :root} do
       live "/account/identities", AccountLive.Identities
+      live "/account/notifications", AccountLive.Notifications
     end
 
     live_session :ops,

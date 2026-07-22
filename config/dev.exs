@@ -35,6 +35,8 @@ config :hive, HiveWeb.Endpoint,
 
 config :hive, dev_routes: true
 
+config :hive, :email, from: {"Hive", "notifications@hive.test"}
+
 config :hive, :og_images, start_browser_pool: false
 
 config :logger, :default_formatter, format: "[$level] $message\n"

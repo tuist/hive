@@ -1,0 +1,24 @@
+<Layouts.app title={@page_title} open_graph={@open_graph}>
+  <main id="notification-unsubscribe">
+    <.card title={dgettext("dashboard_account", "Invalid unsubscribe link")} icon="mail">
+      <.card_section>
+        <div data-part="content">
+          <h1>{dgettext("dashboard_account", "This link is no longer valid")}</h1>
+          <p>
+            {dgettext(
+              "dashboard_account",
+              "Sign in and open account notification preferences to manage email updates."
+            )}
+          </p>
+          <.link href={~p"/account/notifications"}>
+            <.button
+              label={dgettext("dashboard_account", "Manage notifications")}
+              variant="secondary"
+              size="medium"
+            />
+          </.link>
+        </div>
+      </.card_section>
+    </.card>
+  </main>
+</Layouts.app>

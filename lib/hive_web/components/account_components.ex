@@ -5,6 +5,8 @@ defmodule HiveWeb.AccountComponents do
 
   use HiveWeb, :html
 
+  alias HiveWeb.Utilities.Query
+
   attr :user, :any, required: true
   attr :providers, :list, required: true
   attr :identities, :list, required: true
@@ -154,6 +156,315 @@ defmodule HiveWeb.AccountComponents do
     </section>
     """
   end
+
+  attr :email_enabled?, :boolean, required: true
+  attr :global_preferences, :list, required: true
+  attr :domains, :list, required: true
+  attr :domain_preferences, :map, required: true
+  attr :followed_items, :list, required: true
+  attr :followed_items_meta, :map, required: true
+  attr :available_filters, :list, required: true
+  attr :active_filters, :list, required: true
+  attr :search_form, :any, required: true
+  attr :query, :string, required: true
+  attr :uri, :any, required: true
+
+  def notifications(assigns) do
+    ~H"""
+    <section id="account-notifications">
+      <div data-part="page-header">
+        <div data-part="title-group">
+          <h1>{dgettext("dashboard_account", "Notifications")}</h1>
+          <p>
+            {dgettext(
+              "dashboard_account",
+              "Choose the updates Hive sends to your account email. Daily summaries are sent at 08:00 Coordinated Universal Time. You can also follow individual Forage items and specs from their pages."
+            )}
+          </p>
+        </div>
+        <.badge
+          :if={not @email_enabled?}
+          label={dgettext("dashboard_account", "Email delivery is not configured")}
+          color="warning"
+          style="light-fill"
+        />
+      </div>
+
+      <.card icon="mail" title={dgettext("dashboard_account", "Activity")}>
+        <.card_section>
+          <div data-part="preference-list">
+            <.notification_preference
+              :for={preference <- @global_preferences}
+              label={notification_topic_label(preference.topic)}
+              description={notification_topic_description(preference.topic)}
+              topic={preference.topic}
+              cadence={preference.cadence}
+              weekly?={preference.topic == :weekly_drop_digest}
+            />
+          </div>
+        </.card_section>
+      </.card>
+
+      <.card icon="treemap" title={dgettext("dashboard_account", "Domain drops")}>
+        <.card_section>
+          <p data-part="section-copy">
+            {dgettext(
+              "dashboard_account",
+              "Subscribe only to the domains whose shipped updates you want to follow."
+            )}
+          </p>
+          <div data-part="domain-list">
+            <div :for={domain <- @domains} data-part="preference-row">
+              <div data-part="preference-copy">
+                <.link navigate={~p"/domains/#{domain.id}"}>{domain.name}</.link>
+                <span>{domain.description}</span>
+              </div>
+              <.cadence_buttons
+                event="set_domain"
+                id={domain.id}
+                cadence={Map.get(@domain_preferences, domain.id)}
+              />
+            </div>
+            <div :if={@domains == []} data-part="empty-state">
+              <.icon name="treemap" />
+              <strong>{dgettext("dashboard_account", "No domains available")}</strong>
+              <span>{dgettext("dashboard_account", "Visible domains will appear here.")}</span>
+            </div>
+          </div>
+        </.card_section>
+      </.card>
+
+      <.card icon="eye" title={dgettext("dashboard_account", "Following")}>
+        <.card_section data-part="following-section">
+          <p data-part="section-copy">
+            {dgettext(
+              "dashboard_account",
+              "Creators and commenters automatically follow the conversation. You can change the timing or unfollow at any time."
+            )}
+          </p>
+          <div data-part="following-table">
+            <div data-part="table-toolbar">
+              <.filter_dropdown
+                id="notification-following-filter"
+                label={dgettext("dashboard_account", "Filter")}
+                available_filters={@available_filters}
+                active_filters={@active_filters}
+                on_select="add_filter"
+              />
+
+              <div data-part="search">
+                <.form
+                  id="notification-following-search-form"
+                  for={@search_form}
+                  phx-change="search"
+                  phx-submit="search"
+                >
+                  <.text_input
+                    id="notification-following-search"
+                    field={@search_form[:query]}
+                    type="search"
+                    show_suffix={false}
+                    placeholder={dgettext("dashboard_account", "Search followed items...")}
+                  />
+                </.form>
+              </div>
+            </div>
+
+            <div :if={@active_filters != []} data-part="active-filters">
+              <.active_filter :for={filter <- @active_filters} filter={filter} />
+            </div>
+
+            <.table
+              id="notification-following-table"
+              rows={@followed_items}
+              row_key={fn item -> "following-#{item.topic}-#{item.id}" end}
+            >
+              <:col :let={item} label={dgettext("dashboard_account", "Item")}>
+                <.link navigate={item.path} data-part="resource-link">
+                  <.text_and_description_cell
+                    icon={followed_item_icon(item.topic)}
+                    label={item.title}
+                    description={item.description}
+                  />
+                </.link>
+              </:col>
+              <:col :let={item} label={dgettext("dashboard_account", "Email delivery")}>
+                <div data-part="cell" data-type="cadence">
+                  <.cadence_buttons
+                    event="set_follow"
+                    topic={item.topic}
+                    id={item.id}
+                    cadence={item.cadence}
+                  />
+                </div>
+              </:col>
+              <:empty_state>
+                <.table_empty_state
+                  icon="eye"
+                  title={
+                    if @query != "" or @active_filters != [],
+                      do: dgettext("dashboard_account", "No followed items found"),
+                      else: dgettext("dashboard_account", "No followed items")
+                  }
+                  subtitle={
+                    if @query != "" or @active_filters != [],
+                      do:
+                        dgettext(
+                          "dashboard_account",
+                          "Adjust the search or filter to find another followed item."
+                        ),
+                      else:
+                        dgettext(
+                          "dashboard_account",
+                          "Follow a Forage item or spec to receive updates about its conversation and progress."
+                        )
+                  }
+                />
+              </:empty_state>
+            </.table>
+
+            <div :if={@followed_items_meta.total_pages > 1} data-part="pagination">
+              <.button
+                variant="secondary"
+                label={dgettext("dashboard_account", "Prev")}
+                disabled={@followed_items_meta.current_page <= 1}
+                patch={
+                  notification_page_link(@uri, max(1, @followed_items_meta.current_page - 1))
+                }
+              >
+                <:icon_left><.chevron_left /></:icon_left>
+              </.button>
+              <.button
+                variant="secondary"
+                label={dgettext("dashboard_account", "Next")}
+                disabled={@followed_items_meta.current_page >= @followed_items_meta.total_pages}
+                patch={
+                  notification_page_link(
+                    @uri,
+                    min(@followed_items_meta.total_pages, @followed_items_meta.current_page + 1)
+                  )
+                }
+              >
+                <:icon_right><.chevron_right /></:icon_right>
+              </.button>
+            </div>
+          </div>
+        </.card_section>
+      </.card>
+    </section>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :description, :string, required: true
+  attr :topic, :atom, required: true
+  attr :cadence, :atom, default: nil
+  attr :weekly?, :boolean, default: false
+
+  defp notification_preference(assigns) do
+    ~H"""
+    <div data-part="preference-row">
+      <div data-part="preference-copy">
+        <strong>{@label}</strong>
+        <span>{@description}</span>
+      </div>
+      <.button_group size="medium" data-part="cadence-control">
+        <.button_group_item
+          label={dgettext("dashboard_account", "Off")}
+          phx-click="set_global"
+          phx-value-topic={@topic}
+          phx-value-cadence="off"
+          data-selected={is_nil(@cadence)}
+          aria-pressed={to_string(is_nil(@cadence))}
+        />
+        <.button_group_item
+          :if={not @weekly?}
+          label={dgettext("dashboard_account", "Daily")}
+          phx-click="set_global"
+          phx-value-topic={@topic}
+          phx-value-cadence="daily"
+          data-selected={@cadence == :daily}
+          aria-pressed={to_string(@cadence == :daily)}
+        />
+        <.button_group_item
+          label={if @weekly?, do: dgettext("dashboard_account", "Every edition"), else: dgettext("dashboard_account", "Immediately")}
+          phx-click="set_global"
+          phx-value-topic={@topic}
+          phx-value-cadence="immediate"
+          data-selected={@cadence == :immediate}
+          aria-pressed={to_string(@cadence == :immediate)}
+        />
+      </.button_group>
+    </div>
+    """
+  end
+
+  attr :event, :string, required: true
+  attr :topic, :atom, default: nil
+  attr :id, :string, required: true
+  attr :cadence, :atom, default: nil
+
+  defp cadence_buttons(assigns) do
+    ~H"""
+    <.button_group size="medium" data-part="cadence-control">
+      <.button_group_item
+        label={dgettext("dashboard_account", "Off")}
+        phx-click={@event}
+        phx-value-topic={@topic}
+        phx-value-id={@id}
+        phx-value-cadence="off"
+        data-selected={is_nil(@cadence)}
+        aria-pressed={to_string(is_nil(@cadence))}
+      />
+      <.button_group_item
+        label={dgettext("dashboard_account", "Daily")}
+        phx-click={@event}
+        phx-value-topic={@topic}
+        phx-value-id={@id}
+        phx-value-cadence="daily"
+        data-selected={@cadence == :daily}
+        aria-pressed={to_string(@cadence == :daily)}
+      />
+      <.button_group_item
+        label={dgettext("dashboard_account", "Immediately")}
+        phx-click={@event}
+        phx-value-topic={@topic}
+        phx-value-id={@id}
+        phx-value-cadence="immediate"
+        data-selected={@cadence == :immediate}
+        aria-pressed={to_string(@cadence == :immediate)}
+      />
+    </.button_group>
+    """
+  end
+
+  defp followed_item_icon(:forage_item_updates), do: "rss"
+  defp followed_item_icon(:spec_updates), do: "file_text"
+
+  defp notification_page_link(uri, page) do
+    "?" <> Query.put(uri.query, "page", Integer.to_string(page))
+  end
+
+  defp notification_topic_label(:forage_new_items),
+    do: dgettext("dashboard_account", "New Forage items")
+
+  defp notification_topic_label(:spec_new), do: dgettext("dashboard_account", "New specs")
+
+  defp notification_topic_label(:weekly_drop_digest),
+    do: dgettext("dashboard_account", "Weekly drop digest")
+
+  defp notification_topic_description(:forage_new_items),
+    do:
+      dgettext(
+        "dashboard_account",
+        "New feature requests, feedback, issues, and alerts visible to you."
+      )
+
+  defp notification_topic_description(:spec_new),
+    do: dgettext("dashboard_account", "New specs visible to you.")
+
+  defp notification_topic_description(:weekly_drop_digest),
+    do: dgettext("dashboard_account", "The published weekly summary of shipped updates.")
 
   defp slack_profile_label(profile) do
     cond do
