@@ -5,6 +5,8 @@ defmodule Hive.Specs do
 
   import Ecto.Query
 
+  require Logger
+
   alias Ecto.Changeset
   alias Hive.Accounts.User
   alias Hive.Audit
@@ -312,7 +314,7 @@ defmodule Hive.Specs do
       |> case do
         {:ok, spec} ->
           record_spec_event("spec.created", spec, user)
-          SendNotification.enqueue("spec.created", %{"spec_id" => spec.id})
+          enqueue_slack_notification("spec.created", %{"spec_id" => spec.id})
           Hive.Domains.schedule_evolution()
           {:ok, spec}
 
@@ -346,32 +348,54 @@ defmodule Hive.Specs do
   def update_spec(_spec, _attrs, _user), do: {:error, :unauthorized}
 
   def request_review(%Spec{} = spec, %User{} = user) do
-    if can_request_review?(spec, user) do
-      Notifications.ensure_spec_follow(user, spec.id)
+    cond do
+      not can_request_review?(spec, user) ->
+        {:error, :unauthorized}
 
-      Notifications.publish!(%{
-        deduplication_key: "spec_review_requested:#{spec.id}:#{Ecto.UUID.generate()}",
-        type: :spec_review_requested,
-        resource_type: "spec",
-        resource_id: spec.id,
-        actor_id: user.id
-      })
+      # Without a channel the request would be recorded and then reach
+      # nobody, so say so instead of reporting a review that never went out.
+      not review_request_deliverable?() ->
+        {:error, :notifications_not_configured}
 
-      if Slack.notification_enabled_for?("spec.review.requested") do
-        SendNotification.enqueue("spec.review.requested", %{
+      true ->
+        Notifications.ensure_spec_follow(user, spec.id)
+
+        Notifications.publish!(%{
+          deduplication_key: "spec_review_requested:#{spec.id}:#{Ecto.UUID.generate()}",
+          type: :spec_review_requested,
+          resource_type: "spec",
+          resource_id: spec.id,
+          actor_id: user.id
+        })
+
+        enqueue_slack_notification("spec.review.requested", %{
           "spec_id" => spec.id,
           "requester_id" => user.id
         })
-      end
 
-      record_spec_event("spec.review.requested", spec, user)
-      {:ok, spec}
-    else
-      {:error, :unauthorized}
+        record_spec_event("spec.review.requested", spec, user)
+        {:ok, spec}
     end
   end
 
   def request_review(_spec, _user), do: {:error, :unauthorized}
+
+  defp review_request_deliverable? do
+    Slack.notification_enabled_for?("spec.review.requested") or Notifications.email_enabled?()
+  end
+
+  defp enqueue_slack_notification(event, args) do
+    case SendNotification.enqueue(event, args) do
+      {:error, reason} ->
+        Logger.warning(
+          "Slack notification for #{event} could not be enqueued: #{inspect(reason)}. " <>
+            "Args: #{inspect(args)}"
+        )
+
+      _enqueued_or_skipped ->
+        :ok
+    end
+  end
 
   # Runs a spec write inside a transaction that fails fast on lock contention
   # instead of hanging. lock_timeout bounds both the numbering advisory lock and
@@ -426,14 +450,17 @@ defmodule Hive.Specs do
     if spec.source_feature_request_id, do: publish_source_spec_creation(spec, user)
   end
 
+  # Runs inside the transaction that holds the spec-numbering advisory lock,
+  # so the fan-out stays at a fixed number of queries no matter how many
+  # people follow the item.
   defp publish_source_spec_creation(spec, user) do
     item_id = "manual:#{spec.source_feature_request_id}"
+    spec_with_project = Repo.preload(spec, :project)
 
     Notifications.followers(:forage_item_updates, item_id)
-    |> Enum.filter(&can_view?(spec, &1.user))
-    |> Enum.each(fn subscription ->
-      Notifications.ensure_spec_follow(subscription.user, spec.id, cadence: subscription.cadence)
-    end)
+    |> Enum.filter(&can_view?(spec_with_project, &1.user))
+    |> Enum.map(&{&1.user_id, &1.cadence})
+    |> Notifications.ensure_spec_follows(spec.id)
 
     Notifications.publish!(%{
       deduplication_key: "forage_spec_created:#{spec.id}",

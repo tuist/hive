@@ -387,6 +387,17 @@ defmodule HiveWeb.SpecLive.ShowTest do
     assert html =~ "Review requested."
   end
 
+  test "does not crash when an anonymous visitor pushes unfollow", %{conn: conn} do
+    {_author_conn, author} = sign_in(conn, "author@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Memory subsystem", "body" => "Initial proposal."}, author)
+
+    {:ok, view, _html} = live(build_conn(), ~p"/specs/#{spec.number}")
+
+    assert render_click(view, "unfollow") =~ "Sign in to follow this spec."
+  end
+
   test "rejects status changes from non-members", %{conn: conn} do
     {_member_conn, member} = sign_in(conn, "member@tuist.dev")
     {contributor_conn, _contributor} = sign_in(conn, "contributor@example.com")

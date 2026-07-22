@@ -67,6 +67,9 @@ defmodule Hive.MCP.Components.Tools.RequestSpecReview do
 
       {:error, :unauthorized} ->
         json_response(%{error: "unauthorized"})
+
+      {:error, :notifications_not_configured} ->
+        json_response(%{error: "notifications_not_configured"})
     end
   end
 end

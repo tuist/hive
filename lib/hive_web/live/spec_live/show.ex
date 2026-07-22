@@ -105,6 +105,11 @@ defmodule HiveWeb.SpecLive.Show do
      |> put_flash(:info, dgettext("dashboard_specs", "You are following this spec."))}
   end
 
+  def handle_event("unfollow", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_specs", "Sign in to follow this spec."))}
+  end
+
   def handle_event("unfollow", _params, socket) do
     Notifications.unsubscribe(socket.assigns.current_user, :spec_updates, socket.assigns.spec.id)
 
@@ -126,6 +131,17 @@ defmodule HiveWeb.SpecLive.Show do
            socket,
            :error,
            dgettext("dashboard_specs", "Only organization members can request review.")
+         )}
+
+      {:error, :notifications_not_configured} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext(
+             "dashboard_specs",
+             "Configure email delivery or a Slack notification channel before requesting review."
+           )
          )}
     end
   end

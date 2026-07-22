@@ -43,10 +43,11 @@ Signed-in users can comment on visible specs. Comment authors can edit or
 delete their own comments, and each comment has a stable link for sharing
 review context.
 
-An organization member can select **Ask for review** independently of the
-configured delivery channels. Followers receive the request by email, and Hive
-also posts the latest proposal and focused review prompts when Slack
-notifications are configured.
+An organization member can select **Ask for review** once the instance has a
+way to deliver it. Followers receive the request by email, and Hive also posts
+the latest proposal and focused review prompts when Slack notifications are
+configured. With neither email nor Slack set up, Hive declines the request and
+says so instead of recording a review nobody would hear about.
 
 ## Understand visibility
 
@@ -71,3 +72,8 @@ from it when they are allowed to view that spec.
 Open **Account → Notifications** to choose immediate delivery, a daily summary,
 or to unfollow. The same page can subscribe to every new spec visible to the
 account.
+
+Every message carries an unsubscribe link. On a message about a single spec it
+stops that one spec and leaves the rest of your follows in place, and the
+confirmation page also offers to stop spec updates altogether. A daily summary
+covers several specs at once, so its link stops the whole category.

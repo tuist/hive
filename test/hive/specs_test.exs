@@ -420,6 +420,16 @@ defmodule Hive.SpecsTest do
 
       refute_enqueued(worker: Hive.Slack.Workers.SendNotification)
     end
+
+    test "reports a configuration error when no channel can carry the request" do
+      user = user()
+      {:ok, spec} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)
+
+      stub(Hive.Notifications, :email_enabled?, fn -> false end)
+
+      assert Specs.request_review(spec, user) == {:error, :notifications_not_configured}
+      assert Repo.get_by(Event, type: :spec_review_requested, resource_id: spec.id) == nil
+    end
   end
 
   describe "comments" do
