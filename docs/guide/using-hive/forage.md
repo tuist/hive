@@ -98,3 +98,12 @@ email about their own action.
 Open **Account → Notifications** to choose immediate delivery, a daily summary,
 or to unfollow. The same page can subscribe to all new Forage items visible to
 the account.
+
+Every message carries an unsubscribe link. On a message about a single item it
+stops that one item and leaves the rest of your follows in place, and the
+confirmation page also offers to stop the whole category. A daily summary
+covers several items at once, so its link stops the whole category.
+
+Connecting a repository does not announce the issues it already has. Hive
+treats the first sync as filling in the backlog and only sends email for issues
+that appear or change afterwards.

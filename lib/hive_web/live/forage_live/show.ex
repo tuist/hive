@@ -129,6 +129,11 @@ defmodule HiveWeb.ForageLive.Show do
      |> put_flash(:info, dgettext("dashboard_forage", "You are following this item."))}
   end
 
+  def handle_event("unfollow", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_forage", "Sign in to follow this item."))}
+  end
+
   def handle_event("unfollow", _params, socket) do
     Notifications.unsubscribe(
       socket.assigns.current_user,

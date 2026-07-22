@@ -85,6 +85,38 @@ defmodule HiveWeb.ForageLive.ShowTest do
     refute html =~ ">Start Flight<"
   end
 
+  test "does not crash when an anonymous visitor pushes unfollow", %{conn: _conn} do
+    suffix = System.unique_integer([:positive])
+    {:ok, project} = Projects.create_project(%{name: "Anonymous unfollow #{suffix}"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{
+        name: "Anonymous unfollow #{suffix}",
+        project_id: project.id,
+        github_repository_owner: "tuist",
+        github_repository_name: "anonymous-unfollow-#{suffix}"
+      })
+
+    repository = github_repository_for_domain!(domain)
+
+    issue =
+      %GitHubIssue{}
+      |> GitHubIssue.changeset(%{
+        github_repository_id: repository.id,
+        number: 7,
+        title: "Intermittent latency",
+        body: "The request occasionally exceeds its budget.",
+        state: :open
+      })
+      |> Repo.insert!()
+
+    stub(Issues, :list_comments, fn _repository, 7, _opts -> {:ok, []} end)
+
+    {:ok, view, _html} = live(build_conn(), ~p"/forage/items/github-issue/#{issue.id}")
+
+    assert render_click(view, "unfollow") =~ "Sign in to follow this item."
+  end
+
   test "starts an objective-specific Flight from a GitHub issue detail page", %{conn: conn} do
     {conn, user} = sign_in(conn, "github-issue-flight@example.com")
     suffix = System.unique_integer([:positive])

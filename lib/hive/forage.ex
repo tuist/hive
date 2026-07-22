@@ -934,11 +934,16 @@ defmodule Hive.Forage do
   def reconcile_repository_github_issues(%GitHubRepository{id: repository_id}, entries) do
     incoming_numbers = entries |> Enum.map(& &1.number) |> Enum.uniq()
 
+    # A repository with nothing cached yet is being filled in for the first
+    # time, so every issue looks new. Announcing them would mail one message
+    # per open issue to everyone following new Forage items.
+    notify? = repository_cached?(repository_id)
+
     dirty_issue_ids =
       Repo.transaction(fn ->
         dirty_ids =
           entries
-          |> Enum.map(&dirty_issue_id(repository_id, &1))
+          |> Enum.map(&dirty_issue_id(repository_id, &1, notify?: notify?))
           |> Enum.reject(&is_nil/1)
 
         delete_missing(repository_id, incoming_numbers)
@@ -960,8 +965,14 @@ defmodule Hive.Forage do
     :ok
   end
 
-  defp dirty_issue_id(repository_id, entry) do
-    case upsert_entry(repository_id, entry) do
+  defp repository_cached?(repository_id) do
+    GitHubIssue
+    |> where([issue], issue.github_repository_id == ^repository_id)
+    |> Repo.exists?()
+  end
+
+  defp dirty_issue_id(repository_id, entry, opts) do
+    case upsert_entry(repository_id, entry, opts) do
       {:ok, %GitHubIssue{id: id}, true} -> id
       {:ok, %GitHubIssue{}, false} -> nil
       {:error, changeset} -> Repo.rollback(changeset)
@@ -979,15 +990,15 @@ defmodule Hive.Forage do
     |> Repo.all()
   end
 
-  defp upsert_entry(repository_id, entry) do
-    Repo.transaction(fn -> upsert_entry_transaction(repository_id, entry) end)
+  defp upsert_entry(repository_id, entry, opts \\ []) do
+    Repo.transaction(fn -> upsert_entry_transaction(repository_id, entry, opts) end)
     |> case do
       {:ok, result} -> result
       {:error, changeset} -> {:error, changeset}
     end
   end
 
-  defp upsert_entry_transaction(repository_id, entry) do
+  defp upsert_entry_transaction(repository_id, entry, opts) do
     attrs = %{
       github_repository_id: repository_id,
       number: entry.number,
@@ -1015,7 +1026,9 @@ defmodule Hive.Forage do
 
     case Repo.insert_or_update(changeset) do
       {:ok, issue} ->
-        maybe_publish_issue_event(issue, existing, content_changed?)
+        if Keyword.get(opts, :notify?, true) do
+          maybe_publish_issue_event(issue, existing, content_changed?)
+        end
 
         {:ok, issue, content_changed?}
 
