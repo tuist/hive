@@ -9,6 +9,8 @@ defmodule Hive.Notifications do
 
   import Ecto.Query
 
+  require Logger
+
   alias Hive.Accounts.User
   alias Hive.Notifications.Delivery
   alias Hive.Notifications.DeliveryWorker
@@ -18,19 +20,48 @@ defmodule Hive.Notifications do
 
   @global_scope "global"
   @daily_delivery_hour 8
+  @sweep_limit 500
+  @error_length 1_000
+  @message_id_length 255
 
-  def email_enabled? do
-    case Keyword.get(Application.get_env(:hive, :email, []), :from) do
-      {name, address}
-      when is_binary(name) and name != "" and is_binary(address) and address != "" ->
-        true
+  @doc """
+  Configured sender as a `{name, address}` pair, or `nil` when email
+  delivery is not configured.
 
-      address when is_binary(address) and address != "" ->
-        true
+  Operators may write the address on its own or with a display name
+  (`Hive <notifications@example.com>`). The pair is what mail adapters
+  need: the Simple Mail Transfer Protocol envelope sender has to be the
+  bare address, so the display name cannot stay glued to it.
+  """
+  def email_from do
+    Application.get_env(:hive, :email, [])
+    |> Keyword.get(:from)
+    |> parse_sender()
+  end
 
-      _other ->
-        false
+  def email_enabled?, do: not is_nil(email_from())
+
+  @doc """
+  Splits a configured sender into `{name, address}`, or `nil` when it
+  carries no address.
+  """
+  def parse_sender({name, address}) when is_binary(name) and is_binary(address),
+    do: sender(name, address)
+
+  def parse_sender(value) when is_binary(value) do
+    case Regex.run(~r/\A(.*?)<([^<>]+)>\s*\z/, value) do
+      [_match, name, address] -> sender(name, address)
+      nil -> sender("", value)
     end
+  end
+
+  def parse_sender(_other), do: nil
+
+  defp sender(name, address) do
+    address = String.trim(address)
+    name = name |> String.trim() |> String.trim("\"") |> String.trim()
+
+    if address == "", do: nil, else: {name, address}
   end
 
   def global_topics, do: [:forage_new_items, :spec_new, :weekly_drop_digest]
@@ -155,6 +186,47 @@ defmodule Hive.Notifications do
     ensure_subscription(user, :spec_updates, Keyword.put(opts, :scope_id, spec_id))
   end
 
+  @doc """
+  Adds a spec follow for many users at once, keeping each user's cadence.
+
+  Takes `{user_id, cadence}` pairs and writes them in a single statement so
+  fanning a new spec out to a popular item's followers stays constant in
+  round trips. Users who already follow the spec keep their own cadence.
+  """
+  def ensure_spec_follows([], _spec_id), do: :ok
+
+  def ensure_spec_follows(follows, spec_id) when is_list(follows) and is_binary(spec_id) do
+    timestamp = now()
+
+    rows =
+      Enum.map(follows, fn {user_id, cadence} ->
+        %{
+          id: Ecto.UUID.generate(),
+          user_id: user_id,
+          topic: :spec_updates,
+          scope_type: :spec,
+          scope_id: spec_id,
+          cadence: cadence,
+          inserted_at: timestamp,
+          updated_at: timestamp
+        }
+      end)
+
+    Repo.insert_all(Subscription, rows,
+      on_conflict: :nothing,
+      conflict_target: [:user_id, :topic, :scope_type, :scope_id]
+    )
+
+    :ok
+  end
+
+  @doc """
+  True for topics whose subscriptions target one resource rather than the
+  whole instance, so an email about a single resource can offer to stop
+  just that one.
+  """
+  def resource_scoped_topic?(topic), do: topic in [:forage_item_updates, :spec_updates]
+
   def followers(topic, scope_id) when topic in [:forage_item_updates, :spec_updates] do
     {scope_type, normalized_scope_id} = scope_for(topic, scope_id)
 
@@ -219,10 +291,18 @@ defmodule Hive.Notifications do
           }
         end)
 
-      Repo.insert_all(Delivery, rows,
-        on_conflict: :nothing,
-        conflict_target: [:event_id, :user_id, :topic]
-      )
+      {_count, inserted} =
+        Repo.insert_all(Delivery, rows,
+          on_conflict: :nothing,
+          conflict_target: [:event_id, :user_id, :topic],
+          returning: true
+        )
+
+      # Enqueueing here rather than polling for pending rows keeps the job
+      # insert in the same transaction as the delivery it belongs to: a
+      # rolled-back dispatch leaves no orphan job behind, and a delivery
+      # never waits for the next dispatcher tick to be picked up.
+      Enum.each(inserted, &DeliveryWorker.enqueue/1)
 
       event
       |> Event.changeset(%{dispatched_at: now()})
@@ -238,13 +318,30 @@ defmodule Hive.Notifications do
     :ok
   end
 
+  @doc """
+  Recovery sweep for due deliveries whose job never made it to the queue.
+
+  Deliveries are enqueued when they are dispatched, so this only has to
+  catch the rows left behind by a lost job insert. It is scoped to
+  deliveries that are already due, which keeps tomorrow's daily summaries
+  out of every tick.
+  """
   def enqueue_pending_deliveries do
-    Delivery
-    |> where([delivery], delivery.status == :pending)
-    |> order_by([delivery], asc: delivery.scheduled_at)
-    |> limit(500)
-    |> Repo.all()
-    |> Enum.each(&DeliveryWorker.enqueue/1)
+    due =
+      Delivery
+      |> where([delivery], delivery.status == :pending and delivery.scheduled_at <= ^now())
+      |> order_by([delivery], asc: delivery.scheduled_at)
+      |> limit(@sweep_limit)
+      |> Repo.all()
+
+    Enum.each(due, &DeliveryWorker.enqueue/1)
+
+    if length(due) == @sweep_limit do
+      Logger.warning(
+        "Notification sweep reached its limit of #{@sweep_limit} due deliveries; " <>
+          "the remainder is picked up by the next run."
+      )
+    end
 
     :ok
   end
@@ -310,7 +407,7 @@ defmodule Hive.Notifications do
       set: [
         status: :sent,
         sent_at: now(),
-        provider_message_id: provider_message_id,
+        provider_message_id: truncate(provider_message_id, @message_id_length),
         last_error: nil,
         updated_at: now()
       ]
@@ -321,17 +418,18 @@ defmodule Hive.Notifications do
 
   def mark_skipped(deliveries, reason) do
     ids = Enum.map(List.wrap(deliveries), & &1.id)
+    reason = truncate(to_string(reason), @message_id_length)
 
     Delivery
     |> where([delivery], delivery.id in ^ids and delivery.status == :pending)
-    |> Repo.update_all(set: [status: :skipped, skip_reason: to_string(reason), updated_at: now()])
+    |> Repo.update_all(set: [status: :skipped, skip_reason: reason, updated_at: now()])
 
     :ok
   end
 
   def mark_failed(deliveries, reason, opts \\ []) do
     ids = Enum.map(List.wrap(deliveries), & &1.id)
-    error = reason |> inspect() |> String.slice(0, 1_000)
+    error = reason |> inspect() |> String.slice(0, @error_length)
     status = if Keyword.get(opts, :terminal, false), do: :failed, else: :pending
 
     Delivery
@@ -441,6 +539,10 @@ defmodule Hive.Notifications do
       date |> Date.add(1) |> DateTime.new!(Time.new!(@daily_delivery_hour, 0, 0))
     end
   end
+
+  defp truncate(nil, _length), do: nil
+  defp truncate(value, length) when is_binary(value), do: String.slice(value, 0, length)
+  defp truncate(value, length), do: value |> to_string() |> String.slice(0, length)
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 end

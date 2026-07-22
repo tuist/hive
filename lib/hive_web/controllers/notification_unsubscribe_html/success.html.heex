@@ -5,11 +5,18 @@
         <div data-part="content">
           <h1>{dgettext("dashboard_account", "You are unsubscribed")}</h1>
           <p>
-            {dgettext(
-              "dashboard_account",
-              "Hive will no longer send %{topic}. You can enable it again from your account notification preferences.",
-              topic: @topic_label
-            )}
+            {if @scoped?,
+              do:
+                dgettext(
+                  "dashboard_account",
+                  "Hive will no longer email you about that item. The other items you follow are unaffected."
+                ),
+              else:
+                dgettext(
+                  "dashboard_account",
+                  "Hive will no longer send %{topic}. You can enable it again from your account notification preferences.",
+                  topic: @topic_label
+                )}
           </p>
           <.link href={~p"/account/notifications"}>
             <.button

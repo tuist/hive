@@ -9,11 +9,13 @@ defmodule HiveWeb.NotificationUnsubscribeController do
     conn = put_layout(conn, false)
 
     case Email.verify_unsubscribe_token(token) do
-      {:ok, _user_id, topic} ->
+      {:ok, user_id, topic, scope_id} ->
         render(conn, :show,
           page_title: "Unsubscribe · Hive",
           token: token,
           topic_label: Notifications.topic_label(topic),
+          scoped?: not is_nil(scope_id),
+          topic_token: Email.unsubscribe_token(%{id: user_id}, topic),
           open_graph: open_graph("Unsubscribe from email updates")
         )
 
@@ -41,12 +43,13 @@ defmodule HiveWeb.NotificationUnsubscribeController do
     conn = put_layout(conn, false)
 
     case Email.verify_unsubscribe_token(token) do
-      {:ok, user_id, topic} ->
-        if user = Accounts.get_user(user_id), do: Notifications.unsubscribe_topic(user, topic)
+      {:ok, user_id, topic, scope_id} ->
+        if user = Accounts.get_user(user_id), do: unsubscribe(user, topic, scope_id)
 
         render(conn, :success,
           page_title: "Email updates disabled · Hive",
           topic_label: Notifications.topic_label(topic),
+          scoped?: not is_nil(scope_id),
           open_graph: open_graph("Email updates disabled")
         )
 
@@ -61,6 +64,9 @@ defmodule HiveWeb.NotificationUnsubscribeController do
   end
 
   def create(conn, _params), do: show(conn, %{})
+
+  defp unsubscribe(user, topic, nil), do: Notifications.unsubscribe_topic(user, topic)
+  defp unsubscribe(user, topic, scope_id), do: Notifications.unsubscribe(user, topic, scope_id)
 
   defp open_graph(title) do
     [open_graph: open_graph] =

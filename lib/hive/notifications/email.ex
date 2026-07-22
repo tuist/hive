@@ -76,17 +76,27 @@ defmodule Hive.Notifications.Email do
     end
   end
 
-  def unsubscribe_token(%{id: user_id}, topic) when is_atom(topic) do
-    Phoenix.Token.sign(Endpoint, @unsubscribe_salt, {user_id, Atom.to_string(topic)})
+  @doc """
+  Signs an unsubscribe link.
+
+  `scope_id` narrows the link to the single resource the message is about,
+  so stopping updates from a message about one spec does not throw away
+  the reader's other follows. A `nil` scope covers the whole topic, which
+  is what a summary spanning several resources has to offer.
+  """
+  def unsubscribe_token(%{id: user_id}, topic, scope_id \\ nil)
+      when is_atom(topic) and (is_nil(scope_id) or is_binary(scope_id)) do
+    Phoenix.Token.sign(Endpoint, @unsubscribe_salt, {user_id, Atom.to_string(topic), scope_id})
   end
 
   def verify_unsubscribe_token(token) when is_binary(token) do
     topics = Map.new(Hive.Notifications.Subscription.topics(), &{Atom.to_string(&1), &1})
 
-    with {:ok, {user_id, topic}} <-
+    with {:ok, {user_id, topic, scope_id}}
+         when is_binary(user_id) and (is_nil(scope_id) or is_binary(scope_id)) <-
            Phoenix.Token.verify(Endpoint, @unsubscribe_salt, token, max_age: @unsubscribe_max_age),
          topic when is_atom(topic) <- Map.get(topics, topic) do
-      {:ok, user_id, topic}
+      {:ok, user_id, topic, scope_id}
     else
       _error -> {:error, :invalid_token}
     end
@@ -95,7 +105,7 @@ defmodule Hive.Notifications.Email do
   def verify_unsubscribe_token(_token), do: {:error, :invalid_token}
 
   defp deliver_entries(deliveries, entries, user, topic, daily?) do
-    email = build_email(user, topic, entries, daily?)
+    email = build_email(user, topic, entries, daily?, unsubscribe_scope(deliveries, topic))
 
     case Mailer.deliver(email) do
       {:ok, metadata} ->
@@ -107,15 +117,29 @@ defmodule Hive.Notifications.Email do
     end
   end
 
-  defp build_email(user, topic, entries, daily?) do
-    unsubscribe_url = unsubscribe_url(user, topic)
+  defp unsubscribe_scope(deliveries, topic) do
+    if Notifications.resource_scoped_topic?(topic) do
+      deliveries
+      |> Enum.map(& &1.event.resource_id)
+      |> Enum.uniq()
+      |> case do
+        [resource_id] -> resource_id
+        _several -> nil
+      end
+    end
+  end
+
+  defp build_email(user, topic, entries, daily?, scope_id) do
+    unsubscribe_url = unsubscribe_url(user, topic, scope_id)
+
+    label = unsubscribe_label(topic, scope_id)
 
     new()
     |> from(email_from())
     |> to({user.name || user.email, user.email})
     |> subject(subject(topic, entries, daily?))
-    |> text_body(text_body(topic, entries, unsubscribe_url))
-    |> html_body(html_body(topic, entries, unsubscribe_url))
+    |> text_body(text_body(topic, entries, unsubscribe_url, label))
+    |> html_body(html_body(topic, entries, unsubscribe_url, label))
     |> header("List-Unsubscribe", "<#{unsubscribe_url}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
     |> maybe_put_message_stream()
@@ -240,7 +264,10 @@ defmodule Hive.Notifications.Email do
     "#{Notifications.topic_label(topic)}: #{length(entries)} updates"
   end
 
-  defp text_body(topic, entries, unsubscribe_url) do
+  defp unsubscribe_label(topic, nil), do: Notifications.topic_label(topic)
+  defp unsubscribe_label(_topic, _scope_id), do: "these updates"
+
+  defp text_body(topic, entries, unsubscribe_url, unsubscribe_label) do
     entries_text =
       Enum.map_join(entries, "\n\n", fn entry ->
         "#{entry.label}\n#{entry.title}\n#{entry.description}\n#{entry.url}"
@@ -252,11 +279,11 @@ defmodule Hive.Notifications.Email do
     #{entries_text}
 
     Manage notifications: #{absolute_url("/account/notifications")}
-    Unsubscribe from #{Notifications.topic_label(topic)}: #{unsubscribe_url}
+    Unsubscribe from #{unsubscribe_label}: #{unsubscribe_url}
     """
   end
 
-  defp html_body(topic, entries, unsubscribe_url) do
+  defp html_body(topic, entries, unsubscribe_url, unsubscribe_label) do
     entries_html =
       Enum.map_join(entries, "", fn entry ->
         """
@@ -279,7 +306,7 @@ defmodule Hive.Notifications.Email do
           <footer style="margin-top:32px;padding-top:20px;border-top:1px solid #eaecf0;color:#667085;font-size:13px">
             <a href="#{escape(absolute_url("/account/notifications"))}">Manage notifications</a>
             <span> · </span>
-            <a href="#{escape(unsubscribe_url)}">Unsubscribe from these updates</a>
+            <a href="#{escape(unsubscribe_url)}">Unsubscribe from #{escape(unsubscribe_label)}</a>
           </footer>
         </main>
       </body>
@@ -287,17 +314,14 @@ defmodule Hive.Notifications.Email do
     """
   end
 
-  defp unsubscribe_url(user, topic) do
-    token = unsubscribe_token(user, topic)
+  defp unsubscribe_url(user, topic, scope_id) do
+    token = unsubscribe_token(user, topic, scope_id)
     absolute_url("/notifications/unsubscribe?token=#{URI.encode_www_form(token)}")
   end
 
   defp absolute_url(path), do: Endpoint.url() <> path
 
-  defp email_from do
-    Application.get_env(:hive, :email, [])
-    |> Keyword.fetch!(:from)
-  end
+  defp email_from, do: Notifications.email_from()
 
   defp maybe_put_message_stream(email) do
     case Keyword.get(Application.get_env(:hive, :email, []), :message_stream) do

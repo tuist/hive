@@ -77,8 +77,11 @@ server. Defaults to `none`.
 
 ### HIVE_EMAIL_FROM {#hive_email_from}
 
-Verified sender address used for notification email, for example
-`Hive <notifications@example.com>`. Required when email delivery is enabled.
+Verified sender address used for notification email. Write it on its own
+(`notifications@example.com`) or with a display name
+(`Hive <notifications@example.com>`); readers see the display name and the
+mail server receives the address. Required when email delivery is enabled,
+and Hive refuses to start when the value is not an email address.
 
 ### HIVE_POSTMARK_SERVER_TOKEN {#hive_postmark_server_token}
 

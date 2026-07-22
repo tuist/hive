@@ -76,7 +76,7 @@ defmodule Hive.Repo.Migrations.CreateNotifications do
       add :sent_at, :utc_datetime
       add :provider_message_id, :string
       add :skip_reason, :string
-      add :last_error, :string
+      add :last_error, :text
 
       add :event_id, references(:notification_events, type: :binary_id, on_delete: :delete_all),
         null: false

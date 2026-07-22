@@ -22,6 +22,87 @@ defmodule Hive.NotificationsTest do
     user
   end
 
+  test "the configured sender may carry a display name" do
+    assert Notifications.parse_sender("Hive <notifications@example.com>") ==
+             {"Hive", "notifications@example.com"}
+
+    assert Notifications.parse_sender("\"Hive Updates\" <notifications@example.com>") ==
+             {"Hive Updates", "notifications@example.com"}
+
+    assert Notifications.parse_sender("notifications@example.com") ==
+             {"", "notifications@example.com"}
+
+    assert Notifications.parse_sender({"Hive", "notifications@example.com"}) ==
+             {"Hive", "notifications@example.com"}
+
+    assert Notifications.parse_sender("   ") == nil
+    assert Notifications.parse_sender(nil) == nil
+  end
+
+  test "a long provider error is recorded rather than rejected by the database" do
+    follower = user("follower@example.com")
+    delivery = pending_delivery(follower, DateTime.utc_now())
+    reason = {:no_more_hosts, String.duplicate("permanent failure from the relay ", 20)}
+
+    assert :ok = Notifications.mark_failed(delivery, reason, terminal: true)
+
+    stored = Repo.get!(Delivery, delivery.id)
+    assert stored.status == :failed
+    assert String.length(stored.last_error) > 255
+  end
+
+  test "a delivery is enqueued when it is dispatched" do
+    actor = user("actor@example.com")
+    follower = user("follower@example.com")
+    Notifications.subscribe(follower, :forage_new_items, cadence: :immediate)
+
+    {:ok, _item} =
+      Forage.create_feature_request(
+        %{"title" => "Enqueue on dispatch", "description" => "Deliveries should not wait."},
+        actor
+      )
+
+    event = Repo.get_by!(Event, type: :forage_item_created)
+
+    assert {:ok, _event} = Notifications.dispatch(event)
+    assert [_job] = all_enqueued(worker: DeliveryWorker)
+  end
+
+  test "the recovery sweep only picks up deliveries that are already due" do
+    follower = user("follower@example.com")
+    future = DateTime.utc_now() |> DateTime.add(7, :day)
+    delivery = pending_delivery(follower, future)
+
+    assert :ok = Notifications.enqueue_pending_deliveries()
+    assert all_enqueued(worker: DeliveryWorker) == []
+
+    delivery
+    |> Ecto.Changeset.change(scheduled_at: DateTime.utc_now() |> DateTime.truncate(:second))
+    |> Repo.update!()
+
+    assert :ok = Notifications.enqueue_pending_deliveries()
+    assert [_job] = all_enqueued(worker: DeliveryWorker)
+  end
+
+  defp pending_delivery(user, scheduled_at) do
+    {:ok, event} =
+      Notifications.publish(%{
+        deduplication_key: "forage_item_created:#{Ecto.UUID.generate()}",
+        type: :forage_item_created,
+        resource_type: "forage_item",
+        resource_id: "manual:#{Ecto.UUID.generate()}"
+      })
+
+    Repo.insert!(%Delivery{
+      event_id: event.id,
+      user_id: user.id,
+      topic: :forage_new_items,
+      cadence: :immediate,
+      status: :pending,
+      scheduled_at: DateTime.truncate(scheduled_at, :second)
+    })
+  end
+
   test "subscriptions are unique and automatic follows preserve a chosen cadence" do
     user = user("follower@example.com")
 
@@ -181,6 +262,52 @@ defmodule Hive.NotificationsTest do
              Repo.get_by!(Event, type: :forage_spec_created, resource_id: "manual:#{item.id}")
 
     assert item_id == item.id
+  end
+
+  test "an email about one spec offers to stop only that spec" do
+    author = user("author@example.com")
+    follower = user("follower@example.com")
+
+    {:ok, spec} =
+      Specs.create_spec(%{"title" => "Scoped spec", "body" => "The one being discussed."}, author)
+
+    {:ok, other} =
+      Specs.create_spec(%{"title" => "Other spec", "body" => "Unrelated proposal."}, author)
+
+    Notifications.follow_spec(follower, spec.id, cadence: :immediate)
+    Notifications.follow_spec(follower, other.id, cadence: :immediate)
+
+    Notifications.publish!(%{
+      deduplication_key: "spec_updated:#{spec.id}",
+      type: :spec_updated,
+      resource_type: "spec",
+      resource_id: spec.id,
+      actor_id: author.id
+    })
+
+    :ok = Notifications.dispatch_pending()
+    delivery = Repo.get_by!(Delivery, topic: :spec_updates, user_id: follower.id)
+
+    assert :ok = Email.deliver_immediate(delivery)
+
+    assert_email_sent(fn email ->
+      assert {:ok, user_id, :spec_updates, scope_id} =
+               email |> unsubscribe_token_from() |> Email.verify_unsubscribe_token()
+
+      assert user_id == follower.id
+      assert scope_id == spec.id
+    end)
+  end
+
+  defp unsubscribe_token_from(email) do
+    "<" <> rest = Map.fetch!(email.headers, "List-Unsubscribe")
+
+    rest
+    |> String.trim_trailing(">")
+    |> URI.parse()
+    |> Map.fetch!(:query)
+    |> URI.decode_query()
+    |> Map.fetch!("token")
   end
 
   test "delivery skips a resource the subscriber can no longer view" do

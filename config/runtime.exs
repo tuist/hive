@@ -119,6 +119,30 @@ email_provider =
 email_from = System.get_env("HIVE_EMAIL_FROM")
 email_message_stream = System.get_env("HIVE_EMAIL_MESSAGE_STREAM")
 
+# The sender may carry a display name (`Hive <notifications@example.com>`),
+# but only the address inside it reaches the mail server. Checking it here
+# turns a typo into a failed boot instead of email that is accepted by Hive
+# and then rejected by every relay.
+require_email_from = fn value ->
+  address =
+    case Regex.run(~r/\A(.*?)<([^<>]+)>\s*\z/, value || "") do
+      [_match, _name, address] -> String.trim(address)
+      nil -> String.trim(value || "")
+    end
+
+  cond do
+    address == "" ->
+      raise "environment variable HIVE_EMAIL_FROM is required when email delivery is enabled"
+
+    not Regex.match?(~r/\A[^\s@]+@[^\s@]+\.[^\s@]+\z/, address) ->
+      raise "environment variable HIVE_EMAIL_FROM must be an email address, optionally " <>
+              "with a display name, for example: Hive <notifications@example.com>"
+
+    true ->
+      :ok
+  end
+end
+
 case email_provider do
   provider when provider in ["", "none"] ->
     :ok
@@ -128,9 +152,7 @@ case email_provider do
       System.get_env("HIVE_POSTMARK_SERVER_TOKEN") ||
         raise "environment variable HIVE_POSTMARK_SERVER_TOKEN is required for Postmark email"
 
-    if not present?.(email_from) do
-      raise "environment variable HIVE_EMAIL_FROM is required when email delivery is enabled"
-    end
+    require_email_from.(email_from)
 
     config :hive, :email, from: email_from, message_stream: email_message_stream
 
@@ -143,9 +165,7 @@ case email_provider do
       System.get_env("HIVE_SMTP_RELAY") ||
         raise "environment variable HIVE_SMTP_RELAY is required for SMTP email"
 
-    if not present?.(email_from) do
-      raise "environment variable HIVE_EMAIL_FROM is required when email delivery is enabled"
-    end
+    require_email_from.(email_from)
 
     smtp_port = System.get_env("HIVE_SMTP_PORT", "587") |> String.to_integer()
 
