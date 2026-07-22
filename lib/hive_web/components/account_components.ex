@@ -5,6 +5,8 @@ defmodule HiveWeb.AccountComponents do
 
   use HiveWeb, :html
 
+  alias HiveWeb.Utilities.Query
+
   attr :user, :any, required: true
   attr :providers, :list, required: true
   attr :identities, :list, required: true
@@ -160,6 +162,12 @@ defmodule HiveWeb.AccountComponents do
   attr :domains, :list, required: true
   attr :domain_preferences, :map, required: true
   attr :followed_items, :list, required: true
+  attr :followed_items_meta, :map, required: true
+  attr :available_filters, :list, required: true
+  attr :active_filters, :list, required: true
+  attr :search_form, :any, required: true
+  attr :query, :string, required: true
+  attr :uri, :any, required: true
 
   def notifications(assigns) do
     ~H"""
@@ -235,6 +243,37 @@ defmodule HiveWeb.AccountComponents do
             )}
           </p>
           <div data-part="following-table">
+            <div data-part="table-toolbar">
+              <.filter_dropdown
+                id="notification-following-filter"
+                label={dgettext("dashboard_account", "Filter")}
+                available_filters={@available_filters}
+                active_filters={@active_filters}
+                on_select="add_filter"
+              />
+
+              <div data-part="search">
+                <.form
+                  id="notification-following-search-form"
+                  for={@search_form}
+                  phx-change="search"
+                  phx-submit="search"
+                >
+                  <.text_input
+                    id="notification-following-search"
+                    field={@search_form[:query]}
+                    type="search"
+                    show_suffix={false}
+                    placeholder={dgettext("dashboard_account", "Search followed items...")}
+                  />
+                </.form>
+              </div>
+            </div>
+
+            <div :if={@active_filters != []} data-part="active-filters">
+              <.active_filter :for={filter <- @active_filters} filter={filter} />
+            </div>
+
             <.table
               id="notification-following-table"
               rows={@followed_items}
@@ -262,16 +301,53 @@ defmodule HiveWeb.AccountComponents do
               <:empty_state>
                 <.table_empty_state
                   icon="eye"
-                  title={dgettext("dashboard_account", "No followed items")}
+                  title={
+                    if @query != "" or @active_filters != [],
+                      do: dgettext("dashboard_account", "No followed items found"),
+                      else: dgettext("dashboard_account", "No followed items")
+                  }
                   subtitle={
-                    dgettext(
-                      "dashboard_account",
-                      "Follow a Forage item or spec to receive updates about its conversation and progress."
-                    )
+                    if @query != "" or @active_filters != [],
+                      do:
+                        dgettext(
+                          "dashboard_account",
+                          "Adjust the search or filter to find another followed item."
+                        ),
+                      else:
+                        dgettext(
+                          "dashboard_account",
+                          "Follow a Forage item or spec to receive updates about its conversation and progress."
+                        )
                   }
                 />
               </:empty_state>
             </.table>
+
+            <div :if={@followed_items_meta.total_pages > 1} data-part="pagination">
+              <.button
+                variant="secondary"
+                label={dgettext("dashboard_account", "Prev")}
+                disabled={@followed_items_meta.current_page <= 1}
+                patch={
+                  notification_page_link(@uri, max(1, @followed_items_meta.current_page - 1))
+                }
+              >
+                <:icon_left><.chevron_left /></:icon_left>
+              </.button>
+              <.button
+                variant="secondary"
+                label={dgettext("dashboard_account", "Next")}
+                disabled={@followed_items_meta.current_page >= @followed_items_meta.total_pages}
+                patch={
+                  notification_page_link(
+                    @uri,
+                    min(@followed_items_meta.total_pages, @followed_items_meta.current_page + 1)
+                  )
+                }
+              >
+                <:icon_right><.chevron_right /></:icon_right>
+              </.button>
+            </div>
           </div>
         </.card_section>
       </.card>
@@ -364,6 +440,10 @@ defmodule HiveWeb.AccountComponents do
 
   defp followed_item_icon(:forage_item_updates), do: "rss"
   defp followed_item_icon(:spec_updates), do: "file_text"
+
+  defp notification_page_link(uri, page) do
+    "?" <> Query.put(uri.query, "page", Integer.to_string(page))
+  end
 
   defp notification_topic_label(:forage_new_items),
     do: dgettext("dashboard_account", "New Forage items")
