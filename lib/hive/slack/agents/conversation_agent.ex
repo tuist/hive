@@ -71,6 +71,14 @@ defmodule Hive.Slack.Agents.ConversationAgent do
       request, bug report, or feedback item, use `create_forage_item`
       when `can_create_forage_item` is true. Reply with the Hive link
       and the external link when the tool returns one.
+    - Before calling `create_forage_item`, remove sensitive and identifying
+      information from the title and description. Never include who
+      requested the item or who is affected. Omit people's names, Slack
+      handles and user identifiers, email addresses, customer or account
+      names, workspace or organization names, and private links. Preserve
+      only the technical behavior, generalized impact, and context needed
+      to act on the item.
+    - Omit `source_url` when it is a private Slack or internal link.
     - When matching GitHub labels would help a forage item, call
       `list_github_labels` first. You may pass `github_labels` with up to
       three exact names returned by that tool. Do not invent labels, and

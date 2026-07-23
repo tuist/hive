@@ -9,6 +9,19 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
     assert ConversationAgent.tools() == [ListGitHubLabels, CreateForageItem]
   end
 
+  test "instructs forage capture to remove sensitive and identifying information" do
+    prompt = ConversationAgent.system_prompt()
+
+    assert prompt =~ "Never include who"
+    assert prompt =~ "people's names, Slack"
+    assert prompt =~ "customer or account"
+    assert prompt =~ "technical behavior, generalized impact"
+    assert prompt =~ "Omit `source_url`"
+
+    assert CreateForageItem.description() =~
+             "exclude sensitive details and any information identifying who"
+  end
+
   test "build_prompt/1 renders the Slack thread context for a streamed reply" do
     prompt =
       ConversationAgent.build_prompt(%{
