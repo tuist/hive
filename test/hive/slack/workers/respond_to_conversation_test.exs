@@ -18,6 +18,17 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
   alias Hive.Slack.Agents.ConversationAgent
   alias Hive.Slack.Workers.RespondToConversation
 
+  setup do
+    test_pid = self()
+
+    stub(API, :set_assistant_thread_status, fn %Installation{}, params ->
+      send(test_pid, {:assistant_status, params})
+      {:ok, %{"ok" => true}}
+    end)
+
+    :ok
+  end
+
   defp installation! do
     suffix = System.unique_integer([:positive])
 
@@ -53,11 +64,15 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
   end
 
-  defp stub_slack_stream(installation_id, slack_channel_id, thread_ts, reply, stream_ts \\ "2.0") do
+  defp stub_slack_stream(installation, slack_channel_id, thread_ts, reply, stream_ts \\ "2.0") do
+    installation_id = installation.id
+
     stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
       assert params["channel"] == slack_channel_id
       assert params["thread_ts"] == thread_ts
       assert params["markdown_text"] == reply
+      assert is_binary(params["recipient_user_id"])
+      assert params["recipient_team_id"] == installation.team_id
 
       {:ok, %{"ok" => true, "ts" => stream_ts}}
     end)
@@ -115,7 +130,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       "hello!",
       fn prompt ->
         assert prompt =~ "Can create forage item:\ntrue"
-        assert prompt =~ "[triggering mention] 1.0 U-1: <@U-bot> hi"
+        assert prompt =~ "Triggering mention:\n1.0 U-1: <@U-bot> hi"
         refute prompt =~ "Available GitHub labels"
       end,
       fn opts ->
@@ -124,7 +139,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       end
     )
 
-    stub_slack_stream(installation_id, "C-1", "1.0", "hello!")
+    stub_slack_stream(installation, "C-1", "1.0", "hello!")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -170,12 +185,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       end
     )
 
-    stub_slack_stream(
-      installation_id,
-      "C-unlinked",
-      "1.0",
-      "Connect your Slack profile."
-    )
+    stub_slack_stream(installation, "C-unlinked", "1.0", "Connect your Slack profile.")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -578,12 +588,12 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
 
     stub_agent_stream("captured", fn prompt ->
-      assert prompt =~ "[triggering mention] 1.0 U-labels: <@U-bot> capture this"
+      assert prompt =~ "Triggering mention:\n1.0 U-labels: <@U-bot> capture this"
       refute prompt =~ "Phoenix LiveView behavior"
       refute prompt =~ "Available GitHub labels"
     end)
 
-    stub_slack_stream(installation_id, "C-labels", "1.0", "captured")
+    stub_slack_stream(installation, "C-labels", "1.0", "captured")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -641,13 +651,16 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     end)
 
     stub_agent_stream("retrying", fn prompt ->
-      assert prompt =~ "[triggering mention] 4.0 U-requester: <@U-bot> can you try again?"
+      assert prompt =~ "Triggering mention:\n4.0 U-requester: <@U-bot> can you try again?"
       assert prompt =~ "Can create forage item:\ntrue"
-      assert prompt =~ "later unrelated message"
+
+      assert prompt =~
+               "Thread messages after the triggering mention, oldest first:\n- 5.0 U-other: later unrelated message"
+
       assert length(:binary.matches(prompt, "<@U-bot> can you try again?")) == 1
     end)
 
-    stub_slack_stream(installation_id, "C-retry", "1.0", "retrying", "6.0")
+    stub_slack_stream(installation, "C-retry", "1.0", "retrying", "6.0")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -688,7 +701,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub_agent_stream("bounded", fn prompt ->
       assert prompt =~ "root-context"
-      assert prompt =~ "[triggering mention] 2.0 U2: <@U-bot> summarize the decision"
+      assert prompt =~ "Triggering mention:\n2.0 U2: <@U-bot> summarize the decision"
       assert prompt =~ "latest-context"
 
       assert prompt =~
@@ -697,7 +710,7 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       assert String.length(prompt) < 57_000
     end)
 
-    stub_slack_stream(installation_id, "C-long-thread", "1.0", "bounded", "13.0")
+    stub_slack_stream(installation, "C-long-thread", "1.0", "bounded", "13.0")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -739,12 +752,12 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub_agent_stream("handled locally", fn prompt ->
       assert prompt =~
-               "[triggering mention] 2.0 U-local: <@U-bot> record this from the event payload"
+               "Triggering mention:\n2.0 U-local: <@U-bot> record this from the event payload"
 
       assert prompt =~ "Can create forage item:\ntrue"
     end)
 
-    stub_slack_stream(installation_id, "C-local", "1.0", "handled locally", "3.0")
+    stub_slack_stream(installation, "C-local", "1.0", "handled locally", "3.0")
 
     assert :ok =
              perform_job(RespondToConversation, %{
@@ -918,7 +931,12 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        %{
          "ok" => true,
          "messages" => [
-           %{"user" => "U-stream", "text" => "<@U-bot> stream this", "ts" => "1.0"}
+           %{
+             "user" => "U-stream",
+             "user_team" => "T-stream-recipient",
+             "text" => "<@U-bot> stream this",
+             "ts" => "1.0"
+           }
          ]
        }}
     end)
@@ -931,6 +949,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       assert params["channel"] == "C-stream"
       assert params["thread_ts"] == "1.0"
       assert params["markdown_text"] == first_chunk
+      assert params["recipient_user_id"] == "U-stream"
+      assert params["recipient_team_id"] == "T-stream-recipient"
 
       {:ok, %{"ok" => true, "ts" => "2.0"}}
     end)
@@ -1005,6 +1025,8 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
 
     stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
       assert params["markdown_text"] == first_turn
+      assert params["recipient_user_id"] == "U-tool-stream"
+      assert params["recipient_team_id"] == installation.team_id
       {:ok, %{"ok" => true, "ts" => "2.0"}}
     end)
 
@@ -1023,6 +1045,24 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
                "channel_id" => channel.id,
                "thread_ts" => "1.0"
              })
+
+    assert_receive {:assistant_status,
+                    %{
+                      "channel_id" => "C-tool-stream",
+                      "thread_ts" => "1.0",
+                      "status" => "is working on this request...",
+                      "loading_messages" => loading_messages
+                    }}
+
+    assert loading_messages == [
+             "Reading the thread",
+             "Checking Hive context",
+             "Preparing the response"
+           ]
+
+    assert_receive {:assistant_status, %{"status" => "is using list github labels..."}}
+    assert_receive {:assistant_status, %{"status" => "is reading the result..."}}
+    assert_receive {:assistant_status, %{"status" => "", "loading_messages" => []}}
   end
 
   test "perform/1 falls back to message updates when Slack stream start fails" do

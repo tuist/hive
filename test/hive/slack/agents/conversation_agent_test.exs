@@ -17,6 +17,8 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
     assert prompt =~ "customer or account"
     assert prompt =~ "technical behavior, generalized impact"
     assert prompt =~ "Omit `source_url`"
+    assert prompt =~ "closest coherent topic"
+    assert prompt =~ "not the short command"
 
     assert CreateForageItem.description() =~
              "exclude sensitive details and any information identifying who"
@@ -34,7 +36,8 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
             "text" => "<@U-bot> record this",
             "ts" => "2.0",
             "triggering_mention" => true
-          }
+          },
+          %{"user" => "U3", "text" => "later context", "ts" => "3.0"}
         ]
       })
 
@@ -43,8 +46,14 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
     assert prompt =~
              "<https://hive.example/account/slack/new|Connect your Slack profile>"
 
-    assert prompt =~ "- 1.0 U1: first"
-    assert prompt =~ "- [triggering mention] 2.0 U2: <@U-bot> record this"
+    assert prompt =~
+             "Thread context before the triggering mention, oldest first:\n- 1.0 U1: first"
+
+    assert prompt =~ "Triggering mention:\n2.0 U2: <@U-bot> record this"
+
+    assert prompt =~
+             "Thread messages after the triggering mention, oldest first:\n- 3.0 U3: later context"
+
     assert length(:binary.matches(prompt, "<@U-bot> record this")) == 1
     assert prompt =~ "Reply as normal Slack message text"
   end

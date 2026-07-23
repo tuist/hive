@@ -106,7 +106,7 @@ Hive currently uses language models for:
 |---|---|
 | Domain evolution | Suggests durable domains and improves domain descriptions from recent product work. |
 | Spec review requests | Produces focused Slack review prompts for the latest spec revision. |
-| Slack conversations | Replies to mentions, captures requested Forage items, gives unlinked people a direct profile-connection path, and starts objective-specific Flights from Grafana alert threads. |
+| Slack conversations | Reads the triggering mention with its surrounding thread, streams replies with live status updates, captures requested Forage items, gives unlinked people a direct profile-connection path, and starts objective-specific Flights from Grafana alert threads. |
 | GitHub issue classification | Links mirrored issues to the relevant project domains. |
 | Forage Flights | Investigates, reproduces, or fixes a Grafana alert or GitHub issue in an isolated repository snapshot, preserves the portable agent session, and returns a pull request or report after a member starts the Flight. |
 | Drop generation | Turns release evidence into user-facing shipped improvements. |
