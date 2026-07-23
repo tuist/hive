@@ -47,8 +47,8 @@ defmodule Hive.Agents.Tools.CreateForageItem do
   end
 
   @impl true
-  def call(args, _context) when is_map(args) do
-    case Intake.current_requester() do
+  def call(args, context) when is_map(args) do
+    case requester_user(context) do
       nil ->
         {:error, "The Slack user is not linked to a Hive user."}
 
@@ -61,6 +61,12 @@ defmodule Hive.Agents.Tools.CreateForageItem do
   end
 
   def call(_args, _context), do: {:error, "Provide a forage item title and description."}
+
+  defp requester_user(context) do
+    context
+    |> Map.get(:assigns, %{})
+    |> Map.get(:requester_user)
+  end
 
   defp tool_result({:ok, result}) do
     {:ok,

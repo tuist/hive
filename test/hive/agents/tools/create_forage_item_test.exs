@@ -5,7 +5,6 @@ defmodule Hive.Agents.Tools.CreateForageItemTest do
   alias Hive.Agents.Tools.CreateForageItem
   alias Hive.Audit.Activity
   alias Hive.Forage.FeatureRequest
-  alias Hive.Forage.Intake
 
   defp user do
     {:ok, user} =
@@ -18,18 +17,16 @@ defmodule Hive.Agents.Tools.CreateForageItemTest do
     user
   end
 
-  test "creates a forage item for the process requester" do
+  test "creates a forage item for the requester in the tool context" do
     result =
-      Intake.with_requester(user(), fn ->
-        CreateForageItem.call(
-          %{
-            "type" => "bug_report",
-            "title" => "Launch crash",
-            "description" => "The app crashes when the dashboard opens."
-          },
-          %{}
-        )
-      end)
+      CreateForageItem.call(
+        %{
+          "type" => "bug_report",
+          "title" => "Launch crash",
+          "description" => "The app crashes when the dashboard opens."
+        },
+        %{assigns: %{requester_user: user()}}
+      )
 
     assert {:ok, %{destination: "hive_item", hive_url: hive_url, title: "Launch crash"}} = result
     assert hive_url =~ "/forage/items/manual/"
@@ -39,14 +36,14 @@ defmodule Hive.Agents.Tools.CreateForageItemTest do
              Repo.get_by!(Activity, action: "forage.intake.created")
   end
 
-  test "rejects calls without a process requester" do
+  test "rejects calls without a requester in the tool context" do
     assert {:error, "The Slack user is not linked to a Hive user."} =
              CreateForageItem.call(
                %{
                  "title" => "Launch crash",
                  "description" => "The app crashes when the dashboard opens."
                },
-               %{}
+               %{assigns: %{}}
              )
   end
 end

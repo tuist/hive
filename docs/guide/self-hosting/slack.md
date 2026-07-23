@@ -159,6 +159,11 @@ When a linked user mentions the Hive bot and asks it to capture work, the
 bot can use the same destination. If the destination is GitHub, Hive can
 apply matching labels from that repository.
 
+When Hive cannot resolve the Slack user to an account, the bot replies with
+a direct **Connect your Slack profile** link instead of attempting the
+capture. People who are not signed in are taken through login first, then
+profile connection resumes automatically.
+
 ## Link a Slack profile
 
 After an administrator connects the workspace, signed-in users can open

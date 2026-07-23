@@ -13,6 +13,7 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
     prompt =
       ConversationAgent.build_prompt(%{
         "can_create_forage_item" => true,
+        "slack_profile_link" => "https://hive.example/account/slack/new",
         "thread" => [
           %{"user" => "U1", "text" => "first", "ts" => "1.0"},
           %{
@@ -25,6 +26,10 @@ defmodule Hive.Slack.Agents.ConversationAgentTest do
       })
 
     assert prompt =~ "Can create forage item:\ntrue"
+
+    assert prompt =~
+             "<https://hive.example/account/slack/new|Connect your Slack profile>"
+
     assert prompt =~ "- 1.0 U1: first"
     assert prompt =~ "- [triggering mention] 2.0 U2: <@U-bot> record this"
     assert length(:binary.matches(prompt, "<@U-bot> record this")) == 1

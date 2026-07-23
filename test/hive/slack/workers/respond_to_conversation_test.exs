@@ -39,11 +39,16 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
     channel
   end
 
-  defp stub_agent_stream(reply, assertions \\ fn _prompt -> :ok end) do
+  defp stub_agent_stream(
+         reply,
+         prompt_assertions \\ fn _prompt -> :ok end,
+         opts_assertions \\ fn _opts -> :ok end
+       ) do
     stub(Sessions, :stream, fn ConversationAgent, prompt, opts, consume ->
       assert opts[:load_project_instructions] == false
       assert opts[:max_turns] == 8
-      assertions.(prompt)
+      prompt_assertions.(prompt)
+      opts_assertions.(opts)
       consume.([{:text, reply}])
     end)
   end
@@ -106,11 +111,18 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
        }}
     end)
 
-    stub_agent_stream("hello!", fn prompt ->
-      assert prompt =~ "Can create forage item:\ntrue"
-      assert prompt =~ "[triggering mention] 1.0 U-1: <@U-bot> hi"
-      refute prompt =~ "Available GitHub labels"
-    end)
+    stub_agent_stream(
+      "hello!",
+      fn prompt ->
+        assert prompt =~ "Can create forage item:\ntrue"
+        assert prompt =~ "[triggering mention] 1.0 U-1: <@U-bot> hi"
+        refute prompt =~ "Available GitHub labels"
+      end,
+      fn opts ->
+        assert %{requester_user: %{id: requester_id}} = opts[:assigns]
+        assert requester_id == user.id
+      end
+    )
 
     stub_slack_stream(installation_id, "C-1", "1.0", "hello!")
 
@@ -122,6 +134,55 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
              })
 
     assert %Activity{interface: "worker"} = Repo.get_by!(Activity, action: "slack.replied")
+  end
+
+  test "perform/1 gives unlinked requesters a direct Slack profile connection link" do
+    installation = installation!()
+    channel = channel!(installation, "C-unlinked")
+    installation_id = installation.id
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-unlinked",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-unlinked", "text" => "<@U-bot> capture this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(API, :get_user, fn %Installation{id: ^installation_id}, "U-unlinked" ->
+      {:ok, %{"ok" => true, "user" => %{"profile" => %{}}}}
+    end)
+
+    stub_agent_stream(
+      "Connect your Slack profile.",
+      fn prompt ->
+        assert prompt =~ "Can create forage item:\nfalse"
+
+        assert prompt =~
+                 "<#{HiveWeb.Endpoint.url()}/account/slack/new|Connect your Slack profile>"
+      end,
+      fn opts ->
+        assert opts[:assigns] == %{requester_user: nil}
+      end
+    )
+
+    stub_slack_stream(
+      installation_id,
+      "C-unlinked",
+      "1.0",
+      "Connect your Slack profile."
+    )
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
   end
 
   test "perform/1 starts a reproduction Flight from a Grafana alert thread without running the conversation agent" do
@@ -886,6 +947,73 @@ defmodule Hive.Slack.Workers.RespondToConversationTest do
       assert params["channel"] == "C-stream"
       assert params["ts"] == "2.0"
 
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    assert :ok =
+             perform_job(RespondToConversation, %{
+               "installation_id" => installation.id,
+               "channel_id" => channel.id,
+               "thread_ts" => "1.0"
+             })
+  end
+
+  test "perform/1 separates assistant turns around a tool call" do
+    installation = installation!()
+    channel = channel!(installation, "C-tool-stream")
+    installation_id = installation.id
+    first_turn = String.duplicate("a", 80) <> "."
+    second_turn = "You're ready to continue."
+
+    {:ok, user} =
+      Hive.Accounts.upsert_from_auth(%{
+        email: "slack-tool-stream@example.com",
+        provider: "test",
+        provider_uid: "slack-tool-stream"
+      })
+
+    {:ok, _slack_user} =
+      Slack.upsert_user(installation, %{
+        slack_user_id: "U-tool-stream",
+        linked_user_id: user.id
+      })
+
+    stub(API, :list_thread_messages, fn %Installation{id: ^installation_id},
+                                        "C-tool-stream",
+                                        "1.0" ->
+      {:ok,
+       %{
+         "ok" => true,
+         "messages" => [
+           %{"user" => "U-tool-stream", "text" => "<@U-bot> capture this", "ts" => "1.0"}
+         ]
+       }}
+    end)
+
+    stub(Sessions, :stream, fn ConversationAgent, _prompt, _opts, consume ->
+      consume.([
+        :turn_start,
+        {:text, first_turn},
+        :turn_end,
+        {:tool_call, "list_github_labels", "call-1", %{}},
+        {:tool_result, "call-1", {:ok, %{}}},
+        :turn_start,
+        {:text, second_turn},
+        :turn_end
+      ])
+    end)
+
+    stub(API, :start_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["markdown_text"] == first_turn
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :append_stream, fn %Installation{id: ^installation_id}, params ->
+      assert params["markdown_text"] == "\n\n" <> second_turn
+      {:ok, %{"ok" => true, "ts" => "2.0"}}
+    end)
+
+    stub(API, :stop_stream, fn %Installation{id: ^installation_id}, _params ->
       {:ok, %{"ok" => true, "ts" => "2.0"}}
     end)
 

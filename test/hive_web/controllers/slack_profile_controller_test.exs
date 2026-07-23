@@ -8,7 +8,7 @@ defmodule HiveWeb.SlackProfileControllerTest do
     test "redirects anonymous users to login", %{conn: conn} do
       conn = get(conn, ~p"/account/slack/new")
 
-      assert redirected_to(conn) == ~p"/login?return_to=/account/identities"
+      assert redirected_to(conn) == ~p"/login?return_to=/account/slack/new"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Log in"
     end
 

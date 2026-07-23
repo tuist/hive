@@ -25,7 +25,7 @@ defmodule HiveWeb.SlackProfileController do
           :error,
           dgettext("dashboard_account", "Log in to connect your Slack profile.")
         )
-        |> redirect(to: ~p"/login?return_to=/account/identities")
+        |> redirect(to: ~p"/login?return_to=/account/slack/new")
 
       user ->
         callback.(conn, user)
