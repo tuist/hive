@@ -42,6 +42,12 @@ defmodule Hive.Slack.API do
   def stop_stream(installation, params), do: post(installation, "chat.stopStream", params)
 
   @doc """
+  Sets Slack's native assistant status for a thread.
+  """
+  def set_assistant_thread_status(installation, params),
+    do: post(installation, "assistant.threads.setStatus", params)
+
+  @doc """
   Attaches unfurl previews to a message via `chat.unfurl`. `params`
   must include `"channel"`, `"ts"`, and an `"unfurls"` map keyed by
   the URLs being unfurled.

@@ -156,12 +156,15 @@ The item follows the destination configured under
 GitHub issue in the selected repository.
 
 When a linked user mentions the Hive bot and asks it to capture work, the
-bot can use the same destination. If the destination is GitHub, Hive can
-apply matching labels from that repository. Before creating the item, the
-bot removes names, contact details, account and workspace identifiers,
-private links, and details about who requested or is affected by the work.
-The captured item retains only the technical context and generalized impact
-needed to act on it.
+bot reads the triggering mention and its surrounding thread, using the
+closest preceding topic when a request refers to "this" or "it". The bot
+shows live status updates while it reads context, uses tools, and streams
+its reply. It can use the same destination as dashboard intake. If the
+destination is GitHub, Hive can apply matching labels from that repository.
+Before creating the item, the bot removes names, contact details, account
+and workspace identifiers, private links, and details about who requested
+or is affected by the work. The captured item retains only the technical
+context and generalized impact needed to act on it.
 
 When Hive cannot resolve the Slack user to an account, the bot replies with
 a direct **Connect your Slack profile** link instead of attempting the

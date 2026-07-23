@@ -115,6 +115,29 @@ defmodule Hive.Slack.APITest do
              API.stop_stream(connected_installation(), %{"channel" => "C1", "ts" => "2.0"})
   end
 
+  test "set_assistant_thread_status/2 updates Slack's native thread status" do
+    stub(Req, :post, fn url, opts ->
+      assert url == "https://slack.com/api/assistant.threads.setStatus"
+
+      assert Keyword.fetch!(opts, :json) == %{
+               "channel_id" => "C1",
+               "thread_ts" => "1.0",
+               "status" => "is reading the thread...",
+               "loading_messages" => ["Reading the thread", "Preparing the response"]
+             }
+
+      {:ok, %Req.Response{status: 200, body: %{"ok" => true}}}
+    end)
+
+    assert {:ok, %{"ok" => true}} =
+             API.set_assistant_thread_status(connected_installation(), %{
+               "channel_id" => "C1",
+               "thread_ts" => "1.0",
+               "status" => "is reading the thread...",
+               "loading_messages" => ["Reading the thread", "Preparing the response"]
+             })
+  end
+
   test "decodes Slack ok: false as an error tuple" do
     stub(Req, :post, fn _url, _opts ->
       {:ok, %Req.Response{status: 200, body: %{"ok" => false, "error" => "channel_not_found"}}}

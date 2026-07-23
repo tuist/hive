@@ -2,7 +2,7 @@ defmodule Hive.Slack.Agents.ConversationAgent do
   @moduledoc """
   Condukt agent that replies in a Slack thread when Hive's bot is
   @-mentioned. The agent receives the thread context and the mention text
-  and returns a short reply that gets posted via `chat.postMessage`.
+  and returns a short reply that gets streamed into the thread.
   """
 
   use Condukt
@@ -67,10 +67,17 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     - Do not invent facts about Hive, the workspace, or its members.
     - The thread marks the message that triggered this run. Answer that
       mention, using the other messages only as context.
+    - If the triggering mention refers to "this", "it", or "the item",
+      resolve that reference from the closest coherent topic before the
+      mention. Prefer recent messages over older, unrelated topics or
+      setup chatter.
     - If the user asks you to capture, create, file, or record a feature
       request, bug report, or feedback item, use `create_forage_item`
       when `can_create_forage_item` is true. Reply with the Hive link
       and the external link when the tool returns one.
+    - A captured item's title and description must summarize the work
+      discussed in the referenced thread context, not the short command
+      that asked you to capture it.
     - Before calling `create_forage_item`, remove sensitive and identifying
       information from the title and description. Never include who
       requested the item or who is affected. Omit people's names, Slack
@@ -96,6 +103,9 @@ defmodule Hive.Slack.Agents.ConversationAgent do
   def tools, do: [ListGitHubLabels, CreateForageItem]
 
   def build_prompt(input) when is_map(input) do
+    {before_mention, triggering_mention, after_mention} =
+      split_thread(input["thread"] || [])
+
     """
     Can create forage item:
     #{input["can_create_forage_item"] == true}
@@ -103,8 +113,14 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     Slack profile connection link:
     <#{input["slack_profile_link"]}|Connect your Slack profile>
 
-    Thread messages, oldest first:
-    #{format_thread(input["thread"] || [])}
+    Thread context before the triggering mention, oldest first:
+    #{format_thread(before_mention)}
+
+    Triggering mention:
+    #{format_message(triggering_mention)}
+
+    Thread messages after the triggering mention, oldest first:
+    #{format_thread(after_mention)}
 
     Earlier messages omitted because the thread exceeded the context budget:
     #{input["omitted_thread_messages"] || 0}
@@ -125,17 +141,29 @@ defmodule Hive.Slack.Agents.ConversationAgent do
   defp format_thread([]), do: "No prior messages."
 
   defp format_thread(messages) do
-    Enum.map_join(messages, "\n", fn message ->
-      user = Map.get(message, "user") || Map.get(message, :user) || "unknown"
-      ts = Map.get(message, "ts") || Map.get(message, :ts) || "unknown time"
-      text = Map.get(message, "text") || Map.get(message, :text) || ""
+    Enum.map_join(messages, "\n", &"- #{format_message(&1)}")
+  end
 
-      triggering? =
-        Map.get(message, "triggering_mention") || Map.get(message, :triggering_mention)
+  defp format_message(nil), do: "Missing from the available thread context."
 
-      marker = if triggering?, do: " [triggering mention]", else: ""
+  defp format_message(message) do
+    user = Map.get(message, "user") || Map.get(message, :user) || "unknown"
+    ts = Map.get(message, "ts") || Map.get(message, :ts) || "unknown time"
+    text = Map.get(message, "text") || Map.get(message, :text) || ""
 
-      "-#{marker} #{ts} #{user}: #{text}"
-    end)
+    "#{ts} #{user}: #{text}"
+  end
+
+  defp split_thread(messages) do
+    case Enum.split_while(messages, fn message ->
+           !(Map.get(message, "triggering_mention") ||
+               Map.get(message, :triggering_mention))
+         end) do
+      {before_mention, [triggering_mention | after_mention]} ->
+        {before_mention, triggering_mention, after_mention}
+
+      {messages, []} ->
+        {messages, nil, []}
+    end
   end
 end

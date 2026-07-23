@@ -91,6 +91,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
            thread_messages(installation, slack_channel_id, thread_ts, local_messages),
          %{
            mention_user: mention_user,
+           mention_team: mention_team,
            thread: thread,
            omitted_thread_messages: omitted_thread_messages
          } <-
@@ -106,6 +107,8 @@ defmodule Hive.Slack.Workers.RespondToConversation do
            handle_request(
              input,
              requester_user,
+             mention_user,
+             mention_team || installation.team_id,
              installation,
              slack_channel_id,
              thread_ts
@@ -195,7 +198,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   end
 
   defp summarize_thread([], _message_ts) do
-    %{mention_user: nil, thread: [], omitted_thread_messages: 0}
+    %{mention_user: nil, mention_team: nil, thread: [], omitted_thread_messages: 0}
   end
 
   defp summarize_thread(messages, message_ts) do
@@ -211,6 +214,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
     %{
       mention_user: Map.get(triggering_message, "user"),
+      mention_team: Map.get(triggering_message, "user_team"),
       thread: thread,
       omitted_thread_messages: omitted_thread_messages
     }
@@ -267,6 +271,9 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   defp message_context(%Message{} = message) do
     %{
       "user" => message.slack_user_id || "",
+      "user_team" =>
+        Map.get(message.raw_payload || %{}, "user_team") ||
+          Map.get(message.raw_payload || %{}, "team"),
       "text" => message.text || "",
       "ts" => message.slack_ts || "",
       "urls" => evidence_urls(message.raw_payload || %{})
@@ -276,6 +283,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   defp message_context(message) when is_map(message) do
     %{
       "user" => message["user"] || message["bot_id"] || "",
+      "user_team" => message["user_team"] || message["team"],
       "text" => message["text"] || "",
       "ts" => message["ts"] || "",
       "urls" => evidence_urls(message)
@@ -329,7 +337,15 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   defp maybe_put_arg(map, _key, value) when value in [nil, ""], do: map
   defp maybe_put_arg(map, key, value), do: Map.put(map, key, value)
 
-  defp handle_request(input, requester_user, installation, slack_channel_id, thread_ts) do
+  defp handle_request(
+         input,
+         requester_user,
+         recipient_user_id,
+         recipient_team_id,
+         installation,
+         slack_channel_id,
+         thread_ts
+       ) do
     case FlightCommands.handle(
            input["thread"],
            requester_user,
@@ -341,6 +357,8 @@ defmodule Hive.Slack.Workers.RespondToConversation do
         run_conversation_agent(
           input,
           requester_user,
+          recipient_user_id,
+          recipient_team_id,
           installation,
           slack_channel_id,
           thread_ts
@@ -354,25 +372,48 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     end
   end
 
-  defp run_conversation_agent(input, requester_user, installation, slack_channel_id, thread_ts) do
+  defp run_conversation_agent(
+         input,
+         requester_user,
+         recipient_user_id,
+         recipient_team_id,
+         installation,
+         slack_channel_id,
+         thread_ts
+       ) do
     prompt = ConversationAgent.build_prompt(input)
 
-    Sessions.stream(
-      ConversationAgent,
-      prompt,
-      [
-        assigns: %{requester_user: requester_user},
-        load_project_instructions: false,
-        max_turns: 8
-      ],
-      fn events ->
-        events
-        |> Enum.reduce_while(initial_stream_state(), fn event, state ->
-          handle_stream_event(event, state, installation, slack_channel_id, thread_ts)
-        end)
-        |> finalize_stream_result(installation, slack_channel_id, thread_ts)
-      end
+    set_status(
+      installation,
+      slack_channel_id,
+      thread_ts,
+      "is working on this request...",
+      loading_messages()
     )
+
+    try do
+      Sessions.stream(
+        ConversationAgent,
+        prompt,
+        [
+          assigns: %{requester_user: requester_user},
+          load_project_instructions: false,
+          max_turns: 8
+        ],
+        fn events ->
+          events
+          |> Enum.reduce_while(
+            initial_stream_state(recipient_user_id, recipient_team_id),
+            fn event, state ->
+              handle_stream_event(event, state, installation, slack_channel_id, thread_ts)
+            end
+          )
+          |> finalize_stream_result(installation, slack_channel_id, thread_ts)
+        end
+      )
+    after
+      clear_status(installation, slack_channel_id, thread_ts)
+    end
   end
 
   defp handle_stream_event({:text, chunk}, state, installation, slack_channel_id, thread_ts)
@@ -430,13 +471,57 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   end
 
   defp handle_stream_event(
-         {:tool_call, _name, _id, _args},
+         {:tool_call, name, _id, _args},
          state,
-         _installation,
-         _slack,
-         _thread
-       ),
-       do: {:cont, %{state | tool_ran: true}}
+         installation,
+         slack_channel_id,
+         thread_ts
+       ) do
+    tool_name = name |> to_string() |> String.replace("_", " ")
+
+    set_status(
+      installation,
+      slack_channel_id,
+      thread_ts,
+      "is using #{tool_name}...",
+      loading_messages()
+    )
+
+    state =
+      state
+      |> Map.put(:tool_ran, true)
+      |> flush_response(installation, slack_channel_id, thread_ts)
+
+    if state.error do
+      {:halt, state}
+    else
+      {:cont, state}
+    end
+  end
+
+  defp handle_stream_event(
+         {:tool_result, _id, _result},
+         state,
+         installation,
+         slack_channel_id,
+         thread_ts
+       ) do
+    set_status(
+      installation,
+      slack_channel_id,
+      thread_ts,
+      "is reading the result...",
+      loading_messages()
+    )
+
+    state = flush_response(state, installation, slack_channel_id, thread_ts)
+
+    if state.error do
+      {:halt, state}
+    else
+      {:cont, state}
+    end
+  end
 
   defp handle_stream_event(_event, state, _installation, _slack_channel_id, _thread_ts),
     do: {:cont, state}
@@ -482,11 +567,16 @@ defmodule Hive.Slack.Workers.RespondToConversation do
   end
 
   defp do_flush_response(%{mode: nil} = state, delta, installation, slack_channel_id, thread_ts) do
-    case API.start_stream(installation, %{
-           "channel" => slack_channel_id,
-           "thread_ts" => thread_ts,
-           "markdown_text" => delta
-         }) do
+    params =
+      %{
+        "channel" => slack_channel_id,
+        "thread_ts" => thread_ts,
+        "markdown_text" => delta
+      }
+      |> maybe_put_arg("recipient_user_id", state.recipient_user_id)
+      |> maybe_put_arg("recipient_team_id", state.recipient_team_id)
+
+    case API.start_stream(installation, params) do
       {:ok, %{"ts" => stream_ts}} when is_binary(stream_ts) ->
         %{state | mode: :stream, stream_ts: stream_ts}
 
@@ -679,7 +769,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     %{state | last_text: text, last_update_ms: System.monotonic_time(:millisecond)}
   end
 
-  defp initial_stream_state do
+  defp initial_stream_state(recipient_user_id, recipient_team_id) do
     %{
       text: "",
       last_text: "",
@@ -689,8 +779,41 @@ defmodule Hive.Slack.Workers.RespondToConversation do
       stream_ts: nil,
       reply_ts: nil,
       tool_ran: false,
-      separate_next_text: false
+      separate_next_text: false,
+      recipient_user_id: recipient_user_id,
+      recipient_team_id: recipient_team_id
     }
+  end
+
+  defp set_status(installation, slack_channel_id, thread_ts, status, loading_messages) do
+    case API.set_assistant_thread_status(installation, %{
+           "channel_id" => slack_channel_id,
+           "thread_ts" => thread_ts,
+           "status" => status,
+           "loading_messages" => loading_messages
+         }) do
+      {:ok, _response} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "[Slack.RespondToConversation] Slack assistant status update failed: #{inspect(reason)}"
+        )
+
+        :ok
+    end
+  end
+
+  defp clear_status(installation, slack_channel_id, thread_ts) do
+    set_status(installation, slack_channel_id, thread_ts, "", [])
+  end
+
+  defp loading_messages do
+    [
+      "Reading the thread",
+      "Checking Hive context",
+      "Preparing the response"
+    ]
   end
 
   defp post_model_provider_required_message(installation, slack_channel_id, thread_ts) do
