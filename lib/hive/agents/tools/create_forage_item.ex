@@ -14,7 +14,9 @@ defmodule Hive.Agents.Tools.CreateForageItem do
     Create a Hive forage item when a Slack thread explicitly asks Hive to
     capture a feature request, bug report, or feedback item. The instance
     decides whether the item is stored in Hive or published to an
-    external destination such as a GitHub issue.
+    external destination such as a GitHub issue. The title and description
+    must exclude sensitive details and any information identifying who
+    requested the item or who is affected.
     """
   end
 
@@ -29,11 +31,23 @@ defmodule Hive.Agents.Tools.CreateForageItem do
           enum: ["feature_request", "bug_report", "feedback"],
           description: "The kind of forage item to create. Defaults to feature_request."
         },
-        title: %{type: "string", minLength: 1, maxLength: 160},
-        description: %{type: "string", minLength: 10, maxLength: 2_000},
+        title: %{
+          type: "string",
+          minLength: 1,
+          maxLength: 160,
+          description: "A generalized title without personal or organization-identifying details."
+        },
+        description: %{
+          type: "string",
+          minLength: 10,
+          maxLength: 2_000,
+          description:
+            "Actionable technical context without names, contact details, account details, Slack identifiers, or who is affected."
+        },
         source_url: %{
           type: "string",
-          description: "Optional source URL that explains where the request came from."
+          description:
+            "Optional public source URL. Omit private Slack links and other internal links."
         },
         github_labels: %{
           type: "array",
@@ -47,8 +61,8 @@ defmodule Hive.Agents.Tools.CreateForageItem do
   end
 
   @impl true
-  def call(args, _context) when is_map(args) do
-    case Intake.current_requester() do
+  def call(args, context) when is_map(args) do
+    case requester_user(context) do
       nil ->
         {:error, "The Slack user is not linked to a Hive user."}
 
@@ -61,6 +75,12 @@ defmodule Hive.Agents.Tools.CreateForageItem do
   end
 
   def call(_args, _context), do: {:error, "Provide a forage item title and description."}
+
+  defp requester_user(context) do
+    context
+    |> Map.get(:assigns, %{})
+    |> Map.get(:requester_user)
+  end
 
   defp tool_result({:ok, result}) do
     {:ok,

@@ -48,9 +48,7 @@ defmodule Hive.Agents.Tools.ListGitHubLabelsTest do
     end)
 
     result =
-      Intake.with_requester(requester, fn ->
-        ListGitHubLabels.call(%{}, %{})
-      end)
+      ListGitHubLabels.call(%{}, %{assigns: %{requester_user: requester}})
 
     assert {:ok,
             %{
@@ -63,8 +61,8 @@ defmodule Hive.Agents.Tools.ListGitHubLabelsTest do
     assert String.length(description) == 240
   end
 
-  test "rejects calls without a process requester" do
+  test "rejects calls without a requester in the tool context" do
     assert {:error, "The Slack user is not linked to a Hive user."} =
-             ListGitHubLabels.call(%{}, %{})
+             ListGitHubLabels.call(%{}, %{assigns: %{}})
   end
 end

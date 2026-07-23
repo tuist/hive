@@ -28,7 +28,6 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   alias Hive.Agents.Sessions
   alias Hive.Audit
-  alias Hive.Forage.Intake
   alias Hive.Repo
   alias Hive.Slack
   alias Hive.Slack.Agents.ConversationAgent
@@ -100,7 +99,8 @@ defmodule Hive.Slack.Workers.RespondToConversation do
          input = %{
            "thread" => thread,
            "omitted_thread_messages" => omitted_thread_messages,
-           "can_create_forage_item" => not is_nil(requester_user)
+           "can_create_forage_item" => not is_nil(requester_user),
+           "slack_profile_link" => HiveWeb.Endpoint.url() <> "/account/slack/new"
          },
          {:ok, _reply} <-
            handle_request(
@@ -354,23 +354,17 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     end
   end
 
-  defp run_conversation_agent(input, nil, installation, slack_channel_id, thread_ts) do
-    stream_conversation_agent(input, installation, slack_channel_id, thread_ts)
-  end
-
   defp run_conversation_agent(input, requester_user, installation, slack_channel_id, thread_ts) do
-    Intake.with_requester(requester_user, fn ->
-      stream_conversation_agent(input, installation, slack_channel_id, thread_ts)
-    end)
-  end
-
-  defp stream_conversation_agent(input, installation, slack_channel_id, thread_ts) do
     prompt = ConversationAgent.build_prompt(input)
 
     Sessions.stream(
       ConversationAgent,
       prompt,
-      [load_project_instructions: false, max_turns: 8],
+      [
+        assigns: %{requester_user: requester_user},
+        load_project_instructions: false,
+        max_turns: 8
+      ],
       fn events ->
         events
         |> Enum.reduce_while(initial_stream_state(), fn event, state ->
@@ -383,7 +377,7 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp handle_stream_event({:text, chunk}, state, installation, slack_channel_id, thread_ts)
        when is_binary(chunk) do
-    state = %{state | text: state.text <> chunk}
+    state = append_text(state, chunk)
 
     if should_update?(state) do
       state = flush_response(state, installation, slack_channel_id, thread_ts)
@@ -419,6 +413,20 @@ defmodule Hive.Slack.Workers.RespondToConversation do
 
   defp handle_stream_event({:error, reason}, state, _installation, _slack_channel_id, _thread_ts) do
     {:halt, %{state | error: reason}}
+  end
+
+  defp handle_stream_event(
+         :turn_start,
+         state,
+         _installation,
+         _slack_channel_id,
+         _thread_ts
+       ) do
+    {:cont,
+     %{
+       state
+       | separate_next_text: state.separate_next_text or String.trim(state.text) != ""
+     }}
   end
 
   defp handle_stream_event(
@@ -649,6 +657,24 @@ defmodule Hive.Slack.Workers.RespondToConversation do
     String.replace_prefix(text, last_text, "")
   end
 
+  defp append_text(%{separate_next_text: true} = state, chunk) do
+    separator =
+      cond do
+        state.text == "" -> ""
+        String.ends_with?(state.text, "\n\n") -> ""
+        String.ends_with?(state.text, "\n") -> "\n"
+        true -> "\n\n"
+      end
+
+    %{
+      state
+      | text: state.text <> separator <> String.trim_leading(chunk),
+        separate_next_text: false
+    }
+  end
+
+  defp append_text(state, chunk), do: %{state | text: state.text <> chunk}
+
   defp mark_updated(%{text: text} = state) do
     %{state | last_text: text, last_update_ms: System.monotonic_time(:millisecond)}
   end
@@ -662,7 +688,8 @@ defmodule Hive.Slack.Workers.RespondToConversation do
       mode: nil,
       stream_ts: nil,
       reply_ts: nil,
-      tool_ran: false
+      tool_ran: false,
+      separate_next_text: false
     }
   end
 

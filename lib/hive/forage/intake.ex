@@ -15,7 +15,6 @@ defmodule Hive.Forage.Intake do
   alias Hive.GitHub.Issues
   alias Hive.Repo
 
-  @requester_key {__MODULE__, :requester}
   @settings_id "default"
 
   defmodule Result do
@@ -80,19 +79,6 @@ defmodule Hive.Forage.Intake do
         {:ok, []}
     end
   end
-
-  def with_requester(user, fun) when is_function(fun, 0) do
-    previous = Process.get(@requester_key)
-
-    try do
-      put_requester(user)
-      fun.()
-    after
-      restore_requester(previous)
-    end
-  end
-
-  def current_requester, do: Process.get(@requester_key)
 
   def create(attrs, user, opts \\ [])
 
@@ -424,12 +410,6 @@ defmodule Hive.Forage.Intake do
   defp reject_empty(map) do
     Map.reject(map, fn {_key, value} -> value in [nil, ""] end)
   end
-
-  defp put_requester(%User{} = user), do: Process.put(@requester_key, user)
-  defp put_requester(_user), do: Process.delete(@requester_key)
-
-  defp restore_requester(nil), do: Process.delete(@requester_key)
-  defp restore_requester(previous), do: Process.put(@requester_key, previous)
 
   defp create_default_settings do
     %IntakeSettings{id: @settings_id}

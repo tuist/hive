@@ -28,12 +28,14 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     properties: %{
       thread: %{type: "array", items: @message_schema},
       omitted_thread_messages: %{type: "integer"},
-      can_create_forage_item: %{type: "boolean"}
+      can_create_forage_item: %{type: "boolean"},
+      slack_profile_link: %{type: "string", minLength: 1}
     },
     required: [
       "thread",
       "omitted_thread_messages",
-      "can_create_forage_item"
+      "can_create_forage_item",
+      "slack_profile_link"
     ],
     additionalProperties: false
   }
@@ -69,13 +71,22 @@ defmodule Hive.Slack.Agents.ConversationAgent do
       request, bug report, or feedback item, use `create_forage_item`
       when `can_create_forage_item` is true. Reply with the Hive link
       and the external link when the tool returns one.
+    - Before calling `create_forage_item`, remove sensitive and identifying
+      information from the title and description. Never include who
+      requested the item or who is affected. Omit people's names, Slack
+      handles and user identifiers, email addresses, customer or account
+      names, workspace or organization names, and private links. Preserve
+      only the technical behavior, generalized impact, and context needed
+      to act on the item.
+    - Omit `source_url` when it is a private Slack or internal link.
     - When matching GitHub labels would help a forage item, call
       `list_github_labels` first. You may pass `github_labels` with up to
       three exact names returned by that tool. Do not invent labels, and
       omit labels when none fit.
     - If `can_create_forage_item` is false and the user asks you to
-      create a forage item, ask them to sign in to Hive and link their
-      Slack profile before trying again.
+      create a forage item, do not call any tools. Ask them to connect
+      their Slack profile before trying again and include the exact
+      Slack-formatted link from `Slack profile connection link`.
 
     #{StyleGuide.prose_rules()}
     """
@@ -88,6 +99,9 @@ defmodule Hive.Slack.Agents.ConversationAgent do
     """
     Can create forage item:
     #{input["can_create_forage_item"] == true}
+
+    Slack profile connection link:
+    <#{input["slack_profile_link"]}|Connect your Slack profile>
 
     Thread messages, oldest first:
     #{format_thread(input["thread"] || [])}

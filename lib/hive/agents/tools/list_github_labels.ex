@@ -31,8 +31,8 @@ defmodule Hive.Agents.Tools.ListGitHubLabels do
   end
 
   @impl true
-  def call(_args, _context) do
-    case Intake.current_requester() do
+  def call(_args, context) do
+    case requester_user(context) do
       nil ->
         {:error, "The Slack user is not linked to a Hive user."}
 
@@ -43,6 +43,12 @@ defmodule Hive.Agents.Tools.ListGitHubLabels do
           {:error, "The Slack user is not allowed to list GitHub labels."}
         end
     end
+  end
+
+  defp requester_user(context) do
+    context
+    |> Map.get(:assigns, %{})
+    |> Map.get(:requester_user)
   end
 
   defp list_labels do
