@@ -21,47 +21,47 @@ msgstr ""
 msgid "%{count} min"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:47
+#: lib/hive_web/live/flight_live/show.ex:63
 #, elixir-autogen, elixir-format
 msgid "%{title} · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:258
+#: lib/hive_web/live/flight_live/show.ex:274
 #, elixir-autogen, elixir-format
 msgid "Agent"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:172
+#: lib/hive_web/live/flight_live/show.ex:188
 #, elixir-autogen, elixir-format
 msgid "Agent session"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:126
+#: lib/hive_web/live/flight_live/show.ex:142
 #, elixir-autogen, elixir-format
 msgid "Base branch"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:127
+#: lib/hive_web/live/flight_live/show.ex:143
 #, elixir-autogen, elixir-format
 msgid "Base revision"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:158
+#: lib/hive_web/live/flight_live/show.ex:174
 #, elixir-autogen, elixir-format
 msgid "Check out the recorded revision, then ask your local Hive client for this Flight. The response includes the portable session messages and outcome."
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:125
+#: lib/hive_web/live/flight_live/show.ex:141
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:154
+#: lib/hive_web/live/flight_live/show.ex:170
 #, elixir-autogen, elixir-format
 msgid "Continue locally"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:232
+#: lib/hive_web/live/flight_live/show.ex:248
 #, elixir-autogen, elixir-format
 msgid "Durable agent execution and continuation context."
 msgstr ""
@@ -81,12 +81,13 @@ msgstr ""
 msgid "Duration"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:114
+#: lib/hive_web/live/flight_live/show.ex:130
 #, elixir-autogen, elixir-format
 msgid "Execution"
 msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:168
+#: lib/hive_web/live/flight_live/show.ex:39
 #, elixir-autogen, elixir-format
 msgid "Execution history"
 msgstr ""
@@ -97,17 +98,17 @@ msgid "Filter"
 msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:209
-#: lib/hive_web/live/flight_live/show.ex:16
+#: lib/hive_web/live/flight_live/show.ex:17
 #, elixir-autogen, elixir-format
 msgid "Flight"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:117
+#: lib/hive_web/live/flight_live/show.ex:133
 #, elixir-autogen, elixir-format
 msgid "Flight identifier"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:38
+#: lib/hive_web/live/flight_live/show.ex:54
 #, elixir-autogen, elixir-format
 msgid "Flight not found."
 msgstr ""
@@ -116,11 +117,12 @@ msgstr ""
 #: lib/hive_web/live/flight_live/index.ex:25
 #: lib/hive_web/live/flight_live/index.ex:33
 #: lib/hive_web/live/flight_live/index.ex:151
+#: lib/hive_web/live/flight_live/show.ex:43
 #, elixir-autogen, elixir-format
 msgid "Flights"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:178
+#: lib/hive_web/live/flight_live/show.ex:194
 #, elixir-autogen, elixir-format
 msgid "Flights created before session capture or failures before the agent starts do not have a transcript."
 msgstr ""
@@ -140,7 +142,7 @@ msgstr ""
 msgid "Forage item"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:235
+#: lib/hive_web/live/flight_live/show.ex:251
 #, elixir-autogen, elixir-format
 msgid "Forage item unavailable"
 msgstr ""
@@ -161,7 +163,7 @@ msgstr ""
 msgid "Local continuation"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:260
+#: lib/hive_web/live/flight_live/show.ex:276
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -176,18 +178,18 @@ msgstr ""
 msgid "No Flights found"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:176
+#: lib/hive_web/live/flight_live/show.ex:192
 #, elixir-autogen, elixir-format
 msgid "No session was captured"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:93
+#: lib/hive_web/live/flight_live/show.ex:109
 #, elixir-autogen, elixir-format
 msgid "Open Forage item"
 msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:310
-#: lib/hive_web/live/flight_live/show.ex:134
+#: lib/hive_web/live/flight_live/show.ex:150
 #, elixir-autogen, elixir-format
 msgid "Outcome"
 msgstr ""
@@ -203,18 +205,18 @@ msgstr ""
 msgid "Repository"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:122
+#: lib/hive_web/live/flight_live/show.ex:138
 #, elixir-autogen, elixir-format
 msgid "Requested by"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:141
+#: lib/hive_web/live/flight_live/show.ex:157
 #, elixir-autogen, elixir-format
 msgid "Root cause"
 msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:320
-#: lib/hive_web/live/flight_live/show.ex:120
+#: lib/hive_web/live/flight_live/show.ex:136
 #, elixir-autogen, elixir-format
 msgid "Runner"
 msgstr ""
@@ -224,7 +226,7 @@ msgstr ""
 msgid "Sandbox history"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:121
+#: lib/hive_web/live/flight_live/show.ex:137
 #, elixir-autogen, elixir-format
 msgid "Sandbox identifier"
 msgstr ""
@@ -240,7 +242,7 @@ msgid "Start a Flight from a supported Forage item or adjust the current filters
 msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:203
-#: lib/hive_web/live/flight_live/show.ex:124
+#: lib/hive_web/live/flight_live/show.ex:140
 #, elixir-autogen, elixir-format
 msgid "Started"
 msgstr ""
@@ -251,18 +253,18 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:296
+#: lib/hive_web/live/flight_live/show.ex:312
 #, elixir-autogen, elixir-format
 msgid "System"
 msgstr ""
 
 #: lib/hive/flights.ex:108
-#: lib/hive_web/live/flight_live/show.ex:226
+#: lib/hive_web/live/flight_live/show.ex:242
 #, elixir-autogen, elixir-format
 msgid "The agent is working in its sandbox."
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:259
+#: lib/hive_web/live/flight_live/show.ex:275
 #, elixir-autogen, elixir-format
 msgid "Tool result"
 msgstr ""
@@ -277,23 +279,23 @@ msgstr ""
 msgid "Under a minute"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:257
+#: lib/hive_web/live/flight_live/show.ex:273
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:145
+#: lib/hive_web/live/flight_live/show.ex:161
 #, elixir-autogen, elixir-format
 msgid "Validation"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:102
+#: lib/hive_web/live/flight_live/show.ex:118
 #, elixir-autogen, elixir-format
 msgid "View pull request"
 msgstr ""
 
 #: lib/hive/flights.ex:111
-#: lib/hive_web/live/flight_live/show.ex:229
+#: lib/hive_web/live/flight_live/show.ex:245
 #, elixir-autogen, elixir-format
 msgid "Waiting for an available sandbox."
 msgstr ""
@@ -305,17 +307,37 @@ msgstr ""
 
 #: lib/hive_web/live/flight_live/index.ex:233
 #: lib/hive_web/live/flight_live/index.ex:303
-#: lib/hive_web/live/flight_live/show.ex:118
+#: lib/hive_web/live/flight_live/show.ex:134
 #, elixir-autogen, elixir-format
 msgid "Objective"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:119
+#: lib/hive_web/live/flight_live/show.ex:135
 #, elixir-autogen, elixir-format
 msgid "Objective outcome"
 msgstr ""
 
-#: lib/hive_web/live/flight_live/show.ex:123
+#: lib/hive_web/live/flight_live/show.ex:139
 #, elixir-autogen, elixir-format
 msgid "Triggered from"
+msgstr ""
+
+#: lib/hive_web/live/flight_live/show.ex:41
+#, elixir-autogen, elixir-format
+msgid "Continuation details"
+msgstr ""
+
+#: lib/hive_web/live/flight_live/show.ex:44
+#, elixir-autogen, elixir-format
+msgid "Hive Flight"
+msgstr ""
+
+#: lib/hive_web/live/flight_live/show.ex:40
+#, elixir-autogen, elixir-format
+msgid "Product signal context"
+msgstr ""
+
+#: lib/hive_web/live/flight_live/show.ex:34
+#, elixir-autogen, elixir-format
+msgid "Sign in to Hive to inspect this durable agent execution."
 msgstr ""

@@ -7,6 +7,7 @@ defmodule HiveWeb.FlightLive.Show do
   @behaviour Hive.Slack.Unfurl
 
   alias Hive.Flights
+  alias Hive.Slack.Unfurl.BlockKit
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -27,7 +28,22 @@ defmodule HiveWeb.FlightLive.Show do
   end
 
   @impl Hive.Slack.Unfurl
-  def slack_unfurl(_uri, _params), do: :skip
+  def slack_unfurl(uri, _params) do
+    BlockKit.generic(uri, %{
+      description:
+        dgettext(
+          "dashboard_flights",
+          "Sign in to Hive to inspect this durable agent execution."
+        ),
+      highlights: [
+        dgettext("dashboard_flights", "Execution history"),
+        dgettext("dashboard_flights", "Product signal context"),
+        dgettext("dashboard_flights", "Continuation details")
+      ],
+      section_label: dgettext("dashboard_flights", "Flights"),
+      title: dgettext("dashboard_flights", "Hive Flight")
+    })
+  end
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do

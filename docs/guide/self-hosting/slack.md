@@ -202,12 +202,16 @@ active returns the existing Flight instead of starting another agent session.
 
 ## Preview Hive links
 
-Pasting a public Hive link into a connected Slack channel shows a preview
-with the resource title, context, and a link back to Hive.
+Pasting any Hive dashboard link into a connected Slack channel shows a
+Block Kit preview with a link back to Hive. Public resource pages include
+the resource title and context. Indexes, creation flows, settings pages,
+and other dashboard routes use page-level metadata.
 
 Preview visibility follows the anonymous dashboard view. Private specs,
 private domains, organization-only Forage items, account pages, and
-administrator pages do not expose their content in Slack.
+administrator pages do not expose record or account content in Slack.
+Hive either shows generic page metadata or leaves the link without a
+preview.
 
 ## Configure notifications
 

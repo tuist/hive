@@ -2,6 +2,7 @@ defmodule Hive.Slack.UnfurlerTest do
   use Hive.DataCase, async: true
 
   alias Hive.Domains
+  alias Hive.Drops
   alias Hive.Drops.WeeklyDigest
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
@@ -9,7 +10,39 @@ defmodule Hive.Slack.UnfurlerTest do
   alias Hive.Slack.Unfurler
   alias Hive.Specs
 
+  @static_dashboard_paths [
+    "/",
+    "/ops",
+    "/audit",
+    "/forage",
+    "/forage/new",
+    "/forage/feature-requests/new",
+    "/forage/feature-requests",
+    "/forage/bug-reports",
+    "/forage/feedback",
+    "/forage/github-issues",
+    "/forage/grafana-alerts",
+    "/specs",
+    "/specs/new",
+    "/drops",
+    "/drops/subscribe",
+    "/drops/digest",
+    "/flights",
+    "/domains",
+    "/projects",
+    "/account/identities",
+    "/account/notifications",
+    "/ops/slack",
+    "/ops/drops",
+    "/ops/forage",
+    "/ops/inference",
+    "/ops/inference/profiles",
+    "/ops/inference/providers",
+    "/ops/audit"
+  ]
+
   defp app_url(path), do: HiveWeb.Endpoint.url() <> path
+  defp unique_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
 
   defp user! do
     suffix = System.unique_integer([:positive])
@@ -25,6 +58,8 @@ defmodule Hive.Slack.UnfurlerTest do
   end
 
   defp spec!(attrs \\ %{}) do
+    attrs = Map.put_new_lazy(attrs, "project_id", fn -> create_project!().id end)
+
     {:ok, spec} =
       Specs.create_spec(
         Map.merge(
@@ -41,11 +76,42 @@ defmodule Hive.Slack.UnfurlerTest do
     spec
   end
 
-  defp create_project! do
+  defp create_project!(attrs \\ %{}) do
     {:ok, project} =
-      Projects.create_project(%{name: "Project #{System.unique_integer([:positive])}"})
+      Projects.create_project(
+        Map.merge(%{name: "Project #{System.unique_integer([:positive])}"}, attrs)
+      )
 
     project
+  end
+
+  defp create_domain!(attrs) do
+    {:ok, domain} =
+      attrs
+      |> Map.put_new(:project_id, create_project!().id)
+      |> Domains.create_domain()
+
+    domain
+  end
+
+  defp insert_drop!(domain, attrs \\ %{}) do
+    attrs =
+      Map.merge(
+        %{
+          source_type: :github_release,
+          external_id: "tuist/hive@slack-#{System.unique_integer([:positive])}",
+          title: "Route-owned Slack previews",
+          body: "Every Hive dashboard route can now build a safe preview.",
+          url: "https://github.com/tuist/hive/releases",
+          version: "v1.0.0",
+          published_at: ~U[2026-07-23 09:30:00Z]
+        },
+        attrs
+      )
+
+    {:ok, drop} = Drops.upsert_drop(attrs)
+    Drops.replace_drop_domains(drop, [domain.id])
+    drop
   end
 
   defp block_texts(%{"blocks" => blocks}) do
@@ -87,20 +153,45 @@ defmodule Hive.Slack.UnfurlerTest do
     assert Unfurler.unfurl(app_url("/account/slack")) == :skip
   end
 
-  test "builds Block Kit from static route OpenGraph metadata" do
-    assert {:ok, payload} = Unfurler.unfurl(app_url("/ops/slack"))
+  test "every dashboard LiveView owns an unfurl strategy" do
+    missing_modules =
+      HiveWeb.Router.__routes__()
+      |> Enum.flat_map(fn
+        %{metadata: %{log_module: module}} -> [module]
+        _route -> []
+      end)
+      |> Enum.uniq()
+      |> Enum.reject(fn module ->
+        Code.ensure_loaded!(module)
 
-    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Slack"))
-    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Hive"))
-    assert button_url(payload) == app_url("/ops/slack")
+        function_exported?(module, :slack_unfurl, 2) or
+          function_exported?(module, :open_graph, 0)
+      end)
+
+    assert missing_modules == []
   end
 
-  test "uses generic metadata for the Flights index and skips Flight details" do
-    assert {:ok, payload} = Unfurler.unfurl(app_url("/flights"))
-    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Flights"))
-    assert button_url(payload) == app_url("/flights")
+  test "unfurls every static dashboard route" do
+    Enum.each(@static_dashboard_paths, fn path ->
+      assert {:ok, payload} = Unfurler.unfurl(app_url(path))
+      assert button_url(payload) == app_url(path)
+    end)
+  end
 
-    assert Unfurler.unfurl(app_url("/flights/#{Ecto.UUID.generate()}")) == :skip
+  test "uses generic metadata for private dashboard routes" do
+    paths = [
+      "/flights/#{Ecto.UUID.generate()}",
+      "/ops/inference/profiles/#{Ecto.UUID.generate()}",
+      "/ops/inference/tokens/#{Ecto.UUID.generate()}"
+    ]
+
+    Enum.each(paths, fn path ->
+      assert {:ok, payload} = Unfurler.unfurl(app_url(path))
+      assert button_url(payload) == app_url(path)
+    end)
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url(List.first(paths)))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Hive Flight"))
   end
 
   test "delegates spec detail links to the owning route" do
@@ -111,6 +202,10 @@ defmodule Hive.Slack.UnfurlerTest do
     assert block_texts(payload) |> Enum.any?(&(&1 == "Render Hive links inline."))
     assert block_texts(payload) |> Enum.any?(&(&1 =~ "Spec ##{spec.number}"))
     assert button_url(payload) == app_url("/specs/#{spec.number}")
+
+    assert {:ok, edit_payload} = Unfurler.unfurl(app_url("/specs/#{spec.number}/edit"))
+    assert block_texts(edit_payload) |> Enum.any?(&(&1 == "Edit Slack unfurling"))
+    assert button_url(edit_payload) == app_url("/specs/#{spec.number}/edit")
   end
 
   test "skips specs with a private visibility override" do
@@ -136,31 +231,48 @@ defmodule Hive.Slack.UnfurlerTest do
   end
 
   test "delegates domain detail links to the owning route" do
-    {:ok, domain} =
-      Domains.create_domain(%{
-        name: "Forage",
-        project_id: create_project!().id,
+    domain =
+      create_domain!(%{
+        name: unique_name("Forage"),
         description: "Idea harvest.",
         visibility: :public
       })
 
     assert {:ok, payload} = Unfurler.unfurl(app_url("/domains/#{domain.id}"))
 
-    assert block_texts(payload) |> Enum.any?(&(&1 == "Forage"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == domain.name))
     assert block_texts(payload) |> Enum.any?(&(&1 == "Idea harvest."))
     assert block_texts(payload) |> Enum.any?(&(&1 =~ "Domain"))
     assert button_url(payload) == app_url("/domains/#{domain.id}")
   end
 
   test "skips private domains" do
-    {:ok, domain} =
-      Domains.create_domain(%{
-        name: "Secret",
-        project_id: create_project!().id,
-        visibility: :private
-      })
+    domain = create_domain!(%{name: unique_name("Secret"), visibility: :private})
 
     assert Unfurler.unfurl(app_url("/domains/#{domain.id}")) == :skip
+  end
+
+  test "delegates project detail links to the owning route" do
+    project =
+      create_project!(%{
+        description: "Coordinates route-owned Slack previews.",
+        visibility: :public
+      })
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/projects/#{project.id}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == project.name))
+
+    assert block_texts(payload)
+           |> Enum.any?(&(&1 == "Coordinates route-owned Slack previews."))
+
+    assert button_url(payload) == app_url("/projects/#{project.id}")
+  end
+
+  test "skips private projects" do
+    project = create_project!(%{visibility: :private})
+
+    assert Unfurler.unfurl(app_url("/projects/#{project.id}")) == :skip
   end
 
   test "delegates forage detail links to the owning route" do
@@ -189,6 +301,23 @@ defmodule Hive.Slack.UnfurlerTest do
       })
 
     assert Unfurler.unfurl(app_url("/forage/items/manual/#{item.id}")) == :skip
+  end
+
+  test "delegates drop detail links to the owning route" do
+    domain = create_domain!(%{name: unique_name("Hive"), visibility: :public})
+    drop = insert_drop!(domain)
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/drops/#{drop.number}"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Route-owned Slack previews"))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "v1.0.0"))
+    assert button_url(payload) == app_url("/drops/#{drop.number}")
+  end
+
+  test "skips drops that anonymous visitors cannot see" do
+    domain = create_domain!(%{name: unique_name("Internal"), visibility: :private})
+    drop = insert_drop!(domain)
+
+    assert Unfurler.unfurl(app_url("/drops/#{drop.number}")) == :skip
   end
 
   test "unfurls a published weekly Drops digest" do
