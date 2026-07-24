@@ -3,7 +3,11 @@ defmodule Hive.Agents.Errors do
   Normalizes model-provider failures before they reach worker logs or Oban.
   """
 
-  @hard_statuses [401, 402, 412]
+  # A 4xx client error means the provider rejected the request itself, so an
+  # identical retry fails the same way (e.g. an unknown model id yields 400).
+  # 408 (Request Timeout) and 429 (Too Many Requests) are the transient
+  # exceptions that stay retryable.
+  @retryable_client_statuses [408, 429]
 
   @credit_fragments [
     "credit_limit",
@@ -73,7 +77,7 @@ defmodule Hive.Agents.Errors do
       contains_any?(text, @credential_fragments) ->
         :llm_invalid_credentials
 
-      status_code(reason) in @hard_statuses ->
+      client_error_rejected?(status_code(reason)) ->
         :llm_provider_rejected_request
 
       true ->
@@ -139,6 +143,11 @@ defmodule Hive.Agents.Errors do
 
   defp contains_any?(text, fragments),
     do: Enum.any?(fragments, &String.contains?(text, &1))
+
+  defp client_error_rejected?(status) when is_integer(status),
+    do: status in 400..499 and status not in @retryable_client_statuses
+
+  defp client_error_rejected?(_status), do: false
 
   defp status_code({:error, reason}), do: status_code(reason)
   defp status_code(status) when is_integer(status) and status in 100..599, do: status
