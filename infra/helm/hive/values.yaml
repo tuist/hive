@@ -195,7 +195,7 @@ vector:
   enabled: false
   image:
     repository: ghcr.io/opendata-oss/vector
-    tag: "0.2.1"
+    tag: "0.2.2"
     pullPolicy: IfNotPresent
   containerPort: 8080
   logLevel: info
