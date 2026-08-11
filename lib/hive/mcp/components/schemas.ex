@@ -100,6 +100,66 @@ defmodule Hive.MCP.Components.Schemas do
     }
   end
 
+  def postmortem do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "number" => %{"type" => "integer"},
+        "title" => %{"type" => "string"},
+        "body" => %{"type" => "string"},
+        "visibility" => %{"type" => "string"},
+        "author" => nullable_postmortem_author(),
+        "domains" => %{"type" => "array", "items" => postmortem_domain()},
+        "action_items" => %{"type" => "array", "items" => postmortem_action_item()},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"},
+        "path" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "number",
+        "title",
+        "body",
+        "visibility",
+        "author",
+        "domains",
+        "action_items",
+        "inserted_at",
+        "updated_at",
+        "path"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def postmortem_action_item do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "postmortem_id" => %{"type" => "string"},
+        "title" => %{"type" => "string"},
+        "description" => %{"type" => ["string", "null"]},
+        "completed" => %{"type" => "boolean"},
+        "completed_at" => %{"type" => ["string", "null"]},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "postmortem_id",
+        "title",
+        "description",
+        "completed",
+        "completed_at",
+        "inserted_at",
+        "updated_at"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
   def comment do
     %{
       "type" => "object",
@@ -111,6 +171,32 @@ defmodule Hive.MCP.Components.Schemas do
         "updated_at" => %{"type" => "string"}
       },
       "required" => ["id", "body", "author", "inserted_at", "updated_at"],
+      "additionalProperties" => false
+    }
+  end
+
+  defp nullable_postmortem_author do
+    %{
+      "type" => ["object", "null"],
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "email" => %{"type" => "string"},
+        "name" => %{"type" => ["string", "null"]}
+      },
+      "required" => ["id", "email", "name"],
+      "additionalProperties" => false
+    }
+  end
+
+  defp postmortem_domain do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "name" => %{"type" => "string"},
+        "visibility" => %{"type" => "string"}
+      },
+      "required" => ["id", "name", "visibility"],
       "additionalProperties" => false
     }
   end
