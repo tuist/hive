@@ -81,6 +81,35 @@ defmodule HiveWeb.PostmortemLive.IndexTest do
 
     assert has_element?(view, "#new-action-item-modal")
     assert has_element?(view, "#new-action-item-modal [data-part=trigger]")
+
+    assert {:ok, action_item} =
+             Postmortems.create_action_item(
+               postmortem,
+               %{
+                 "title" => "Add registry monitoring",
+                 "description" => "Alert when package resolution latency rises."
+               },
+               user
+             )
+
+    {:ok, view, _html} = live(conn, ~p"/postmortems/#{postmortem.number}")
+
+    html =
+      render_submit(view, "update_action_item", %{
+        "id" => action_item.id,
+        "action_item" => %{
+          "title" => "x",
+          "description" => "Keep the description visible."
+        }
+      })
+
+    assert html =~ ~s(value="x")
+    assert html =~ "Keep the description visible."
+
+    assert Postmortems.get_postmortem_by_number!(postmortem.number).action_items
+           |> hd()
+           |> Map.get(:title) ==
+             "Add registry monitoring"
   end
 
   test "shows public postmortems to anonymous visitors and hides private ones", %{conn: conn} do

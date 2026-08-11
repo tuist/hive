@@ -228,6 +228,14 @@ defmodule Hive.Audit do
       when is_binary(number) and number != "",
       do: "/specs/#{number}"
 
+  def resource_path("postmortem", _target_id, %{"number" => number})
+      when is_binary(number) and number != "",
+      do: "/postmortems/#{number}"
+
+  def resource_path("postmortem", _target_id, %{number: number})
+      when is_binary(number) and number != "",
+      do: "/postmortems/#{number}"
+
   def resource_path("drop", _target_id, %{"number" => number})
       when is_binary(number) and number != "",
       do: "/drops/#{number}"

@@ -18,21 +18,30 @@ defmodule Hive.Postmortems.EmbeddingWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"postmortem_id" => id, "content_hash" => content_hash}}) do
+  def perform(%Oban.Job{args: %{"postmortem_id" => id, "content_hash" => content_hash}} = job) do
     case Postmortems.index_postmortem(id, content_hash) do
       {:ok, _embedding} -> :ok
       {:error, :not_found} -> :ok
       {:error, :embedding_not_configured} -> {:snooze, @embedding_unavailable_snooze_seconds}
-      {:error, reason} -> handle_error(id, content_hash, reason)
+      {:error, reason} -> handle_error(job, id, content_hash, reason)
     end
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
-      handle_error(id, content_hash, error)
+      handle_error(job, id, content_hash, error)
   end
 
-  defp handle_error(id, content_hash, reason) do
+  defp handle_error(job, id, content_hash, reason) do
     case Errors.hard_failure_reason(reason) do
       nil ->
+        if job.attempt >= job.max_attempts do
+          failure_reason =
+            reason
+            |> Errors.sanitize_reason(:postmortem_embedding_failed)
+            |> inspect(limit: 20, printable_limit: 500)
+
+          :ok = Postmortems.mark_embedding_failed(id, content_hash, failure_reason)
+        end
+
         Errors.oban_error(reason, :postmortem_embedding_failed)
 
       hard_reason ->

@@ -6,6 +6,7 @@ defmodule Hive.Postmortems do
   import Ecto.Query
 
   alias Hive.Accounts.User
+  alias Hive.Audit
   alias Hive.Auth
   alias Ecto.Changeset
   alias Hive.Domains.Domain
@@ -15,9 +16,6 @@ defmodule Hive.Postmortems do
   alias Hive.Postmortems.Postmortem
   alias Hive.Repo
   alias HiveWeb.Markdown
-
-  @number_lock_namespace 0x48695645
-  @number_lock_key 0x504D4F52
 
   def can_publish?(user), do: Auth.member?(user)
   def can_edit?(%Postmortem{}, user), do: Auth.member?(user)
@@ -90,30 +88,7 @@ defmodule Hive.Postmortems do
 
   def publish_postmortem(attrs, %User{} = user) do
     if can_publish?(user) do
-      with {:ok, postmortem} <-
-             Repo.transaction(fn ->
-               Repo.query!("SELECT pg_advisory_xact_lock($1::integer, $2::integer)", [
-                 @number_lock_namespace,
-                 @number_lock_key
-               ])
-
-               case %Postmortem{}
-                    |> Postmortem.changeset(attrs)
-                    |> Ecto.Changeset.put_change(:created_by_user_id, user.id)
-                    |> Repo.insert() do
-                 {:ok, postmortem} ->
-                   case put_domains(postmortem, attrs) do
-                     {:ok, postmortem} -> postmortem
-                     {:error, changeset} -> Repo.rollback(changeset)
-                   end
-
-                 {:error, changeset} ->
-                   Repo.rollback(changeset)
-               end
-             end) do
-        schedule_indexing(postmortem)
-        {:ok, postmortem}
-      end
+      persist_new_postmortem(attrs, user)
     else
       {:error, :unauthorized}
     end
@@ -121,13 +96,26 @@ defmodule Hive.Postmortems do
 
   def publish_postmortem(_attrs, _user), do: {:error, :unauthorized}
 
+  defp persist_new_postmortem(attrs, user) do
+    Repo.transaction(fn ->
+      with {:ok, postmortem} <-
+             %Postmortem{}
+             |> Postmortem.changeset(attrs)
+             |> Ecto.Changeset.put_change(:created_by_user_id, user.id)
+             |> Repo.insert(),
+           {:ok, postmortem} <- put_domains(postmortem, attrs),
+           :ok <- schedule_indexing(postmortem) do
+        postmortem
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> finish_postmortem_transaction("postmortem.published", user)
+  end
+
   def update_postmortem(%Postmortem{} = postmortem, attrs, %User{} = user) do
     if can_edit?(postmortem, user) do
-      with {:ok, updated_postmortem} <- Repo.update(Postmortem.changeset(postmortem, attrs)),
-           {:ok, updated_postmortem} <- put_domains(updated_postmortem, attrs) do
-        schedule_indexing(updated_postmortem)
-        {:ok, updated_postmortem}
-      end
+      persist_updated_postmortem(postmortem, attrs, user)
     else
       {:error, :unauthorized}
     end
@@ -135,11 +123,35 @@ defmodule Hive.Postmortems do
 
   def update_postmortem(_postmortem, _attrs, _user), do: {:error, :unauthorized}
 
+  defp persist_updated_postmortem(postmortem, attrs, user) do
+    Repo.transaction(fn ->
+      with {:ok, updated_postmortem} <-
+             Repo.update(Postmortem.changeset(postmortem, attrs)),
+           {:ok, updated_postmortem} <- put_domains(updated_postmortem, attrs),
+           :ok <- schedule_indexing(updated_postmortem) do
+        updated_postmortem
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> finish_postmortem_transaction("postmortem.updated", user)
+  end
+
+  defp finish_postmortem_transaction({:ok, postmortem}, action, user) do
+    record_postmortem_event(action, postmortem, user)
+    {:ok, postmortem}
+  end
+
+  defp finish_postmortem_transaction({:error, reason}, _action, _user), do: {:error, reason}
+
   def create_action_item(%Postmortem{} = postmortem, attrs, %User{} = user) do
     if can_edit?(postmortem, user) do
       %ActionItem{postmortem_id: postmortem.id}
       |> ActionItem.changeset(attrs)
       |> Repo.insert()
+      |> tap_result(fn action_item ->
+        record_action_item_event("postmortem.action_item_created", postmortem, action_item, user)
+      end)
     else
       {:error, :unauthorized}
     end
@@ -152,7 +164,17 @@ defmodule Hive.Postmortems do
         %User{} = user
       ) do
     if action_item.postmortem_id == postmortem.id and can_edit?(postmortem, user) do
-      action_item |> ActionItem.changeset(attrs) |> Repo.update()
+      action_item
+      |> ActionItem.changeset(attrs)
+      |> Repo.update()
+      |> tap_result(fn updated_action_item ->
+        record_action_item_event(
+          "postmortem.action_item_updated",
+          postmortem,
+          updated_action_item,
+          user
+        )
+      end)
     else
       {:error, :unauthorized}
     end
@@ -160,7 +182,16 @@ defmodule Hive.Postmortems do
 
   def delete_action_item(%Postmortem{} = postmortem, %ActionItem{} = action_item, %User{} = user) do
     if action_item.postmortem_id == postmortem.id and can_edit?(postmortem, user) do
-      Repo.delete(action_item)
+      action_item
+      |> Repo.delete()
+      |> tap_result(fn deleted_action_item ->
+        record_action_item_event(
+          "postmortem.action_item_deleted",
+          postmortem,
+          deleted_action_item,
+          user
+        )
+      end)
     else
       {:error, :unauthorized}
     end
@@ -173,7 +204,17 @@ defmodule Hive.Postmortems do
           do: nil,
           else: DateTime.utc_now() |> DateTime.truncate(:second)
 
-      action_item |> Changeset.change(completed_at: completed_at) |> Repo.update()
+      action =
+        if completed_at,
+          do: "postmortem.action_item_completed",
+          else: "postmortem.action_item_reopened"
+
+      action_item
+      |> Changeset.change(completed_at: completed_at)
+      |> Repo.update()
+      |> tap_result(fn updated_action_item ->
+        record_action_item_event(action, postmortem, updated_action_item, user)
+      end)
     else
       {:error, :unauthorized}
     end
@@ -187,20 +228,30 @@ defmodule Hive.Postmortems do
         {:error, :not_found}
 
       postmortem ->
-        if content_hash == content_hash(postmortem.body) do
-          case Repo.get_by(Embedding, postmortem_id: postmortem.id) do
-            %Embedding{status: :indexed, content_hash: ^content_hash} = embedding ->
-              {:ok, embedding}
+        index_current_postmortem(postmortem, content_hash, embed)
+    end
+  end
 
-            _embedding ->
-              with {:ok, vector} <- embed.(postmortem.body),
-                   {:ok, embedding} <- save_embedding(postmortem.id, content_hash, vector) do
-                {:ok, embedding}
-              end
-          end
-        else
-          {:ok, :stale}
-        end
+  defp index_current_postmortem(postmortem, content_hash, embed) do
+    if content_hash == content_hash(postmortem.body),
+      do: index_embedding(postmortem, content_hash, embed),
+      else: {:ok, :stale}
+  end
+
+  defp index_embedding(postmortem, content_hash, embed) do
+    case Repo.get_by(Embedding, postmortem_id: postmortem.id) do
+      %Embedding{status: :indexed, content_hash: ^content_hash} = embedding ->
+        {:ok, embedding}
+
+      _embedding ->
+        generate_embedding(postmortem, content_hash, embed)
+    end
+  end
+
+  defp generate_embedding(postmortem, content_hash, embed) do
+    case embed.(postmortem.body) do
+      {:ok, vector} -> save_embedding(postmortem.id, content_hash, vector)
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -221,12 +272,15 @@ defmodule Hive.Postmortems do
   def semantic_search(query, opts \\ []) when is_binary(query) do
     embed = Keyword.get(opts, :embed, &embed/1)
     limit = Keyword.get(opts, :limit, 10)
+    user = Keyword.get(opts, :user)
 
     with {:ok, query_embedding} <- embed.(query) do
       results =
         Embedding
         |> where([embedding], embedding.status == :indexed)
-        |> preload(:postmortem)
+        |> join(:inner, [embedding], postmortem in assoc(embedding, :postmortem), as: :postmortem)
+        |> apply_embedding_visibility(user)
+        |> preload([postmortem: postmortem], postmortem: postmortem)
         |> Repo.all()
         |> Enum.map(fn embedding ->
           %{
@@ -281,6 +335,12 @@ defmodule Hive.Postmortems do
       else: where(query, [postmortem], postmortem.visibility == :public)
   end
 
+  defp apply_embedding_visibility(query, user) do
+    if Auth.member?(user),
+      do: query,
+      else: where(query, [postmortem: postmortem], postmortem.visibility == :public)
+  end
+
   defp action_items_query do
     from action_item in ActionItem,
       order_by: [asc_nulls_first: action_item.completed_at, asc: action_item.inserted_at]
@@ -289,9 +349,24 @@ defmodule Hive.Postmortems do
   defp schedule_indexing(postmortem) do
     content_hash = content_hash(postmortem.body)
 
+    case Repo.get_by(Embedding, postmortem_id: postmortem.id) do
+      %Embedding{content_hash: ^content_hash} ->
+        :ok
+
+      _embedding ->
+        with {:ok, _embedding} <- put_pending_embedding(postmortem.id, content_hash),
+             {:ok, _job} <- EmbeddingWorker.enqueue(postmortem.id, content_hash) do
+          :ok
+        end
+    end
+  end
+
+  defp put_pending_embedding(postmortem_id, content_hash) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     %Embedding{}
     |> Embedding.changeset(%{
-      postmortem_id: postmortem.id,
+      postmortem_id: postmortem_id,
       content_hash: content_hash,
       status: :pending,
       embedding: nil,
@@ -306,35 +381,6 @@ defmodule Hive.Postmortems do
           embedding: nil,
           failure_reason: nil,
           indexed_at: nil,
-          updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
-        ]
-      ],
-      conflict_target: :postmortem_id
-    )
-
-    EmbeddingWorker.enqueue(postmortem.id, content_hash)
-    :ok
-  end
-
-  defp save_embedding(postmortem_id, content_hash, vector) when is_list(vector) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    %Embedding{}
-    |> Embedding.changeset(%{
-      postmortem_id: postmortem_id,
-      content_hash: content_hash,
-      status: :indexed,
-      embedding: vector,
-      failure_reason: nil,
-      indexed_at: now
-    })
-    |> Repo.insert(
-      on_conflict: [
-        set: [
-          status: :indexed,
-          embedding: vector,
-          failure_reason: nil,
-          indexed_at: now,
           updated_at: now
         ]
       ],
@@ -343,49 +389,131 @@ defmodule Hive.Postmortems do
     )
   end
 
+  defp save_embedding(postmortem_id, content_hash, vector) when is_list(vector) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Embedding
+    |> where(
+      [embedding],
+      embedding.postmortem_id == ^postmortem_id and embedding.content_hash == ^content_hash
+    )
+    |> select([embedding], embedding)
+    |> Repo.update_all(
+      set: [
+        status: :indexed,
+        embedding: vector,
+        failure_reason: nil,
+        indexed_at: now,
+        updated_at: now
+      ]
+    )
+    |> case do
+      {1, [embedding]} -> {:ok, embedding}
+      {0, []} -> {:ok, :stale}
+    end
+  end
+
   defp embed(body) do
-    with {:ok, opts} <- Hive.Agents.embedding_client_opts() do
-      {model, opts} = Keyword.pop!(opts, :model)
-      ReqLLM.embed(model, body, opts)
-    else
-      {:error, :llm_not_configured} -> {:error, :embedding_not_configured}
+    case Hive.Agents.embedding_client_opts() do
+      {:ok, opts} ->
+        {model, opts} = Keyword.pop!(opts, :model)
+        ReqLLM.embed(model, body, opts)
+
+      {:error, :llm_not_configured} ->
+        {:error, :embedding_not_configured}
     end
   end
 
   defp content_hash(body), do: :crypto.hash(:sha256, body) |> Base.encode16(case: :lower)
 
   defp put_domains(postmortem, attrs) do
-    domain_ids =
-      attrs
-      |> Map.get("domain_ids", Map.get(attrs, :domain_ids, []))
-      |> List.wrap()
-      |> Enum.reject(&(&1 in [nil, ""]))
+    case fetch_domain_ids(attrs) do
+      :error ->
+        postmortem = Repo.preload(postmortem, :domains)
 
-    domains = Repo.all(from domain in Domain, where: domain.id in ^domain_ids)
+        if postmortem.visibility == :public and
+             Enum.any?(postmortem.domains, &(&1.visibility == :private)) do
+          invalid_domain_visibility(postmortem)
+        else
+          {:ok, postmortem}
+        end
 
-    cond do
-      length(domains) != length(Enum.uniq(domain_ids)) ->
-        {:error,
-         Changeset.add_error(
-           Changeset.change(postmortem),
-           :domain_ids,
-           "contains unknown domains"
-         )}
+      {:ok, values} ->
+        domain_ids = values |> List.wrap() |> Enum.reject(&(&1 in [nil, ""]))
+        domains = Repo.all(from domain in Domain, where: domain.id in ^domain_ids)
 
-      postmortem.visibility == :public and Enum.any?(domains, &(&1.visibility == :private)) ->
-        {:error,
-         Changeset.add_error(
-           Changeset.change(postmortem),
-           :domain_ids,
-           "public postmortems can only include public domains"
-         )}
+        cond do
+          length(domains) != length(Enum.uniq(domain_ids)) ->
+            {:error,
+             Changeset.add_error(
+               Changeset.change(postmortem),
+               :domain_ids,
+               "contains unknown domains"
+             )}
 
-      true ->
-        postmortem
-        |> Repo.preload(:domains)
-        |> Changeset.change()
-        |> Changeset.put_assoc(:domains, domains)
-        |> Repo.update()
+          postmortem.visibility == :public and
+              Enum.any?(domains, &(&1.visibility == :private)) ->
+            invalid_domain_visibility(postmortem)
+
+          true ->
+            postmortem
+            |> Repo.preload(:domains)
+            |> Changeset.change()
+            |> Changeset.put_assoc(:domains, domains)
+            |> Repo.update()
+        end
     end
+  end
+
+  defp fetch_domain_ids(attrs) do
+    case Map.fetch(attrs, "domain_ids") do
+      :error -> Map.fetch(attrs, :domain_ids)
+      result -> result
+    end
+  end
+
+  defp invalid_domain_visibility(postmortem) do
+    {:error,
+     Changeset.add_error(
+       Changeset.change(postmortem),
+       :domain_ids,
+       "public postmortems can only include public domains"
+     )}
+  end
+
+  defp tap_result({:ok, value} = result, fun) do
+    fun.(value)
+    result
+  end
+
+  defp tap_result(result, _fun), do: result
+
+  defp record_postmortem_event(action, postmortem, user) do
+    Audit.record(action, %{
+      actor: user,
+      target_type: "postmortem",
+      target_id: postmortem.id,
+      target_label: title(postmortem),
+      metadata: %{
+        "number" => to_string(postmortem.number),
+        "path" => "/postmortems/#{postmortem.number}",
+        "visibility" => Atom.to_string(postmortem.visibility)
+      }
+    })
+  end
+
+  defp record_action_item_event(action, postmortem, action_item, user) do
+    Audit.record(action, %{
+      actor: user,
+      target_type: "postmortem",
+      target_id: postmortem.id,
+      target_label: title(postmortem),
+      metadata: %{
+        "action_item_id" => action_item.id,
+        "action_item_title" => action_item.title,
+        "number" => to_string(postmortem.number),
+        "path" => "/postmortems/#{postmortem.number}"
+      }
+    })
   end
 end

@@ -220,6 +220,17 @@ defmodule Hive.Slack.UnfurlerTest do
     assert {:ok, payload} = Unfurler.unfurl(app_url("/postmortems/#{postmortem.number}"))
     assert block_texts(payload) |> Enum.any?(&(&1 == "Delivery delay"))
     assert button_url(payload) == app_url("/postmortems/#{postmortem.number}")
+
+    {:ok, private_postmortem} =
+      Postmortems.publish_postmortem(
+        %{
+          "body" => "# Private delivery delay\n\nAn internal backlog delayed notifications.",
+          "visibility" => "private"
+        },
+        user!()
+      )
+
+    assert Unfurler.unfurl(app_url("/postmortems/#{private_postmortem.number}")) == :skip
     assert Unfurler.unfurl(app_url("/postmortems/99999999")) == :skip
   end
 

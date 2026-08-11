@@ -57,6 +57,7 @@ defmodule HiveWeb.PostmortemLive.Show do
          })
          |> assign(:postmortem, postmortem)
          |> assign(:can_edit?, Postmortems.can_edit?(postmortem, socket.assigns.current_user))
+         |> assign(:editing_action_item_id, nil)
          |> assign_action_item_form(Postmortems.change_action_item())}
 
       {:error, :not_found} ->
@@ -76,6 +77,7 @@ defmodule HiveWeb.PostmortemLive.Show do
          socket
          |> put_flash(:info, dgettext("dashboard_postmortems", "Action item added."))
          |> reload_postmortem()
+         |> assign(:editing_action_item_id, nil)
          |> assign_action_item_form(Postmortems.change_action_item())
          |> push_event("close-modal", %{id: "new-action-item-modal"})}
 
@@ -121,6 +123,7 @@ defmodule HiveWeb.PostmortemLive.Show do
        socket
        |> put_flash(:info, dgettext("dashboard_postmortems", "Action item updated."))
        |> reload_postmortem()
+       |> assign(:editing_action_item_id, nil)
        |> assign_action_item_form(Postmortems.change_action_item())
        |> push_event("close-modal", %{id: "edit-action-item-modal-#{id}"})}
     else
@@ -133,7 +136,10 @@ defmodule HiveWeb.PostmortemLive.Show do
          )}
 
       {:error, changeset} ->
-        {:noreply, assign_action_item_form(socket, Map.put(changeset, :action, :validate))}
+        {:noreply,
+         socket
+         |> assign(:editing_action_item_id, id)
+         |> assign_action_item_form(Map.put(changeset, :action, :validate))}
 
       nil ->
         {:noreply,
@@ -163,12 +169,22 @@ defmodule HiveWeb.PostmortemLive.Show do
   def handle_event("close_new_action_item", _params, socket) do
     {:noreply,
      socket
+     |> assign(:editing_action_item_id, nil)
      |> assign_action_item_form(Postmortems.change_action_item())
      |> push_event("close-modal", %{id: "new-action-item-modal"})}
   end
 
-  def handle_event("close_action_item_modal", %{"id" => id}, socket) do
-    {:noreply, push_event(socket, "close-modal", %{id: id})}
+  def handle_event("close_action_item_modal", params, socket) do
+    socket =
+      socket
+      |> assign(:editing_action_item_id, nil)
+      |> assign_action_item_form(Postmortems.change_action_item())
+
+    {:noreply,
+     case params do
+       %{"id" => id} -> push_event(socket, "close-modal", %{id: id})
+       _params -> socket
+     end}
   end
 
   @impl true
@@ -241,15 +257,21 @@ defmodule HiveWeb.PostmortemLive.Show do
                   <.badge_cell label={if action_item.completed_at, do: dgettext("dashboard_postmortems", "Completed"), else: dgettext("dashboard_postmortems", "Open")} color={if action_item.completed_at, do: "success", else: "neutral"} style="light-fill" />
                 </:col>
                 <:col :if={@can_edit?} :let={action_item} label="">
+                  <% edit_form =
+                    action_item_form(
+                      action_item,
+                      @editing_action_item_id,
+                      @action_item_form
+                    ) %>
                   <.button_cell>
                     <:button>
-                      <.modal id={"edit-action-item-modal-#{action_item.id}"} data-width="large" title={dgettext("dashboard_postmortems", "Edit action item")} header_type="icon" header_size="large">
+                      <.modal id={"edit-action-item-modal-#{action_item.id}"} data-width="large" title={dgettext("dashboard_postmortems", "Edit action item")} header_type="icon" header_size="large" on_dismiss="close_action_item_modal">
                         <:trigger :let={attrs}><.button label={dgettext("dashboard_postmortems", "Edit action item")} title={dgettext("dashboard_postmortems", "Edit action item")} type="button" size="large" variant="secondary" icon_only={true} {attrs}><.pencil /></.button></:trigger>
                         <:header_icon><.pencil /></:header_icon>
                         <.line_divider />
-                        <.form for={action_item_form(action_item)} id={"edit-action-item-#{action_item.id}"} phx-submit="update_action_item" phx-value-id={action_item.id} data-part="action-item-form">
-                          <.text_input id={"edit-action-item-title-#{action_item.id}"} field={action_item_form(action_item)[:title]} label={dgettext("dashboard_postmortems", "Title")} />
-                          <.text_area id={"edit-action-item-description-#{action_item.id}"} field={action_item_form(action_item)[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
+                        <.form for={edit_form} id={"edit-action-item-#{action_item.id}"} phx-submit="update_action_item" phx-value-id={action_item.id} data-part="action-item-form">
+                          <.text_input id={"edit-action-item-title-#{action_item.id}"} field={edit_form[:title]} label={dgettext("dashboard_postmortems", "Title")} />
+                          <.text_area id={"edit-action-item-description-#{action_item.id}"} field={edit_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
                         </.form>
                         <.line_divider />
                         <:footer>
@@ -282,7 +304,9 @@ defmodule HiveWeb.PostmortemLive.Show do
   defp assign_action_item_form(socket, changeset),
     do: assign(socket, :action_item_form, to_form(changeset, as: :action_item))
 
-  defp action_item_form(action_item),
+  defp action_item_form(%ActionItem{id: id}, id, form), do: form
+
+  defp action_item_form(action_item, _editing_action_item_id, _form),
     do: to_form(Postmortems.change_action_item(action_item), as: :action_item)
 
   attr :action_item, ActionItem, required: true

@@ -421,6 +421,15 @@ defmodule HiveWeb.FeedControllerTest do
           user
         )
 
+      {:ok, private_postmortem} =
+        Postmortems.publish_postmortem(
+          %{
+            "body" => "# Private delivery delay\n\nAn internal worker queue delayed delivery.",
+            "visibility" => "private"
+          },
+          user
+        )
+
       atom = get(conn, "/postmortems/atom.xml") |> response(200)
       rss = get(build_conn(), "/postmortems/rss.xml") |> response(200)
 
@@ -428,6 +437,14 @@ defmodule HiveWeb.FeedControllerTest do
       assert atom =~ "/postmortems/#{postmortem.number}"
       assert rss =~ ~s(<title>Delivery delay</title>)
       assert rss =~ "/postmortems/#{postmortem.number}"
+      refute atom =~ "Private delivery delay"
+      refute rss =~ "Private delivery delay"
+
+      {member_conn, _user} = sign_in(build_conn(), "postmortem-feed@example.com")
+      member_atom = get(member_conn, "/postmortems/atom.xml") |> response(200)
+
+      assert member_atom =~ ~s(<title>Private delivery delay</title>)
+      assert member_atom =~ "/postmortems/#{private_postmortem.number}"
     end
 
     test "postmortems index advertises both Atom and RSS feeds", %{conn: conn} do

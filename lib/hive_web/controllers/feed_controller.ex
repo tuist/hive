@@ -384,7 +384,7 @@ defmodule HiveWeb.FeedController do
   end
 
   defp postmortems_feed(conn) do
-    postmortems = Postmortems.list_postmortems()
+    postmortems = Postmortems.list_postmortems(Auth.current_user(conn))
 
     %{
       id: feed_id(conn),
