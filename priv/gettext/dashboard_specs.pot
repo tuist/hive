@@ -277,7 +277,7 @@ msgid "Editable proposal"
 msgstr ""
 
 #: lib/hive_web/components/spec_components.ex:24
-#: lib/hive_web/controllers/feed_controller.ex:374
+#: lib/hive_web/controllers/feed_controller.ex:378
 #: lib/hive_web/live/spec_live/index.ex:16
 #, elixir-autogen, elixir-format
 msgid "Editable proposals that shape forage into buildable work."
@@ -308,7 +308,7 @@ msgstr ""
 msgid "Forage source"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:372
+#: lib/hive_web/controllers/feed_controller.ex:376
 #: lib/hive_web/live/spec_live/index.ex:50
 #: lib/hive_web/live/spec_live/show.ex:60
 #, elixir-autogen, elixir-format

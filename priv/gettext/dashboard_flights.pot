@@ -71,7 +71,7 @@ msgstr ""
 msgid "Durable agent executions with the product signal, sandbox outcome, and context needed to continue locally."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:160
+#: lib/hive_web/controllers/feed_controller.ex:164
 #, elixir-autogen, elixir-format
 msgid "Durable agent executions with their Forage context and outcomes."
 msgstr ""
@@ -147,7 +147,7 @@ msgstr ""
 msgid "Forage item unavailable"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:158
+#: lib/hive_web/controllers/feed_controller.ex:162
 #: lib/hive_web/live/flight_live/index.ex:56
 #, elixir-autogen, elixir-format
 msgid "Hive · Flights"

@@ -1,0 +1,371 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:172
+#, elixir-autogen, elixir-format
+msgid "#%{number} %{title}"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:24
+#, elixir-autogen, elixir-format
+msgid "%{count} postmortems"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:253
+#, elixir-autogen, elixir-format
+msgid "Action item"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:78
+#, elixir-autogen, elixir-format
+msgid "Action item added."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:160
+#, elixir-autogen, elixir-format
+msgid "Action item deleted."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:109
+#: lib/hive_web/live/postmortem_live/show.ex:146
+#: lib/hive_web/live/postmortem_live/show.ex:165
+#, elixir-autogen, elixir-format
+msgid "Action item not found."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:124
+#, elixir-autogen, elixir-format
+msgid "Action item updated."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:223
+#: lib/hive_web/live/postmortem_live/show.ex:230
+#, elixir-autogen, elixir-format
+msgid "Action items"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:232
+#: lib/hive_web/live/postmortem_live/show.ex:233
+#: lib/hive_web/live/postmortem_live/show.ex:244
+#, elixir-autogen, elixir-format
+msgid "Add action item"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:173
+#: lib/hive_web/live/postmortem_live/show.ex:210
+#, elixir-autogen, elixir-format
+msgid "Author"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:243
+#: lib/hive_web/live/postmortem_live/show.ex:279
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:181
+#, elixir-autogen, elixir-format
+msgid "Choose visibility"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:257
+#, elixir-autogen, elixir-format
+msgid "Completed"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:286
+#: lib/hive_web/live/postmortem_live/show.ex:286
+#, elixir-autogen, elixir-format
+msgid "Delete action item"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:286
+#, elixir-autogen, elixir-format
+msgid "Delete this action item?"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:237
+#, elixir-autogen, elixir-format
+msgid "Describe the follow-up work"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:238
+#: lib/hive_web/live/postmortem_live/show.ex:274
+#, elixir-autogen, elixir-format
+msgid "Description (optional)"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:173
+#: lib/hive_web/live/postmortem_live/show.ex:214
+#, elixir-autogen, elixir-format
+msgid "Domains"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:199
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:65
+#, elixir-autogen, elixir-format
+msgid "Edit a published incident postmortem."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:268
+#: lib/hive_web/live/postmortem_live/show.ex:269
+#: lib/hive_web/live/postmortem_live/show.ex:269
+#, elixir-autogen, elixir-format
+msgid "Edit action item"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:42
+#: lib/hive_web/live/postmortem_live/form.ex:158
+#, elixir-autogen, elixir-format
+msgid "Edit postmortem"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:158
+#, elixir-autogen, elixir-format
+msgid "Filter"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:367
+#, elixir-autogen, elixir-format
+msgid "Hive"
+msgstr ""
+
+#: lib/hive_web/controllers/feed_controller.ex:391
+#: lib/hive_web/live/postmortem_live/index.ex:47
+#: lib/hive_web/live/postmortem_live/show.ex:54
+#, elixir-autogen, elixir-format
+msgid "Hive · Postmortems"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:117
+#, elixir-autogen, elixir-format
+msgid "Last 30 days"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:17
+#: lib/hive_web/live/postmortem_live/form.ex:67
+#: lib/hive_web/live/postmortem_live/form.ex:78
+#: lib/hive_web/live/postmortem_live/form.ex:167
+#, elixir-autogen, elixir-format
+msgid "Markdown body"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:189
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:251
+#, elixir-autogen, elixir-format
+msgid "No action items have been added."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:168
+#, elixir-autogen, elixir-format
+msgid "No postmortems yet"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:57
+#: lib/hive_web/live/postmortem_live/form.ex:127
+#, elixir-autogen, elixir-format
+msgid "Only organization members can publish postmortems."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:257
+#, elixir-autogen, elixir-format
+msgid "Open"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:16
+#: lib/hive_web/live/postmortem_live/form.ex:66
+#: lib/hive_web/live/postmortem_live/form.ex:77
+#: lib/hive_web/live/postmortem_live/form.ex:162
+#: lib/hive_web/live/postmortem_live/index.ex:172
+#: lib/hive_web/live/postmortem_live/show.ex:229
+#, elixir-autogen, elixir-format
+msgid "Postmortem"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:19
+#, elixir-autogen, elixir-format
+msgid "Postmortem #%{number}"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:196
+#, elixir-autogen, elixir-format
+msgid "Postmortem #%{number} · %{title}"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:119
+#, elixir-autogen, elixir-format
+msgid "Postmortem published."
+msgstr ""
+
+#: lib/hive_web/components/layouts.ex:189
+#: lib/hive_web/live/postmortem_live/form.ex:20
+#: lib/hive_web/live/postmortem_live/index.ex:22
+#: lib/hive_web/live/postmortem_live/index.ex:28
+#: lib/hive_web/live/postmortem_live/index.ex:147
+#: lib/hive_web/live/postmortem_live/index.ex:155
+#, elixir-autogen, elixir-format
+msgid "Postmortems"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:41
+#, elixir-autogen, elixir-format
+msgid "Postmortems · %{product}"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:188
+#, elixir-autogen, elixir-format
+msgid "Prev"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:183
+#, elixir-autogen, elixir-format
+msgid "Private"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:182
+#, elixir-autogen, elixir-format
+msgid "Public"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:188
+#, elixir-autogen, elixir-format
+msgid "Publish"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:76
+#, elixir-autogen, elixir-format
+msgid "Publish an incident postmortem in Markdown."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:15
+#, elixir-autogen, elixir-format
+msgid "Publish or edit an incident postmortem in Markdown."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:41
+#: lib/hive_web/live/postmortem_live/form.ex:158
+#: lib/hive_web/live/postmortem_live/index.ex:152
+#, elixir-autogen, elixir-format
+msgid "Publish postmortem"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:114
+#: lib/hive_web/live/postmortem_live/index.ex:185
+#: lib/hive_web/live/postmortem_live/show.ex:206
+#, elixir-autogen, elixir-format
+msgid "Published"
+msgstr ""
+
+#: lib/hive_web/controllers/feed_controller.ex:393
+#: lib/hive_web/live/postmortem_live/index.ex:18
+#: lib/hive_web/live/postmortem_live/index.ex:148
+#, elixir-autogen, elixir-format
+msgid "Published accounts of incidents and what we learned from them."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:21
+#, elixir-autogen, elixir-format
+msgid "Published postmortem"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:169
+#, elixir-autogen, elixir-format
+msgid "Published postmortems will appear here."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:232
+#, elixir-autogen, elixir-format
+msgid "Record the follow-up work this incident requires."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:188
+#: lib/hive_web/live/postmortem_live/show.ex:280
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:161
+#, elixir-autogen, elixir-format
+msgid "Search postmortems..."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:209
+#, elixir-autogen, elixir-format
+msgid "Select domains"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:256
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:202
+#, elixir-autogen, elixir-format
+msgid "Summary"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:237
+#: lib/hive_web/live/postmortem_live/show.ex:273
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:337
+#: lib/hive_web/live/postmortem_live/show.ex:337
+#, elixir-autogen, elixir-format
+msgid "Toggle action item status"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:220
+#, elixir-autogen, elixir-format
+msgid "Unassigned"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:302
+#, elixir-autogen, elixir-format
+msgid "Unassigned domain"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/index.ex:202
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:180
+#, elixir-autogen, elixir-format
+msgid "Visibility"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/form.ex:159
+#, elixir-autogen, elixir-format
+msgid "Write the complete postmortem in Markdown. Its first level-one heading becomes the display title."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:89
+#: lib/hive_web/live/postmortem_live/show.ex:135
+#, elixir-autogen, elixir-format
+msgid "You cannot manage action items."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:224
+#, elixir-autogen, elixir-format
+msgid "complete"
+msgstr ""
