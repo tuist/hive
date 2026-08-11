@@ -17,6 +17,8 @@ alias Hive.Projects
 alias Hive.Projects.Project
 alias Hive.Projects.Webhook
 alias Hive.Projects.Webhooks
+alias Hive.Postmortems.Postmortem
+alias Hive.Postmortems.ActionItem
 alias Hive.Repo
 alias Hive.Specs
 alias Hive.Specs.Comment
@@ -1421,6 +1423,115 @@ Enum.each(spec_view_seeds, fn seed ->
     )
     |> Repo.insert!()
   end
+end)
+
+postmortem_seeds = [
+  %{
+    body: """
+    # Delayed notification delivery
+
+    ## What happened
+
+    A backlog in the notification worker delayed delivery for 42 minutes after a traffic spike.
+
+    ## Impact
+
+    People received follow-up emails later than expected. No notifications were lost.
+
+    ## What we changed
+
+    We added queue-depth monitoring and increased worker capacity for sustained bursts.
+    """,
+    inserted_at: ~U[2026-08-04 09:30:00Z],
+    domain_names: ["Hive"],
+    action_items: [
+      %{
+        title: "Add a queue-depth alert for sustained notification backlogs",
+        description: "Alert when notification backlogs remain above the operating threshold.",
+        completed_at: ~U[2026-08-05 10:00:00Z]
+      },
+      %{
+        title: "Document the notification worker capacity runbook",
+        description: "Describe the safe procedure for increasing worker capacity.",
+        completed_at: nil
+      }
+    ]
+  },
+  %{
+    body: """
+    # Tuist registry package resolution delay
+
+    ## What happened
+
+    A cache invalidation change caused package resolution through the Tuist registry to slow down for 18 minutes.
+
+    ## Impact
+
+    Some project generations waited longer than expected for package resolution. No package data was lost.
+
+    ## What we changed
+
+    We now validate cache invalidation behavior before deployment and alert on registry latency.
+    """,
+    inserted_at: ~U[2026-07-22 14:15:00Z],
+    domain_names: ["Hive", "Tuist"],
+    action_items: [
+      %{
+        title: "Validate registry cache invalidation before each deployment",
+        description: "Exercise invalidation against a representative package before deployment.",
+        completed_at: ~U[2026-07-23 09:00:00Z]
+      },
+      %{
+        title: "Publish a registry recovery guide for customers",
+        description: "Explain how customers can recover from a registry availability incident.",
+        completed_at: nil
+      }
+    ]
+  }
+]
+
+Enum.each(postmortem_seeds, fn seed ->
+  author = Accounts.get_user_by_email("test@hive.dev")
+
+  changeset =
+    case Repo.get_by(Postmortem, body: seed.body) do
+      nil -> Postmortem.changeset(%Postmortem{}, %{body: seed.body})
+      postmortem -> Postmortem.changeset(postmortem, %{body: seed.body})
+    end
+
+  postmortem =
+    changeset
+    |> Ecto.Changeset.put_change(:created_by_user_id, author.id)
+    |> Ecto.Changeset.put_change(:inserted_at, seed.inserted_at)
+    |> Ecto.Changeset.put_change(:updated_at, seed.inserted_at)
+    |> Repo.insert_or_update!()
+
+  Enum.each(seed.domain_names, fn domain_name ->
+    domain = Repo.get_by!(Domain, name: domain_name)
+
+    Repo.query!(
+      "INSERT INTO domains_postmortems (domain_id, postmortem_id) VALUES ($1::uuid, $2::uuid) ON CONFLICT DO NOTHING",
+      [Ecto.UUID.dump!(domain.id), Ecto.UUID.dump!(postmortem.id)]
+    )
+  end)
+
+  Enum.each(seed.action_items, fn action_item ->
+    case Repo.get_by(ActionItem, postmortem_id: postmortem.id, title: action_item.title) do
+      nil ->
+        %ActionItem{postmortem_id: postmortem.id}
+        |> ActionItem.changeset(%{title: action_item.title, description: action_item.description})
+        |> Ecto.Changeset.put_change(:completed_at, action_item.completed_at)
+        |> Repo.insert!()
+
+      existing ->
+        existing
+        |> Ecto.Changeset.change(
+          description: action_item.description,
+          completed_at: action_item.completed_at
+        )
+        |> Repo.update!()
+    end
+  end)
 end)
 
 project_webhooks = [

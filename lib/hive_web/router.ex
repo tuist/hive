@@ -154,6 +154,8 @@ defmodule HiveWeb.Router do
       get "/flights/rss.xml", FeedController, :flights_rss
       get "/specs/atom.xml", FeedController, :specs_atom
       get "/specs/rss.xml", FeedController, :specs_rss
+      get "/postmortems/atom.xml", FeedController, :postmortems_atom
+      get "/postmortems/rss.xml", FeedController, :postmortems_rss
       get "/drops/atom.xml", FeedController, :drops_atom
       get "/drops/rss.xml", FeedController, :drops_rss
       get "/drops/digest/atom.xml", FeedController, :drops_digest_atom
@@ -205,6 +207,10 @@ defmodule HiveWeb.Router do
       live "/specs/new", SpecLive.New
       live "/specs/:number", SpecLive.Show
       live "/specs/:number/edit", SpecLive.Edit
+      live "/postmortems", PostmortemLive.Index
+      live "/postmortems/new", PostmortemLive.Form, :new
+      live "/postmortems/:number", PostmortemLive.Show
+      live "/postmortems/:number/edit", PostmortemLive.Form, :edit
       live "/drops", DropsLive.Index
       live "/drops/subscribe", DropsLive.Subscribe
       live "/drops/digest", DropsLive.Digest

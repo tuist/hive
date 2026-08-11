@@ -1,0 +1,344 @@
+defmodule HiveWeb.PostmortemLive.Show do
+  @moduledoc false
+
+  use HiveWeb, :live_view
+  use Noora
+
+  import Noora.CheckboxControl
+
+  alias Hive.Postmortems
+  alias Hive.Postmortems.ActionItem
+  alias HiveWeb.Layouts
+  alias HiveWeb.Markdown
+  alias HiveWeb.OpenGraph
+
+  def open_graph(postmortem) do
+    %{
+      description: Markdown.preview(postmortem.body, 280),
+      section_label:
+        dgettext("dashboard_postmortems", "Postmortem #%{number}", number: postmortem.number),
+      highlights:
+        domain_names(postmortem) ++ [dgettext("dashboard_postmortems", "Published postmortem")],
+      id: "postmortem-#{postmortem.number}",
+      path: "/postmortems/#{postmortem.number}",
+      title: Postmortems.title(postmortem)
+    }
+  end
+
+  def slack_unfurl(uri, %{"number" => number}) do
+    case Integer.parse(number) do
+      {number, ""} -> postmortem_unfurl(uri, number)
+      _invalid -> :skip
+    end
+  end
+
+  defp postmortem_unfurl(uri, number) do
+    case Postmortems.fetch_visible_postmortem_by_number(number, nil) do
+      {:ok, postmortem} -> Hive.Slack.Unfurl.BlockKit.open_graph(uri, open_graph(postmortem))
+      {:error, :not_found} -> :skip
+    end
+  end
+
+  @impl true
+  def mount(%{"number" => number}, _session, socket) do
+    case Postmortems.fetch_visible_postmortem_by_number(number, socket.assigns.current_user) do
+      {:ok, postmortem} ->
+        {:ok,
+         socket
+         |> assign(
+           :page_title,
+           "#{Postmortems.title(postmortem)} · #{socket.assigns.product_name}"
+         )
+         |> assign(OpenGraph.assigns(open_graph(postmortem)))
+         |> assign(:atom_feed, %{
+           title: dgettext("dashboard_postmortems", "Hive · Postmortems"),
+           atom_href: "/postmortems/atom.xml",
+           rss_href: "/postmortems/rss.xml"
+         })
+         |> assign(:postmortem, postmortem)
+         |> assign(:can_edit?, Postmortems.can_edit?(postmortem, socket.assigns.current_user))
+         |> assign_action_item_form(Postmortems.change_action_item())}
+
+      {:error, :not_found} ->
+        {:ok, push_navigate(socket, to: ~p"/postmortems")}
+    end
+  end
+
+  @impl true
+  def handle_event("create_action_item", %{"action_item" => params}, socket) do
+    case Postmortems.create_action_item(
+           socket.assigns.postmortem,
+           params,
+           socket.assigns.current_user
+         ) do
+      {:ok, _action_item} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, dgettext("dashboard_postmortems", "Action item added."))
+         |> reload_postmortem()
+         |> assign_action_item_form(Postmortems.change_action_item())
+         |> push_event("close-modal", %{id: "new-action-item-modal"})}
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_postmortems", "You cannot manage action items.")
+         )}
+
+      {:error, changeset} ->
+        {:noreply, assign_action_item_form(socket, Map.put(changeset, :action, :validate))}
+    end
+  end
+
+  def handle_event("toggle_action_item", %{"id" => id}, socket) do
+    with %ActionItem{} = action_item <- find_action_item(socket, id),
+         {:ok, _action_item} <-
+           Postmortems.toggle_action_item(
+             socket.assigns.postmortem,
+             action_item,
+             socket.assigns.current_user
+           ) do
+      {:noreply, reload_postmortem(socket)}
+    else
+      _error ->
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_postmortems", "Action item not found."))}
+    end
+  end
+
+  def handle_event("update_action_item", %{"action_item" => params, "id" => id}, socket) do
+    with %ActionItem{} = action_item <- find_action_item(socket, id),
+         {:ok, _action_item} <-
+           Postmortems.update_action_item(
+             socket.assigns.postmortem,
+             action_item,
+             params,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> put_flash(:info, dgettext("dashboard_postmortems", "Action item updated."))
+       |> reload_postmortem()
+       |> assign_action_item_form(Postmortems.change_action_item())
+       |> push_event("close-modal", %{id: "edit-action-item-modal-#{id}"})}
+    else
+      {:error, :unauthorized} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_postmortems", "You cannot manage action items.")
+         )}
+
+      {:error, changeset} ->
+        {:noreply, assign_action_item_form(socket, Map.put(changeset, :action, :validate))}
+
+      nil ->
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_postmortems", "Action item not found."))}
+    end
+  end
+
+  def handle_event("delete_action_item", %{"id" => id}, socket) do
+    with %ActionItem{} = action_item <- find_action_item(socket, id),
+         {:ok, _action_item} <-
+           Postmortems.delete_action_item(
+             socket.assigns.postmortem,
+             action_item,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> put_flash(:info, dgettext("dashboard_postmortems", "Action item deleted."))
+       |> reload_postmortem()}
+    else
+      _error ->
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_postmortems", "Action item not found."))}
+    end
+  end
+
+  def handle_event("close_new_action_item", _params, socket) do
+    {:noreply,
+     socket
+     |> assign_action_item_form(Postmortems.change_action_item())
+     |> push_event("close-modal", %{id: "new-action-item-modal"})}
+  end
+
+  def handle_event("close_action_item_modal", %{"id" => id}, socket) do
+    {:noreply, push_event(socket, "close-modal", %{id: id})}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.dashboard flash={@flash} product_name={@product_name} user_name={@user_name} user_email={@user_email} avatar_color={@avatar_color} auth_enabled?={@auth_enabled?} signed_in?={@signed_in?} admin?={@admin?} csrf_token={@csrf_token} current_path={@current_path} forage_sources={@forage_sources} specs_have_new_activity?={@specs_have_new_activity?}>
+      <section id="postmortems">
+        <div data-part="header">
+          <div data-part="title-group"><h1>{dgettext("dashboard_postmortems", "Postmortem #%{number} · %{title}", number: @postmortem.number, title: Postmortems.title(@postmortem))}</h1></div>
+          <div data-part="header-actions">
+            <Layouts.feeds_dropdown id="postmortem-feeds-dropdown" atom_href="/postmortems/atom.xml" rss_href="/postmortems/rss.xml" />
+            <.button :if={@can_edit?} label={dgettext("dashboard_postmortems", "Edit")} href={~p"/postmortems/#{@postmortem.number}/edit"} size="medium" variant="primary"><:icon_left><.pencil /></:icon_left></.button>
+          </div>
+        </div>
+        <.card icon="info_circle" title={dgettext("dashboard_postmortems", "Summary")} data-part="summary-card">
+          <.card_section>
+            <div data-part="summary-grid">
+              <div data-part="summary-item">
+                <span data-part="label">{dgettext("dashboard_postmortems", "Published")}</span>
+                <span>{Calendar.strftime(@postmortem.inserted_at, "%b %d, %Y · %H:%M UTC")}</span>
+              </div>
+              <div data-part="summary-item">
+                <span data-part="label">{dgettext("dashboard_postmortems", "Author")}</span>
+                <span>{author_label(@postmortem)}</span>
+              </div>
+              <div data-part="summary-item">
+                <span data-part="label">{dgettext("dashboard_postmortems", "Domains")}</span>
+                <div :if={@postmortem.domains != []} data-part="domains">
+                  <.link :for={domain <- @postmortem.domains} navigate={~p"/domains/#{domain.id}"}>
+                    <.badge label={domain.name} color="neutral" style="light-fill" size="large" />
+                  </.link>
+                </div>
+                <span :if={@postmortem.domains == []}>{dgettext("dashboard_postmortems", "Unassigned")}</span>
+              </div>
+              <div data-part="summary-item">
+                <span data-part="label">{dgettext("dashboard_postmortems", "Action items")}</span>
+                <span>{completed_action_item_count(@postmortem)}/{length(@postmortem.action_items)} {dgettext("dashboard_postmortems", "complete")}</span>
+              </div>
+            </div>
+          </.card_section>
+        </.card>
+        <.card icon="alert_triangle" title={dgettext("dashboard_postmortems", "Postmortem")}><.card_section><div data-part="body">{Markdown.render(@postmortem.body)}</div></.card_section></.card>
+        <.card icon="circle_check" title={dgettext("dashboard_postmortems", "Action items")}>
+          <:actions :if={@can_edit?}>
+            <.modal id="new-action-item-modal" data-width="large" title={dgettext("dashboard_postmortems", "Add action item")} description={dgettext("dashboard_postmortems", "Record the follow-up work this incident requires.")} header_type="icon" header_size="large" on_dismiss="close_new_action_item">
+              <:trigger :let={attrs}><.button label={dgettext("dashboard_postmortems", "Add action item")} size="medium" variant="secondary" {attrs}><:icon_left><.circle_plus /></:icon_left></.button></:trigger>
+              <:header_icon><.circle_check /></:header_icon>
+              <.line_divider />
+              <.form for={@action_item_form} id="new-action-item" phx-submit="create_action_item" data-part="action-item-form">
+                <.text_input id="new-action-item-title" field={@action_item_form[:title]} label={dgettext("dashboard_postmortems", "Title")} placeholder={dgettext("dashboard_postmortems", "Describe the follow-up work")} />
+                <.text_area field={@action_item_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
+              </.form>
+              <.line_divider />
+              <:footer>
+                <.modal_footer>
+                  <:action><.button label={dgettext("dashboard_postmortems", "Cancel")} type="button" size="medium" variant="secondary" phx-click="close_new_action_item" /></:action>
+                  <:action><.button label={dgettext("dashboard_postmortems", "Add action item")} type="submit" form="new-action-item" size="medium" variant="primary" /></:action>
+                </.modal_footer>
+              </:footer>
+            </.modal>
+          </:actions>
+          <.card_section>
+            <div data-part="action-items">
+              <p :if={@postmortem.action_items == []} data-part="empty-action-items">{dgettext("dashboard_postmortems", "No action items have been added.")}</p>
+              <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items}>
+                <:col :let={action_item} label={dgettext("dashboard_postmortems", "Action item")}>
+                  <.action_item_cell action_item={action_item} can_edit?={@can_edit?} />
+                </:col>
+                <:col :let={action_item} label={dgettext("dashboard_postmortems", "Status")}>
+                  <.badge_cell label={if action_item.completed_at, do: dgettext("dashboard_postmortems", "Completed"), else: dgettext("dashboard_postmortems", "Open")} color={if action_item.completed_at, do: "success", else: "neutral"} style="light-fill" />
+                </:col>
+                <:col :if={@can_edit?} :let={action_item} label="">
+                  <.button_cell>
+                    <:button>
+                      <.modal id={"edit-action-item-modal-#{action_item.id}"} data-width="large" title={dgettext("dashboard_postmortems", "Edit action item")} header_type="icon" header_size="large">
+                        <:trigger :let={attrs}><.button label={dgettext("dashboard_postmortems", "Edit action item")} title={dgettext("dashboard_postmortems", "Edit action item")} type="button" size="large" variant="secondary" icon_only={true} {attrs}><.pencil /></.button></:trigger>
+                        <:header_icon><.pencil /></:header_icon>
+                        <.line_divider />
+                        <.form for={action_item_form(action_item)} id={"edit-action-item-#{action_item.id}"} phx-submit="update_action_item" phx-value-id={action_item.id} data-part="action-item-form">
+                          <.text_input id={"edit-action-item-title-#{action_item.id}"} field={action_item_form(action_item)[:title]} label={dgettext("dashboard_postmortems", "Title")} />
+                          <.text_area id={"edit-action-item-description-#{action_item.id}"} field={action_item_form(action_item)[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
+                        </.form>
+                        <.line_divider />
+                        <:footer>
+                          <.modal_footer>
+                            <:action><.button label={dgettext("dashboard_postmortems", "Cancel")} type="button" size="medium" variant="secondary" phx-click="close_action_item_modal" phx-value-id={"edit-action-item-modal-#{action_item.id}"} /></:action>
+                            <:action><.button label={dgettext("dashboard_postmortems", "Save changes")} type="submit" form={"edit-action-item-#{action_item.id}"} size="medium" variant="primary" /></:action>
+                          </.modal_footer>
+                        </:footer>
+                      </.modal>
+                    </:button>
+                    <:button>
+                      <.button label={dgettext("dashboard_postmortems", "Delete action item")} title={dgettext("dashboard_postmortems", "Delete action item")} type="button" size="large" variant="secondary" icon_only={true} phx-click="delete_action_item" phx-value-id={action_item.id} data-confirm={dgettext("dashboard_postmortems", "Delete this action item?")}><.trash /></.button>
+                    </:button>
+                  </.button_cell>
+                </:col>
+              </.table>
+            </div>
+          </.card_section>
+        </.card>
+      </section>
+    </Layouts.dashboard>
+    """
+  end
+
+  defp domain_names(%{domains: domains}) when is_list(domains) and domains != [],
+    do: Enum.map(domains, & &1.name)
+
+  defp domain_names(_postmortem), do: [dgettext("dashboard_postmortems", "Unassigned domain")]
+
+  defp assign_action_item_form(socket, changeset),
+    do: assign(socket, :action_item_form, to_form(changeset, as: :action_item))
+
+  defp action_item_form(action_item),
+    do: to_form(Postmortems.change_action_item(action_item), as: :action_item)
+
+  attr :action_item, ActionItem, required: true
+  attr :can_edit?, :boolean, required: true
+
+  defp action_item_cell(assigns) do
+    assigns = assign(assigns, :has_description?, has_description?(assigns.action_item))
+
+    ~H"""
+    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={@action_item.description}>
+      <:image :if={@can_edit? || @action_item.completed_at}>
+        <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
+      </:image>
+    </.text_and_description_cell>
+    <.text_cell :if={!@has_description?} label={@action_item.title}>
+      <:image :if={@can_edit? || @action_item.completed_at}>
+        <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
+      </:image>
+    </.text_cell>
+    """
+  end
+
+  attr :action_item, ActionItem, required: true
+  attr :can_edit?, :boolean, required: true
+
+  defp action_item_control(assigns) do
+    ~H"""
+    <button :if={@can_edit?} type="button" data-part="action-item-toggle" phx-click="toggle_action_item" phx-value-id={@action_item.id} title={dgettext("dashboard_postmortems", "Toggle action item status")} aria-label={dgettext("dashboard_postmortems", "Toggle action item status")}>
+      <.checkbox_control checked={not is_nil(@action_item.completed_at)} />
+    </button>
+    <.check :if={!@can_edit? && @action_item.completed_at} />
+    """
+  end
+
+  defp has_description?(%{description: description}) when is_binary(description),
+    do: String.trim(description) != ""
+
+  defp has_description?(_action_item), do: false
+
+  defp reload_postmortem(socket),
+    do:
+      assign(
+        socket,
+        :postmortem,
+        Postmortems.get_postmortem_by_number!(socket.assigns.postmortem.number)
+      )
+
+  defp find_action_item(socket, id),
+    do: Enum.find(socket.assigns.postmortem.action_items, &(&1.id == id))
+
+  defp completed_action_item_count(postmortem),
+    do: Enum.count(postmortem.action_items, & &1.completed_at)
+
+  defp author_label(%{created_by_user: %{name: name}}) when is_binary(name) and name != "",
+    do: name
+
+  defp author_label(%{created_by_user: %{email: email}}) when is_binary(email), do: email
+  defp author_label(_postmortem), do: dgettext("dashboard_postmortems", "Hive")
+end
