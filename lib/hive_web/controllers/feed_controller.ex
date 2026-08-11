@@ -1,6 +1,6 @@
 defmodule HiveWeb.FeedController do
   @moduledoc """
-  Serves Atom 1.0 and RSS 2.0 feeds for forage sources and specs.
+  Serves Atom 1.0 and RSS 2.0 feeds for publishable Hive resources.
 
   Each list-style HTML page has sibling `*/atom.xml` and `*/rss.xml`
   endpoints so people can subscribe through any reader. The same context
@@ -20,6 +20,7 @@ defmodule HiveWeb.FeedController do
   alias Hive.Forage.Grafana
   alias Hive.Domains
   alias Hive.Projects
+  alias Hive.Postmortems
   alias Hive.Specs
   alias HiveWeb.Atom, as: AtomFeed
   alias HiveWeb.Endpoint
@@ -45,6 +46,9 @@ defmodule HiveWeb.FeedController do
 
   def specs_atom(conn, _params), do: send_feed(conn, :atom, specs_feed(conn))
   def specs_rss(conn, _params), do: send_feed(conn, :rss, specs_feed(conn))
+
+  def postmortems_atom(conn, _params), do: send_feed(conn, :atom, postmortems_feed(conn))
+  def postmortems_rss(conn, _params), do: send_feed(conn, :rss, postmortems_feed(conn))
 
   def drops_atom(conn, params), do: send_feed(conn, :atom, drops_feed(conn, params))
   def drops_rss(conn, params), do: send_feed(conn, :rss, drops_feed(conn, params))
@@ -379,6 +383,24 @@ defmodule HiveWeb.FeedController do
     }
   end
 
+  defp postmortems_feed(conn) do
+    postmortems = Postmortems.list_postmortems(Auth.current_user(conn))
+
+    %{
+      id: feed_id(conn),
+      title: dgettext("dashboard_postmortems", "Hive · Postmortems"),
+      subtitle:
+        dgettext(
+          "dashboard_postmortems",
+          "Published accounts of incidents and what we learned from them."
+        ),
+      updated: latest_updated(postmortems, fn postmortem -> postmortem.updated_at end),
+      self_url: feed_url(conn),
+      alternate_url: page_url(conn, "/postmortems"),
+      entries: Enum.map(postmortems, &postmortem_entry(conn, &1))
+    }
+  end
+
   defp feature_request_entry(conn, request) do
     %{
       id: page_url(conn, "/forage/feature-requests") <> "##{request.id}",
@@ -459,6 +481,20 @@ defmodule HiveWeb.FeedController do
       summary: spec.summary || spec.body,
       author_name: author_name(spec.created_by_user),
       author_email: author_email(spec.created_by_user)
+    }
+  end
+
+  defp postmortem_entry(conn, postmortem) do
+    url = page_url(conn, "/postmortems/#{postmortem.number}")
+
+    %{
+      id: url,
+      title: Postmortems.title(postmortem),
+      updated: postmortem.updated_at,
+      url: url,
+      summary: postmortem.body,
+      author_name: author_name(postmortem.created_by_user),
+      author_email: author_email(postmortem.created_by_user)
     }
   end
 

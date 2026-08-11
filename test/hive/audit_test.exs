@@ -165,6 +165,11 @@ defmodule Hive.AuditTest do
       assert Audit.resource_path("drop", "drop-id", %{"number" => "34"}) == "/drops/34"
     end
 
+    test "uses the postmortem number from metadata when present" do
+      assert Audit.resource_path("postmortem", "postmortem-id", %{"number" => "56"}) ==
+               "/postmortems/56"
+    end
+
     test "uses the week start for a Drops digest" do
       assert Audit.resource_path("drop_digest", "digest-id", %{"week_start" => "2026-07-06"}) ==
                "/drops/digest/2026-07-06"

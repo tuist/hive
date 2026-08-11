@@ -26,11 +26,12 @@ without requiring readers to construct it manually.
 Flight feeds require an organization-member session and never expose portable
 agent sessions. Each entry links to its Flight detail page.
 
-## Specs and Drops
+## Specs, postmortems, and Drops
 
 | Content | Atom 1.0 | Really Simple Syndication 2.0 |
 |---|---|---|
 | Specs | `/specs/atom.xml` | `/specs/rss.xml` |
+| Postmortems | `/postmortems/atom.xml` | `/postmortems/rss.xml` |
 | Drops | `/drops/atom.xml` | `/drops/rss.xml` |
 | Weekly drop digests | `/drops/digest/atom.xml` | `/drops/digest/rss.xml` |
 

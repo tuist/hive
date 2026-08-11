@@ -27,14 +27,14 @@ Changing the configured domains later does not change existing roles.
 
 | Capability | Anonymous | Collaborator | Member | Administrator |
 |---|---|---|---|---|
-| View public projects, domains, specs, and drops | yes | yes | yes | yes |
+| View public projects, domains, specs, postmortems, and drops | yes | yes | yes | yes |
 | Use the mobile application to view visible Forage items, specs, and Drops | no | yes | yes | yes |
 | Submit Forage items | no | yes | yes | yes |
 | Comment on visible Forage items and specs | no | yes | yes | yes |
 | Create Forage items as GitHub issues | no | no | yes | yes |
 | Start and inspect Flights | no | no | yes | yes |
 | View private product work | no | no | yes | yes |
-| Create and manage projects, domains, and specs | no | no | yes | yes |
+| Create and manage projects, domains, specs, and postmortems | no | no | yes | yes |
 | Manage Forage intake | no | no | no | yes |
 | Manage Slack and model gateway settings | no | no | no | yes |
 | View the audit trail | no | no | no | yes |
@@ -45,9 +45,10 @@ instance requires sign-in before any dashboard content is shown.
 
 ## Resource visibility
 
-Projects and domains can be public or private. Specs inherit their
-project's visibility and can be narrowed to private, but a spec in a
-private project cannot be made public.
+Projects, domains, and postmortems can be public or private. Specs inherit
+their project's visibility and can be narrowed to private, but a spec in a
+private project cannot be made public. Public postmortems can only be associated
+with public domains.
 
 Public feeds and Slack link previews follow the anonymous view. Content
 that requires a Hive session is not included.

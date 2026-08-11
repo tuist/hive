@@ -7,6 +7,7 @@ defmodule Hive.Slack.UnfurlerTest do
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Projects
+  alias Hive.Postmortems
   alias Hive.Slack.Unfurler
   alias Hive.Specs
 
@@ -24,6 +25,7 @@ defmodule Hive.Slack.UnfurlerTest do
     "/forage/grafana-alerts",
     "/specs",
     "/specs/new",
+    "/postmortems",
     "/drops",
     "/drops/subscribe",
     "/drops/digest",
@@ -206,6 +208,30 @@ defmodule Hive.Slack.UnfurlerTest do
     assert {:ok, edit_payload} = Unfurler.unfurl(app_url("/specs/#{spec.number}/edit"))
     assert block_texts(edit_payload) |> Enum.any?(&(&1 == "Edit Slack unfurling"))
     assert button_url(edit_payload) == app_url("/specs/#{spec.number}/edit")
+  end
+
+  test "delegates postmortem detail links and skips missing postmortems" do
+    {:ok, postmortem} =
+      Postmortems.publish_postmortem(
+        %{"body" => "# Delivery delay\n\nA worker backlog delayed notifications."},
+        user!()
+      )
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/postmortems/#{postmortem.number}"))
+    assert block_texts(payload) |> Enum.any?(&(&1 == "Delivery delay"))
+    assert button_url(payload) == app_url("/postmortems/#{postmortem.number}")
+
+    {:ok, private_postmortem} =
+      Postmortems.publish_postmortem(
+        %{
+          "body" => "# Private delivery delay\n\nAn internal backlog delayed notifications.",
+          "visibility" => "private"
+        },
+        user!()
+      )
+
+    assert Unfurler.unfurl(app_url("/postmortems/#{private_postmortem.number}")) == :skip
+    assert Unfurler.unfurl(app_url("/postmortems/99999999")) == :skip
   end
 
   test "skips specs with a private visibility override" do

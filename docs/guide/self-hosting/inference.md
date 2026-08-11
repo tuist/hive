@@ -112,6 +112,7 @@ Hive currently uses language models for:
 | Drop generation | Turns release evidence into user-facing shipped improvements. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
+| Postmortem semantic retrieval | Stores a durable vector for each published postmortem so related incidents can be found by meaning. |
 
 Most of these workflows start from their scheduled or event-driven trigger
 when Hive inference is configured. Flights are different: an organization
@@ -137,6 +138,12 @@ GitHub issue becomes eligible for classification again.
 
 For a separate embedding profile, select **Use for Hive embeddings** on
 an embedding-capable profile.
+
+Postmortems are indexed asynchronously. Hive records the source-content
+fingerprint with each vector, so unchanged content is never sent for a second
+embedding request. Editing a postmortem creates one new pending index entry;
+obsolete jobs exit without making a provider request. Permanent provider
+rejections are recorded until the postmortem changes.
 
 ## Launch-time fallback
 

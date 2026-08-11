@@ -73,7 +73,7 @@ msgstr ""
 msgid "%{type} from %{source}."
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:400
+#: lib/hive_web/controllers/feed_controller.ex:422
 #, elixir-autogen, elixir-format
 msgid "%{type}: %{title}"
 msgstr ""
@@ -297,7 +297,7 @@ msgid "Feature requests · %{product}"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:42
-#: lib/hive_web/controllers/feed_controller.ex:75
+#: lib/hive_web/controllers/feed_controller.ex:79
 #, elixir-autogen, elixir-format
 msgid "Feature requests, bug reports, feedback, GitHub issues, and Grafana alerts in one queue."
 msgstr ""
@@ -324,7 +324,7 @@ msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:40
 #: lib/hive_web/components/layouts.ex:170
-#: lib/hive_web/components/layouts.ex:309
+#: lib/hive_web/components/layouts.ex:315
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
@@ -429,26 +429,26 @@ msgstr ""
 msgid "Grafana alerts · %{product}"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:91
+#: lib/hive_web/controllers/feed_controller.ex:95
 #: lib/hive_web/live/forage_live/feature_requests.ex:45
 #, elixir-autogen, elixir-format
 msgid "Hive · Feature requests"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:73
+#: lib/hive_web/controllers/feed_controller.ex:77
 #: lib/hive_web/live/forage_live/index.ex:161
 #: lib/hive_web/live/forage_live/show.ex:84
 #, elixir-autogen, elixir-format
 msgid "Hive · Forage"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:107
+#: lib/hive_web/controllers/feed_controller.ex:111
 #: lib/hive_web/live/forage_live/github_issues.ex:61
 #, elixir-autogen, elixir-format
 msgid "Hive · GitHub issues"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:133
+#: lib/hive_web/controllers/feed_controller.ex:137
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:47
 #, elixir-autogen, elixir-format
 msgid "Hive · Grafana alerts"
@@ -613,7 +613,7 @@ msgstr ""
 msgid "Open issues"
 msgstr ""
 
-#: lib/hive_web/controllers/feed_controller.ex:109
+#: lib/hive_web/controllers/feed_controller.ex:113
 #, elixir-autogen, elixir-format
 msgid "Open issues from GitHub repositories connected to domains."
 msgstr ""
@@ -639,7 +639,7 @@ msgid "Open the issue on GitHub to read or add comments."
 msgstr ""
 
 #: lib/hive/forage.ex:100
-#: lib/hive_web/controllers/feed_controller.ex:135
+#: lib/hive_web/controllers/feed_controller.ex:139
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:17
 #, elixir-autogen, elixir-format
 msgid "Operational signals visible only to organization members."
@@ -678,7 +678,7 @@ msgid "Public defects that should become actionable work."
 msgstr ""
 
 #: lib/hive/forage.ex:45
-#: lib/hive_web/controllers/feed_controller.ex:93
+#: lib/hive_web/controllers/feed_controller.ex:97
 #: lib/hive_web/live/forage_live/feature_requests.ex:17
 #, elixir-autogen, elixir-format
 msgid "Public domain ideas submitted by authenticated users."

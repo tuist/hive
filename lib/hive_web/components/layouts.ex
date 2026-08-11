@@ -185,6 +185,12 @@ defmodule HiveWeb.Layouts do
             selected={String.starts_with?(@current_path, "/specs")}
             data-new-activity={if @specs_have_new_activity?, do: "true"}
           />
+          <.sidebar_item
+            label={dgettext("dashboard_postmortems", "Postmortems")}
+            icon="alert_triangle"
+            href={~p"/postmortems"}
+            selected={String.starts_with?(@current_path, ~p"/postmortems")}
+          />
           <% drops_selected? = String.starts_with?(@current_path, ~p"/drops") %>
           <details data-part="drops" open={drops_selected?}>
             <summary>

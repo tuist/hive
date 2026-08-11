@@ -12,6 +12,7 @@ defmodule HiveWeb.FeedControllerTest do
   alias Hive.Domains
   alias Hive.Projects
   alias Hive.Projects.Webhooks
+  alias Hive.Postmortems
   alias Hive.Repo
   alias Hive.Specs
 
@@ -406,6 +407,56 @@ defmodule HiveWeb.FeedControllerTest do
   end
 
   describe "feed discovery and dropdown" do
+    test "renders public postmortems in Atom and RSS", %{conn: conn} do
+      {:ok, user} =
+        Accounts.upsert_from_auth(%{
+          email: "postmortem-feed@example.com",
+          provider: "test",
+          provider_uid: "postmortem-feed@example.com"
+        })
+
+      {:ok, postmortem} =
+        Postmortems.publish_postmortem(
+          %{"body" => "# Delivery delay\n\nA worker queue delayed notification delivery."},
+          user
+        )
+
+      {:ok, private_postmortem} =
+        Postmortems.publish_postmortem(
+          %{
+            "body" => "# Private delivery delay\n\nAn internal worker queue delayed delivery.",
+            "visibility" => "private"
+          },
+          user
+        )
+
+      atom = get(conn, "/postmortems/atom.xml") |> response(200)
+      rss = get(build_conn(), "/postmortems/rss.xml") |> response(200)
+
+      assert atom =~ ~s(<title>Delivery delay</title>)
+      assert atom =~ "/postmortems/#{postmortem.number}"
+      assert rss =~ ~s(<title>Delivery delay</title>)
+      assert rss =~ "/postmortems/#{postmortem.number}"
+      refute atom =~ "Private delivery delay"
+      refute rss =~ "Private delivery delay"
+
+      {member_conn, _user} = sign_in(build_conn(), "postmortem-feed@example.com")
+      member_atom = get(member_conn, "/postmortems/atom.xml") |> response(200)
+
+      assert member_atom =~ ~s(<title>Private delivery delay</title>)
+      assert member_atom =~ "/postmortems/#{private_postmortem.number}"
+    end
+
+    test "postmortems index advertises both Atom and RSS feeds", %{conn: conn} do
+      response = get(conn, "/postmortems")
+      body = html_response(response, 200)
+
+      assert body =~ ~s(type="application/atom+xml")
+      assert body =~ ~s(href="/postmortems/atom.xml")
+      assert body =~ ~s(type="application/rss+xml")
+      assert body =~ ~s(href="/postmortems/rss.xml")
+    end
+
     test "forage page advertises both Atom and RSS feeds", %{conn: conn} do
       body = conn |> get(~p"/forage") |> html_response(200)
 

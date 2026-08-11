@@ -73,7 +73,7 @@ msgstr ""
 msgid "Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:424
+#: lib/hive_web/components/layouts.ex:430
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
