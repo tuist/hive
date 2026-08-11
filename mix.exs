@@ -49,7 +49,7 @@ defmodule Hive.MixProject do
       {:flop, "~> 0.26"},
       {:let_me, "~> 3.0"},
       {:mdex, "~> 0.13"},
-      {:lumis, "~> 0.1"},
+      {:lumis, "~> 0.6"},
       {:noora, "~> 0.82"},
       {:req, "~> 0.5"},
       {:ex_aws_auth, "~> 1.3"},
