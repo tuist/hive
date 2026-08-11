@@ -50,7 +50,7 @@ defmodule Hive.MixProject do
       {:let_me, "~> 3.0"},
       {:mdex, "~> 0.13"},
       {:lumis, "~> 0.1"},
-      {:noora, "~> 0.82"},
+      {:noora, "~> 0.86"},
       {:req, "~> 0.5"},
       {:ex_aws_auth, "~> 1.3"},
       {:carta, "~> 0.2.0"},
