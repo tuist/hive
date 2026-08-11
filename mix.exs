@@ -63,7 +63,7 @@ defmodule Hive.MixProject do
       # Pinned to the upstream fix for intermittent missing Model Context Protocol tool-call responses.
       # Revert to a Hex version once the fix is released.
       {:emcp,
-       github: "addstar34/emcp", ref: "c687e279cf4f550f69934549a1303312ed3a23b5", override: true},
+       github: "addstar34/emcp", ref: "b2397baa78fde3386872e25861bd3768b9ac0f30", override: true},
       {:ex_json_schema, "~> 0.11"},
       {:open_api_spex, "~> 3.22"},
       {:boruta, git: "https://github.com/malach-it/boruta_auth", branch: "master"},
