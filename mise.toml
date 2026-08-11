@@ -15,7 +15,7 @@ yq = "latest"
 git-cliff = "latest"
 "github:superradcompany/microsandbox" = "0.6.7"
 rust = "1.88.0"
-java = "17.0.2"
+java = "17.0.20+8"
 kotlin = "2.1.0"
 android-sdk = "21.0"
 "github:tuist/once" = { version = "0.28.0", exe = "once" }
