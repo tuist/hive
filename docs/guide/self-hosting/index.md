@@ -6,7 +6,7 @@ the improvements people can use later.
 
 ## How work moves through Hive
 
-Hive uses five concepts:
+Hive uses six concepts:
 
 1. **Projects** represent a product, codebase, or service. A project owns
    the repositories and incoming sources that belong to it.
@@ -17,7 +17,9 @@ Hive uses five concepts:
    issues, and Grafana alerts into one queue.
 4. **Specs** turn those signals into proposals. A spec records the
    intended outcome, its current status, revisions, and discussion.
-5. **Drops** show the user-facing improvements that shipped and connect
+5. **Postmortems** preserve what happened during an incident, what the
+   team learned, and the follow-up work that remains.
+6. **Drops** show the user-facing improvements that shipped and connect
    them back to projects, domains, and supporting work.
 
 This creates a loop from evidence to intent to delivery. Teams can use
@@ -33,6 +35,8 @@ If your organization already runs Hive, start with the product guide:
   signals.
 - [Specs](/guide/using-hive/specs) covers proposals, revisions, comments,
   and review requests.
+- [Postmortems](/guide/using-hive/postmortems) explains how to publish an
+  incident account and track its follow-up work.
 - [Drops](./drops) explains how to follow shipped improvements.
 
 If you operate Hive for your organization, start with

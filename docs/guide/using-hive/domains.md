@@ -35,11 +35,12 @@ relevant to the source project.
 
 ## Use domains throughout Hive
 
-Domains appear on Forage items, specs, and drops. They provide a stable
-way to answer questions such as:
+Domains appear on Forage items, specs, postmortems, and drops. They
+provide a stable way to answer questions such as:
 
 - What signals are arriving for this product area?
 - Which proposals are currently active?
+- What did we learn from recent incidents?
 - What improvements shipped recently?
 
 The domain page combines those signals and exposes subscription feeds.
