@@ -16,6 +16,7 @@ const docsSidebar = [
       { text: "Forage", link: "/guide/using-hive/forage" },
       { text: "Flights", link: "/guide/using-hive/flights" },
       { text: "Specs", link: "/guide/using-hive/specs" },
+      { text: "Postmortems", link: "/guide/using-hive/postmortems" },
       { text: "Drops", link: "/guide/self-hosting/drops" },
     ],
   },
