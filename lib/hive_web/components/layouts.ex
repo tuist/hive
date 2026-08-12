@@ -155,6 +155,12 @@ defmodule HiveWeb.Layouts do
       <section data-part="main">
         <.sidebar>
           <.sidebar_item
+            label={dgettext("dashboard", "Overview")}
+            icon="dashboard"
+            href={~p"/"}
+            selected={@current_path == ~p"/"}
+          />
+          <.sidebar_item
             label={dgettext("dashboard_projects", "Projects")}
             icon="apps"
             href={~p"/projects"}

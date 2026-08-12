@@ -21,6 +21,7 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(href="/assets/js/app.css")
       assert html =~ "Body content here"
     end
+
   end
 
   describe "flash_group/1" do
@@ -187,6 +188,16 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(href="/forage")
       refute html =~ "Feature requests"
       refute html =~ "/forage/feature-requests"
+    end
+
+    test "links to the overview page" do
+      html = render_dashboard(assigns(%{current_path: "/"}))
+
+      assert html =~ "Overview"
+      assert html =~ ~s(href="/")
+
+      assert html =~
+               ~r/<a href="\/" data-part="item">\s*<div class="noora-tab-menu-vertical" data-selected(?:>|="")/
     end
 
     test "shows Domains at the top of the sidebar for any visitor" do
