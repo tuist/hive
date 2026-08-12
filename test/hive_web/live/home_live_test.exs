@@ -1,16 +1,23 @@
 defmodule HiveWeb.HomeLiveTest do
   use HiveWeb.ConnCase, async: true
 
-  test "introduces Hive and links every product area", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/")
+  test "introduces the instance and links every product area", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/")
 
-    assert html =~ "From product signal to shipped work."
-    assert html =~ "How work moves through Hive"
-    assert html =~ "Choose where to start"
+    assert html =~ "Hive brings product signals"
+    assert html =~ "The product loop"
+    assert html =~ "Shared context"
 
     for path <- ~w(/projects /domains /forage /specs /postmortems /drops) do
-      assert html =~ ~s(href="#{path}")
+      assert has_element?(view, ~s(#overview a[data-part="area"][href="#{path}"]))
     end
+  end
+
+  test "lays the areas out with Noora cards", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    assert has_element?(view, ~s(#overview > [data-part="header"] [data-part="title-group"] h1))
+    assert has_element?(view, ~s(#overview .noora-card [data-part="areas"]))
   end
 
   test "does not surface flights yet", %{conn: conn} do

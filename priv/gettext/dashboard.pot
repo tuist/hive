@@ -56,132 +56,69 @@ msgstr ""
 msgid "This URL points to a local or private network host, which Hive will not fetch."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:13
+#: lib/hive_web/live/home_live.ex:12
 #, elixir-autogen, elixir-format
 msgid "Bring product signals, shared plans, and shipped work into one place your whole team can follow."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:118
-#, elixir-autogen, elixir-format
-msgid "Choose where to start"
-msgstr ""
-
 #: lib/hive_web/live/home_live.ex:107
-#, elixir-autogen, elixir-format
-msgid "Close the loop"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Deliver"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:101
-#, elixir-autogen, elixir-format
-msgid "Evidence becomes a proposal the whole team can discuss."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:250
-#, elixir-autogen, elixir-format
-msgid "Explore"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:121
-#, elixir-autogen, elixir-format
-msgid "Follow work from evidence to outcome, or jump directly into the part you need."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:25
+#: lib/hive_web/live/home_live.ex:24
 #, elixir-autogen, elixir-format
 msgid "From product signal to shipped work"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:64
-#, elixir-autogen, elixir-format
-msgid "From product signal to shipped work."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:90
+#: lib/hive_web/live/home_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Gather"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:66
-#, elixir-autogen, elixir-format
-msgid "Hive brings product signals, shared plans, and shipped improvements into one place your whole team can follow."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:17
-#, elixir-autogen, elixir-format
-msgid "Hive overview"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:87
-#, elixir-autogen, elixir-format
-msgid "How work moves through Hive"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:170
-#, elixir-autogen, elixir-format
-msgid "Keep the work connected"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:91
-#, elixir-autogen, elixir-format
-msgid "Listen to every signal"
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:99
-#, elixir-autogen, elixir-format
-msgid "Make intent explicit"
-msgstr ""
-
 #: lib/hive_web/components/layouts.ex:160
+#: lib/hive_web/live/home_live.ex:16
+#: lib/hive_web/live/home_live.ex:59
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:35
+#: lib/hive_web/live/home_live.ex:34
 #, elixir-autogen, elixir-format
 msgid "Overview · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:93
-#, elixir-autogen, elixir-format
-msgid "Requests, feedback, issues, and alerts arrive with context."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:98
+#: lib/hive_web/live/home_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Shape"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:169
+#: lib/hive_web/live/home_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "Shared context"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:20
+#: lib/hive_web/live/home_live.ex:19
 #, elixir-autogen, elixir-format
 msgid "Shared product intent"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:109
-#, elixir-autogen, elixir-format
-msgid "Shipped improvements stay connected to the work behind them."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:21
+#: lib/hive_web/live/home_live.ex:20
 #, elixir-autogen, elixir-format
 msgid "Shipped work in context"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:19
+#: lib/hive_web/live/home_live.ex:18
 #, elixir-autogen, elixir-format
 msgid "Signals in one queue"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:117
+#: lib/hive_web/live/home_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "The product loop"
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:61
+#, elixir-autogen, elixir-format
+msgid "%{product} brings product signals, shared plans, and shipped improvements into one place your whole team can follow."
 msgstr ""

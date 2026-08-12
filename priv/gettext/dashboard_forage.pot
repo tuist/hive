@@ -337,7 +337,7 @@ msgstr ""
 #: lib/hive_web/live/forage_live/index.ex:120
 #: lib/hive_web/live/forage_live/new_feature_request.ex:20
 #: lib/hive_web/live/forage_live/placeholder.ex:19
-#: lib/hive_web/live/home_live.ex:133
+#: lib/hive_web/live/home_live.ex:84
 #: lib/hive_web/live/ops_live/forage.ex:26
 #: lib/hive_web/live/ops_live/forage.ex:106
 #, elixir-autogen, elixir-format
@@ -1276,12 +1276,12 @@ msgstr ""
 msgid "You are no longer following this item."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:135
+#: lib/hive_web/live/home_live.ex:86
 #, elixir-autogen, elixir-format
 msgid "Bring feature requests, bug reports, feedback, issues, and alerts into one shared queue."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:73
+#: lib/hive_web/live/home_live.ex:70
 #, elixir-autogen, elixir-format
 msgid "Explore Forage"
 msgstr ""
