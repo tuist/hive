@@ -1,6 +1,8 @@
 defmodule HiveWeb.OpenGraphTest do
   use HiveWeb.ConnCase, async: true
 
+  use Mimic
+
   import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Hive.Forage
@@ -265,6 +267,27 @@ defmodule HiveWeb.OpenGraphTest do
     assert html =~ "&lt;unsafe&gt;"
     assert html =~ "Description with &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"
     assert html =~ "<main class=\"card\">"
+  end
+
+  test "render_html brands the card with the instance name and logo" do
+    Mimic.stub(Hive.Branding, :product_name, fn -> "Tuist" end)
+    Mimic.stub(Hive.Branding, :logo_data_uri, fn -> "data:image/png;base64,Zm9v" end)
+
+    html = OpenGraph.render_html(open_graph_data())
+
+    assert html =~ "Tuist"
+    assert html =~ ~s(<img src="data:image/png;base64,Zm9v" alt="" />)
+  end
+
+  test "hash changes when the instance logo changes" do
+    data = open_graph_data()
+
+    Mimic.stub(Hive.Branding, :logo_cache_key, fn -> "https://example.com/logo.png" end)
+    branded = OpenGraph.hash(data)
+
+    Mimic.stub(Hive.Branding, :logo_cache_key, fn -> "https://example.com/other.png" end)
+
+    assert branded != OpenGraph.hash(data)
   end
 
   defp assert_open_graph_contract(data) do

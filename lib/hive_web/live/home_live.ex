@@ -3,6 +3,7 @@ defmodule HiveWeb.HomeLive do
 
   use HiveWeb, :live_view
 
+  alias Hive.Branding
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -57,7 +58,7 @@ defmodule HiveWeb.HomeLive do
         <div data-part="hero">
           <div data-part="hero-copy">
             <div data-part="product-mark">
-              <img src={~p"/images/logo.png"} alt="" />
+              <img src={Branding.logo_url()} alt="" />
               <span>{@product_name}</span>
             </div>
             <h1>{dgettext("dashboard", "From product signal to shipped work.")}</h1>

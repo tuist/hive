@@ -120,14 +120,15 @@ msgstr ""
 msgid "Drop not found."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:203
-#: lib/hive_web/components/layouts.ex:309
+#: lib/hive_web/components/layouts.ex:211
+#: lib/hive_web/components/layouts.ex:317
 #: lib/hive_web/live/drops_live/digest.ex:26
 #: lib/hive_web/live/drops_live/digest.ex:245
 #: lib/hive_web/live/drops_live/index.ex:29
 #: lib/hive_web/live/drops_live/index.ex:33
 #: lib/hive_web/live/drops_live/index.ex:155
 #: lib/hive_web/live/drops_live/subscribe.ex:22
+#: lib/hive_web/live/home_live.ex:157
 #: lib/hive_web/live/ops_live/drops.ex:31
 #: lib/hive_web/live/ops_live/drops.ex:171
 #, elixir-autogen, elixir-format
@@ -606,7 +607,7 @@ msgstr ""
 msgid "Browse narrated weekly editions connecting the most meaningful updates shipped across Hive."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:213
+#: lib/hive_web/components/layouts.ex:221
 #, elixir-autogen, elixir-format
 msgid "Digests"
 msgstr ""
@@ -707,4 +708,14 @@ msgstr ""
 #: lib/hive_web/live/drops_live/digest.ex:412
 #, elixir-autogen, elixir-format
 msgid "Year"
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:159
+#, elixir-autogen, elixir-format
+msgid "See the improvements that reached users and the product context behind each release."
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:79
+#, elixir-autogen, elixir-format
+msgid "See what shipped"
 msgstr ""

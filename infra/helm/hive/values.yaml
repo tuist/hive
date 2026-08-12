@@ -55,6 +55,11 @@ env:
   # behind login and only authenticated users (passing any configured
   # provider's domain allowlist) can access them.
   HIVE_VISIBILITY: "public"
+  # Name and logo the instance presents itself with. Leave unset to run
+  # under Hive's own branding; HIVE_LOGO_URL takes an absolute URL to a
+  # publicly reachable image.
+  # HIVE_PRODUCT_NAME: "Hive"
+  # HIVE_LOGO_URL: "https://example.com/logo.png"
   # none: object storage is disabled. s3: configure HIVE_S3_* env vars
   # below, usually with credentials coming from `externalSecrets.items`.
   HIVE_OBJECT_STORAGE_PROVIDER: "none"

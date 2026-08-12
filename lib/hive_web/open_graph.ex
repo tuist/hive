@@ -7,7 +7,7 @@ defmodule HiveWeb.OpenGraph do
 
   require Logger
 
-  alias Hive.Auth
+  alias Hive.Branding
   alias Hive.ObjectStorage
   alias HiveWeb.Endpoint
 
@@ -74,8 +74,8 @@ defmodule HiveWeb.OpenGraph do
         @content_type,
         @width,
         @height,
-        Auth.product_name(),
-        logo_hash(),
+        Branding.product_name(),
+        Branding.logo_cache_key(),
         normalize(data)
       ])
     )
@@ -316,7 +316,7 @@ defmodule HiveWeb.OpenGraph do
           <section class="content">
             <header class="brand">
               #{logo_markup()}
-              <span>#{escape(Auth.product_name())}</span>
+              <span>#{escape(Branding.product_name())}</span>
             </header>
 
             <section class="main">
@@ -454,7 +454,7 @@ defmodule HiveWeb.OpenGraph do
 
   defp absolute_url(path), do: Endpoint.url() <> path
 
-  defp meta_title(%{title: title}), do: "#{title} | #{Auth.product_name()}"
+  defp meta_title(%{title: title}), do: "#{title} | #{Branding.product_name()}"
 
   defp card_data(data) do
     highlights =
@@ -529,7 +529,7 @@ defmodule HiveWeb.OpenGraph do
   defp maybe_put_author(data, _author), do: data
 
   defp logo_markup do
-    case logo_data_uri() do
+    case Branding.logo_data_uri() do
       nil -> ""
       data_uri -> ~s(<img src="#{data_uri}" alt="" />)
     end
@@ -545,27 +545,6 @@ defmodule HiveWeb.OpenGraph do
   end
 
   defp author_markup(_data), do: ""
-
-  defp logo_data_uri do
-    case File.read(logo_path()) do
-      {:ok, logo} -> "data:image/png;base64,#{Base.encode64(logo)}"
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp logo_hash do
-    case File.read(logo_path()) do
-      {:ok, logo} ->
-        :sha256
-        |> :crypto.hash(logo)
-        |> Base.url_encode64(padding: false)
-
-      {:error, _reason} ->
-        "missing-logo"
-    end
-  end
-
-  defp logo_path, do: Application.app_dir(:hive, "priv/static/images/logo.png")
 
   defp escape(value) do
     value

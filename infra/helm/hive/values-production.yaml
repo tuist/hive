@@ -38,6 +38,9 @@ env:
   # GitHub login is intentionally left unrestricted (no HIVE_GITHUB_ALLOWED_DOMAINS)
   # so external contributors can sign in with their own accounts.
   HIVE_VISIBILITY: "public"
+  # The Hive logo belongs to the open source product. Tuist's instance
+  # presents itself with Tuist's mark instead.
+  HIVE_LOGO_URL: "https://tuist.dev/android-chrome-512x512.png"
   HIVE_GOOGLE_ALLOWED_DOMAINS: "tuist.dev"
   # Accounts on these domains are org members (see organization-only
   # forage sources); everyone else who signs in is an external contributor.

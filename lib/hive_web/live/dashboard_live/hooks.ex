@@ -12,6 +12,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
   alias Hive.Accounts
   alias Hive.Audit
   alias Hive.Auth
+  alias Hive.Branding
   alias Hive.Forage
   alias Hive.Specs
 
@@ -35,7 +36,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
 
     socket
     |> assign(:current_user, user)
-    |> assign(:product_name, Auth.product_name())
+    |> assign(:product_name, Branding.product_name())
     |> assign(:user_name, user_name)
     |> assign(:user_email, user && user.email)
     |> assign(:avatar_color, if(user, do: "purple", else: "gray"))

@@ -435,6 +435,10 @@ hive_providers =
   end)
   |> Enum.reverse()
 
+config :hive, :branding,
+  product_name: System.get_env("HIVE_PRODUCT_NAME"),
+  logo_url: System.get_env("HIVE_LOGO_URL")
+
 config :hive, :auth,
   visibility: System.get_env("HIVE_VISIBILITY", "public"),
   providers: hive_providers,

@@ -1,6 +1,8 @@
 defmodule HiveWeb.LayoutsTest do
   use ExUnit.Case, async: true
 
+  use Mimic
+
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
@@ -22,6 +24,18 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ "Body content here"
     end
 
+    test "points the favicon at the instance logo" do
+      Mimic.stub(Hive.Branding, :logo_url, fn -> "https://example.com/logo.png" end)
+
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Layouts.app title="Sign in">Body content here</Layouts.app>
+        """)
+
+      assert html =~ ~s(<link rel="icon" href="https://example.com/logo.png")
+    end
   end
 
   describe "flash_group/1" do

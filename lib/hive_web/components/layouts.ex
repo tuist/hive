@@ -3,6 +3,8 @@ defmodule HiveWeb.Layouts do
 
   use HiveWeb, :html
 
+  alias Hive.Branding
+
   embed_templates "layouts/*"
 
   attr :title, :string, required: true
@@ -20,7 +22,7 @@ defmodule HiveWeb.Layouts do
         <title>{@title}</title>
         <.open_graph_meta open_graph={@open_graph} />
         <.atom_feed_link feed={@atom_feed} />
-        <link rel="icon" type="image/png" href={~p"/images/logo.png"} />
+        <link rel="icon" href={Branding.logo_url()} />
         <link rel="stylesheet" href="/assets/js/app.css" />
       </head>
       <body data-part="app-body">
@@ -380,7 +382,7 @@ defmodule HiveWeb.Layouts do
     <header class="headerbar">
       <a data-part="left-section" href="/">
         <div data-part="brand">
-          <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
+          <img src={Branding.logo_url()} alt={@product_name} data-part="logo" />
           <span data-part="title">{@product_name}</span>
         </div>
       </a>
