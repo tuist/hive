@@ -37,6 +37,7 @@ defmodule Hive.Specs do
 
   def can_create?(user), do: Auth.member?(user)
   def can_edit?(_spec, user), do: Auth.member?(user)
+  def can_delete?(%Spec{} = spec, user), do: can_edit?(spec, user)
   def can_request_review?(%Spec{} = spec, user), do: can_edit?(spec, user)
   def can_comment?(spec, %User{} = user), do: can_view?(spec, user)
   def can_comment?(_spec, _user), do: false
@@ -257,6 +258,14 @@ defmodule Hive.Specs do
     end
   end
 
+  def fetch_visible_spec_by_reference(reference, user) do
+    spec = get_spec_by_reference!(reference)
+
+    if can_view?(spec, user), do: {:ok, spec}, else: {:error, :not_found}
+  rescue
+    _error in [Ecto.NoResultsError, Ecto.Query.CastError] -> {:error, :not_found}
+  end
+
   defp reference_identifier(reference) do
     reference = String.trim(reference)
 
@@ -346,6 +355,26 @@ defmodule Hive.Specs do
   end
 
   def update_spec(_spec, _attrs, _user), do: {:error, :unauthorized}
+
+  def delete_spec(%Spec{} = spec, %User{} = user) do
+    if can_delete?(spec, user) do
+      case spec |> Changeset.optimistic_lock(:lock_version) |> Repo.delete() do
+        {:ok, deleted_spec} ->
+          record_spec_event("spec.deleted", deleted_spec, user)
+          Hive.Domains.schedule_evolution()
+          {:ok, deleted_spec}
+
+        {:error, changeset} ->
+          {:error, changeset}
+      end
+    else
+      {:error, :unauthorized}
+    end
+  rescue
+    Ecto.StaleEntryError -> {:error, :stale}
+  end
+
+  def delete_spec(_spec, _user), do: {:error, :unauthorized}
 
   def request_review(%Spec{} = spec, %User{} = user) do
     cond do

@@ -59,6 +59,14 @@ Private specs are visible only to organization members and
 administrators. Their content is excluded from public feeds and Slack
 link previews.
 
+## Use connected clients
+
+Clients using the [Model Context Protocol](https://modelcontextprotocol.io/)
+can list, fetch, create, update, review, comment on, and delete specs. Deletion
+is available only to organization members and administrators. The client must
+provide the revision it last read, and Hive refuses the deletion when a newer
+revision exists so an unseen edit is not discarded.
+
 ## Subscribe
 
 The Specs page exposes Atom 1.0 and Really Simple Syndication feeds for

@@ -19,6 +19,7 @@ defmodule Hive.Postmortems do
 
   def can_publish?(user), do: Auth.member?(user)
   def can_edit?(%Postmortem{}, user), do: Auth.member?(user)
+  def can_delete?(%Postmortem{} = postmortem, user), do: can_edit?(postmortem, user)
   def can_view?(%Postmortem{visibility: :public}, _user), do: true
   def can_view?(%Postmortem{}, user), do: Auth.member?(user)
 
@@ -55,20 +56,48 @@ defmodule Hive.Postmortems do
     {postmortems, %{current_page: page, total_pages: total_pages, total_entries: total_entries}}
   end
 
-  def get_postmortem!(id), do: Repo.get!(Postmortem, id)
-  def get_postmortem(id), do: Repo.get(Postmortem, id)
+  def get_postmortem!(id) do
+    Postmortem
+    |> preload_postmortem()
+    |> Repo.get!(id)
+  end
+
+  def get_postmortem(id) do
+    Postmortem
+    |> preload_postmortem()
+    |> Repo.get(id)
+  end
 
   def get_postmortem_by_number!(number),
     do:
       Postmortem
-      |> preload([:created_by_user, :domains, action_items: ^action_items_query()])
+      |> preload_postmortem()
       |> Repo.get_by!(number: number)
 
   def get_postmortem_by_number(number),
     do:
       Postmortem
-      |> preload([:created_by_user, :domains, action_items: ^action_items_query()])
+      |> preload_postmortem()
       |> Repo.get_by(number: number)
+
+  def get_postmortem_by_reference(reference) when is_integer(reference),
+    do: get_postmortem_by_number(reference)
+
+  def get_postmortem_by_reference(reference) when is_binary(reference) do
+    reference
+    |> reference_identifier()
+    |> case do
+      "" ->
+        nil
+
+      identifier ->
+        if public_number?(identifier),
+          do: get_postmortem_by_number(identifier),
+          else: get_postmortem(identifier)
+    end
+  rescue
+    Ecto.Query.CastError -> nil
+  end
 
   def fetch_visible_postmortem_by_number(number, user) do
     case get_postmortem_by_number(number) do
@@ -78,6 +107,28 @@ defmodule Hive.Postmortems do
       _ ->
         {:error, :not_found}
     end
+  end
+
+  def fetch_visible_postmortem_by_reference(reference, user) do
+    case get_postmortem_by_reference(reference) do
+      %Postmortem{} = postmortem ->
+        if(can_view?(postmortem, user), do: {:ok, postmortem}, else: {:error, :not_found})
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
+  def fetch_visible_action_item(id, user) when is_binary(id) do
+    with %ActionItem{} = action_item <- Repo.get(ActionItem, id),
+         %Postmortem{} = postmortem <- get_postmortem(action_item.postmortem_id),
+         true <- can_view?(postmortem, user) do
+      {:ok, postmortem, action_item}
+    else
+      _ -> {:error, :not_found}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   def change_postmortem(postmortem \\ %Postmortem{}, attrs \\ %{}),
@@ -122,6 +173,20 @@ defmodule Hive.Postmortems do
   end
 
   def update_postmortem(_postmortem, _attrs, _user), do: {:error, :unauthorized}
+
+  def delete_postmortem(%Postmortem{} = postmortem, %User{} = user) do
+    if can_delete?(postmortem, user) do
+      postmortem
+      |> Repo.delete()
+      |> tap_result(fn deleted_postmortem ->
+        record_postmortem_event("postmortem.deleted", deleted_postmortem, user)
+      end)
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def delete_postmortem(_postmortem, _user), do: {:error, :unauthorized}
 
   defp persist_updated_postmortem(postmortem, attrs, user) do
     Repo.transaction(fn ->
@@ -198,26 +263,45 @@ defmodule Hive.Postmortems do
   end
 
   def toggle_action_item(%Postmortem{} = postmortem, %ActionItem{} = action_item, %User{} = user) do
-    if action_item.postmortem_id == postmortem.id and can_edit?(postmortem, user) do
-      completed_at =
-        if action_item.completed_at,
-          do: nil,
-          else: DateTime.utc_now() |> DateTime.truncate(:second)
+    set_action_item_completed(postmortem, action_item, is_nil(action_item.completed_at), user)
+  end
 
-      action =
-        if completed_at,
-          do: "postmortem.action_item_completed",
-          else: "postmortem.action_item_reopened"
+  def set_action_item_completed(
+        %Postmortem{} = postmortem,
+        %ActionItem{} = action_item,
+        completed,
+        %User{} = user
+      )
+      when is_boolean(completed) do
+    cond do
+      action_item.postmortem_id != postmortem.id or not can_edit?(postmortem, user) ->
+        {:error, :unauthorized}
 
-      action_item
-      |> Changeset.change(completed_at: completed_at)
-      |> Repo.update()
-      |> tap_result(fn updated_action_item ->
-        record_action_item_event(action, postmortem, updated_action_item, user)
-      end)
-    else
-      {:error, :unauthorized}
+      completed == not is_nil(action_item.completed_at) ->
+        {:ok, action_item}
+
+      true ->
+        persist_action_item_completion(postmortem, action_item, completed, user)
     end
+  end
+
+  def set_action_item_completed(_postmortem, _action_item, _completed, _user),
+    do: {:error, :unauthorized}
+
+  defp persist_action_item_completion(postmortem, action_item, completed, user) do
+    completed_at = if completed, do: DateTime.utc_now() |> DateTime.truncate(:second), else: nil
+
+    action =
+      if completed,
+        do: "postmortem.action_item_completed",
+        else: "postmortem.action_item_reopened"
+
+    action_item
+    |> Changeset.change(completed_at: completed_at)
+    |> Repo.update()
+    |> tap_result(fn updated_action_item ->
+      record_action_item_event(action, postmortem, updated_action_item, user)
+    end)
   end
 
   def index_postmortem(postmortem_id, content_hash, opts \\ []) do
@@ -345,6 +429,31 @@ defmodule Hive.Postmortems do
     from action_item in ActionItem,
       order_by: [asc_nulls_first: action_item.completed_at, asc: action_item.inserted_at]
   end
+
+  defp preload_postmortem(query) do
+    preload(query, [:created_by_user, :domains, action_items: ^action_items_query()])
+  end
+
+  defp reference_identifier(reference) do
+    reference = String.trim(reference)
+
+    case URI.parse(reference) do
+      %URI{path: path} when is_binary(path) and path != "" ->
+        path
+        |> String.split("/", trim: true)
+        |> postmortem_path_number()
+        |> Kernel.||(reference)
+
+      _uri ->
+        reference
+    end
+  end
+
+  defp postmortem_path_number(["postmortems", number | _rest]), do: number
+  defp postmortem_path_number([_segment | rest]), do: postmortem_path_number(rest)
+  defp postmortem_path_number([]), do: nil
+
+  defp public_number?(identifier), do: match?({_number, ""}, Integer.parse(identifier))
 
   defp schedule_indexing(postmortem) do
     content_hash = content_hash(postmortem.body)

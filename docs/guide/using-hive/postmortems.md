@@ -40,6 +40,19 @@ mark it completed, or reopen it when more work is required.
 Readers can see the action items and their current status. Management controls
 only appear for people who can edit the postmortem.
 
+## Use connected clients
+
+Clients using the [Model Context Protocol](https://modelcontextprotocol.io/)
+can list, fetch, publish, update, and delete postmortems. The returned
+postmortem includes its author, domains, visibility, action items, timestamps,
+and dashboard path. A client can refer to a postmortem by its identifier,
+public number, or shared address.
+
+Action items have their own list, fetch, create, update, and delete tools. The
+update tool can change the title or description and can complete or reopen the
+item. Read tools follow the postmortem's visibility. Write and delete tools are
+available only to organization members and administrators.
+
 ## Find related incidents
 
 The Postmortems page supports text search, publication-date filters, and
