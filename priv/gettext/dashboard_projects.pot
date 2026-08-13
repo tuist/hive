@@ -407,7 +407,7 @@ msgid "Project updated."
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:166
-#: lib/hive_web/live/home_live.ex:124
+#: lib/hive_web/live/home_live.ex:181
 #: lib/hive_web/live/project_live/index.ex:20
 #: lib/hive_web/live/project_live/index.ex:28
 #: lib/hive_web/live/project_live/index.ex:101
@@ -584,7 +584,7 @@ msgstr ""
 msgid "never used"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:126
+#: lib/hive_web/live/home_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Group the products, codebases, repositories, and sources your organization builds."
 msgstr ""
