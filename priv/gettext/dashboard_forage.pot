@@ -323,8 +323,8 @@ msgid "Firing"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:40
-#: lib/hive_web/components/layouts.ex:170
-#: lib/hive_web/components/layouts.ex:315
+#: lib/hive_web/components/layouts.ex:178
+#: lib/hive_web/components/layouts.ex:323
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
@@ -337,6 +337,7 @@ msgstr ""
 #: lib/hive_web/live/forage_live/index.ex:120
 #: lib/hive_web/live/forage_live/new_feature_request.ex:20
 #: lib/hive_web/live/forage_live/placeholder.ex:19
+#: lib/hive_web/live/home_live.ex:145
 #: lib/hive_web/live/ops_live/forage.ex:26
 #: lib/hive_web/live/ops_live/forage.ex:106
 #, elixir-autogen, elixir-format
@@ -1273,4 +1274,14 @@ msgstr ""
 #: lib/hive_web/live/forage_live/show.ex:147
 #, elixir-autogen, elixir-format
 msgid "You are no longer following this item."
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:73
+#, elixir-autogen, elixir-format
+msgid "Browse the requests"
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:147
+#, elixir-autogen, elixir-format
+msgid "See what people have asked for, the bugs they hit, and the alerts being watched."
 msgstr ""

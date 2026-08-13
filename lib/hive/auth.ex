@@ -21,10 +21,6 @@ defmodule Hive.Auth do
   alias Hive.Accounts
   alias Hive.Accounts.User
 
-  @product_name "Hive"
-
-  def product_name, do: @product_name
-
   @doc """
   Returns the configured visibility: `"public"` (default) or `"private"`.
   Driven by `HIVE_VISIBILITY` at runtime.

@@ -48,6 +48,23 @@ server certificate when secure connection verification is required.
 Set to `true` or `1` when the database connection should use Internet
 Protocol version 6 ([IPv6](https://en.wikipedia.org/wiki/IPv6)). Optional.
 
+## Branding
+
+### HIVE_PRODUCT_NAME {#hive_product_name}
+
+Name the instance presents itself with in the header, page titles, login
+screen, and link previews. Defaults to `Hive`.
+
+### HIVE_LOGO_URL {#hive_logo_url}
+
+Absolute Uniform Resource Locator
+([URL](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/Web_mechanics/What_is_a_URL))
+of the image used as the header logo, the favicon, and the mark on
+generated link-preview images. It must be publicly reachable from both
+the browser and the instance itself. Defaults to the bundled Hive logo.
+A square image of at least 256 by 256 pixels reproduces best. If the
+image cannot be fetched, link previews fall back to the bundled logo.
+
 ## Access control
 
 ### HIVE_VISIBILITY {#hive_visibility}

@@ -3,7 +3,7 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
 
   use HiveWeb, :html
 
-  alias Hive.Auth
+  alias Hive.Branding
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -14,7 +14,7 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
           "dashboard_auth",
           "Review and approve a secure application access request."
         ),
-      section_label: Auth.product_name(),
+      section_label: Branding.product_name(),
       highlights: [
         dgettext("dashboard_auth", "You stay in control"),
         dgettext("dashboard_auth", "Access can be revoked"),
@@ -46,8 +46,8 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
       <main id="oauth-consent">
         <div data-part="frame">
           <div data-part="brand">
-            <img src={~p"/images/logo.png"} alt="Hive" data-part="logo" />
-            <span data-part="brand-name">Hive</span>
+            <img src={Branding.logo_url()} alt={Branding.product_name()} data-part="logo" />
+            <span data-part="brand-name">{Branding.product_name()}</span>
           </div>
 
           <div data-part="header">
@@ -138,12 +138,12 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
     assigns = %{open_graph: OpenGraph.assigns(open_graph())[:open_graph]}
 
     ~H"""
-    <Layouts.app title={dgettext("dashboard_auth", "Access not granted · Hive")} open_graph={@open_graph}>
+    <Layouts.app title={dgettext("dashboard_auth", "Access not granted · %{product}", product: Branding.product_name())} open_graph={@open_graph}>
       <main id="oauth-consent">
         <div data-part="frame" data-state="denied">
           <div data-part="brand">
-            <img src={~p"/images/logo.png"} alt="Hive" data-part="logo" />
-            <span data-part="brand-name">Hive</span>
+            <img src={Branding.logo_url()} alt={Branding.product_name()} data-part="logo" />
+            <span data-part="brand-name">{Branding.product_name()}</span>
           </div>
           <div data-part="result-icon" aria-hidden="true"><.icon name="lock" /></div>
           <div data-part="result-copy">

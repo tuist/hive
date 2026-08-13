@@ -283,7 +283,11 @@ defmodule HiveWeb.Router do
 
     pipe_through HiveWeb.Plugs.RequireAuthenticated
 
-    get "/", PageController, :home
+    live_session :home,
+      on_mount: HiveWeb.DashboardLive.Hooks,
+      root_layout: {HiveWeb.Layouts, :root} do
+      live "/", HomeLive, :index
+    end
   end
 
   scope "/" do

@@ -552,9 +552,10 @@ msgstr ""
 msgid "Spec updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:182
+#: lib/hive_web/components/layouts.ex:190
 #: lib/hive_web/components/spec_components.ex:23
 #: lib/hive_web/components/spec_components.ex:44
+#: lib/hive_web/live/home_live.ex:157
 #: lib/hive_web/live/spec_live/index.ex:17
 #: lib/hive_web/live/spec_live/index.ex:29
 #, elixir-autogen, elixir-format
@@ -719,4 +720,9 @@ msgstr ""
 #: lib/hive_web/live/spec_live/show.ex:119
 #, elixir-autogen, elixir-format
 msgid "You are no longer following this spec."
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:159
+#, elixir-autogen, elixir-format
+msgid "Read the proposals behind upcoming work, and the discussion that shaped each one."
 msgstr ""

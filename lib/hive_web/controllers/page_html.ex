@@ -4,6 +4,7 @@ defmodule HiveWeb.PageHTML do
   use HiveWeb, :html
 
   alias Hive.Auth
+  alias Hive.Branding
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -16,7 +17,7 @@ defmodule HiveWeb.PageHTML do
           "dashboard_auth",
           "Sign in to submit public ideas and help turn domain signals into actionable work."
         ),
-      section_label: Auth.product_name(),
+      section_label: Branding.product_name(),
       highlights: [
         dgettext("dashboard_auth", "OpenID Connect sign-in"),
         dgettext("dashboard_auth", "Public by default"),
@@ -24,7 +25,7 @@ defmodule HiveWeb.PageHTML do
       ],
       id: "login",
       path: "/login",
-      title: dgettext("dashboard_auth", "Log in to %{product}", product: Auth.product_name())
+      title: dgettext("dashboard_auth", "Log in to %{product}", product: Branding.product_name())
     }
   end
 
@@ -34,7 +35,7 @@ defmodule HiveWeb.PageHTML do
     assigns = %{
       conn: conn,
       error: Keyword.get(opts, :error),
-      product_name: Auth.product_name(),
+      product_name: Branding.product_name(),
       auth_enabled?: Auth.private?(),
       providers: Auth.providers(),
       dev_login?: @dev_login?,
@@ -51,7 +52,7 @@ defmodule HiveWeb.PageHTML do
       <main id="login">
         <div data-part="frame">
           <div data-part="content">
-            <img src={~p"/images/logo.png"} alt={@product_name} data-part="logo" />
+            <img src={Branding.logo_url()} alt={@product_name} data-part="logo" />
             <div data-part="header">
               <h1 data-part="title">
                 {dgettext("dashboard_auth", "Log in to %{product}", product: @product_name)}

@@ -26,7 +26,7 @@ Phoenix application that hosts Tuist's agentic domain orchestration. MPL-2.0 lic
   - `plugs/require_authenticated.ex` — gates routes when `Auth.enabled?()`
 - `assets/css/app.css` — imports Noora's CSS; Hive-specific styling layered on top
 - `config/` — Phoenix config; `runtime.exs` reads env vars into the `:hive, :auth` keyword list
-- `priv/static/images/logo.png` — used as headerbar, login frame, favicon, and README image
+- `priv/static/images/logo.png` — the bundled default logo (headerbar, login frame, favicon, OpenGraph card, README image). `Hive.Branding` resolves the name and logo an instance actually renders, so deployments can override both with `HIVE_PRODUCT_NAME` / `HIVE_LOGO_URL`
 - `infra/helm/hive/` — generic Helm chart with `values-production.yaml` Tuist overlay
 - `.github/workflows/deploy.yml` — builds, pushes to GHCR, `helm upgrade` against the production cluster
 

@@ -1,6 +1,8 @@
 defmodule HiveWeb.LayoutsTest do
   use ExUnit.Case, async: true
 
+  use Mimic
+
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
@@ -20,6 +22,19 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(rel="icon")
       assert html =~ ~s(href="/assets/js/app.css")
       assert html =~ "Body content here"
+    end
+
+    test "points the favicon at the instance logo" do
+      Mimic.stub(Hive.Branding, :logo_url, fn -> "https://example.com/logo.png" end)
+
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Layouts.app title="Sign in">Body content here</Layouts.app>
+        """)
+
+      assert html =~ ~s(<link rel="icon" href="https://example.com/logo.png")
     end
   end
 
@@ -187,6 +202,16 @@ defmodule HiveWeb.LayoutsTest do
       assert html =~ ~s(href="/forage")
       refute html =~ "Feature requests"
       refute html =~ "/forage/feature-requests"
+    end
+
+    test "links to the overview page" do
+      html = render_dashboard(assigns(%{current_path: "/"}))
+
+      assert html =~ "Overview"
+      assert html =~ ~s(href="/")
+
+      assert html =~
+               ~r/<a href="\/" data-part="item">\s*<div class="noora-tab-menu-vertical" data-selected(?:>|="")/
     end
 
     test "shows Domains at the top of the sidebar for any visitor" do

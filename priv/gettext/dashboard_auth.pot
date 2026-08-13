@@ -21,7 +21,7 @@ msgstr ""
 msgid "%{provider} is connected to your account."
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:109
+#: lib/hive_web/controllers/page_html.ex:110
 #, elixir-autogen, elixir-format
 msgid "Anyone can use it without signing in. Set HIVE_VISIBILITY=private and configure an identity provider to require login."
 msgstr ""
@@ -31,64 +31,64 @@ msgstr ""
 msgid "Authorize %{client}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:74
+#: lib/hive_web/controllers/page_html.ex:75
 #, elixir-autogen, elixir-format
 msgid "Continue with %{provider}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:84
-#: lib/hive_web/controllers/page_html.ex:116
+#: lib/hive_web/controllers/page_html.ex:85
+#: lib/hive_web/controllers/page_html.ex:117
 #, elixir-autogen, elixir-format
 msgid "Continue without signing in"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:27
-#: lib/hive_web/controllers/page_html.ex:57
+#: lib/hive_web/controllers/page_html.ex:28
+#: lib/hive_web/controllers/page_html.ex:58
 #, elixir-autogen, elixir-format
 msgid "Log in to %{product}"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:94
+#: lib/hive_web/controllers/page_html.ex:95
 #, elixir-autogen, elixir-format
 msgid "No identity provider is configured"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:21
+#: lib/hive_web/controllers/page_html.ex:22
 #, elixir-autogen, elixir-format
 msgid "OpenID Connect sign-in"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:23
+#: lib/hive_web/controllers/page_html.ex:24
 #, elixir-autogen, elixir-format
 msgid "Organization-aware"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:22
+#: lib/hive_web/controllers/page_html.ex:23
 #, elixir-autogen, elixir-format
 msgid "Public by default"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:96
+#: lib/hive_web/controllers/page_html.ex:97
 #, elixir-autogen, elixir-format
 msgid "Set HIVE_GOOGLE_CLIENT_ID/HIVE_GOOGLE_CLIENT_SECRET or HIVE_OIDC_ISSUER + HIVE_OIDC_CLIENT_ID/HIVE_OIDC_CLIENT_SECRET to enable login."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:430
+#: lib/hive_web/components/layouts.ex:438
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:65
+#: lib/hive_web/controllers/page_html.ex:66
 #, elixir-autogen, elixir-format
 msgid "Sign in as test user"
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:15
+#: lib/hive_web/controllers/page_html.ex:16
 #, elixir-autogen, elixir-format
 msgid "Sign in to submit public ideas and help turn domain signals into actionable work."
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:48
+#: lib/hive_web/controllers/page_html.ex:49
 #, elixir-autogen, elixir-format
 msgid "Sign in · %{product}"
 msgstr ""
@@ -113,7 +113,7 @@ msgstr ""
 msgid "The state parameter must not exceed %{count} characters."
 msgstr ""
 
-#: lib/hive_web/controllers/page_html.ex:107
+#: lib/hive_web/controllers/page_html.ex:108
 #, elixir-autogen, elixir-format
 msgid "This instance is public"
 msgstr ""
@@ -146,11 +146,6 @@ msgstr ""
 #: lib/hive_web/controllers/oauth/authorize_html.ex:20
 #, elixir-autogen, elixir-format
 msgid "Access can be revoked"
-msgstr ""
-
-#: lib/hive_web/controllers/oauth/authorize_html.ex:141
-#, elixir-autogen, elixir-format
-msgid "Access not granted · Hive"
 msgstr ""
 
 #: lib/hive_web/controllers/oauth/authorize_html.ex:150
@@ -241,4 +236,9 @@ msgstr ""
 #: lib/hive_web/controllers/oauth/authorize_html.ex:19
 #, elixir-autogen, elixir-format
 msgid "You stay in control"
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:141
+#, elixir-autogen, elixir-format
+msgid "Access not granted · %{product}"
 msgstr ""
