@@ -77,7 +77,7 @@ defmodule Hive.Agents.Errors do
       contains_any?(text, @credential_fragments) ->
         :llm_invalid_credentials
 
-      client_error_rejected?(status_code(reason)) ->
+      client_error_rejected?(status_code(reason)) or invalid_request?(reason) ->
         :llm_provider_rejected_request
 
       true ->
@@ -117,8 +117,12 @@ defmodule Hive.Agents.Errors do
     truncate_message(reason)
   end
 
-  def sanitize_reason(%{__struct__: module}, _fallback) when is_atom(module) do
-    {:error, module}
+  def sanitize_reason(%{__struct__: module} = reason, _fallback) when is_atom(module) do
+    if is_exception(reason) do
+      {:error, module, truncate_message(Exception.message(reason))}
+    else
+      {:error, module}
+    end
   end
 
   def sanitize_reason(reason, _fallback) when is_tuple(reason) and tuple_size(reason) > 0 do
@@ -126,6 +130,18 @@ defmodule Hive.Agents.Errors do
   end
 
   def sanitize_reason(_reason, fallback), do: fallback
+
+  # A request the client library refused to send is malformed, so every retry
+  # builds the same invalid request.
+  defp invalid_request?(%ReqLLM.Error.Invalid.Parameter{}), do: true
+
+  defp invalid_request?({:fallback_failed, reason, fallback_reason}) do
+    invalid_request?(reason) or invalid_request?(fallback_reason)
+  end
+
+  defp invalid_request?({tag, reason}) when is_atom(tag), do: invalid_request?(reason)
+
+  defp invalid_request?(_reason), do: false
 
   defp provider_unavailable_error?(error) do
     message = error |> Exception.message() |> String.downcase()
