@@ -119,6 +119,26 @@ defmodule Hive.PostmortemsTest do
     assert updated_hash == content_hash(updated_body)
   end
 
+  test "caps the text sent for indexing so long postmortems stay indexable" do
+    owner = user()
+    body = "# Long incident\n\n" <> String.duplicate("The account keeps going. ", 2_000)
+
+    {:ok, postmortem} = Postmortems.publish_postmortem(%{"body" => body}, owner)
+
+    embed = fn text ->
+      send(self(), {:embedded, String.length(text)})
+      {:ok, [0.8, 0.2]}
+    end
+
+    assert {:ok, %Embedding{status: :indexed}} =
+             Postmortems.index_postmortem(postmortem.id, content_hash(postmortem.body),
+               embed: embed
+             )
+
+    assert_received {:embedded, length}
+    assert length < String.length(body)
+  end
+
   test "semantic search applies postmortem visibility" do
     owner = user()
 

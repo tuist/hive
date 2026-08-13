@@ -64,8 +64,14 @@ defmodule Hive.Agents do
   """
   def embedding_client_opts do
     case hive_profile_client_opts(:embedding) do
-      {:error, :hive_profile_not_configured} -> {:error, :llm_not_configured}
-      result -> result
+      {:error, :hive_profile_not_configured} ->
+        {:error, :llm_not_configured}
+
+      {:ok, opts} ->
+        {:ok, Keyword.put(opts, :model, embedding_model(opts[:model]))}
+
+      result ->
+        result
     end
   end
 
@@ -116,6 +122,13 @@ defmodule Hive.Agents do
             {:error, :llm_not_configured}
         end
     end
+  end
+
+  # Profile names are operator-chosen aliases that only Hive's own gateway can
+  # resolve, so ReqLLM's catalog cannot tell whether they embed. Declaring the
+  # capability inline keeps embedding available whatever the profile is called.
+  defp embedding_model("openai:" <> profile_name) do
+    %{provider: :openai, id: profile_name, capabilities: %{embeddings: true}}
   end
 
   defp maybe_put(opts, _key, nil), do: opts

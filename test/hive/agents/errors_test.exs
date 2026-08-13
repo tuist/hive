@@ -32,6 +32,17 @@ defmodule Hive.Agents.ErrorsTest do
       assert Errors.oban_error(reason) == {:cancel, :llm_provider_rejected_request}
     end
 
+    test "classifies invalid request parameters as hard failures" do
+      reason =
+        ReqLLM.Error.Invalid.Parameter.exception(
+          parameter: "model: openai:hive-inference does not support embedding operations"
+        )
+
+      assert Errors.hard_failure?(reason)
+      assert Errors.hard_failure_reason(reason) == :llm_provider_rejected_request
+      assert Errors.oban_error(reason) == {:cancel, :llm_provider_rejected_request}
+    end
+
     test "keeps rate limits retryable" do
       reason =
         ReqLLM.Error.API.Request.exception(
@@ -56,6 +67,15 @@ defmodule Hive.Agents.ErrorsTest do
 
       refute Errors.hard_failure?(reason)
       assert {:error, {:llm_request_failed, 408, _message}} = Errors.oban_error(reason)
+    end
+  end
+
+  describe "sanitize_reason/2" do
+    test "keeps the message of exceptions it does not know" do
+      reason = ReqLLM.Error.Invalid.Parameter.exception(parameter: "text: cannot be empty")
+
+      assert {:error, ReqLLM.Error.Invalid.Parameter, message} = Errors.sanitize_reason(reason)
+      assert message =~ "text: cannot be empty"
     end
   end
 end
