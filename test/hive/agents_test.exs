@@ -44,11 +44,17 @@ defmodule Hive.AgentsTest do
 
   test "exposes embedding client options from the Hive embedding profile" do
     _inference_profile = model_binding!(name: "hive-agent", hive_inference: true)
-    embedding_profile = model_binding!(name: "hive-embeddings", hive_embedding: true)
+    embedding_profile = model_binding!(name: "vectors", hive_embedding: true)
 
     assert {:ok, opts} = Agents.embedding_client_opts()
 
-    assert opts[:model] == "openai:hive-embeddings"
+    assert opts[:model] == %{
+             provider: :openai,
+             id: "vectors",
+             capabilities: %{embeddings: true}
+           }
+
+    assert {:ok, _model} = ReqLLM.Embedding.validate_model(opts[:model])
     assert opts[:base_url] == HiveWeb.Endpoint.url() <> "/inference/v1"
 
     assert {:ok, token} = Inference.authenticate_token(opts[:api_key])
