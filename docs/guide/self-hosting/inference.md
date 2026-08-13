@@ -143,7 +143,9 @@ Postmortems are indexed asynchronously. Hive records the source-content
 fingerprint with each vector, so unchanged content is never sent for a second
 embedding request. Editing a postmortem creates one new pending index entry;
 obsolete jobs exit without making a provider request. Permanent provider
-rejections are recorded until the postmortem changes.
+rejections are recorded until the postmortem changes. Very long postmortems are
+indexed on their opening sections so they stay searchable instead of exceeding
+the embedding model's input limit.
 
 ## Launch-time fallback
 

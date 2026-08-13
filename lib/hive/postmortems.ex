@@ -17,6 +17,8 @@ defmodule Hive.Postmortems do
   alias Hive.Repo
   alias HiveWeb.Markdown
 
+  @embedding_input_limit 24_000
+
   def can_publish?(user), do: Auth.member?(user)
   def can_edit?(%Postmortem{}, user), do: Auth.member?(user)
   def can_delete?(%Postmortem{} = postmortem, user), do: can_edit?(postmortem, user)
@@ -333,7 +335,7 @@ defmodule Hive.Postmortems do
   end
 
   defp generate_embedding(postmortem, content_hash, embed) do
-    case embed.(postmortem.body) do
+    case embed.(embedding_input(postmortem.body)) do
       {:ok, vector} -> save_embedding(postmortem.id, content_hash, vector)
       {:error, reason} -> {:error, reason}
     end
@@ -532,6 +534,11 @@ defmodule Hive.Postmortems do
         {:error, :embedding_not_configured}
     end
   end
+
+  # Postmortem bodies are unbounded prose while embedding models cap their
+  # input, so long incidents are indexed on their opening sections instead of
+  # being rejected by the provider.
+  defp embedding_input(body), do: String.slice(body, 0, @embedding_input_limit)
 
   defp content_hash(body), do: :crypto.hash(:sha256, body) |> Base.encode16(case: :lower)
 
