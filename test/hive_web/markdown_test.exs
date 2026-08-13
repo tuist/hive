@@ -1,6 +1,8 @@
 defmodule HiveWeb.MarkdownTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.LiveViewTest
+
   alias HiveWeb.Markdown
 
   defp html(markdown) do
@@ -60,6 +62,60 @@ defmodule HiveWeb.MarkdownTest do
     assert rendered =~ "Heads up."
     assert rendered =~ "<blockquote>"
     assert rendered =~ "Plain quote."
+  end
+
+  test "renders GitHub-style admonitions with the Noora alert component" do
+    rendered =
+      render_component(&Markdown.content/1, %{
+        id: "incident-body",
+        body: "> [!IMPORTANT]\n> Prevention work is still in progress."
+      })
+
+    assert rendered =~ ~s(class="noora-alert")
+    assert rendered =~ ~s(data-status="information")
+    assert rendered =~ ~s(data-type="secondary")
+    assert rendered =~ ~s(data-size="large")
+    assert rendered =~ "Important"
+    assert rendered =~ "Prevention work is still in progress."
+    refute rendered =~ "markdown-alert"
+  end
+
+  test "maps every GitHub-style admonition to a Noora alert status" do
+    admonitions = [
+      {"NOTE", "information"},
+      {"TIP", "success"},
+      {"WARNING", "warning"},
+      {"CAUTION", "error"}
+    ]
+
+    for {type, status} <- admonitions do
+      rendered =
+        render_component(&Markdown.content/1, %{
+          id: "#{String.downcase(type)}-body",
+          body: "> [!#{type}]\n> #{String.capitalize(type)} content."
+        })
+
+      assert rendered =~ ~s(class="noora-alert")
+      assert rendered =~ ~s(data-status="#{status}")
+      assert rendered =~ String.capitalize(type)
+      refute rendered =~ "markdown-alert"
+    end
+  end
+
+  test "renders Markdown tables with the Noora table component" do
+    rendered =
+      render_component(&Markdown.content/1, %{
+        id: "incident-body",
+        body:
+          "| Mitigation | Evidence |\n| --- | --- |\n| Remove legacy writer | Pull request 12192 |"
+      })
+
+    assert rendered =~ ~s(id="incident-body-table-1")
+    assert rendered =~ ~s(class="noora-table")
+    assert rendered =~ "Mitigation"
+    assert rendered =~ "Evidence"
+    assert rendered =~ "Remove legacy writer"
+    assert rendered =~ "Pull request 12192"
   end
 
   test "renders mentions as tag spans" do

@@ -104,15 +104,6 @@
     margin-top: var(--noora-spacing-5);
   }
 
-  & [data-part="body"] {
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-medium);
-
-    & > * + * {
-      margin-top: var(--noora-spacing-4);
-    }
-  }
-
   & [data-part="domains"] {
     display: flex;
     align-items: center;
