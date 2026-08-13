@@ -4,10 +4,10 @@ defmodule HiveWeb.HomeLiveTest do
   test "introduces the instance and links every product area", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/")
 
-    assert html =~ "From product signal to shipped work."
-    assert html =~ "How work moves through Hive"
-    assert html =~ "Hive brings product signals"
-    assert html =~ "Choose where to start"
+    assert html =~ "Product development in the open."
+    assert html =~ "How work moves from request to release"
+    assert html =~ "Read any of it without an account"
+    assert html =~ "Follow the work end to end"
 
     for path <- ~w(/projects /domains /forage /specs /postmortems /drops) do
       assert html =~ ~s(href="#{path}")
@@ -35,7 +35,7 @@ defmodule HiveWeb.HomeLiveTest do
     html = html_response(conn, 200)
 
     assert html =~ ~s(property="og:title")
-    assert html =~ "From product signal to shipped work"
+    assert html =~ "Product development in the open"
     assert html =~ ~s(property="og:image")
   end
 end

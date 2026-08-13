@@ -107,7 +107,7 @@ msgstr ""
 #: lib/hive_web/components/layouts.ex:172
 #: lib/hive_web/live/domain_live/index.ex:20
 #: lib/hive_web/live/domain_live/index.ex:28
-#: lib/hive_web/live/home_live.ex:192
+#: lib/hive_web/live/home_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
@@ -262,7 +262,7 @@ msgstr ""
 msgid "Specs, forage items, drops, and projects linked to %{domain}."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:194
+#: lib/hive_web/live/home_live.ex:203
 #, elixir-autogen, elixir-format
-msgid "Organize durable product areas that can span projects and collect related work."
+msgid "The lasting areas of the product that requests and releases are grouped under."
 msgstr ""

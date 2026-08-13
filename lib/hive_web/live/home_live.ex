@@ -12,17 +12,17 @@ defmodule HiveWeb.HomeLive do
       description:
         dgettext(
           "dashboard",
-          "Bring product signals, shared plans, and shipped work into one place your whole team can follow."
+          "Follow how the product gets built, from the requests people send in to the work that ships."
         ),
       section_label: dgettext("dashboard", "Overview"),
       highlights: [
-        dgettext("dashboard", "Signals in one queue"),
-        dgettext("dashboard", "Shared product intent"),
-        dgettext("dashboard", "Shipped work in context")
+        dgettext("dashboard", "What people asked for"),
+        dgettext("dashboard", "What we plan to build"),
+        dgettext("dashboard", "What already shipped")
       ],
       id: "overview",
       path: "/",
-      title: dgettext("dashboard", "From product signal to shipped work")
+      title: dgettext("dashboard", "Product development in the open")
     }
   end
 
@@ -61,17 +61,16 @@ defmodule HiveWeb.HomeLive do
               <img src={Branding.logo_url()} alt="" />
               <span>{@product_name}</span>
             </div>
-            <h1>{dgettext("dashboard", "From product signal to shipped work.")}</h1>
+            <h1>{dgettext("dashboard", "Product development in the open.")}</h1>
             <p>
               {dgettext(
                 "dashboard",
-                "%{product} brings product signals, shared plans, and shipped improvements into one place your whole team can follow.",
-                product: @product_name
+                "This is where the product gets built in the open: the requests people send in, the plans written from them, and the work that ships. Read any of it without an account."
               )}
             </p>
             <div data-part="hero-actions">
               <.button
-                label={dgettext("dashboard_forage", "Explore Forage")}
+                label={dgettext("dashboard_forage", "Browse the requests")}
                 href={~p"/forage"}
                 variant="primary"
                 size="medium"
@@ -85,31 +84,41 @@ defmodule HiveWeb.HomeLive do
             </div>
           </div>
 
-          <div data-part="journey" aria-label={
-              dgettext("dashboard", "How work moves through %{product}", product: @product_name)
-            }>
+          <div
+            data-part="journey"
+            aria-label={dgettext("dashboard", "How work moves from request to release")}
+          >
             <.journey_step
               icon="rss"
               step={dgettext("dashboard", "Gather")}
-              title={dgettext("dashboard", "Listen to every signal")}
+              title={dgettext("dashboard", "Every signal lands here")}
               description={
-                dgettext("dashboard", "Requests, feedback, issues, and alerts arrive with context.")
+                dgettext(
+                  "dashboard",
+                  "Feature requests, bug reports, feedback, and alerts from the people using the product."
+                )
               }
             />
             <.journey_step
               icon="file_text"
               step={dgettext("dashboard", "Shape")}
-              title={dgettext("dashboard", "Make intent explicit")}
+              title={dgettext("dashboard", "Plans written in public")}
               description={
-                dgettext("dashboard", "Evidence becomes a proposal the whole team can discuss.")
+                dgettext(
+                  "dashboard",
+                  "The strongest signals turn into proposals anyone can read before they are built."
+                )
               }
             />
             <.journey_step
               icon="package"
               step={dgettext("dashboard", "Deliver")}
-              title={dgettext("dashboard", "Close the loop")}
+              title={dgettext("dashboard", "Shipped work, in context")}
               description={
-                dgettext("dashboard", "Shipped improvements stay connected to the work behind them.")
+                dgettext(
+                  "dashboard",
+                  "Every release stays linked to the requests and plans it came from."
+                )
               }
             />
           </div>
@@ -118,12 +127,12 @@ defmodule HiveWeb.HomeLive do
         <div data-part="section-heading">
           <div>
             <span data-part="eyebrow">{dgettext("dashboard", "The product loop")}</span>
-            <h2>{dgettext("dashboard", "Choose where to start")}</h2>
+            <h2>{dgettext("dashboard", "Follow the work end to end")}</h2>
           </div>
           <p>
             {dgettext(
               "dashboard",
-              "Follow work from evidence to outcome, or jump directly into the part you need."
+              "Start wherever you are curious: what people asked for, what is being planned, or what already shipped."
             )}
           </p>
         </div>
@@ -137,7 +146,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_forage",
-                "Bring feature requests, bug reports, feedback, issues, and alerts into one shared queue."
+                "See what people have asked for, the bugs they hit, and the alerts being watched."
               )
             }
           />
@@ -149,7 +158,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_specs",
-                "Turn evidence into clear, reviewable product intent and keep the discussion with it."
+                "Read the proposals behind upcoming work, and the discussion that shaped each one."
               )
             }
           />
@@ -161,7 +170,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_drops",
-                "See the improvements that reached users and the product context behind each release."
+                "Catch up on what recently reached users, and the story behind each release."
               )
             }
           />
@@ -170,7 +179,7 @@ defmodule HiveWeb.HomeLive do
         <div data-part="section-heading" data-size="compact">
           <div>
             <span data-part="eyebrow">{dgettext("dashboard", "Shared context")}</span>
-            <h2>{dgettext("dashboard", "Keep the work connected")}</h2>
+            <h2>{dgettext("dashboard", "Where the work lives")}</h2>
           </div>
         </div>
 
@@ -182,7 +191,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_projects",
-                "Group the products, codebases, repositories, and sources your organization builds."
+                "The products, codebases, and repositories all of this work belongs to."
               )
             }
           />
@@ -193,7 +202,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_domains",
-                "Organize durable product areas that can span projects and collect related work."
+                "The lasting areas of the product that requests and releases are grouped under."
               )
             }
           />
@@ -204,7 +213,7 @@ defmodule HiveWeb.HomeLive do
             description={
               dgettext(
                 "dashboard_postmortems",
-                "Preserve what happened, what the team learned, and the follow-up work that remains."
+                "When something broke: what happened, what was learned, and what changed after."
               )
             }
           />
@@ -250,7 +259,7 @@ defmodule HiveWeb.HomeLive do
         <p>{@description}</p>
       </div>
       <span data-part="area-action">
-        {dgettext("dashboard", "Explore")}
+        {dgettext("dashboard", "Take a look")}
         <.icon name="arrow_right" />
       </span>
     </.link>

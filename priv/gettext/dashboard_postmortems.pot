@@ -216,7 +216,7 @@ msgid "Postmortem published."
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:197
-#: lib/hive_web/live/home_live.ex:203
+#: lib/hive_web/live/home_live.ex:212
 #: lib/hive_web/live/postmortem_live/form.ex:20
 #: lib/hive_web/live/postmortem_live/index.ex:22
 #: lib/hive_web/live/postmortem_live/index.ex:28
@@ -371,7 +371,7 @@ msgstr ""
 msgid "complete"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:205
+#: lib/hive_web/live/home_live.ex:214
 #, elixir-autogen, elixir-format
-msgid "Preserve what happened, what the team learned, and the follow-up work that remains."
+msgid "When something broke: what happened, what was learned, and what changed after."
 msgstr ""

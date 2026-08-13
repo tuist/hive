@@ -128,7 +128,7 @@ msgstr ""
 #: lib/hive_web/live/drops_live/index.ex:33
 #: lib/hive_web/live/drops_live/index.ex:155
 #: lib/hive_web/live/drops_live/subscribe.ex:22
-#: lib/hive_web/live/home_live.ex:160
+#: lib/hive_web/live/home_live.ex:169
 #: lib/hive_web/live/ops_live/drops.ex:31
 #: lib/hive_web/live/ops_live/drops.ex:171
 #, elixir-autogen, elixir-format
@@ -710,12 +710,12 @@ msgstr ""
 msgid "Year"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:162
-#, elixir-autogen, elixir-format
-msgid "See the improvements that reached users and the product context behind each release."
-msgstr ""
-
-#: lib/hive_web/live/home_live.ex:80
+#: lib/hive_web/live/home_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "See what shipped"
+msgstr ""
+
+#: lib/hive_web/live/home_live.ex:171
+#, elixir-autogen, elixir-format
+msgid "Catch up on what recently reached users, and the story behind each release."
 msgstr ""
