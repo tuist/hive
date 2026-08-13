@@ -68,6 +68,34 @@ defmodule HiveWeb.PostmortemLive.IndexTest do
     assert html =~ "/100000"
   end
 
+  test "renders postmortem callouts and tables with Noora components", %{conn: conn} do
+    {conn, user} = sign_in(conn, "postmortem-markdown@example.com")
+
+    {:ok, postmortem} =
+      Postmortems.publish_postmortem(
+        %{
+          "body" => """
+          # Registry incident
+
+          > [!IMPORTANT]
+          > Prevention work is still in progress.
+
+          | Mitigation | Evidence |
+          | --- | --- |
+          | Remove legacy writer | Pull request 12192 |
+          """
+        },
+        user
+      )
+
+    {:ok, view, html} = live(conn, ~p"/postmortems/#{postmortem.number}")
+
+    assert has_element?(view, ".markdown .noora-alert[data-status=information]")
+    assert has_element?(view, ".markdown .noora-table")
+    assert html =~ "Prevention work is still in progress."
+    assert html =~ "Remove legacy writer"
+  end
+
   test "manages postmortem action items", %{conn: conn} do
     {conn, user} = sign_in(conn, "postmortem-action-items@example.com")
 

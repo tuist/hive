@@ -226,7 +226,7 @@ defmodule HiveWeb.PostmortemLive.Show do
             </div>
           </.card_section>
         </.card>
-        <.card icon="alert_triangle" title={dgettext("dashboard_postmortems", "Postmortem")}><.card_section><div data-part="body">{Markdown.render(@postmortem.body)}</div></.card_section></.card>
+        <.card icon="alert_triangle" title={dgettext("dashboard_postmortems", "Postmortem")}><.card_section><Markdown.content id={"postmortem-#{@postmortem.number}-body"} body={@postmortem.body} data-part="body" /></.card_section></.card>
         <.card icon="circle_check" title={dgettext("dashboard_postmortems", "Action items")}>
           <:actions :if={@can_edit?}>
             <.modal id="new-action-item-modal" data-width="large" title={dgettext("dashboard_postmortems", "Add action item")} description={dgettext("dashboard_postmortems", "Record the follow-up work this incident requires.")} header_type="icon" header_size="large" on_dismiss="close_new_action_item">

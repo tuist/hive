@@ -1,6 +1,9 @@
 defmodule HiveWeb.Markdown do
   @moduledoc false
 
+  use Phoenix.Component
+  use Noora
+
   import Phoenix.HTML
 
   @paragraph_wrap ~r/\A<p>(.*)<\/p>\z/s
@@ -33,10 +36,72 @@ defmodule HiveWeb.Markdown do
     sanitize: MDEx.Document.default_sanitize_options()
   ]
 
+  @alert_statuses %{
+    note: "information",
+    tip: "success",
+    important: "information",
+    warning: "warning",
+    caution: "error"
+  }
+
+  attr :id, :string, required: true
+  attr :body, :string, required: true
+  attr :rest, :global
+
+  def content(assigns) do
+    assigns = assign(assigns, :blocks, component_blocks(assigns.body, assigns.id))
+
+    ~H"""
+    <div id={@id} class="markdown" {@rest}>
+      <.markdown_block :for={block <- @blocks} block={block} />
+    </div>
+    """
+  end
+
+  attr :block, :any, required: true
+
+  defp markdown_block(%{block: {:html, html}} = assigns) do
+    assigns = assign(assigns, :html, html)
+
+    ~H"""
+    {@html}
+    """
+  end
+
+  defp markdown_block(%{block: {:alert, status, title, description}} = assigns) do
+    assigns =
+      assign(assigns,
+        status: status,
+        title: title,
+        description: description
+      )
+
+    ~H"""
+    <.alert status={@status} type="secondary" size="large" title={@title}>
+      {@description}
+    </.alert>
+    """
+  end
+
+  defp markdown_block(%{block: {:table, table}} = assigns) do
+    assigns = assign(assigns, :table, table)
+
+    ~H"""
+    <.table id={@table.id} rows={@table.rows}>
+      <:col
+        :for={{heading, column_index} <- Enum.with_index(@table.headings)}
+        :let={row}
+        label={heading}
+      >
+        {Enum.at(row.cells, column_index)}
+      </:col>
+    </.table>
+    """
+  end
+
   def render(markdown) when is_binary(markdown) do
     markdown
-    |> MDEx.parse_document!(@options)
-    |> MDEx.traverse_and_update(&downshift_heading/1)
+    |> markdown_document()
     |> MDEx.to_html!(@options)
     |> highlight_mentions()
     |> raw()
@@ -117,6 +182,69 @@ defmodule HiveWeb.Markdown do
   end
 
   def preview(_text, _limit), do: ""
+
+  defp component_blocks(markdown, id) when is_binary(markdown) do
+    document = markdown_document(markdown)
+
+    document.nodes
+    |> Enum.with_index()
+    |> Enum.map(fn {node, index} -> component_block(node, document, id, index) end)
+  end
+
+  defp component_blocks(_markdown, _id), do: []
+
+  defp component_block(%MDEx.Alert{} = alert, document, _id, _index) do
+    status = Map.fetch!(@alert_statuses, alert.alert_type)
+    title = alert.alert_type |> Atom.to_string() |> String.capitalize()
+
+    {:alert, status, title, render_nodes(document, alert.nodes)}
+  end
+
+  defp component_block(%MDEx.Table{} = table, document, id, index) do
+    [header | rows] = table.nodes
+    table_id = "#{id}-table-#{index + 1}"
+
+    headings =
+      Enum.map(header.nodes, fn cell ->
+        cell.nodes
+        |> Enum.map_join(&node_text/1)
+        |> String.trim()
+      end)
+
+    rows =
+      rows
+      |> Enum.with_index(1)
+      |> Enum.map(fn {row, row_index} ->
+        %{
+          id: "#{table_id}-row-#{row_index}",
+          cells: Enum.map(row.nodes, &render_nodes(document, &1.nodes))
+        }
+      end)
+
+    {:table, %{id: table_id, headings: headings, rows: rows}}
+  end
+
+  defp component_block(node, document, _id, _index) do
+    {:html, render_nodes(document, [node])}
+  end
+
+  defp markdown_document(markdown) do
+    markdown
+    |> MDEx.parse_document!(@options)
+    |> MDEx.traverse_and_update(&downshift_heading/1)
+  end
+
+  defp render_nodes(document, nodes) do
+    document
+    |> Map.put(:nodes, nodes)
+    |> MDEx.to_html!(@options)
+    |> highlight_mentions()
+    |> raw()
+  end
+
+  defp node_text(%{literal: literal}) when is_binary(literal), do: literal
+  defp node_text(%{nodes: nodes}) when is_list(nodes), do: Enum.map_join(nodes, &node_text/1)
+  defp node_text(_node), do: ""
 
   defp downshift_heading(%MDEx.Heading{level: level} = node),
     do: %{node | level: min(level + 1, 6)}
