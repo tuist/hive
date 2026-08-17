@@ -24,7 +24,7 @@ defmodule HiveWeb.PostmortemLive.ShowTest do
     {conn, postmortem, action_item}
   end
 
-  test "renders the description preview as plain text and the expansion as Markdown", %{
+  test "keeps the collapsed row concise and renders the description in a labeled expansion", %{
     conn: conn
   } do
     {conn, postmortem, action_item} =
@@ -38,17 +38,8 @@ defmodule HiveWeb.PostmortemLive.ShowTest do
     row = "#action-item-#{action_item.id}"
     expanded = "#action-item-#{action_item.id}-expanded"
 
-    # The collapsed preview is flattened, so Markdown syntax does not leak into
-    # the table cell. (The raw body still appears elsewhere on the page, in the
-    # edit modal's textarea, so this has to assert on the cell itself.)
-    preview =
-      view
-      |> element("#{row} [data-type=text_and_description] [data-part=description]")
-      |> render()
-
-    assert preview =~ "server/lib/tuist/registry.ex:62 defaults the sync limit to 1,000."
-    refute preview =~ "`"
-    refute preview =~ "<code>"
+    assert has_element?(view, "#{row} [data-type=text]", "Cap the catalog pass")
+    refute has_element?(view, "#{row} [data-type=text_and_description]")
 
     assert has_element?(view, "#{row}[data-expandable]")
     refute has_element?(view, expanded)
@@ -59,6 +50,7 @@ defmodule HiveWeb.PostmortemLive.ShowTest do
 
     expanded_html = view |> element(expanded) |> render()
 
+    assert expanded_html =~ "Description"
     assert expanded_html =~ "<code>server/lib/tuist/registry.ex:62</code>"
     assert expanded_html =~ "<li>"
 

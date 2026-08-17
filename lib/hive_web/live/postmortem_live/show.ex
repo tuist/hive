@@ -308,7 +308,12 @@ defmodule HiveWeb.PostmortemLive.Show do
                   </.button_cell>
                 </:col>
                 <:expanded_content :let={action_item}>
-                  <Markdown.content id={"#{action_item_key(action_item)}-description"} body={action_item.description} data-part="action-item-description" />
+                  <div data-part="action-item-details">
+                    <span data-part="label">
+                      {dgettext("dashboard_postmortems", "Description")}
+                    </span>
+                    <Markdown.content id={"#{action_item_key(action_item)}-description"} body={action_item.description} data-part="description" />
+                  </div>
                 </:expanded_content>
               </.table>
             </div>
@@ -355,15 +360,8 @@ defmodule HiveWeb.PostmortemLive.Show do
   attr :can_edit?, :boolean, required: true
 
   defp action_item_cell(assigns) do
-    assigns = assign(assigns, :has_description?, has_description?(assigns.action_item))
-
     ~H"""
-    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={Markdown.preview(@action_item.description, 400)}>
-      <:image :if={@can_edit? || @action_item.completed_at}>
-        <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
-      </:image>
-    </.text_and_description_cell>
-    <.text_cell :if={!@has_description?} label={@action_item.title}>
+    <.text_cell label={@action_item.title}>
       <:image :if={@can_edit? || @action_item.completed_at}>
         <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
       </:image>
