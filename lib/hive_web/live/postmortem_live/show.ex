@@ -235,6 +235,7 @@ defmodule HiveWeb.PostmortemLive.Show do
               <.line_divider />
               <.form for={@action_item_form} id="new-action-item" phx-submit="create_action_item" data-part="action-item-form">
                 <.text_input id="new-action-item-title" field={@action_item_form[:title]} label={dgettext("dashboard_postmortems", "Title")} placeholder={dgettext("dashboard_postmortems", "Describe the follow-up work")} />
+                <.action_item_priority_select id="new-action-item-priority" field={@action_item_form[:priority]} />
                 <.text_area field={@action_item_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
               </.form>
               <.line_divider />
@@ -252,6 +253,9 @@ defmodule HiveWeb.PostmortemLive.Show do
               <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items}>
                 <:col :let={action_item} label={dgettext("dashboard_postmortems", "Action item")}>
                   <.action_item_cell action_item={action_item} can_edit?={@can_edit?} />
+                </:col>
+                <:col :let={action_item} label={dgettext("dashboard_postmortems", "Priority")}>
+                  <.badge_cell label={priority_label(action_item.priority)} color={priority_color(action_item.priority)} style="light-fill" />
                 </:col>
                 <:col :let={action_item} label={dgettext("dashboard_postmortems", "Status")}>
                   <.badge_cell label={if action_item.completed_at, do: dgettext("dashboard_postmortems", "Completed"), else: dgettext("dashboard_postmortems", "Open")} color={if action_item.completed_at, do: "success", else: "neutral"} style="light-fill" />
@@ -271,6 +275,7 @@ defmodule HiveWeb.PostmortemLive.Show do
                         <.line_divider />
                         <.form for={edit_form} id={"edit-action-item-#{action_item.id}"} phx-submit="update_action_item" phx-value-id={action_item.id} data-part="action-item-form">
                           <.text_input id={"edit-action-item-title-#{action_item.id}"} field={edit_form[:title]} label={dgettext("dashboard_postmortems", "Title")} />
+                          <.action_item_priority_select id={"edit-action-item-priority-#{action_item.id}"} field={edit_form[:priority]} />
                           <.text_area id={"edit-action-item-description-#{action_item.id}"} field={edit_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
                         </.form>
                         <.line_divider />
@@ -309,6 +314,25 @@ defmodule HiveWeb.PostmortemLive.Show do
   defp action_item_form(action_item, _editing_action_item_id, _form),
     do: to_form(Postmortems.change_action_item(action_item), as: :action_item)
 
+  attr :id, :string, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+
+  defp action_item_priority_select(assigns) do
+    ~H"""
+    <div data-part="select-field">
+      <span>{dgettext("dashboard_postmortems", "Priority")}</span>
+      <.select
+        id={@id}
+        name={@field.name}
+        value={Phoenix.HTML.Form.normalize_value("select", @field.value)}
+        label={dgettext("dashboard_postmortems", "Choose priority")}
+      >
+        <:item :for={priority <- ActionItem.priorities()} value={to_string(priority)} label={priority_label(priority)} />
+      </.select>
+    </div>
+    """
+  end
+
   attr :action_item, ActionItem, required: true
   attr :can_edit?, :boolean, required: true
 
@@ -345,6 +369,16 @@ defmodule HiveWeb.PostmortemLive.Show do
     do: String.trim(description) != ""
 
   defp has_description?(_action_item), do: false
+
+  defp priority_label(:immediate), do: dgettext("dashboard_postmortems", "Immediate")
+  defp priority_label(:high), do: dgettext("dashboard_postmortems", "High")
+  defp priority_label(:medium), do: dgettext("dashboard_postmortems", "Medium")
+  defp priority_label(:low), do: dgettext("dashboard_postmortems", "Low")
+
+  defp priority_color(:immediate), do: "destructive"
+  defp priority_color(:high), do: "warning"
+  defp priority_color(:medium), do: "information"
+  defp priority_color(:low), do: "neutral"
 
   defp reload_postmortem(socket),
     do:

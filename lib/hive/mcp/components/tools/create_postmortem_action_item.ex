@@ -14,7 +14,12 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItem do
           "description" => "Postmortem identifier, public number, or shared postmortem address."
         },
         "title" => %{"type" => "string"},
-        "description" => %{"type" => ["string", "null"]}
+        "description" => %{"type" => ["string", "null"]},
+        "priority" => %{
+          "type" => "string",
+          "enum" => Enum.map(Hive.Postmortems.ActionItem.priorities(), &Atom.to_string/1),
+          "description" => "Urgency of the follow-up work. Defaults to medium."
+        }
       }
     },
     output_schema:
@@ -41,7 +46,7 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItem do
   end
 
   defp create(postmortem, user, args) do
-    attrs = Map.take(args, ["title", "description"])
+    attrs = Map.take(args, ["title", "description", "priority"])
 
     case Postmortems.create_action_item(postmortem, attrs, user) do
       {:ok, action_item} ->

@@ -141,6 +141,10 @@ defmodule Hive.MCP.Components.Schemas do
         "postmortem_id" => %{"type" => "string"},
         "title" => %{"type" => "string"},
         "description" => %{"type" => ["string", "null"]},
+        "priority" => %{
+          "type" => "string",
+          "enum" => Enum.map(Hive.Postmortems.ActionItem.priorities(), &Atom.to_string/1)
+        },
         "completed" => %{"type" => "boolean"},
         "completed_at" => %{"type" => ["string", "null"]},
         "inserted_at" => %{"type" => "string"},
@@ -151,6 +155,7 @@ defmodule Hive.MCP.Components.Schemas do
         "postmortem_id",
         "title",
         "description",
+        "priority",
         "completed",
         "completed_at",
         "inserted_at",

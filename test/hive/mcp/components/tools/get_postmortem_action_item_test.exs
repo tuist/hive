@@ -25,6 +25,7 @@ defmodule Hive.MCP.Components.Tools.GetPostmortemActionItemTest do
       |> response_json()
 
     assert response["action_item"]["id"] == action_item.id
+    assert response["action_item"]["priority"] == "medium"
     assert response["action_item"]["completed"] == false
   end
 

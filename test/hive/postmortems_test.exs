@@ -292,7 +292,8 @@ defmodule Hive.PostmortemsTest do
                postmortem,
                %{
                  "title" => "Add a registry latency alert",
-                 "description" => "Page the registry team when latency crosses the threshold."
+                 "description" => "Page the registry team when latency crosses the threshold.",
+                 "priority" => "high"
                },
                owner
              )
@@ -300,18 +301,22 @@ defmodule Hive.PostmortemsTest do
     assert action_item.description ==
              "Page the registry team when latency crosses the threshold."
 
+    assert action_item.priority == :high
+
     assert {:ok, action_item} =
              Postmortems.update_action_item(
                postmortem,
                action_item,
                %{
                  "title" => "Add a registry latency alert and runbook",
-                 "description" => "Document the response steps next to the alert definition."
+                 "description" => "Document the response steps next to the alert definition.",
+                 "priority" => "immediate"
                },
                owner
              )
 
     assert action_item.description == "Document the response steps next to the alert definition."
+    assert action_item.priority == :immediate
 
     assert {:ok, %{completed_at: completed_at} = action_item} =
              Postmortems.toggle_action_item(postmortem, action_item, owner)
@@ -349,7 +354,12 @@ defmodule Hive.PostmortemsTest do
                owner
              )
 
-    assert %Activity{metadata: %{"action_item_id" => action_item_id}} =
+    assert %Activity{
+             metadata: %{
+               "action_item_id" => action_item_id,
+               "action_item_priority" => "medium"
+             }
+           } =
              Repo.get_by!(Activity,
                action: "postmortem.action_item_created",
                target_id: postmortem.id

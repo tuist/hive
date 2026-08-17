@@ -196,4 +196,10 @@
     gap: var(--noora-spacing-6);
     padding: var(--noora-spacing-9) 0;
   }
+
+  & [data-part="action-item-form"] [data-part="select-field"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-3);
+  }
 }

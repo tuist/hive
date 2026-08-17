@@ -1448,11 +1448,13 @@ postmortem_seeds = [
       %{
         title: "Add a queue-depth alert for sustained notification backlogs",
         description: "Alert when notification backlogs remain above the operating threshold.",
+        priority: :immediate,
         completed_at: ~U[2026-08-05 10:00:00Z]
       },
       %{
         title: "Document the notification worker capacity runbook",
         description: "Describe the safe procedure for increasing worker capacity.",
+        priority: :medium,
         completed_at: nil
       }
     ]
@@ -1479,11 +1481,13 @@ postmortem_seeds = [
       %{
         title: "Validate registry cache invalidation before each deployment",
         description: "Exercise invalidation against a representative package before deployment.",
+        priority: :high,
         completed_at: ~U[2026-07-23 09:00:00Z]
       },
       %{
         title: "Publish a registry recovery guide for customers",
         description: "Explain how customers can recover from a registry availability incident.",
+        priority: :low,
         completed_at: nil
       }
     ]
@@ -1519,7 +1523,11 @@ Enum.each(postmortem_seeds, fn seed ->
     case Repo.get_by(ActionItem, postmortem_id: postmortem.id, title: action_item.title) do
       nil ->
         %ActionItem{postmortem_id: postmortem.id}
-        |> ActionItem.changeset(%{title: action_item.title, description: action_item.description})
+        |> ActionItem.changeset(%{
+          title: action_item.title,
+          description: action_item.description,
+          priority: action_item.priority
+        })
         |> Ecto.Changeset.put_change(:completed_at, action_item.completed_at)
         |> Repo.insert!()
 
@@ -1527,6 +1535,7 @@ Enum.each(postmortem_seeds, fn seed ->
         existing
         |> Ecto.Changeset.change(
           description: action_item.description,
+          priority: action_item.priority,
           completed_at: action_item.completed_at
         )
         |> Repo.update!()

@@ -115,19 +115,23 @@ defmodule HiveWeb.PostmortemLive.IndexTest do
                postmortem,
                %{
                  "title" => "Add registry monitoring",
-                 "description" => "Alert when package resolution latency rises."
+                 "description" => "Alert when package resolution latency rises.",
+                 "priority" => "high"
                },
                user
              )
 
-    {:ok, view, _html} = live(conn, ~p"/postmortems/#{postmortem.number}")
+    {:ok, view, html} = live(conn, ~p"/postmortems/#{postmortem.number}")
+
+    assert html =~ "High"
 
     html =
       render_submit(view, "update_action_item", %{
         "id" => action_item.id,
         "action_item" => %{
           "title" => "x",
-          "description" => "Keep the description visible."
+          "description" => "Keep the description visible.",
+          "priority" => "low"
         }
       })
 
