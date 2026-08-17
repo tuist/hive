@@ -143,6 +143,37 @@
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }
 
+  /* Noora sizes tables to `max-content`, so one long action-item description
+     stretches the table until Priority, Status, and the row actions sit past
+     the right edge. Let the table share the available width and cap the
+     description at two lines instead. */
+  & #postmortem-action-items-table {
+    & table {
+      min-width: 0;
+    }
+
+    & [data-type="text"],
+    & [data-type="text_and_description"] {
+      & [data-part="column"] {
+        min-width: 0;
+      }
+
+      & [data-part="label"] {
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      & [data-part="description"] {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+      }
+    }
+  }
+
   & [data-part="action-item-toggle"] {
     margin: 0;
     border: 0;

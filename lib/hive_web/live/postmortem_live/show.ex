@@ -340,7 +340,7 @@ defmodule HiveWeb.PostmortemLive.Show do
     assigns = assign(assigns, :has_description?, has_description?(assigns.action_item))
 
     ~H"""
-    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={@action_item.description}>
+    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={@action_item.description} title={@action_item.description}>
       <:image :if={@can_edit? || @action_item.completed_at}>
         <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
       </:image>
