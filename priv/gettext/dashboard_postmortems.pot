@@ -21,7 +21,7 @@ msgstr ""
 msgid "%{count} postmortems"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:253
+#: lib/hive_web/live/postmortem_live/show.ex:254
 #, elixir-autogen, elixir-format
 msgid "Action item"
 msgstr ""
@@ -56,7 +56,7 @@ msgstr ""
 
 #: lib/hive_web/live/postmortem_live/show.ex:232
 #: lib/hive_web/live/postmortem_live/show.ex:233
-#: lib/hive_web/live/postmortem_live/show.ex:244
+#: lib/hive_web/live/postmortem_live/show.ex:245
 #, elixir-autogen, elixir-format
 msgid "Add action item"
 msgstr ""
@@ -67,8 +67,8 @@ msgstr ""
 msgid "Author"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:243
-#: lib/hive_web/live/postmortem_live/show.ex:279
+#: lib/hive_web/live/postmortem_live/show.ex:244
+#: lib/hive_web/live/postmortem_live/show.ex:284
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -78,18 +78,18 @@ msgstr ""
 msgid "Choose visibility"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:257
+#: lib/hive_web/live/postmortem_live/show.ex:261
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:286
-#: lib/hive_web/live/postmortem_live/show.ex:286
+#: lib/hive_web/live/postmortem_live/show.ex:291
+#: lib/hive_web/live/postmortem_live/show.ex:291
 #, elixir-autogen, elixir-format
 msgid "Delete action item"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:286
+#: lib/hive_web/live/postmortem_live/show.ex:291
 #, elixir-autogen, elixir-format
 msgid "Delete this action item?"
 msgstr ""
@@ -99,8 +99,8 @@ msgstr ""
 msgid "Describe the follow-up work"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:238
-#: lib/hive_web/live/postmortem_live/show.ex:274
+#: lib/hive_web/live/postmortem_live/show.ex:239
+#: lib/hive_web/live/postmortem_live/show.ex:279
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr ""
@@ -121,9 +121,9 @@ msgstr ""
 msgid "Edit a published incident postmortem."
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:268
-#: lib/hive_web/live/postmortem_live/show.ex:269
-#: lib/hive_web/live/postmortem_live/show.ex:269
+#: lib/hive_web/live/postmortem_live/show.ex:272
+#: lib/hive_web/live/postmortem_live/show.ex:273
+#: lib/hive_web/live/postmortem_live/show.ex:273
 #, elixir-autogen, elixir-format
 msgid "Edit action item"
 msgstr ""
@@ -139,7 +139,7 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:367
+#: lib/hive_web/live/postmortem_live/show.ex:401
 #, elixir-autogen, elixir-format
 msgid "Hive"
 msgstr ""
@@ -169,7 +169,7 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:251
+#: lib/hive_web/live/postmortem_live/show.ex:252
 #, elixir-autogen, elixir-format
 msgid "No action items have been added."
 msgstr ""
@@ -185,7 +185,7 @@ msgstr ""
 msgid "Only organization members can publish postmortems."
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:257
+#: lib/hive_web/live/postmortem_live/show.ex:261
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
@@ -298,7 +298,7 @@ msgid "Record the follow-up work this incident requires."
 msgstr ""
 
 #: lib/hive_web/live/postmortem_live/form.ex:188
-#: lib/hive_web/live/postmortem_live/show.ex:280
+#: lib/hive_web/live/postmortem_live/show.ex:285
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr ""
@@ -313,7 +313,7 @@ msgstr ""
 msgid "Select domains"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:256
+#: lib/hive_web/live/postmortem_live/show.ex:260
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
@@ -324,13 +324,13 @@ msgid "Summary"
 msgstr ""
 
 #: lib/hive_web/live/postmortem_live/show.ex:237
-#: lib/hive_web/live/postmortem_live/show.ex:273
+#: lib/hive_web/live/postmortem_live/show.ex:277
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:337
-#: lib/hive_web/live/postmortem_live/show.ex:337
+#: lib/hive_web/live/postmortem_live/show.ex:361
+#: lib/hive_web/live/postmortem_live/show.ex:361
 #, elixir-autogen, elixir-format
 msgid "Toggle action item status"
 msgstr ""
@@ -340,7 +340,7 @@ msgstr ""
 msgid "Unassigned"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:302
+#: lib/hive_web/live/postmortem_live/show.ex:307
 #, elixir-autogen, elixir-format
 msgid "Unassigned domain"
 msgstr ""
@@ -374,4 +374,35 @@ msgstr ""
 #: lib/hive_web/live/home_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "When something broke: what happened, what was learned, and what changed after."
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:328
+#, elixir-autogen, elixir-format
+msgid "Choose priority"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:374
+#, elixir-autogen, elixir-format
+msgid "High"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:373
+#, elixir-autogen, elixir-format
+msgid "Immediate"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:376
+#, elixir-autogen, elixir-format
+msgid "Low"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:375
+#, elixir-autogen, elixir-format
+msgid "Medium"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:257
+#: lib/hive_web/live/postmortem_live/show.ex:323
+#, elixir-autogen, elixir-format
+msgid "Priority"
 msgstr ""

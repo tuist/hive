@@ -14,10 +14,18 @@ defmodule Hive.MCP.Components.Tools.ListPostmortemActionItemsTest do
       )
 
     {:ok, first} =
-      Postmortems.create_action_item(postmortem, %{"title" => "Add an alert"}, user)
+      Postmortems.create_action_item(
+        postmortem,
+        %{"title" => "Add an alert", "priority" => "low"},
+        user
+      )
 
     {:ok, second} =
-      Postmortems.create_action_item(postmortem, %{"title" => "Write the runbook"}, user)
+      Postmortems.create_action_item(
+        postmortem,
+        %{"title" => "Write the runbook", "priority" => "high"},
+        user
+      )
 
     response =
       ListPostmortemActionItems.call(mcp_conn(nil), %{
@@ -25,6 +33,6 @@ defmodule Hive.MCP.Components.Tools.ListPostmortemActionItemsTest do
       })
       |> response_json()
 
-    assert Enum.map(response["action_items"], & &1["id"]) == [first.id, second.id]
+    assert Enum.map(response["action_items"], & &1["id"]) == [second.id, first.id]
   end
 end

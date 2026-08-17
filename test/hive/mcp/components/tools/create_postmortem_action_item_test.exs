@@ -17,13 +17,15 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItemTest do
       CreatePostmortemActionItem.call(mcp_conn(user), %{
         "postmortem_id" => "/postmortems/#{postmortem.number}",
         "title" => "Add a registry latency alert",
-        "description" => "Page when latency is high."
+        "description" => "Page when latency is high.",
+        "priority" => "high"
       })
       |> response_json()
 
     assert response["action_item"]["postmortem_id"] == postmortem.id
     assert response["action_item"]["title"] == "Add a registry latency alert"
     assert response["action_item"]["description"] == "Page when latency is high."
+    assert response["action_item"]["priority"] == "high"
   end
 
   test "rejects collaborators" do

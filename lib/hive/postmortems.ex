@@ -429,7 +429,15 @@ defmodule Hive.Postmortems do
 
   defp action_items_query do
     from action_item in ActionItem,
-      order_by: [asc_nulls_first: action_item.completed_at, asc: action_item.inserted_at]
+      order_by: [
+        asc_nulls_first: action_item.completed_at,
+        asc:
+          fragment(
+            "CASE ? WHEN 'immediate' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END",
+            action_item.priority
+          ),
+        asc: action_item.inserted_at
+      ]
   end
 
   defp preload_postmortem(query) do
@@ -626,6 +634,7 @@ defmodule Hive.Postmortems do
       target_label: title(postmortem),
       metadata: %{
         "action_item_id" => action_item.id,
+        "action_item_priority" => Atom.to_string(action_item.priority),
         "action_item_title" => action_item.title,
         "number" => to_string(postmortem.number),
         "path" => "/postmortems/#{postmortem.number}"
