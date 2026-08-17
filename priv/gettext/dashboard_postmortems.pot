@@ -139,7 +139,7 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:421
+#: lib/hive_web/live/postmortem_live/show.ex:419
 #, elixir-autogen, elixir-format
 msgid "Hive"
 msgstr ""
@@ -329,8 +329,8 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:379
-#: lib/hive_web/live/postmortem_live/show.ex:379
+#: lib/hive_web/live/postmortem_live/show.ex:377
+#: lib/hive_web/live/postmortem_live/show.ex:377
 #, elixir-autogen, elixir-format
 msgid "Toggle action item status"
 msgstr ""
@@ -340,7 +340,7 @@ msgstr ""
 msgid "Unassigned"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:325
+#: lib/hive_web/live/postmortem_live/show.ex:330
 #, elixir-autogen, elixir-format
 msgid "Unassigned domain"
 msgstr ""
@@ -376,33 +376,38 @@ msgstr ""
 msgid "When something broke: what happened, what was learned, and what changed after."
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:346
+#: lib/hive_web/live/postmortem_live/show.ex:351
 #, elixir-autogen, elixir-format
 msgid "Choose priority"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:394
+#: lib/hive_web/live/postmortem_live/show.ex:392
 #, elixir-autogen, elixir-format
 msgid "High"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:393
+#: lib/hive_web/live/postmortem_live/show.ex:391
 #, elixir-autogen, elixir-format
 msgid "Immediate"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:396
+#: lib/hive_web/live/postmortem_live/show.ex:394
 #, elixir-autogen, elixir-format
 msgid "Low"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/show.ex:395
+#: lib/hive_web/live/postmortem_live/show.ex:393
 #, elixir-autogen, elixir-format
 msgid "Medium"
 msgstr ""
 
 #: lib/hive_web/live/postmortem_live/show.ex:272
-#: lib/hive_web/live/postmortem_live/show.ex:341
+#: lib/hive_web/live/postmortem_live/show.ex:346
 #, elixir-autogen, elixir-format
 msgid "Priority"
+msgstr ""
+
+#: lib/hive_web/live/postmortem_live/show.ex:313
+#, elixir-autogen, elixir-format
+msgid "Description"
 msgstr ""
