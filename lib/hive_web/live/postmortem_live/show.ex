@@ -58,6 +58,7 @@ defmodule HiveWeb.PostmortemLive.Show do
          |> assign(:postmortem, postmortem)
          |> assign(:can_edit?, Postmortems.can_edit?(postmortem, socket.assigns.current_user))
          |> assign(:editing_action_item_id, nil)
+         |> assign(:expanded_action_item_keys, MapSet.new())
          |> assign_action_item_form(Postmortems.change_action_item())}
 
       {:error, :not_found} ->
@@ -166,6 +167,20 @@ defmodule HiveWeb.PostmortemLive.Show do
     end
   end
 
+  def handle_event("toggle-expand", %{"row-key" => row_key}, socket) do
+    expanded = socket.assigns.expanded_action_item_keys
+
+    {:noreply,
+     assign(
+       socket,
+       :expanded_action_item_keys,
+       if(MapSet.member?(expanded, row_key),
+         do: MapSet.delete(expanded, row_key),
+         else: MapSet.put(expanded, row_key)
+       )
+     )}
+  end
+
   def handle_event("close_new_action_item", _params, socket) do
     {:noreply,
      socket
@@ -250,7 +265,7 @@ defmodule HiveWeb.PostmortemLive.Show do
           <.card_section>
             <div data-part="action-items">
               <p :if={@postmortem.action_items == []} data-part="empty-action-items">{dgettext("dashboard_postmortems", "No action items have been added.")}</p>
-              <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items}>
+              <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items} row_key={&action_item_key/1} row_expandable={&has_description?/1} expanded_rows={MapSet.to_list(@expanded_action_item_keys)}>
                 <:col :let={action_item} label={dgettext("dashboard_postmortems", "Action item")}>
                   <.action_item_cell action_item={action_item} can_edit?={@can_edit?} />
                 </:col>
@@ -292,6 +307,9 @@ defmodule HiveWeb.PostmortemLive.Show do
                     </:button>
                   </.button_cell>
                 </:col>
+                <:expanded_content :let={action_item}>
+                  <Markdown.content id={"#{action_item_key(action_item)}-description"} body={action_item.description} data-part="action-item-description" />
+                </:expanded_content>
               </.table>
             </div>
           </.card_section>
@@ -340,7 +358,7 @@ defmodule HiveWeb.PostmortemLive.Show do
     assigns = assign(assigns, :has_description?, has_description?(assigns.action_item))
 
     ~H"""
-    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={@action_item.description} title={@action_item.description}>
+    <.text_and_description_cell :if={@has_description?} label={@action_item.title} description={Markdown.preview(@action_item.description, 400)}>
       <:image :if={@can_edit? || @action_item.completed_at}>
         <.action_item_control action_item={@action_item} can_edit?={@can_edit?} />
       </:image>
@@ -369,6 +387,8 @@ defmodule HiveWeb.PostmortemLive.Show do
     do: String.trim(description) != ""
 
   defp has_description?(_action_item), do: false
+
+  defp action_item_key(%ActionItem{id: id}), do: "action-item-#{id}"
 
   defp priority_label(:immediate), do: dgettext("dashboard_postmortems", "Immediate")
   defp priority_label(:high), do: dgettext("dashboard_postmortems", "High")
