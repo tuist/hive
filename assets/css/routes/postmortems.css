@@ -152,6 +152,16 @@
       min-width: 0;
     }
 
+    /* The chevron on an expandable row wraps the first cell in another flex
+       container, so the shrink chain has to reach through it too. */
+    & [data-part="expand-cell"] {
+      min-width: 0;
+
+      & > [data-part="cell"] {
+        min-width: 0;
+      }
+    }
+
     & [data-type="text"],
     & [data-type="text_and_description"] {
       & [data-part="column"] {
@@ -163,6 +173,8 @@
         white-space: normal;
       }
 
+      /* Collapsed preview only. The full description is one click away in the
+         expanded row, rendered as Markdown. */
       & [data-part="description"] {
         display: -webkit-box;
         -webkit-box-orient: vertical;
@@ -170,6 +182,17 @@
         line-clamp: 2;
         overflow: hidden;
         overflow-wrap: anywhere;
+      }
+    }
+
+    & [data-part="action-item-description"] {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      padding: var(--noora-spacing-2) 0;
+      font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+
+      & pre {
+        max-width: 100%;
       }
     }
   }
