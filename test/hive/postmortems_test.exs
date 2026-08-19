@@ -332,6 +332,19 @@ defmodule Hive.PostmortemsTest do
 
     assert {"must be a valid HTTP or HTTPS URL", _metadata} = changeset.errors[:resolution_url]
 
+    assert {:error, changeset} =
+             Postmortems.update_action_item(
+               postmortem,
+               action_item,
+               %{"resolution_url" => "https://example.com/" <> String.duplicate("a", 2_048)},
+               owner
+             )
+
+    assert {"should be at most %{count} character(s)", metadata} =
+             changeset.errors[:resolution_url]
+
+    assert metadata[:count] == 2_048
+
     assert {:ok, %{completed_at: completed_at} = action_item} =
              Postmortems.toggle_action_item(postmortem, action_item, owner)
 

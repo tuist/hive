@@ -45,6 +45,29 @@ defmodule Hive.MCP.Components.Tools.UpdatePostmortemActionItemTest do
 
     assert reopened_response["action_item"]["completed"] == false
     assert reopened_response["action_item"]["completed_at"] == nil
+
+    invalid_response =
+      UpdatePostmortemActionItem.call(mcp_conn(user), %{
+        "action_item_id" => action_item.id,
+        "resolution_url" => "javascript:alert(1)"
+      })
+      |> response_json()
+
+    assert invalid_response == %{
+             "error" => "invalid",
+             "details" => %{
+               "resolution_url" => ["must be a valid HTTP or HTTPS URL"]
+             }
+           }
+
+    cleared_response =
+      UpdatePostmortemActionItem.call(mcp_conn(user), %{
+        "action_item_id" => action_item.id,
+        "resolution_url" => ""
+      })
+      |> response_json()
+
+    assert cleared_response["action_item"]["resolution_url"] == nil
   end
 
   test "rejects collaborator updates" do

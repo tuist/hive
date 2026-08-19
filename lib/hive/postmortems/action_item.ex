@@ -29,6 +29,7 @@ defmodule Hive.Postmortems.ActionItem do
     |> validate_required([:title, :priority])
     |> validate_length(:title, min: 3, max: 500)
     |> validate_length(:description, max: 5_000)
+    |> validate_length(:resolution_url, max: 2_048)
     |> validate_url(:resolution_url)
     |> validate_inclusion(:priority, @priorities)
     |> foreign_key_constraint(:postmortem_id)
