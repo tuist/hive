@@ -15,6 +15,10 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItem do
         },
         "title" => %{"type" => "string"},
         "description" => %{"type" => ["string", "null"]},
+        "resolution_url" => %{
+          "type" => ["string", "null"],
+          "description" => "HTTP or HTTPS link to the work that resolved this action item."
+        },
         "priority" => %{
           "type" => "string",
           "enum" => Enum.map(Hive.Postmortems.ActionItem.priorities(), &Atom.to_string/1),
@@ -46,7 +50,7 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItem do
   end
 
   defp create(postmortem, user, args) do
-    attrs = Map.take(args, ["title", "description", "priority"])
+    attrs = Map.take(args, ["title", "description", "resolution_url", "priority"])
 
     case Postmortems.create_action_item(postmortem, attrs, user) do
       {:ok, action_item} ->

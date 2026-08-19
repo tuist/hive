@@ -178,12 +178,18 @@
         var(--noora-spacing-7);
       overflow-wrap: anywhere;
 
-      & > [data-part="label"] {
+      & [data-part="detail"] {
+        display: flex;
+        flex-direction: column;
+        gap: var(--noora-spacing-2);
+      }
+
+      & [data-part="label"] {
         color: var(--noora-surface-label-secondary);
         font: var(--noora-font-weight-medium) var(--noora-font-body-small);
       }
 
-      & > [data-part="description"] pre {
+      & [data-part="description"] pre {
         max-width: 100%;
       }
     }

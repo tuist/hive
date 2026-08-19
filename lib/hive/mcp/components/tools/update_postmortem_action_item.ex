@@ -15,6 +15,10 @@ defmodule Hive.MCP.Components.Tools.UpdatePostmortemActionItem do
         },
         "title" => %{"type" => "string"},
         "description" => %{"type" => ["string", "null"]},
+        "resolution_url" => %{
+          "type" => ["string", "null"],
+          "description" => "HTTP or HTTPS link to the work that resolved this action item."
+        },
         "priority" => %{
           "type" => "string",
           "enum" => Enum.map(Hive.Postmortems.ActionItem.priorities(), &Atom.to_string/1),
@@ -66,7 +70,7 @@ defmodule Hive.MCP.Components.Tools.UpdatePostmortemActionItem do
   end
 
   defp update_text(postmortem, action_item, user, args) do
-    case Map.take(args, ["title", "description", "priority"]) do
+    case Map.take(args, ["title", "description", "resolution_url", "priority"]) do
       attrs when attrs == %{} -> {:ok, action_item}
       attrs -> Postmortems.update_action_item(postmortem, action_item, attrs, user)
     end

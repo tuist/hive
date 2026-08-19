@@ -141,6 +141,7 @@ defmodule Hive.MCP.Components.Schemas do
         "postmortem_id" => %{"type" => "string"},
         "title" => %{"type" => "string"},
         "description" => %{"type" => ["string", "null"]},
+        "resolution_url" => %{"type" => ["string", "null"]},
         "priority" => %{
           "type" => "string",
           "enum" => Enum.map(Hive.Postmortems.ActionItem.priorities(), &Atom.to_string/1)
@@ -155,6 +156,7 @@ defmodule Hive.MCP.Components.Schemas do
         "postmortem_id",
         "title",
         "description",
+        "resolution_url",
         "priority",
         "completed",
         "completed_at",

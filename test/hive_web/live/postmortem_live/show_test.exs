@@ -71,6 +71,28 @@ defmodule HiveWeb.PostmortemLive.ShowTest do
     refute has_element?(view, "#action-item-#{action_item.id}[data-expandable]")
   end
 
+  test "renders a resolution link in an expandable action item", %{conn: conn} do
+    resolution_url = "https://github.com/tuist/hive/pull/123"
+
+    {conn, postmortem, action_item} =
+      postmortem_with_action_item(conn, "postmortem-resolution@example.com", %{
+        "title" => "Cap the catalog pass",
+        "resolution_url" => resolution_url
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/postmortems/#{postmortem.number}")
+
+    row = "#action-item-#{action_item.id}"
+    expanded = "#action-item-#{action_item.id}-expanded"
+
+    assert has_element?(view, "#{row}[data-expandable]")
+
+    view |> element(row) |> render_click()
+
+    assert has_element?(view, expanded)
+    assert has_element?(view, "#{expanded} a[href=\"#{resolution_url}\"]", resolution_url)
+  end
+
   test "toggling an action item does not expand its row", %{conn: conn} do
     {conn, postmortem, action_item} =
       postmortem_with_action_item(conn, "postmortem-toggle@example.com", %{

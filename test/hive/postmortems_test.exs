@@ -293,6 +293,7 @@ defmodule Hive.PostmortemsTest do
                %{
                  "title" => "Add a registry latency alert",
                  "description" => "Page the registry team when latency crosses the threshold.",
+                 "resolution_url" => "https://github.com/tuist/hive/pull/123",
                  "priority" => "high"
                },
                owner
@@ -302,6 +303,7 @@ defmodule Hive.PostmortemsTest do
              "Page the registry team when latency crosses the threshold."
 
     assert action_item.priority == :high
+    assert action_item.resolution_url == "https://github.com/tuist/hive/pull/123"
 
     assert {:ok, action_item} =
              Postmortems.update_action_item(
@@ -310,6 +312,7 @@ defmodule Hive.PostmortemsTest do
                %{
                  "title" => "Add a registry latency alert and runbook",
                  "description" => "Document the response steps next to the alert definition.",
+                 "resolution_url" => "https://github.com/tuist/hive/pull/456",
                  "priority" => "immediate"
                },
                owner
@@ -317,6 +320,30 @@ defmodule Hive.PostmortemsTest do
 
     assert action_item.description == "Document the response steps next to the alert definition."
     assert action_item.priority == :immediate
+    assert action_item.resolution_url == "https://github.com/tuist/hive/pull/456"
+
+    assert {:error, changeset} =
+             Postmortems.update_action_item(
+               postmortem,
+               action_item,
+               %{"resolution_url" => "github.com/tuist/hive/pull/456"},
+               owner
+             )
+
+    assert {"must be a valid HTTP or HTTPS URL", _metadata} = changeset.errors[:resolution_url]
+
+    assert {:error, changeset} =
+             Postmortems.update_action_item(
+               postmortem,
+               action_item,
+               %{"resolution_url" => "https://example.com/" <> String.duplicate("a", 2_048)},
+               owner
+             )
+
+    assert {"should be at most %{count} character(s)", metadata} =
+             changeset.errors[:resolution_url]
+
+    assert metadata[:count] == 2_048
 
     assert {:ok, %{completed_at: completed_at} = action_item} =
              Postmortems.toggle_action_item(postmortem, action_item, owner)

@@ -34,7 +34,8 @@ Private content is excluded whenever the reader is not signed in.
 ## Track action items
 
 Organization members can add action items from a postmortem page. Each item
-has a title, a priority, and an optional description. Priority ranges from
+has a title, a priority, an optional description, and an optional link to the
+change, pull request, or other work that resolved it. Priority ranges from
 **Immediate** through **High**, **Medium**, and **Low**, with **Medium** as the
 default. Members can edit or delete an item, mark it completed, or reopen it
 when more work is required.
@@ -51,8 +52,8 @@ and dashboard path. A client can refer to a postmortem by its identifier,
 public number, or shared address.
 
 Action items have their own list, fetch, create, update, and delete tools. The
-update tool can change the title, description, or priority and can complete or
-reopen the item. Read tools follow the postmortem's visibility. Write and
+update tool can change the title, description, priority, or resolution link,
+and can complete or reopen the item. Read tools follow the postmortem's visibility. Write and
 delete tools are available only to organization members and administrators.
 
 ## Find related incidents
