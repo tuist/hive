@@ -252,6 +252,7 @@ defmodule HiveWeb.PostmortemLive.Show do
                 <.text_input id="new-action-item-title" field={@action_item_form[:title]} label={dgettext("dashboard_postmortems", "Title")} placeholder={dgettext("dashboard_postmortems", "Describe the follow-up work")} />
                 <.action_item_priority_select id="new-action-item-priority" field={@action_item_form[:priority]} />
                 <.text_area field={@action_item_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
+                <.text_input field={@action_item_form[:resolution_url]} label={dgettext("dashboard_postmortems", "Resolution link (optional)")} placeholder="https://github.com/tuist/hive/pull/123" />
               </.form>
               <.line_divider />
               <:footer>
@@ -265,7 +266,7 @@ defmodule HiveWeb.PostmortemLive.Show do
           <.card_section>
             <div data-part="action-items">
               <p :if={@postmortem.action_items == []} data-part="empty-action-items">{dgettext("dashboard_postmortems", "No action items have been added.")}</p>
-              <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items} row_key={&action_item_key/1} row_expandable={&has_description?/1} expanded_rows={MapSet.to_list(@expanded_action_item_keys)}>
+              <.table :if={@postmortem.action_items != []} id="postmortem-action-items-table" rows={@postmortem.action_items} row_key={&action_item_key/1} row_expandable={&has_details?/1} expanded_rows={MapSet.to_list(@expanded_action_item_keys)}>
                 <:col :let={action_item} label={dgettext("dashboard_postmortems", "Action item")}>
                   <.action_item_cell action_item={action_item} can_edit?={@can_edit?} />
                 </:col>
@@ -292,6 +293,7 @@ defmodule HiveWeb.PostmortemLive.Show do
                           <.text_input id={"edit-action-item-title-#{action_item.id}"} field={edit_form[:title]} label={dgettext("dashboard_postmortems", "Title")} />
                           <.action_item_priority_select id={"edit-action-item-priority-#{action_item.id}"} field={edit_form[:priority]} />
                           <.text_area id={"edit-action-item-description-#{action_item.id}"} field={edit_form[:description]} label={dgettext("dashboard_postmortems", "Description (optional)")} rows={4} max_length={5_000} />
+                          <.text_input id={"edit-action-item-resolution-url-#{action_item.id}"} field={edit_form[:resolution_url]} label={dgettext("dashboard_postmortems", "Resolution link (optional)")} placeholder="https://github.com/tuist/hive/pull/123" />
                         </.form>
                         <.line_divider />
                         <:footer>
@@ -309,10 +311,14 @@ defmodule HiveWeb.PostmortemLive.Show do
                 </:col>
                 <:expanded_content :let={action_item}>
                   <div data-part="action-item-details">
-                    <span data-part="label">
-                      {dgettext("dashboard_postmortems", "Description")}
-                    </span>
-                    <Markdown.content id={"#{action_item_key(action_item)}-description"} body={action_item.description} data-part="description" />
+                    <div :if={has_description?(action_item)} data-part="detail">
+                      <span data-part="label">{dgettext("dashboard_postmortems", "Description")}</span>
+                      <Markdown.content id={"#{action_item_key(action_item)}-description"} body={action_item.description} data-part="description" />
+                    </div>
+                    <div :if={has_resolution_url?(action_item)} data-part="detail">
+                      <span data-part="label">{dgettext("dashboard_postmortems", "Resolved by")}</span>
+                      <.link href={action_item.resolution_url} target="_blank" rel="noopener noreferrer">{action_item.resolution_url}</.link>
+                    </div>
                   </div>
                 </:expanded_content>
               </.table>
@@ -385,6 +391,14 @@ defmodule HiveWeb.PostmortemLive.Show do
     do: String.trim(description) != ""
 
   defp has_description?(_action_item), do: false
+
+  defp has_resolution_url?(%{resolution_url: resolution_url}) when is_binary(resolution_url),
+    do: String.trim(resolution_url) != ""
+
+  defp has_resolution_url?(_action_item), do: false
+
+  defp has_details?(action_item),
+    do: has_description?(action_item) or has_resolution_url?(action_item)
 
   defp action_item_key(%ActionItem{id: id}), do: "action-item-#{id}"
 

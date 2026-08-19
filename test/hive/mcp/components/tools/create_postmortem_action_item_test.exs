@@ -18,6 +18,7 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItemTest do
         "postmortem_id" => "/postmortems/#{postmortem.number}",
         "title" => "Add a registry latency alert",
         "description" => "Page when latency is high.",
+        "resolution_url" => "https://github.com/tuist/hive/pull/123",
         "priority" => "high"
       })
       |> response_json()
@@ -25,6 +26,7 @@ defmodule Hive.MCP.Components.Tools.CreatePostmortemActionItemTest do
     assert response["action_item"]["postmortem_id"] == postmortem.id
     assert response["action_item"]["title"] == "Add a registry latency alert"
     assert response["action_item"]["description"] == "Page when latency is high."
+    assert response["action_item"]["resolution_url"] == "https://github.com/tuist/hive/pull/123"
     assert response["action_item"]["priority"] == "high"
   end
 

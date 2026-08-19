@@ -27,6 +27,7 @@ defmodule Hive.MCP.Components.Tools.Postmortems do
       postmortem_id: action_item.postmortem_id,
       title: action_item.title,
       description: action_item.description,
+      resolution_url: action_item.resolution_url,
       priority: Atom.to_string(action_item.priority),
       completed: not is_nil(action_item.completed_at),
       completed_at: action_item.completed_at,

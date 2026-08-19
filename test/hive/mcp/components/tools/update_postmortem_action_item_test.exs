@@ -21,6 +21,7 @@ defmodule Hive.MCP.Components.Tools.UpdatePostmortemActionItemTest do
         "action_item_id" => action_item.id,
         "title" => "Add a registry latency alert",
         "description" => "Page when latency is high.",
+        "resolution_url" => "https://github.com/tuist/hive/pull/123",
         "priority" => "immediate",
         "completed" => true
       })
@@ -28,6 +29,10 @@ defmodule Hive.MCP.Components.Tools.UpdatePostmortemActionItemTest do
 
     assert completed_response["action_item"]["title"] == "Add a registry latency alert"
     assert completed_response["action_item"]["priority"] == "immediate"
+
+    assert completed_response["action_item"]["resolution_url"] ==
+             "https://github.com/tuist/hive/pull/123"
+
     assert completed_response["action_item"]["completed"] == true
     assert is_binary(completed_response["action_item"]["completed_at"])
 
