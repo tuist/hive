@@ -213,14 +213,6 @@
     }
   }
 
-  & [data-part="spec-table-source"] {
-    display: block;
-    padding: var(--noora-spacing-6) var(--noora-spacing-7);
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-    overflow-wrap: anywhere;
-  }
-
   & [data-part="empty-state"] {
     display: flex;
     flex-direction: column;
