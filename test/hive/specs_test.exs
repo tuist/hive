@@ -152,6 +152,36 @@ defmodule Hive.SpecsTest do
   end
 
   describe "list_specs/1" do
+    test "uses the first level-one Markdown heading as the display title" do
+      user = user()
+
+      assert {:ok, spec} =
+               Specs.create_spec(
+                 %{
+                   "title" => "Stored proposal title",
+                   "body" => "# Markdown document title\n\nThe body of the proposal."
+                 },
+                 user
+               )
+
+      assert Specs.title(spec) == "Markdown document title"
+    end
+
+    test "uses the stored title when the Markdown document has no level-one heading" do
+      user = user()
+
+      assert {:ok, spec} =
+               Specs.create_spec(
+                 %{
+                   "title" => "Stored proposal title",
+                   "body" => "## Context\n\nThe body of the proposal."
+                 },
+                 user
+               )
+
+      assert Specs.title(spec) == "Stored proposal title"
+    end
+
     test "filters specs by status" do
       user = user()
       {:ok, draft} = Specs.create_spec(%{"title" => "Draft", "body" => "Initial proposal."}, user)

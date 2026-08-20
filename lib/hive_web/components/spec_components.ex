@@ -73,7 +73,7 @@ defmodule HiveWeb.SpecComponents do
                 <.icon name="file_text" />
                 <div data-part="spec-table-copy">
                   <div data-part="spec-title-row">
-                    <strong>{spec_number(spec)} {spec.title}</strong>
+                    <strong>{spec_number(spec)} {Specs.title(spec)}</strong>
                     <.badge
                       :if={spec.has_new_activity}
                       label={dgettext("dashboard_specs", "New activity")}
@@ -87,8 +87,19 @@ defmodule HiveWeb.SpecComponents do
                 </div>
               </div>
             </:col>
-            <:col :let={spec} label={dgettext("dashboard_specs", "Source")}>
-              <span data-part="spec-table-source">{source_label(spec)}</span>
+            <:col :let={spec} label={dgettext("dashboard_specs", "Author")}>
+              <div data-part="author-cell">
+                <.text_and_description_cell label={author_name(spec)}>
+                  <:image>
+                    <.avatar
+                      id={"spec-author-#{spec.id}"}
+                      name={author_name(spec)}
+                      color={avatar_color(author_name(spec))}
+                      size="small"
+                    />
+                  </:image>
+                </.text_and_description_cell>
+              </div>
             </:col>
             <:col :let={spec} label={dgettext("dashboard_specs", "Domains")}>
               <div data-part="spec-table-domains">
@@ -557,6 +568,12 @@ defmodule HiveWeb.SpecComponents do
     do: dgettext("dashboard_specs", "Source: %{title}", title: title)
 
   defp source_label(_spec), do: dgettext("dashboard_specs", "Created directly")
+
+  defp author_name(%{created_by_user: %{name: name}}) when is_binary(name) and name != "",
+    do: name
+
+  defp author_name(%{created_by_user: %{email: email}}) when is_binary(email), do: email
+  defp author_name(_spec), do: dgettext("dashboard_specs", "Unknown")
 
   defp project_label(%{project: %{name: name}}) when is_binary(name), do: name
   defp project_label(_spec), do: dgettext("dashboard_specs", "No project")

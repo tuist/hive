@@ -113,6 +113,10 @@
     }
   }
 
+  & [data-part="author-cell"] [data-part="icon"] {
+    box-shadow: none;
+  }
+
   & [data-part="domain-list"],
   & [data-part="spec-table-domains"] {
     display: flex;
@@ -211,14 +215,6 @@
       gap: var(--noora-spacing-3);
       min-width: 0;
     }
-  }
-
-  & [data-part="spec-table-source"] {
-    display: block;
-    padding: var(--noora-spacing-6) var(--noora-spacing-7);
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-    overflow-wrap: anywhere;
   }
 
   & [data-part="empty-state"] {

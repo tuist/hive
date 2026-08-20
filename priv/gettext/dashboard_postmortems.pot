@@ -164,7 +164,7 @@ msgstr ""
 msgid "Markdown body"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/index.ex:189
+#: lib/hive_web/live/postmortem_live/index.ex:191
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
@@ -231,7 +231,7 @@ msgstr ""
 msgid "Postmortems · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/index.ex:188
+#: lib/hive_web/live/postmortem_live/index.ex:190
 #, elixir-autogen, elixir-format
 msgid "Prev"
 msgstr ""
@@ -269,7 +269,7 @@ msgid "Publish postmortem"
 msgstr ""
 
 #: lib/hive_web/live/postmortem_live/index.ex:114
-#: lib/hive_web/live/postmortem_live/index.ex:185
+#: lib/hive_web/live/postmortem_live/index.ex:187
 #: lib/hive_web/live/postmortem_live/show.ex:221
 #, elixir-autogen, elixir-format
 msgid "Published"
@@ -345,7 +345,7 @@ msgstr ""
 msgid "Unassigned domain"
 msgstr ""
 
-#: lib/hive_web/live/postmortem_live/index.ex:202
+#: lib/hive_web/live/postmortem_live/index.ex:204
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr ""

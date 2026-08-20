@@ -23,6 +23,7 @@ defmodule HiveWeb.PostmortemLive.IndexTest do
     assert has_element?(view, "#postmortems-filter")
     assert html =~ "Published"
     assert html =~ "postmortem-viewer@example.com"
+    assert html =~ "postmortem-author-"
     assert {:ok, _show_view, show_html} = live(conn, ~p"/postmortems/#{postmortem.number}")
     assert show_html =~ "A delayed worker backlog affected notifications."
     assert show_html =~ ~s(property="og:image")

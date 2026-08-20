@@ -26,15 +26,15 @@ defmodule HiveWeb.SpecLive.IndexTest do
     assert html_response(conn, 200) =~ ~s|property="og:image"|
   end
 
-  test "lists specs and hides creation from guests", %{conn: conn} do
+  test "lists Markdown document titles and authors, and hides creation from guests", %{conn: conn} do
     {conn, user} = sign_in(conn, "alice@example.com")
     domain = create_domain!(%{name: "Hive"})
 
     {:ok, _spec} =
       Specs.create_spec(
         %{
-          "title" => "GitHub sign-in",
-          "body" => "Initial proposal.",
+          "title" => "Stored proposal title",
+          "body" => "# Markdown document title\n\nInitial proposal.",
           "domain_ids" => [domain.id]
         },
         user
@@ -42,7 +42,12 @@ defmodule HiveWeb.SpecLive.IndexTest do
 
     {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/specs")
 
-    assert html =~ "GitHub sign-in"
+    assert html =~ "Markdown document title"
+    refute html =~ "Stored proposal title"
+    assert html =~ "Author"
+    assert html =~ "alice@example.com"
+    assert html =~ "spec-author-"
+    refute html =~ ">Source<"
     assert html =~ "Hive"
     assert html =~ ~s(data-size="large")
     refute html =~ "New spec"

@@ -22,6 +22,7 @@ defmodule Hive.Specs do
   alias Hive.Specs.View
   alias Hive.Slack
   alias Hive.Slack.Workers.SendNotification
+  alias HiveWeb.Markdown
 
   @pubsub Hive.PubSub
   @topic_prefix "specs"
@@ -93,6 +94,22 @@ defmodule Hive.Specs do
       |> Repo.all()
 
     decorate_with_activity(specs, user)
+  end
+
+  def title(%Spec{body: body, title: fallback}) do
+    body
+    |> String.split("\n")
+    |> Enum.find_value(fn line ->
+      case Regex.run(~r/^\s*#\s+(.+)\s*$/, line) do
+        [_, title] -> Markdown.preview(title, 100)
+        _no_heading -> nil
+      end
+    end)
+    |> case do
+      "" -> fallback
+      nil -> fallback
+      title -> title
+    end
   end
 
   def mark_viewed(%Spec{id: spec_id}, %User{id: user_id})
