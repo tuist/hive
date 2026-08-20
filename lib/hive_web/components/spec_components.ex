@@ -88,16 +88,7 @@ defmodule HiveWeb.SpecComponents do
               </div>
             </:col>
             <:col :let={spec} label={dgettext("dashboard_specs", "Author")}>
-              <.text_and_description_cell label={author_name(spec)}>
-                <:image>
-                  <.avatar
-                    id={"spec-author-#{spec.id}"}
-                    name={author_name(spec)}
-                    color={avatar_color(author_name(spec))}
-                    size="small"
-                  />
-                </:image>
-              </.text_and_description_cell>
+              <.text_cell label={author_name(spec)} />
             </:col>
             <:col :let={spec} label={dgettext("dashboard_specs", "Domains")}>
               <div data-part="spec-table-domains">
