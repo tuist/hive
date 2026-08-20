@@ -46,7 +46,7 @@ defmodule HiveWeb.SpecLive.IndexTest do
     refute html =~ "Stored proposal title"
     assert html =~ "Author"
     assert html =~ "alice@example.com"
-    refute html =~ "spec-author-"
+    assert html =~ "spec-author-"
     refute html =~ ">Source<"
     assert html =~ "Hive"
     assert html =~ ~s(data-size="large")

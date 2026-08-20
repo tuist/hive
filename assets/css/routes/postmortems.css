@@ -97,6 +97,10 @@
     }
   }
 
+  & [data-part="author-cell"] [data-part="icon"] {
+    box-shadow: none;
+  }
+
   & [data-part="pagination"] {
     display: flex;
     justify-content: center;

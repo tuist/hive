@@ -171,16 +171,18 @@ defmodule HiveWeb.PostmortemLive.Index do
             <.table :if={@postmortems != []} id="postmortems-table" rows={@postmortems} row_navigate={fn postmortem -> ~p"/postmortems/#{postmortem.number}" end}>
               <:col :let={postmortem} label={dgettext("dashboard_postmortems", "Postmortem")}><.text_and_description_cell label={dgettext("dashboard_postmortems", "#%{number} %{title}", number: postmortem.number, title: Postmortems.title(postmortem))} description={Markdown.preview(postmortem.body)} icon="alert_triangle" /></:col>
               <:col :let={postmortem} label={dgettext("dashboard_postmortems", "Author")}>
-                <.text_and_description_cell label={author_name(postmortem)}>
-                  <:image>
-                    <.avatar
-                      id={"postmortem-author-#{postmortem.id}"}
-                      name={author_name(postmortem)}
-                      color={avatar_color(author_name(postmortem))}
-                      size="small"
-                    />
-                  </:image>
-                </.text_and_description_cell>
+                <div data-part="author-cell">
+                  <.text_and_description_cell label={author_name(postmortem)}>
+                    <:image>
+                      <.avatar
+                        id={"postmortem-author-#{postmortem.id}"}
+                        name={author_name(postmortem)}
+                        color={avatar_color(author_name(postmortem))}
+                        size="small"
+                      />
+                    </:image>
+                  </.text_and_description_cell>
+                </div>
               </:col>
               <:col :let={postmortem} label={dgettext("dashboard_postmortems", "Published")}><.time_cell time={postmortem.inserted_at} /></:col>
             </.table>

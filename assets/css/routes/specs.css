@@ -113,6 +113,10 @@
     }
   }
 
+  & [data-part="author-cell"] [data-part="icon"] {
+    box-shadow: none;
+  }
+
   & [data-part="domain-list"],
   & [data-part="spec-table-domains"] {
     display: flex;
