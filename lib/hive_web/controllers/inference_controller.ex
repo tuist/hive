@@ -110,11 +110,61 @@ defmodule HiveWeb.InferenceController do
        ) do
     case Inference.request_fun().(request) do
       {:ok, response} ->
-        record_relay(binding, token, response, nil, operation)
-        send_upstream_response(conn, response, "application/json")
+        if Inference.streaming_required?(response) do
+          proxy_streaming_completion(conn, binding, token, request, operation)
+        else
+          record_relay(binding, token, response, nil, operation)
+          send_upstream_response(conn, response, "application/json")
+        end
 
       {:error, _reason} ->
         openai_error(conn, :bad_gateway, "The upstream provider request failed.", "server_error")
+    end
+  end
+
+  defp proxy_streaming_completion(conn, binding, token, request, operation) do
+    stream_ref = make_ref()
+    Process.put(stream_ref, [])
+
+    request =
+      request
+      |> Inference.streaming_request()
+      |> Keyword.put(:into, collect_streamed_completion(stream_ref))
+
+    try do
+      case Inference.request_fun().(request) do
+        {:ok, response} ->
+          case Inference.completion_from_stream(response, Process.get(stream_ref)) do
+            {:ok, response} ->
+              record_relay(binding, token, response, nil, operation)
+              send_upstream_response(conn, response, "application/json")
+
+            {:error, _reason} ->
+              openai_error(
+                conn,
+                :bad_gateway,
+                "The upstream provider request failed.",
+                "server_error"
+              )
+          end
+
+        {:error, _reason} ->
+          openai_error(
+            conn,
+            :bad_gateway,
+            "The upstream provider request failed.",
+            "server_error"
+          )
+      end
+    after
+      Process.delete(stream_ref)
+    end
+  end
+
+  defp collect_streamed_completion(stream_ref) do
+    fn {:data, data}, {request, response} ->
+      Process.put(stream_ref, [data | Process.get(stream_ref, [])])
+      {:cont, {request, response}}
     end
   end
 
