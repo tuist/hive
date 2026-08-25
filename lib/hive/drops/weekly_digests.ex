@@ -364,7 +364,7 @@ defmodule Hive.Drops.WeeklyDigests do
 
   defp run_agent(input, opts) do
     agent = Keyword.get(opts, :agent, WeeklyDigestAgent)
-    agent_opts = opts |> Keyword.get(:agent_opts, []) |> Keyword.put_new(:max_turns, 1)
+    agent_opts = Keyword.get(opts, :agent_opts, [])
     Sessions.run_operation(agent, :generate_weekly_digest, input, agent_opts)
   end
 
