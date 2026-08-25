@@ -92,6 +92,54 @@ defmodule Hive.Drops.WeeklyDigestsTest do
     assert WeeklyDigests.list_published() == []
   end
 
+  test "publishes an empty week when a late public drop becomes available" do
+    assert {:ok, _digest, :empty} =
+             WeeklyDigests.generate_for_week(@week_start,
+               runner: fn _input -> flunk("empty weeks should not call the runner") end
+             )
+
+    domain = create_domain!("Public", :public)
+    insert_drop!(domain, "Late arrival", ~U[2026-07-09 09:00:00Z], "Body")
+
+    assert {:ok, digest, :published} =
+             WeeklyDigests.generate_for_week(@week_start,
+               agents_enabled?: fn -> true end,
+               runner: fn _input ->
+                 {:ok, %{title: "Recovered", summary: "Summary", body: "Narration"}}
+               end
+             )
+
+    assert digest.status == :published
+    assert digest.title == "Recovered"
+  end
+
+  test "reconciles recent empty weeks alongside the latest publishable week" do
+    older_week_start = ~D[2026-06-29]
+
+    assert {:ok, _digest, :empty} =
+             WeeklyDigests.generate_for_week(older_week_start,
+               runner: fn _input -> flunk("empty weeks should not call the runner") end
+             )
+
+    domain = create_domain!("Public", :public)
+    insert_drop!(domain, "Late arrival", ~U[2026-07-01 09:00:00Z], "Body")
+
+    results =
+      WeeklyDigests.generate_publishable_weeks(
+        now: ~U[2026-07-17 18:05:00Z],
+        agents_enabled?: fn -> true end,
+        runner: fn _input ->
+          {:ok, %{title: "Recovered", summary: "Summary", body: "Narration"}}
+        end
+      )
+
+    assert {:ok, %WeeklyDigest{week_start: ^older_week_start, status: :published}, :published} =
+             Enum.find(
+               results,
+               &match?({:ok, %WeeklyDigest{week_start: ^older_week_start}, _}, &1)
+             )
+  end
+
   test "leaves a populated week unclaimed when inference is dormant" do
     domain = create_domain!("Public", :public)
     insert_drop!(domain, "Dormant", ~U[2026-07-07 09:00:00Z], "Body")

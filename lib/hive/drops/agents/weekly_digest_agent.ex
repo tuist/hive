@@ -49,7 +49,7 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
     properties: %{
       title: %{type: "string", minLength: 1, maxLength: 160},
       summary: %{type: "string", minLength: 1, maxLength: 400},
-      body: %{type: "string", minLength: 1, maxLength: 20_000}
+      body: %{type: "string", minLength: 1, maxLength: 5_000}
     },
     required: ["title", "summary", "body"],
     additionalProperties: false
@@ -79,7 +79,7 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
       strongest changes and connect them instead of forcing every input
       into the prose.
     - Keep the title specific and restrained. Keep the summary to one or
-      two sentences. Keep the body between 450 and 900 words when the
+      two sentences. Keep the body between 300 and 600 words when the
       source material supports it, and stay shorter for a quiet week.
     - Never invent outcomes, metrics, motivations, or chronology.
 
