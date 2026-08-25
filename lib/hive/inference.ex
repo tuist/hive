@@ -12,6 +12,7 @@ defmodule Hive.Inference do
   alias Hive.Inference.Token
   alias Hive.Inference.Usage
   alias Hive.Repo
+  alias ServerSentEvents.Parser
 
   @config_key {__MODULE__, :config}
   @token_bytes 32
@@ -309,9 +310,175 @@ defmodule Hive.Inference do
     relay_request_to(binding, "chat/completions", body, stream?(body), opts)
   end
 
+  @doc false
+  def streaming_required?(%{
+        status: 400,
+        body: %{"error" => %{"code" => "streaming_required"}}
+      }),
+      do: true
+
+  def streaming_required?(_response), do: false
+
+  @doc false
+  def streaming_request(request) when is_list(request) do
+    headers =
+      request
+      |> Keyword.fetch!(:headers)
+      |> Enum.reject(fn {name, _value} -> String.downcase(to_string(name)) == "accept" end)
+
+    request
+    |> Keyword.update!(:json, &Map.put(&1, "stream", true))
+    |> Keyword.put(:headers, [{"accept", "text/event-stream"} | headers])
+  end
+
+  @doc false
+  def completion_from_stream(response, chunks) when is_list(chunks) do
+    {events, _parser} =
+      chunks
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+      |> then(&Parser.parse(Parser.new(), &1))
+
+    events
+    |> Enum.reduce_while({:ok, initial_streamed_completion()}, fn event, {:ok, completion} ->
+      case stream_event_payload(event) do
+        :ignore ->
+          {:cont, {:ok, completion}}
+
+        {:ok, payload} ->
+          {:cont, {:ok, merge_streamed_completion(completion, payload)}}
+
+        :error ->
+          {:halt, {:error, :invalid_streamed_completion}}
+      end
+    end)
+    |> case do
+      {:ok, completion} -> build_streamed_completion(response, completion)
+      error -> error
+    end
+  end
+
   def relay_embedding_request(%ModelBinding{} = binding, body, opts \\ []) when is_map(body) do
     relay_request_to(binding, "embeddings", body, false, opts)
   end
+
+  defp initial_streamed_completion do
+    %{id: nil, created: nil, model: nil, choices: %{}, usage: nil}
+  end
+
+  defp stream_event_payload(%{data: data}) when is_binary(data) do
+    case String.trim(data) do
+      "" -> :ignore
+      "[DONE]" -> :ignore
+      payload -> decode_stream_event_payload(payload)
+    end
+  end
+
+  defp stream_event_payload(_event), do: :ignore
+
+  defp decode_stream_event_payload(payload) do
+    case JSON.decode(payload) do
+      {:ok, decoded} when is_map(decoded) -> {:ok, decoded}
+      _error -> :error
+    end
+  end
+
+  defp merge_streamed_completion(completion, payload) do
+    completion
+    |> put_stream_value(:id, payload, "id")
+    |> put_stream_value(:created, payload, "created")
+    |> put_stream_value(:model, payload, "model")
+    |> put_stream_value(:usage, payload, "usage")
+    |> merge_streamed_choices(Map.get(payload, "choices", []))
+  end
+
+  defp put_stream_value(completion, key, payload, payload_key) do
+    case Map.get(payload, payload_key) do
+      nil -> completion
+      value -> Map.put(completion, key, value)
+    end
+  end
+
+  defp merge_streamed_choices(completion, choices) when is_list(choices) do
+    Enum.reduce(choices, completion, &merge_streamed_choice/2)
+  end
+
+  defp merge_streamed_choices(completion, _choices), do: completion
+
+  defp merge_streamed_choice(%{"index" => index} = choice, completion) when is_integer(index) do
+    current_choice =
+      Map.get(completion.choices, index, %{
+        "index" => index,
+        "message" => %{"role" => "assistant", "content" => nil},
+        "finish_reason" => nil
+      })
+
+    updated_choice =
+      current_choice
+      |> Map.update!("message", &merge_streamed_message(&1, Map.get(choice, "delta", %{})))
+      |> put_choice_value(choice, "finish_reason")
+      |> put_choice_value(choice, "logprobs")
+
+    put_in(completion, [:choices, index], updated_choice)
+  end
+
+  defp merge_streamed_choice(_choice, completion), do: completion
+
+  defp merge_streamed_message(message, delta) when is_map(delta) do
+    Enum.reduce(delta, message, fn
+      {key, value}, message
+      when key in ["content", "reasoning_content", "refusal"] and is_binary(value) ->
+        Map.put(message, key, (Map.get(message, key) || "") <> value)
+
+      {"role", value}, message when is_binary(value) ->
+        Map.put(message, "role", value)
+
+      {key, value}, message when not is_nil(value) ->
+        Map.put(message, key, value)
+
+      _entry, message ->
+        message
+    end)
+  end
+
+  defp merge_streamed_message(message, _delta), do: message
+
+  defp put_choice_value(choice, payload, key) do
+    case Map.get(payload, key) do
+      nil -> choice
+      value -> Map.put(choice, key, value)
+    end
+  end
+
+  defp build_streamed_completion(
+         response,
+         %{id: id, created: created, model: model, choices: choices} = completion
+       )
+       when is_binary(id) and is_integer(created) and is_binary(model) do
+    choices = choices |> Map.values() |> Enum.sort_by(& &1["index"])
+
+    if choices == [] do
+      {:error, :invalid_streamed_completion}
+    else
+      body =
+        %{
+          "id" => id,
+          "object" => "chat.completion",
+          "created" => created,
+          "model" => model,
+          "choices" => choices
+        }
+        |> maybe_put_usage(completion.usage)
+
+      {:ok, %{response | body: body, headers: [{"content-type", "application/json"}]}}
+    end
+  end
+
+  defp build_streamed_completion(_response, _completion),
+    do: {:error, :invalid_streamed_completion}
+
+  defp maybe_put_usage(body, usage) when is_map(usage), do: Map.put(body, "usage", usage)
+  defp maybe_put_usage(body, _usage), do: body
 
   defp relay_request_to(%ModelBinding{} = binding, path, body, streamed?, opts) do
     with {:ok, upstream} <- upstream_for(binding, opts) do

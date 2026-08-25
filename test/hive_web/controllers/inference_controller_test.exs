@@ -185,6 +185,85 @@ defmodule HiveWeb.InferenceControllerTest do
     assert Decimal.equal?(cost_usd, Decimal.new("0"))
   end
 
+  test "POST /inference/v1/chat/completions bridges a streaming-only upstream", %{conn: conn} do
+    parent = self()
+
+    put_relay_config(fn request ->
+      send(parent, {:upstream_request, request})
+
+      case Keyword.fetch(request, :into) do
+        :error ->
+          {:ok,
+           Req.Response.new(
+             status: 400,
+             headers: [{"content-type", "application/json"}],
+             body: %{"error" => %{"code" => "streaming_required"}}
+           )}
+
+        {:ok, into} ->
+          response =
+            Req.Response.new(status: 200, headers: [{"content-type", "text/event-stream"}])
+
+          stream =
+            """
+            data: {"id":"chatcmpl-stream","object":"chat.completion.chunk","created":1725000000,"model":"upstream-model","choices":[{"index":0,"delta":{"role":"assistant","content":"Hello"},"finish_reason":null}]}
+
+            data: {"id":"chatcmpl-stream","object":"chat.completion.chunk","created":1725000000,"model":"upstream-model","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30}}
+
+            data: [DONE]
+
+            """
+
+          {first_chunk, second_chunk} = String.split_at(stream, 80)
+
+          assert {:cont, acc} = into.({:data, first_chunk}, {request, response})
+          assert {:cont, _acc} = into.({:data, second_chunk}, acc)
+
+          {:ok, %{response | body: nil}}
+      end
+    end)
+
+    {binding, token_value} = relay_token!()
+
+    response =
+      conn
+      |> put_req_header("authorization", "Bearer #{token_value}")
+      |> post(~p"/inference/v1/chat/completions", %{
+        "model" => "blick-code-review",
+        "messages" => [%{"role" => "user", "content" => "Review this change."}]
+      })
+      |> json_response(200)
+
+    assert %{
+             "id" => "chatcmpl-stream",
+             "object" => "chat.completion",
+             "model" => "upstream-model",
+             "choices" => [
+               %{
+                 "finish_reason" => "stop",
+                 "message" => %{"role" => "assistant", "content" => "Hello world"}
+               }
+             ],
+             "usage" => %{"prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30}
+           } = response
+
+    assert_received {:upstream_request, initial_request}
+    refute Keyword.has_key?(initial_request, :into)
+
+    assert_received {:upstream_request, streamed_request}
+    assert Keyword.fetch!(streamed_request, :json)["stream"]
+    assert {"accept", "text/event-stream"} in Keyword.fetch!(streamed_request, :headers)
+
+    period = {DateTime.add(DateTime.utc_now(), -1, :day), DateTime.utc_now()}
+
+    assert %{
+             request_count: 1,
+             input_tokens: 10,
+             output_tokens: 20,
+             total_tokens: 30
+           } = Inference.usage_summary(binding, period)
+  end
+
   test "POST /inference/v1/embeddings rewrites the model before forwarding", %{conn: conn} do
     parent = self()
 
