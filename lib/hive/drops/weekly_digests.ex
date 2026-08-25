@@ -19,6 +19,7 @@ defmodule Hive.Drops.WeeklyDigests do
   @claim_timeout_seconds 300
   @default_page_size 10
   @publication_time ~T[17:00:00]
+  @reconciliation_window_weeks 8
 
   def latest_publishable_week(now \\ DateTime.utc_now()) do
     today = DateTime.to_date(now)
@@ -39,12 +40,35 @@ defmodule Hive.Drops.WeeklyDigests do
     generate_for_week(week_start, Keyword.delete(opts, :now))
   end
 
+  def generate_publishable_weeks(opts \\ []) do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+    {latest_week_start, _week_end} = latest_publishable_week(now)
+
+    [latest_week_start | recoverable_week_starts(latest_week_start)]
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.map(&generate_for_week(&1, Keyword.delete(opts, :now)))
+  end
+
   def generate_for_week(%Date{} = week_start, opts \\ []) do
     week_end = Date.add(week_start, 4)
 
     case current_result(week_start) do
       {:done, digest} ->
         {:ok, digest, :existing}
+
+      {:empty, digest} ->
+        drops =
+          Drops.list_drops_between(week_start, Date.add(week_end, 1),
+            user: nil,
+            limit: @max_drops
+          )
+
+        if drops == [] do
+          {:ok, digest, :existing}
+        else
+          generate_claimed_digest(week_start, week_end, drops, opts, reopen_empty?: true)
+        end
 
       :continue ->
         drops =
@@ -198,8 +222,8 @@ defmodule Hive.Drops.WeeklyDigests do
     end
   end
 
-  defp generate_claimed_digest(week_start, week_end, drops, opts) do
-    with {:claimed, digest} <- claim_week(week_start, week_end),
+  defp generate_claimed_digest(week_start, week_end, drops, opts, claim_opts \\ []) do
+    with {:claimed, digest} <- claim_week(week_start, week_end, claim_opts),
          {:ok, output} <- run_generator(build_input(week_start, week_end, drops), opts),
          {:ok, attrs} <- normalize_output(output),
          {:ok, digest} <- publish(digest, drops, attrs) do
@@ -223,15 +247,18 @@ defmodule Hive.Drops.WeeklyDigests do
 
   defp current_result(week_start) do
     case Repo.get_by(WeeklyDigest, week_start: week_start) do
-      %WeeklyDigest{status: status} = digest when status in [:published, :empty] ->
+      %WeeklyDigest{status: :published} = digest ->
         {:done, digest}
+
+      %WeeklyDigest{status: :empty} = digest ->
+        {:empty, digest}
 
       _other ->
         :continue
     end
   end
 
-  defp claim_week(week_start, week_end) do
+  defp claim_week(week_start, week_end, opts \\ []) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     id = Ecto.UUID.generate()
 
@@ -256,11 +283,11 @@ defmodule Hive.Drops.WeeklyDigests do
     if inserted == 1 do
       {:claimed, Repo.get!(WeeklyDigest, id)}
     else
-      reclaim_existing(week_start, now)
+      reclaim_existing(week_start, now, opts)
     end
   end
 
-  defp reclaim_existing(week_start, now) do
+  defp reclaim_existing(week_start, now, opts) do
     Repo.transaction(fn ->
       digest =
         WeeklyDigest
@@ -269,8 +296,11 @@ defmodule Hive.Drops.WeeklyDigests do
         |> Repo.one!()
 
       cond do
-        digest.status in [:published, :empty] ->
+        digest.status == :published ->
           {:existing, digest}
+
+        digest.status == :empty ->
+          reclaim_empty_digest(digest, opts)
 
         digest.status == :failed or stale_claim?(digest, now) ->
           reclaim_digest(digest)
@@ -295,6 +325,14 @@ defmodule Hive.Drops.WeeklyDigests do
     case update_digest(digest, %{status: :generating, failure_reason: nil}) do
       {:ok, reclaimed} -> {:claimed, reclaimed}
       {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  defp reclaim_empty_digest(digest, opts) do
+    if Keyword.get(opts, :reopen_empty?, false) do
+      reclaim_digest(digest)
+    else
+      {:existing, digest}
     end
   end
 
@@ -326,7 +364,7 @@ defmodule Hive.Drops.WeeklyDigests do
 
   defp run_agent(input, opts) do
     agent = Keyword.get(opts, :agent, WeeklyDigestAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
+    agent_opts = opts |> Keyword.get(:agent_opts, []) |> Keyword.put_new(:max_turns, 1)
     Sessions.run_operation(agent, :generate_weekly_digest, input, agent_opts)
   end
 
@@ -442,4 +480,16 @@ defmodule Hive.Drops.WeeklyDigests do
 
   defp iso8601(%NaiveDateTime{} = datetime),
     do: datetime |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  defp recoverable_week_starts(latest_week_start) do
+    earliest_week_start = Date.add(latest_week_start, -7 * @reconciliation_window_weeks)
+
+    WeeklyDigest
+    |> where(
+      [digest],
+      digest.status in [:empty, :failed] and digest.week_start >= ^earliest_week_start
+    )
+    |> select([digest], digest.week_start)
+    |> Repo.all()
+  end
 end

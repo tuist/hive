@@ -1,6 +1,6 @@
 defmodule Hive.Drops.WeeklyDigestWorker do
   @moduledoc """
-  Generates the latest publishable Monday-to-Friday Drops digest once.
+  Generates and reconciles published-week Drops digests.
   """
 
   use Oban.Worker,
@@ -21,28 +21,29 @@ defmodule Hive.Drops.WeeklyDigestWorker do
   def perform(%Oban.Job{}) do
     Audit.put_context(%{interface: "worker"})
 
-    case WeeklyDigests.generate_latest_week() do
-      {:ok, digest, :published} ->
-        Audit.record(:"drop.weekly_digest.generated", %{
-          target_type: "drop_digest",
-          target_id: digest.id,
-          target_label: digest.title,
-          metadata: %{week_start: Date.to_iso8601(digest.week_start)}
-        })
+    outcomes = WeeklyDigests.generate_publishable_weeks()
 
-        :ok
+    outcomes
+    |> Enum.filter(&match?({:ok, _digest, :published}, &1))
+    |> Enum.each(fn {:ok, digest, :published} ->
+      Audit.record(:"drop.weekly_digest.generated", %{
+        target_type: "drop_digest",
+        target_id: digest.id,
+        target_label: digest.title,
+        metadata: %{week_start: Date.to_iso8601(digest.week_start)}
+      })
+    end)
 
-      {:ok, _digest, :busy} ->
+    cond do
+      Enum.any?(outcomes, &match?({:error, _reason}, &1)) ->
+        {:error, reason} = Enum.find(outcomes, &match?({:error, _reason}, &1))
+        handle_error(reason)
+
+      Enum.any?(outcomes, &match?({:ok, _digest, :busy}, &1)) ->
         {:snooze, @claim_snooze_seconds}
 
-      {:ok, _digest, _outcome} ->
+      true ->
         :ok
-
-      :skipped ->
-        :ok
-
-      {:error, reason} ->
-        handle_error(reason)
     end
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] -> handle_error(error)

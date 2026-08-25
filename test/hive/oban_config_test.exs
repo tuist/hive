@@ -13,7 +13,7 @@ defmodule Hive.ObanConfigTest do
     assert Keyword.fetch!(opts, :rescue_after) == :timer.minutes(30)
   end
 
-  test "generates the weekly Drops digest every Friday and on boot" do
+  test "reconciles the weekly Drops digest daily and on boot" do
     plugins =
       :hive
       |> Application.fetch_env!(Oban)
@@ -24,6 +24,6 @@ defmodule Hive.ObanConfigTest do
 
     crontab = Keyword.fetch!(opts, :crontab)
     assert {"@reboot", Hive.Drops.WeeklyDigestWorker} in crontab
-    assert {"0 17 * * 5", Hive.Drops.WeeklyDigestWorker} in crontab
+    assert {"5 18 * * *", Hive.Drops.WeeklyDigestWorker} in crontab
   end
 end

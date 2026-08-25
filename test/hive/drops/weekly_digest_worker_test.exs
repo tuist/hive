@@ -16,7 +16,7 @@ defmodule Hive.Drops.WeeklyDigestWorkerTest do
       title: "The connected week"
     }
 
-    stub(WeeklyDigests, :generate_latest_week, fn -> {:ok, digest, :published} end)
+    stub(WeeklyDigests, :generate_publishable_weeks, fn -> [{:ok, digest, :published}] end)
 
     assert :ok = WeeklyDigestWorker.perform(%Oban.Job{})
 
@@ -30,7 +30,7 @@ defmodule Hive.Drops.WeeklyDigestWorkerTest do
 
   test "does not audit an edition that already existed" do
     digest = %WeeklyDigest{id: Ecto.UUID.generate()}
-    stub(WeeklyDigests, :generate_latest_week, fn -> {:ok, digest, :existing} end)
+    stub(WeeklyDigests, :generate_publishable_weeks, fn -> [{:ok, digest, :existing}] end)
 
     assert :ok = WeeklyDigestWorker.perform(%Oban.Job{})
     refute Repo.get_by(Activity, target_id: digest.id)
@@ -38,13 +38,13 @@ defmodule Hive.Drops.WeeklyDigestWorkerTest do
 
   test "snoozes while another worker owns the weekly claim" do
     digest = %WeeklyDigest{id: Ecto.UUID.generate()}
-    stub(WeeklyDigests, :generate_latest_week, fn -> {:ok, digest, :busy} end)
+    stub(WeeklyDigests, :generate_publishable_weeks, fn -> [{:ok, digest, :busy}] end)
 
     assert {:snooze, 300} = WeeklyDigestWorker.perform(%Oban.Job{})
   end
 
   test "cancels credit-limit failures instead of retrying" do
-    stub(WeeklyDigests, :generate_latest_week, fn -> {:error, :llm_credit_limit} end)
+    stub(WeeklyDigests, :generate_publishable_weeks, fn -> [{:error, :llm_credit_limit}] end)
 
     assert {:cancel, :llm_credit_limit} = WeeklyDigestWorker.perform(%Oban.Job{})
   end

@@ -10,6 +10,7 @@ defmodule Hive.Drops.WeeklyDigestAgentTest do
     assert prompt =~ "not release"
     assert prompt =~ "notes, a changelog list"
     assert prompt =~ "Do not turn the body into a bullet list"
+    assert prompt =~ "between 300 and 600 words"
     assert prompt =~ "Never use em dashes"
     refute prompt =~ "—"
     assert WeeklyDigestAgent.tools() == []
