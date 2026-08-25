@@ -16,6 +16,8 @@ defmodule Hive.Drops.WeeklyDigests do
 
   @max_drops 40
   @max_drop_body_length 1_500
+  @fallback_drop_limit 10
+  @fallback_drop_body_length 600
   @claim_timeout_seconds 300
   @default_page_size 10
   @publication_time ~T[17:00:00]
@@ -223,25 +225,38 @@ defmodule Hive.Drops.WeeklyDigests do
   end
 
   defp generate_claimed_digest(week_start, week_end, drops, opts, claim_opts \\ []) do
-    with {:claimed, digest} <- claim_week(week_start, week_end, claim_opts),
-         {:ok, output} <- run_generator(build_input(week_start, week_end, drops), opts),
-         {:ok, attrs} <- normalize_output(output),
-         {:ok, digest} <- publish(digest, drops, attrs) do
-      {:ok, digest, :published}
-    else
+    case claim_week(week_start, week_end, claim_opts) do
+      {:claimed, digest} ->
+        generate_from_claimed_digest(digest, week_start, week_end, drops, opts)
+
       {:existing, digest} ->
         {:ok, digest, :existing}
 
       {:busy, digest} ->
         {:ok, digest, :busy}
 
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp generate_from_claimed_digest(digest, week_start, week_end, drops, opts) do
+    with {:ok, output} <- run_generator(build_input(week_start, week_end, drops), opts),
+         {:ok, attrs} <- normalize_output(output),
+         {:ok, digest} <- publish(digest, drops, attrs) do
+      {:ok, digest, :published}
+    else
       {:error, :llm_not_configured} ->
         delete_generating_digest(week_start)
         :skipped
 
       {:error, reason} ->
-        mark_failed(week_start, reason)
-        {:error, reason}
+        if Keyword.get(opts, :fallback_on_failure?, true) do
+          publish_fallback(digest, week_start, week_end, drops, reason)
+        else
+          mark_failed(week_start, reason)
+          {:error, reason}
+        end
     end
   end
 
@@ -410,6 +425,83 @@ defmodule Hive.Drops.WeeklyDigests do
     |> case do
       {:ok, result} -> result
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp publish_fallback(digest, week_start, week_end, drops, reason) do
+    case publish(digest, drops, fallback_attrs(week_start, week_end, drops)) do
+      {:ok, digest} ->
+        {:ok, digest, :published}
+
+      {:error, publish_reason} ->
+        mark_failed(week_start, publish_reason)
+        {:error, reason}
+    end
+  end
+
+  defp fallback_attrs(week_start, week_end, drops) do
+    %{
+      title: fallback_title(week_start, drops),
+      summary: fallback_summary(drops),
+      body: fallback_body(week_start, week_end, drops)
+    }
+  end
+
+  defp fallback_title(_week_start, [drop]) do
+    "Weekly Drops: " <> truncate(fallback_text(drop.title), 140)
+  end
+
+  defp fallback_title(week_start, _drops), do: "Weekly Drops: #{Date.to_iso8601(week_start)}"
+
+  defp fallback_summary([drop]) do
+    "One public drop was published this week: #{fallback_text(drop.title)}."
+  end
+
+  defp fallback_summary(drops) do
+    "#{length(drops)} public drops were published this week, including #{fallback_highlights(drops)}."
+  end
+
+  defp fallback_highlights(drops) do
+    drops
+    |> Enum.take(3)
+    |> Enum.map_join(", ", &fallback_text(&1.title))
+    |> truncate(300)
+  end
+
+  defp fallback_body(week_start, week_end, drops) do
+    introduction =
+      "These public Drops were published from #{Date.to_iso8601(week_start)} through #{Date.to_iso8601(week_end)}."
+
+    sections =
+      drops
+      |> Enum.take(@fallback_drop_limit)
+      |> Enum.map(&fallback_drop_section/1)
+
+    [introduction | sections]
+    |> Enum.join("\n\n")
+    |> maybe_append_remaining_drops(drops)
+  end
+
+  defp fallback_drop_section(drop) do
+    body =
+      drop.body
+      |> fallback_text()
+      |> truncate(@fallback_drop_body_length)
+
+    "## #{fallback_text(drop.title)}\n\n#{body}\n\n[Read the public drop](#{Drops.public_path(drop)})"
+  end
+
+  defp maybe_append_remaining_drops(body, drops) when length(drops) > @fallback_drop_limit do
+    body <>
+      "\n\nAdditional public Drops were published this week. Browse Drops for the complete list."
+  end
+
+  defp maybe_append_remaining_drops(body, _drops), do: body
+
+  defp fallback_text(value) do
+    case normalize_text(value) do
+      nil -> "Read the public drop for the full update."
+      text -> text
     end
   end
 

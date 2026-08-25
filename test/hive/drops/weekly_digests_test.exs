@@ -160,6 +160,7 @@ defmodule Hive.Drops.WeeklyDigestsTest do
     assert {:error, :timeout} =
              WeeklyDigests.generate_for_week(@week_start,
                agents_enabled?: fn -> true end,
+               fallback_on_failure?: false,
                runner: fn _input -> {:error, :timeout} end
              )
 
@@ -175,6 +176,22 @@ defmodule Hive.Drops.WeeklyDigestsTest do
 
     assert digest.status == :published
     assert digest.title == "Recovered"
+  end
+
+  test "publishes a source-backed fallback when generation fails" do
+    domain = create_domain!("Public", :public)
+    drop = insert_drop!(domain, "Reliable updates", ~U[2026-07-07 09:00:00Z], "Source body")
+
+    assert {:ok, digest, :published} =
+             WeeklyDigests.generate_for_week(@week_start,
+               agents_enabled?: fn -> true end,
+               runner: fn _input -> {:error, :timeout} end
+             )
+
+    assert digest.title == "Weekly Drops: Reliable updates"
+    assert digest.summary == "One public drop was published this week: Reliable updates."
+    assert digest.body =~ "Source body"
+    assert digest.body =~ "[Read the public drop](/drops/#{drop.number})"
   end
 
   test "selects the latest publishable Monday-to-Friday workweek" do
