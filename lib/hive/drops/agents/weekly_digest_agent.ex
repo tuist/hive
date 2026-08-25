@@ -6,54 +6,10 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
 
   use Condukt
 
+  alias Hive.Agents.Sessions
   alias Hive.Agents.StyleGuide
 
-  @drop_schema %{
-    type: "object",
-    properties: %{
-      id: %{type: "string"},
-      title: %{type: "string"},
-      body: %{type: "string"},
-      url: %{type: "string"},
-      source_url: %{type: "string"},
-      published_at: %{type: "string"},
-      domains: %{type: "array", items: %{type: "string"}},
-      projects: %{type: "array", items: %{type: "string"}}
-    },
-    required: [
-      "id",
-      "title",
-      "body",
-      "url",
-      "source_url",
-      "published_at",
-      "domains",
-      "projects"
-    ],
-    additionalProperties: false
-  }
-
-  @input_schema %{
-    type: "object",
-    properties: %{
-      week_start: %{type: "string"},
-      week_end: %{type: "string"},
-      drops: %{type: "array", items: @drop_schema, minItems: 1}
-    },
-    required: ["week_start", "week_end", "drops"],
-    additionalProperties: false
-  }
-
-  @output_schema %{
-    type: "object",
-    properties: %{
-      title: %{type: "string", minLength: 1, maxLength: 160},
-      summary: %{type: "string", minLength: 1, maxLength: 400},
-      body: %{type: "string", minLength: 1, maxLength: 5_000}
-    },
-    required: ["title", "summary", "body"],
-    additionalProperties: false
-  }
+  @max_tokens 2_400
 
   @impl true
   def system_prompt do
@@ -90,12 +46,53 @@ defmodule Hive.Drops.Agents.WeeklyDigestAgent do
   @impl true
   def tools, do: []
 
-  operation(:generate_weekly_digest,
-    input: @input_schema,
-    output: @output_schema,
-    instructions: """
-    Write one cohesive weekly digest from the supplied public drops. Return
-    its title, standalone summary, and full Markdown body.
+  def generate(input, opts \\ []) when is_map(input) and is_list(opts) do
+    opts =
+      opts
+      |> Keyword.put_new(:max_tokens, @max_tokens)
+      |> Keyword.put_new(:max_turns, 1)
+
+    case Sessions.stream(__MODULE__, prompt(input), opts, &collect_text/1) do
+      {:ok, response} -> decode_output(response)
+      error -> error
+    end
+  end
+
+  defp prompt(input) do
     """
-  )
+    Write one cohesive weekly digest from the supplied public drops.
+
+    Return only one JSON object, with exactly these string fields:
+    - title: a specific, restrained title no longer than 160 characters
+    - summary: one or two sentences no longer than 400 characters
+    - body: 300 to 600 words of connected Markdown prose
+
+    The body must be editorial narration, not a changelog list. Explain the
+    thread between the strongest changes, link concrete claims using supplied
+    Hive drop URLs, and do not mention the writing process. Do not use a code
+    fence.
+
+    #{Jason.encode!(input)}
+    """
+  end
+
+  defp collect_text(events) do
+    events
+    |> Enum.reduce_while({:ok, []}, fn
+      {:text, chunk}, {:ok, chunks} -> {:cont, {:ok, [chunk | chunks]}}
+      {:error, reason}, _result -> {:halt, {:error, reason}}
+      _event, result -> {:cont, result}
+    end)
+    |> case do
+      {:ok, chunks} -> {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary()}
+      error -> error
+    end
+  end
+
+  defp decode_output(response) do
+    case Jason.decode(response) do
+      {:ok, output} when is_map(output) -> {:ok, output}
+      _other -> {:error, :invalid_weekly_digest}
+    end
+  end
 end
