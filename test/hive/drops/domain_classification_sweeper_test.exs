@@ -41,4 +41,44 @@ defmodule Hive.Drops.DomainClassificationSweeperTest do
     assert first.id == second.id
     assert second.conflict?
   end
+
+  test "perform/1 leaves an account-scoped failure alone during its cooldown" do
+    drop = insert_drop!(System.unique_integer([:positive]))
+    :ok = Drops.mark_drop_classification_failed(drop.id, :llm_credit_limit)
+
+    assert :ok = perform_job(DomainClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  test "perform/1 reconsiders an account-scoped failure once the cooldown passes" do
+    drop = insert_drop!(System.unique_integer([:positive]))
+    :ok = Drops.mark_drop_classification_failed(drop.id, :llm_credit_limit)
+    backdate_failure!(drop.id, 7_200)
+
+    assert :ok = perform_job(DomainClassificationSweeper, %{})
+
+    drop_id = drop.id
+
+    assert [%Oban.Job{args: %{"drop_id" => ^drop_id}}] =
+             all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  test "perform/1 never reconsiders a record-scoped failure" do
+    drop = insert_drop!(System.unique_integer([:positive]))
+    :ok = Drops.mark_drop_classification_failed(drop.id, :llm_invalid_credentials)
+    backdate_failure!(drop.id, 7_200)
+
+    assert :ok = perform_job(DomainClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: DomainClassificationWorker)
+  end
+
+  defp backdate_failure!(drop_id, seconds_ago) do
+    failed_at =
+      DateTime.utc_now() |> DateTime.add(-seconds_ago, :second) |> DateTime.truncate(:second)
+
+    Repo.update_all(
+      from(drop in Hive.Drops.Drop, where: drop.id == ^drop_id),
+      set: [classification_failed_at: failed_at]
+    )
+  end
 end

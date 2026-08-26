@@ -20,6 +20,10 @@ defmodule Hive.Drops do
 
   import Ecto.Query
 
+  # How long a drop tombstoned by an account-scoped model failure waits before
+  # the sweeper reconsiders it.
+  @account_failure_retry_after 3_600
+
   alias Hive.Auth
   alias Hive.Drops.Drop
   alias Hive.Drops.DropDomain
@@ -402,16 +406,24 @@ defmodule Hive.Drops do
     selected
   end
 
-  @doc "Records a terminal classification failure so scheduled sweeps do not retry it."
+  @doc """
+  Records a terminal classification failure so scheduled sweeps do not retry it.
+
+  An account-scoped failure refreshes its own timestamp, which is what paces the
+  sweeper's reconsideration window; a record-scoped failure is written once and
+  left alone.
+  """
   def mark_drop_classification_failed(drop_id, reason)
       when is_binary(drop_id) and (is_atom(reason) or is_binary(reason)) do
     failed_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    account_failures = Hive.Agents.Errors.account_failure_names()
 
     Drop
     |> where(
       [drop],
       drop.id == ^drop_id and is_nil(drop.classified_at) and
-        is_nil(drop.classification_failed_at)
+        (is_nil(drop.classification_failed_at) or
+           drop.classification_failure in ^account_failures)
     )
     |> Repo.update_all(
       set: [classification_failure: to_string(reason), classification_failed_at: failed_at]
@@ -420,14 +432,29 @@ defmodule Hive.Drops do
     :ok
   end
 
-  @doc "Returns pending drops in oldest-first order. Used by the classification sweeper."
+  @doc """
+  Returns pending drops in oldest-first order. Used by the classification sweeper.
+
+  Drops tombstoned by an account-scoped failure come back once `retry_after`
+  has passed: credit exhaustion said nothing about the drop, so burying it
+  permanently loses work that succeeds as soon as the account recovers.
+  """
   def list_unclassified_drops(opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
+    retry_after = Keyword.get(opts, :retry_after, @account_failure_retry_after)
+
+    cutoff =
+      DateTime.utc_now() |> DateTime.add(-retry_after, :second) |> DateTime.truncate(:second)
+
+    account_failures = Hive.Agents.Errors.account_failure_names()
 
     Drop
     |> where(
       [drop],
-      is_nil(drop.classified_at) and is_nil(drop.classification_failed_at)
+      is_nil(drop.classified_at) and
+        (is_nil(drop.classification_failed_at) or
+           (drop.classification_failure in ^account_failures and
+              drop.classification_failed_at < ^cutoff))
     )
     |> order_by([drop], asc: drop.inserted_at)
     |> limit(^limit)

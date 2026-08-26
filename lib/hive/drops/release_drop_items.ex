@@ -15,7 +15,14 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   @max_release_body_length 20_000
   @max_reference_urls 40
-  @max_fetched_reference_urls 50
+  @max_fetched_reference_urls 12
+
+  # References are crawled breadth-first out of the release body, so a release
+  # that links a hub page pulls in a long tail of documents. Bound the total
+  # characters that reach the prompt rather than just the document count: at the
+  # previous 50 documents x 12k characters each, a single release could carry a
+  # six-figure token prompt, and `max_turns` resent it on every turn.
+  @max_reference_content_chars 60_000
   @fetch_concurrency 8
   @fetch_timeout 45_000
   @url_re ~r{https?://[^\s<>\]\)"]+}i
@@ -49,7 +56,7 @@ defmodule Hive.Drops.ReleaseDropItems do
         body: truncate(release.body || ""),
         url: release.html_url || "",
         published_at: release.published_at || release.created_at || "",
-        references: Enum.filter(references, &successful_reference?/1)
+        references: references |> Enum.filter(&successful_reference?/1) |> take_within_budget()
       }
     }
   end
@@ -65,6 +72,15 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   defp fetch_reference_queue(urls, seen_urls, fetcher, references) do
     remaining = @max_fetched_reference_urls - length(references)
+
+    if remaining <= 0 or content_length(references) >= @max_reference_content_chars do
+      references
+    else
+      crawl(urls, seen_urls, fetcher, references, remaining)
+    end
+  end
+
+  defp crawl(urls, seen_urls, fetcher, references, remaining) do
     urls = Enum.take(urls, remaining)
     fetched_references = fetch_url_batch(urls, fetcher)
     references = references ++ fetched_references
@@ -80,6 +96,35 @@ defmodule Hive.Drops.ReleaseDropItems do
     seen_urls = Enum.reduce(discovered_urls, seen_urls, &MapSet.put(&2, &1))
 
     fetch_reference_queue(discovered_urls, seen_urls, fetcher, references)
+  end
+
+  # Keeps references whole until the character budget runs out, then trims the
+  # one that straddles the limit so the prompt stays bounded.
+  defp take_within_budget(references) do
+    references
+    |> Enum.reduce({[], @max_reference_content_chars}, fn reference, {kept, left} ->
+      size = reference |> Map.get(:content, "") |> String.length()
+
+      cond do
+        left <= 0 -> {kept, 0}
+        size <= left -> {[reference | kept], left - size}
+        true -> {[trim_reference(reference, left) | kept], 0}
+      end
+    end)
+    |> elem(0)
+    |> Enum.reverse()
+  end
+
+  defp trim_reference(reference, budget) do
+    reference
+    |> Map.put(:content, reference |> Map.get(:content, "") |> String.slice(0, budget))
+    |> Map.put(:truncated, true)
+  end
+
+  defp content_length(references) do
+    Enum.reduce(references, 0, fn reference, total ->
+      total + (reference |> Map.get(:content, "") |> String.length())
+    end)
   end
 
   defp fetch_url_batch([], _fetcher), do: []

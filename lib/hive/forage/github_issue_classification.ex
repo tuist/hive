@@ -13,6 +13,7 @@ defmodule Hive.Forage.GitHubIssueClassification do
   import Ecto.Query
 
   alias Hive.Agents
+  alias Hive.Agents.Errors
   alias Hive.Agents.Sessions
   alias Hive.Forage.Agents.GitHubIssueClassifierAgent
   alias Hive.Forage.GitHubIssue
@@ -140,16 +141,24 @@ defmodule Hive.Forage.GitHubIssueClassification do
     :ok
   end
 
-  @doc "Records a terminal failure so scheduled sweeps do not repeat the model request."
+  @doc """
+  Records a terminal failure so scheduled sweeps do not repeat the model request.
+
+  An account-scoped failure refreshes its own timestamp, which is what paces the
+  sweeper's reconsideration window; a record-scoped failure is written once and
+  left alone.
+  """
   def mark_failed(issue_id, reason)
       when is_binary(issue_id) and (is_atom(reason) or is_binary(reason)) do
     failed_at = DateTime.utc_now() |> DateTime.truncate(:second)
+    account_failures = Errors.account_failure_names()
 
     GitHubIssue
     |> where(
       [issue],
       issue.id == ^issue_id and is_nil(issue.classified_at) and
-        is_nil(issue.classification_failed_at)
+        (is_nil(issue.classification_failed_at) or
+           issue.classification_failure in ^account_failures)
     )
     |> Repo.update_all(
       set: [classification_failure: to_string(reason), classification_failed_at: failed_at]

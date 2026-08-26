@@ -128,7 +128,7 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
     release = %Releases{body: "See #{seed_url}"}
 
     discovered_urls =
-      Enum.map(1..12, &"https://example.com/evidence/#{&1}")
+      Enum.map(1..8, &"https://example.com/evidence/#{&1}")
 
     fetcher = fn
       ^seed_url ->
@@ -210,7 +210,7 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
 
     runner = fn input ->
       assert Enum.map(input.release.references, & &1.url) ==
-               [seed_url | Enum.take(discovered_urls, 49)]
+               [seed_url | Enum.take(discovered_urls, 11)]
 
       {:ok, %{items: []}}
     end
@@ -229,5 +229,72 @@ defmodule Hive.Drops.ReleaseDropItemsTest do
 
     assert :skipped =
              ReleaseDropItems.generate(repository, release, agents_enabled?: fn -> false end)
+  end
+
+  describe "reference budget" do
+    setup do
+      repository = %GitHubRepository{owner: "tuist", name: "hive"}
+
+      release = %Releases{
+        tag_name: "v2.0.0",
+        name: "Hive 2.0.0",
+        body: Enum.map_join(1..40, "\n", &"- See https://example.com/doc-#{&1}"),
+        html_url: "https://github.com/tuist/hive/releases/tag/v2.0.0",
+        published_at: "2026-08-26T09:30:00Z"
+      }
+
+      fetcher = fn url ->
+        {:ok, %{content: String.duplicate("x", 7_000), title: "Doc", final_url: url}}
+      end
+
+      {:ok, repository: repository, release: release, fetcher: fetcher}
+    end
+
+    test "bounds the characters reference content contributes to the prompt", ctx do
+      test_pid = self()
+
+      runner = fn input ->
+        total =
+          input.release.references
+          |> Enum.map(&String.length(&1.content))
+          |> Enum.sum()
+
+        send(test_pid, {:budget, length(input.release.references), total})
+        {:ok, %{items: []}}
+      end
+
+      assert {:ok, []} =
+               ReleaseDropItems.generate(ctx.repository, ctx.release,
+                 agents_enabled?: fn -> true end,
+                 fetcher: ctx.fetcher,
+                 runner: runner
+               )
+
+      assert_received {:budget, count, total}
+
+      # Without a budget this release would carry 40 documents of 12k characters.
+      assert total <= 60_000
+      assert count <= 12
+    end
+
+    test "marks the reference that straddles the limit as truncated", ctx do
+      test_pid = self()
+
+      runner = fn input ->
+        send(test_pid, {:refs, input.release.references})
+        {:ok, %{items: []}}
+      end
+
+      assert {:ok, []} =
+               ReleaseDropItems.generate(ctx.repository, ctx.release,
+                 agents_enabled?: fn -> true end,
+                 fetcher: ctx.fetcher,
+                 runner: runner
+               )
+
+      assert_received {:refs, references}
+
+      assert Enum.any?(references, &Map.get(&1, :truncated))
+    end
   end
 end

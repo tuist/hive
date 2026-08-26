@@ -126,7 +126,7 @@ Hive currently uses language models for:
 | Slack conversations | Reads the triggering mention with its surrounding thread, streams replies with live status updates, captures requested Forage items, gives unlinked people a direct profile-connection path, and starts objective-specific Flights from Grafana alert threads. |
 | GitHub issue classification | Links mirrored issues to the relevant project domains. |
 | Forage Flights | Investigates, reproduces, or fixes a Grafana alert or GitHub issue in an isolated repository snapshot, preserves the portable agent session, and returns a pull request or report after a member starts the Flight. |
-| Drop generation | Turns release evidence into user-facing shipped improvements. |
+| Drop generation | Turns release evidence into user-facing shipped improvements. Linked pages are followed to a bounded number of documents and a bounded total size, so one release that links a hub page cannot dominate a request. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
 | Postmortem semantic retrieval | Stores a durable vector for each published postmortem so related incidents can be found by meaning. |
@@ -148,10 +148,13 @@ Kubernetes execution layer for file and command operations while Agent Sandbox
 owns isolated pod lifecycle and cleanup. Self-hosters can supply another
 provider through the runtime-configurable Condukt sandbox contract.
 
-Scheduled classification retries only revisit pending work. Permanent
-provider rejections, such as invalid credentials or exhausted credit, are
-recorded and are not requested again for unchanged source content. A changed
-GitHub issue becomes eligible for classification again.
+Scheduled classification retries only revisit pending work. Rejections that
+describe the request, such as invalid credentials, are recorded and are not
+requested again for unchanged source content. Rejections that describe the
+account, such as exhausted credit or a suspended provider, are reconsidered an
+hour later, because they say nothing about the item that happened to be in
+flight when the account went down. A changed GitHub issue becomes eligible for
+classification again.
 
 For a separate embedding profile, select **Use for Hive embeddings** on
 an embedding-capable profile.
