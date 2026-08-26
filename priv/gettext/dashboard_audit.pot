@@ -43,7 +43,7 @@ msgstr ""
 msgid "Agent"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:357
+#: lib/hive_web/components/layouts.ex:360
 #: lib/hive_web/live/audit_live.ex:26
 #: lib/hive_web/live/audit_live.ex:34
 #: lib/hive_web/live/audit_live.ex:137

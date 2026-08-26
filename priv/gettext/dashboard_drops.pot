@@ -120,8 +120,8 @@ msgstr ""
 msgid "Drop not found."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:211
-#: lib/hive_web/components/layouts.ex:317
+#: lib/hive_web/components/layouts.ex:214
+#: lib/hive_web/components/layouts.ex:320
 #: lib/hive_web/live/drops_live/digest.ex:26
 #: lib/hive_web/live/drops_live/digest.ex:245
 #: lib/hive_web/live/drops_live/index.ex:29
@@ -607,7 +607,7 @@ msgstr ""
 msgid "Browse narrated weekly editions connecting the most meaningful updates shipped across Hive."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:221
+#: lib/hive_web/components/layouts.ex:224
 #, elixir-autogen, elixir-format
 msgid "Digests"
 msgstr ""

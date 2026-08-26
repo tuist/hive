@@ -155,11 +155,14 @@ defmodule HiveWeb.ForageLive.IndexTest do
     refute html =~ "This would help triage.</p>"
   end
 
-  test "legacy source routes redirect to filtered forage", %{conn: conn} do
-    assert {:error, {:live_redirect, %{to: target}}} =
-             live(conn, ~p"/forage/feature-requests")
+  test "renders feature requests at their stable public URL", %{conn: conn} do
+    conn = get(conn, ~p"/forage/feature-requests")
 
-    assert target =~ "/forage?"
-    assert target =~ "filter_type_val=feature_request"
+    response = html_response(conn, 200)
+    assert response =~ "Feature requests · Hive"
+    assert response =~ ~s|name="description" content="Public feature requests|
+
+    assert response =~
+             ~s|rel="canonical" href="#{HiveWeb.Endpoint.url()}/forage/feature-requests"|
   end
 end

@@ -113,14 +113,12 @@ defmodule HiveWeb.ForageLive.GitHubIssuesTest do
     assert html =~ "No forage items found"
   end
 
-  test "the legacy source URL redirects to filtered forage", %{conn: conn} do
+  test "renders GitHub issues at their stable source URL", %{conn: conn} do
     {conn, _user} = sign_in(conn, "pedro@tuist.dev")
 
-    assert {:error, {:live_redirect, %{to: target}}} =
-             live(conn, ~p"/forage/github-issues")
+    {:ok, _view, html} = live(conn, ~p"/forage/github-issues")
 
-    assert target =~ "/forage?"
-    assert target =~ "filter_type_val=github_issue"
+    assert html =~ "No forage items found"
   end
 
   test "lands on state=open and shows the State chip", %{conn: conn} do

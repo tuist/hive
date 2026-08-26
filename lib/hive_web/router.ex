@@ -112,6 +112,8 @@ defmodule HiveWeb.Router do
   scope "/", HiveWeb do
     get "/live", HealthController, :live
     get "/ready", HealthController, :ready
+    get "/robots.txt", RobotsController, :show
+    get "/sitemap.xml", SitemapController, :show
 
     scope "/" do
       pipe_through :session
@@ -188,105 +190,103 @@ defmodule HiveWeb.Router do
       post "/dev/login", AuthController, :dev_login
     end
 
-    get "/ops", PageController, :ops
-    get "/audit", PageController, :audit
-
-    live_session :forage,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/forage", ForageLive.Index, :index
-      live "/forage/new", ForageLive.NewFeatureRequest
-      live "/forage/items/:origin/:id", ForageLive.Show
-      live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
-      live "/forage/feature-requests", ForageLive.Index, :feature_requests
-      live "/forage/bug-reports", ForageLive.Index, :bug_reports
-      live "/forage/feedback", ForageLive.Index, :feedback
-      live "/forage/github-issues", ForageLive.Index, :github_issues
-      live "/forage/grafana-alerts", ForageLive.Index, :grafana_alerts
-      live "/specs", SpecLive.Index
-      live "/specs/new", SpecLive.New
-      live "/specs/:number", SpecLive.Show
-      live "/specs/:number/edit", SpecLive.Edit
-      live "/postmortems", PostmortemLive.Index
-      live "/postmortems/new", PostmortemLive.Form, :new
-      live "/postmortems/:number", PostmortemLive.Show
-      live "/postmortems/:number/edit", PostmortemLive.Form, :edit
-      live "/drops", DropsLive.Index
-      live "/drops/subscribe", DropsLive.Subscribe
-      live "/drops/digest", DropsLive.Digest
-      live "/drops/digest/:week", DropsLive.Digest
-      live "/drops/:number", DropsLive.Show
-    end
-
-    live_session :flights,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/flights", FlightLive.Index, :index
-      live "/flights/:id", FlightLive.Show, :show
-    end
-
-    live_session :domains,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/domains", DomainLive.Index
-      live "/domains/:id", DomainLive.Show
-    end
-
-    live_session :projects,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/projects", ProjectLive.Index
-      live "/projects/:id", ProjectLive.Show
-    end
-
-    live_session :account,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/account/identities", AccountLive.Identities
-      live "/account/notifications", AccountLive.Notifications
-    end
-
-    live_session :ops,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/ops/slack", OpsLive.Slack
-      live "/ops/drops", OpsLive.Drops
-      live "/ops/forage", OpsLive.Forage
-      live "/ops/inference", OpsLive.Inference
-      live "/ops/inference/profiles", OpsLive.Inference
-      live "/ops/inference/profiles/:id", OpsLive.InferenceProfile
-      live "/ops/inference/providers", OpsLive.InferenceProviders
-      live "/ops/inference/tokens/:id", OpsLive.InferenceToken
-      live "/ops/audit", AuditLive
-    end
-
-    scope "/slack" do
+    scope "/" do
       pipe_through HiveWeb.Plugs.RequireAuthenticated
 
-      get "/install", SlackInstallController, :new
-      get "/install/callback", SlackInstallController, :callback
-      post "/installations/:id/disconnect", SlackInstallController, :disconnect
-    end
+      get "/ops", PageController, :ops
+      get "/audit", PageController, :audit
 
-    scope "/account/slack" do
-      pipe_through HiveWeb.Plugs.RequireAuthenticated
+      live_session :forage,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/forage", ForageLive.Index, :index
+        live "/forage/new", ForageLive.NewFeatureRequest
+        live "/forage/items/:origin/:id", ForageLive.Show
+        live "/forage/feature-requests/new", ForageLive.NewFeatureRequest
+        live "/forage/feature-requests", ForageLive.Index, :feature_requests
+        live "/forage/bug-reports", ForageLive.Index, :bug_reports
+        live "/forage/feedback", ForageLive.Index, :feedback
+        live "/forage/github-issues", ForageLive.Index, :github_issues
+        live "/forage/grafana-alerts", ForageLive.Index, :grafana_alerts
+        live "/specs", SpecLive.Index
+        live "/specs/new", SpecLive.New
+        live "/specs/:number", SpecLive.Show
+        live "/specs/:number/edit", SpecLive.Edit
+        live "/postmortems", PostmortemLive.Index
+        live "/postmortems/new", PostmortemLive.Form, :new
+        live "/postmortems/:number", PostmortemLive.Show
+        live "/postmortems/:number/edit", PostmortemLive.Form, :edit
+        live "/drops", DropsLive.Index
+        live "/drops/subscribe", DropsLive.Subscribe
+        live "/drops/digest", DropsLive.Digest
+        live "/drops/digest/:week", DropsLive.Digest
+        live "/drops/:number", DropsLive.Show
+      end
 
-      get "/new", SlackProfileController, :new
-      get "/callback", SlackProfileController, :callback
+      live_session :flights,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/flights", FlightLive.Index, :index
+        live "/flights/:id", FlightLive.Show, :show
+      end
+
+      live_session :domains,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/domains", DomainLive.Index
+        live "/domains/:id", DomainLive.Show
+      end
+
+      live_session :projects,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/projects", ProjectLive.Index
+        live "/projects/:id", ProjectLive.Show
+      end
+
+      live_session :account,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/account/identities", AccountLive.Identities
+        live "/account/notifications", AccountLive.Notifications
+      end
+
+      live_session :ops,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/ops/slack", OpsLive.Slack
+        live "/ops/drops", OpsLive.Drops
+        live "/ops/forage", OpsLive.Forage
+        live "/ops/inference", OpsLive.Inference
+        live "/ops/inference/profiles", OpsLive.Inference
+        live "/ops/inference/profiles/:id", OpsLive.InferenceProfile
+        live "/ops/inference/providers", OpsLive.InferenceProviders
+        live "/ops/inference/tokens/:id", OpsLive.InferenceToken
+        live "/ops/audit", AuditLive
+      end
+
+      scope "/slack" do
+        get "/install", SlackInstallController, :new
+        get "/install/callback", SlackInstallController, :callback
+        post "/installations/:id/disconnect", SlackInstallController, :disconnect
+      end
+
+      scope "/account/slack" do
+        get "/new", SlackProfileController, :new
+        get "/callback", SlackProfileController, :callback
+      end
+
+      live_session :home,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/", HomeLive, :index
+      end
     end
 
     scope "/auth" do
       pipe_through :oauth
       get "/:provider", AuthController, :request
       get "/:provider/callback", AuthController, :callback
-    end
-
-    pipe_through HiveWeb.Plugs.RequireAuthenticated
-
-    live_session :home,
-      on_mount: HiveWeb.DashboardLive.Hooks,
-      root_layout: {HiveWeb.Layouts, :root} do
-      live "/", HomeLive, :index
     end
   end
 

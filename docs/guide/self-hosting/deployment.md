@@ -22,6 +22,16 @@ Instances are public by default. Configure and test at least one
 [authentication provider](./authentication) before setting
 `HIVE_VISIBILITY=private`.
 
+## Search engines
+
+Public instances publish a sitemap at `/sitemap.xml` and advertise it from
+`/robots.txt`. The sitemap contains only public collections and public items,
+so search engines can discover content without being directed to account,
+operational, or editing pages.
+
+Private instances block crawlers in `/robots.txt`, do not publish a sitemap,
+and require a signed-in session before serving dashboard pages.
+
 Store provider credentials in the deployment's secret manager. Make
 them available to both migrations and the web process when the platform
 uses separate execution environments.

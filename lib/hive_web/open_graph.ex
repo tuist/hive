@@ -36,6 +36,7 @@ defmodule HiveWeb.OpenGraph do
         image: absolute_url(path(data)),
         image_height: @height,
         image_width: @width,
+        robots: robots(data.path),
         title: meta_title(data),
         twitter_card: "summary_large_image",
         url: absolute_url(data.path)
@@ -455,6 +456,46 @@ defmodule HiveWeb.OpenGraph do
   defp absolute_url(path), do: Endpoint.url() <> path
 
   defp meta_title(%{title: title}), do: "#{title} | #{Branding.product_name()}"
+
+  defp robots(path) do
+    if indexable_path?(path), do: nil, else: "noindex, follow"
+  end
+
+  defp indexable_path?(path)
+       when path in [
+              "/",
+              "/forage",
+              "/forage/feature-requests",
+              "/forage/bug-reports",
+              "/forage/feedback",
+              "/forage/github-issues",
+              "/forage/grafana-alerts",
+              "/specs",
+              "/postmortems",
+              "/drops",
+              "/drops/digest",
+              "/domains",
+              "/projects"
+            ],
+       do: true
+
+  defp indexable_path?("/forage/items/" <> _item), do: true
+  defp indexable_path?("/domains/" <> _domain), do: true
+  defp indexable_path?("/projects/" <> _project), do: true
+
+  defp indexable_path?("/specs/" <> number), do: numeric_path?(number)
+  defp indexable_path?("/postmortems/" <> number), do: numeric_path?(number)
+  defp indexable_path?("/drops/" <> number), do: numeric_path?(number)
+  defp indexable_path?("/drops/digest/" <> week), do: valid_week?(week)
+  defp indexable_path?(_path), do: false
+
+  defp numeric_path?(path) do
+    match?({_number, ""}, Integer.parse(path))
+  end
+
+  defp valid_week?(week) do
+    match?({:ok, _date}, Date.from_iso8601(week))
+  end
 
   defp card_data(data) do
     highlights =

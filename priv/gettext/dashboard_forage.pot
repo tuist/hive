@@ -58,6 +58,7 @@ msgid "%{count} total requests"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/github_issues.ex:48
+#: lib/hive_web/live/forage_live/index.ex:730
 #: lib/hive_web/live/forage_live/placeholder.ex:45
 #, elixir-autogen, elixir-format
 msgid "%{source} · %{product}"
@@ -165,19 +166,19 @@ msgstr ""
 msgid "Comment"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:313
+#: lib/hive_web/live/forage_live/index.ex:309
 #: lib/hive_web/live/forage_live/show.ex:240
 #, elixir-autogen, elixir-format
 msgid "Comment added."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:399
+#: lib/hive_web/live/forage_live/index.ex:395
 #: lib/hive_web/live/forage_live/show.ex:326
 #, elixir-autogen, elixir-format
 msgid "Comment not found."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:381
+#: lib/hive_web/live/forage_live/index.ex:377
 #: lib/hive_web/live/forage_live/show.ex:308
 #, elixir-autogen, elixir-format
 msgid "Comment updated."
@@ -242,7 +243,7 @@ msgid "Details"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/github_issues.ex:173
-#: lib/hive_web/live/forage_live/index.ex:639
+#: lib/hive_web/live/forage_live/index.ex:662
 #, elixir-autogen, elixir-format
 msgid "Domain"
 msgstr ""
@@ -323,8 +324,8 @@ msgid "Firing"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:40
-#: lib/hive_web/components/layouts.ex:178
-#: lib/hive_web/components/layouts.ex:323
+#: lib/hive_web/components/layouts.ex:181
+#: lib/hive_web/components/layouts.ex:326
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
@@ -344,7 +345,7 @@ msgstr ""
 msgid "Forage"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:606
+#: lib/hive_web/live/forage_live/index.ex:629
 #: lib/hive_web/live/forage_live/show.ex:109
 #, elixir-autogen, elixir-format
 msgid "Forage item not found."
@@ -355,7 +356,7 @@ msgstr ""
 msgid "Forage item submitted."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:278
+#: lib/hive_web/live/forage_live/index.ex:274
 #: lib/hive_web/live/forage_live/show.ex:205
 #, elixir-autogen, elixir-format
 msgid "Forage item updated."
@@ -378,6 +379,7 @@ msgid "Forage source"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/index.ex:140
+#: lib/hive_web/live/forage_live/index.ex:725
 #: lib/hive_web/live/ops_live/forage.ex:55
 #, elixir-autogen, elixir-format
 msgid "Forage · %{product}"
@@ -567,9 +569,9 @@ msgstr ""
 msgid "No forage items found"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:338
-#: lib/hive_web/live/forage_live/index.ex:366
-#: lib/hive_web/live/forage_live/index.ex:389
+#: lib/hive_web/live/forage_live/index.ex:334
+#: lib/hive_web/live/forage_live/index.ex:362
+#: lib/hive_web/live/forage_live/index.ex:385
 #: lib/hive_web/live/forage_live/show.ex:265
 #: lib/hive_web/live/forage_live/show.ex:293
 #: lib/hive_web/live/forage_live/show.ex:316
@@ -577,9 +579,9 @@ msgstr ""
 msgid "Only the comment author can edit this comment."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:237
-#: lib/hive_web/live/forage_live/index.ex:261
-#: lib/hive_web/live/forage_live/index.ex:286
+#: lib/hive_web/live/forage_live/index.ex:233
+#: lib/hive_web/live/forage_live/index.ex:257
+#: lib/hive_web/live/forage_live/index.ex:282
 #: lib/hive_web/live/forage_live/show.ex:164
 #: lib/hive_web/live/forage_live/show.ex:188
 #: lib/hive_web/live/forage_live/show.ex:213
@@ -718,7 +720,7 @@ msgid "Repositories"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/github_issues.ex:183
-#: lib/hive_web/live/forage_live/index.ex:644
+#: lib/hive_web/live/forage_live/index.ex:667
 #, elixir-autogen, elixir-format
 msgid "Repository"
 msgstr ""
@@ -765,7 +767,7 @@ msgstr ""
 msgid "Sign in to comment"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:317
+#: lib/hive_web/live/forage_live/index.ex:313
 #: lib/hive_web/live/forage_live/show.ex:244
 #, elixir-autogen, elixir-format
 msgid "Sign in to comment."
@@ -783,7 +785,7 @@ msgid "State"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:156
-#: lib/hive_web/live/forage_live/index.ex:634
+#: lib/hive_web/live/forage_live/index.ex:657
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
@@ -826,7 +828,7 @@ msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:149
 #: lib/hive_web/components/forage_components.ex:1440
-#: lib/hive_web/live/forage_live/index.ex:627
+#: lib/hive_web/live/forage_live/index.ex:650
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
@@ -847,7 +849,7 @@ msgstr ""
 msgid "View on GitHub"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/index.ex:604
+#: lib/hive_web/live/forage_live/index.ex:627
 #: lib/hive_web/live/forage_live/show.ex:103
 #, elixir-autogen, elixir-format
 msgid "You cannot view that forage item."
@@ -1284,4 +1286,9 @@ msgstr ""
 #: lib/hive_web/live/home_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "See what people have asked for, the bugs they hit, and the alerts being watched."
+msgstr ""
+
+#: lib/hive_web/live/forage_live/index.ex:422
+#, elixir-autogen, elixir-format
+msgid "You cannot view that forage source."
 msgstr ""

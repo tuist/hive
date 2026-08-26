@@ -66,7 +66,7 @@ msgstr ""
 msgid "Gather"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:160
+#: lib/hive_web/components/layouts.ex:163
 #: lib/hive_web/live/home_live.ex:17
 #, elixir-autogen, elixir-format
 msgid "Overview"

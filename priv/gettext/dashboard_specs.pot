@@ -547,7 +547,7 @@ msgstr ""
 msgid "Spec updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:190
+#: lib/hive_web/components/layouts.ex:193
 #: lib/hive_web/components/spec_components.ex:23
 #: lib/hive_web/components/spec_components.ex:44
 #: lib/hive_web/live/home_live.ex:157

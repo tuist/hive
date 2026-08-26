@@ -406,7 +406,7 @@ msgstr ""
 msgid "Project updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:166
+#: lib/hive_web/components/layouts.ex:169
 #: lib/hive_web/live/home_live.ex:190
 #: lib/hive_web/live/project_live/index.ex:20
 #: lib/hive_web/live/project_live/index.ex:28
