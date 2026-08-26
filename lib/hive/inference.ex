@@ -68,11 +68,15 @@ defmodule Hive.Inference do
 
   def get_model_binding!(id), do: Repo.get!(ModelBinding, id)
 
+  def get_profile(id) when is_binary(id), do: Repo.get(ModelBinding, id)
+
   def get_profile!(id) do
     ModelBinding
     |> preload(tokens: ^tokens_query())
     |> Repo.get!(id)
   end
+
+  def get_token(id) when is_binary(id), do: Repo.get(Token, id)
 
   def get_token!(id), do: Repo.get!(Token, id)
 
@@ -152,6 +156,41 @@ defmodule Hive.Inference do
     |> Repo.all()
   end
 
+  def list_tokens(opts) when is_list(opts) do
+    page = opts |> Keyword.get(:page, 1) |> normalize_profile_page()
+
+    page_size =
+      opts |> Keyword.get(:page_size, @default_profile_page_size) |> normalize_profile_page_size()
+
+    query =
+      Token
+      |> join(:inner, [token], binding in assoc(token, :model_binding))
+      |> maybe_filter_tokens_profile(Keyword.get(opts, :profile_id))
+      |> maybe_filter_tokens_enabled(Keyword.get(opts, :enabled))
+      |> maybe_filter_tokens_query(Keyword.get(opts, :query))
+
+    total_entries = Repo.aggregate(query, :count, :id)
+    total_pages = total_pages(total_entries, page_size)
+    page = min(page, total_pages)
+    offset = (page - 1) * page_size
+
+    tokens =
+      query
+      |> order_by([token], desc: token.inserted_at)
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> preload([_token, binding], model_binding: binding)
+      |> Repo.all()
+
+    {tokens,
+     %{
+       current_page: page,
+       page_size: page_size,
+       total_entries: total_entries,
+       total_pages: total_pages
+     }}
+  end
+
   def usage_summary(
         %ModelBinding{} = binding,
         {%DateTime{} = start_datetime, %DateTime{} = end_datetime}
@@ -171,9 +210,26 @@ defmodule Hive.Inference do
     |> normalize_usage_summary()
   end
 
+  def usage_summary(nil, period), do: usage_summary(period)
+
   def usage_summary(%Token{} = token, {%DateTime{} = start_datetime, %DateTime{} = end_datetime}) do
     Usage
     |> where([usage], usage.token_id == ^token.id)
+    |> billable_usage_query()
+    |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
+    |> select([usage], %{
+      request_count: count(usage.id),
+      input_tokens: coalesce(sum(usage.input_tokens), 0),
+      output_tokens: coalesce(sum(usage.output_tokens), 0),
+      total_tokens: coalesce(sum(usage.total_tokens), 0),
+      cost_usd: coalesce(sum(usage.cost_usd), type(^Decimal.new(0), :decimal))
+    })
+    |> Repo.one()
+    |> normalize_usage_summary()
+  end
+
+  def usage_summary({%DateTime{} = start_datetime, %DateTime{} = end_datetime}) do
+    Usage
     |> billable_usage_query()
     |> where([usage], usage.inserted_at >= ^start_datetime and usage.inserted_at <= ^end_datetime)
     |> select([usage], %{
@@ -794,6 +850,39 @@ defmodule Hive.Inference do
   end
 
   defp maybe_filter_profiles_enabled(query, _enabled), do: query
+
+  defp maybe_filter_tokens_profile(query, profile_id) when is_binary(profile_id) do
+    case String.trim(profile_id) do
+      "" -> query
+      profile_id -> where(query, [token, _binding], token.model_binding_id == ^profile_id)
+    end
+  end
+
+  defp maybe_filter_tokens_profile(query, _profile_id), do: query
+
+  defp maybe_filter_tokens_enabled(query, enabled) when is_boolean(enabled) do
+    where(query, [token, _binding], token.enabled == ^enabled)
+  end
+
+  defp maybe_filter_tokens_enabled(query, _enabled), do: query
+
+  defp maybe_filter_tokens_query(query, value) when is_binary(value) do
+    case String.trim(value) do
+      "" ->
+        query
+
+      value ->
+        pattern = "%#{value}%"
+
+        where(
+          query,
+          [token, binding],
+          ilike(token.name, ^pattern) or ilike(binding.name, ^pattern)
+        )
+    end
+  end
+
+  defp maybe_filter_tokens_query(query, _value), do: query
 
   defp normalize_profile_page(page) when is_integer(page) and page > 0, do: page
 
