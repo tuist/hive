@@ -113,7 +113,7 @@ msgstr ""
 msgid "Flight not found."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:184
+#: lib/hive_web/components/layouts.ex:187
 #: lib/hive_web/live/flight_live/index.ex:25
 #: lib/hive_web/live/flight_live/index.ex:33
 #: lib/hive_web/live/flight_live/index.ex:151

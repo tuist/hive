@@ -104,7 +104,7 @@ msgstr ""
 
 #: lib/hive_web/components/domain_components.ex:19
 #: lib/hive_web/components/domain_components.ex:24
-#: lib/hive_web/components/layouts.ex:172
+#: lib/hive_web/components/layouts.ex:175
 #: lib/hive_web/live/domain_live/index.ex:20
 #: lib/hive_web/live/domain_live/index.ex:28
 #: lib/hive_web/live/home_live.ex:201
