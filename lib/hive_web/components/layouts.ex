@@ -112,6 +112,9 @@ defmodule HiveWeb.Layouts do
 
   def open_graph_meta(assigns) do
     ~H"""
+    <meta name="description" content={@open_graph.description} />
+    <link rel="canonical" href={@open_graph.url} />
+    <meta :if={@open_graph.robots} name="robots" content={@open_graph.robots} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={@open_graph.title} />
     <meta property="og:description" content={@open_graph.description} />

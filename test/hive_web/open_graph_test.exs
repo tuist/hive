@@ -82,6 +82,7 @@ defmodule HiveWeb.OpenGraphTest do
                image: image,
                image_height: 1008,
                image_width: 1920,
+               robots: robots,
                title: "Sample | Hive",
                twitter_card: "summary_large_image",
                url: url
@@ -91,6 +92,13 @@ defmodule HiveWeb.OpenGraphTest do
     assert description == data.description
     assert image =~ "/open-graph/card.jpg?token="
     assert url =~ data.path
+    assert robots == "noindex, follow"
+  end
+
+  test "assigns leave public paths indexable" do
+    data = %{open_graph_data() | path: "/"}
+
+    assert [open_graph: %{robots: nil}] = OpenGraph.assigns(data)
   end
 
   test "verify_token rejects tampered card tokens" do

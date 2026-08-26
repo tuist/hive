@@ -37,5 +37,8 @@ defmodule HiveWeb.HomeLiveTest do
     assert html =~ ~s(property="og:title")
     assert html =~ "Product development in the open"
     assert html =~ ~s(property="og:image")
+    assert html =~ ~s(name="description")
+    assert html =~ ~s(rel="canonical" href="#{HiveWeb.Endpoint.url()}/")
+    refute html =~ ~s(name="robots")
   end
 end

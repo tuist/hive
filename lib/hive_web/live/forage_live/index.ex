@@ -172,12 +172,7 @@ defmodule HiveWeb.ForageLive.Index do
         maybe_redirect_to_item(params, uri, socket)
 
       type ->
-        params =
-          params
-          |> Map.put_new("filter_type_op", "==")
-          |> Map.put_new("filter_type_val", Atom.to_string(type))
-
-        {:noreply, push_patch(socket, to: ~p"/forage?#{params}")}
+        assign_category_params(socket, params, uri, type)
     end
   end
 
@@ -185,7 +180,8 @@ defmodule HiveWeb.ForageLive.Index do
   def handle_event("search", %{"search" => %{"query" => query}}, socket) do
     {:noreply,
      push_patch(socket,
-       to: ~p"/forage?#{forage_query_params(query, socket.assigns.active_filters)}",
+       to:
+         query_path(socket.assigns.uri, forage_query_params(query, socket.assigns.active_filters)),
        replace: true
      )}
   end
@@ -200,7 +196,7 @@ defmodule HiveWeb.ForageLive.Index do
 
     {:noreply,
      socket
-     |> push_patch(to: ~p"/forage?#{updated_params}")
+     |> push_patch(to: query_path(socket.assigns.uri, updated_params))
      |> push_event("open-dropdown", %{id: "filter-#{filter_id}-value-dropdown"})
      |> push_event("open-popover", %{id: "filter-#{filter_id}-value-popover"})}
   end
@@ -215,7 +211,7 @@ defmodule HiveWeb.ForageLive.Index do
 
     {:noreply,
      socket
-     |> push_patch(to: ~p"/forage?#{updated_params}")
+     |> push_patch(to: query_path(socket.assigns.uri, updated_params))
      |> push_event("close-dropdown", %{id: "all", all: true})
      |> push_event("close-popover", %{id: "all", all: true})}
   end
@@ -406,7 +402,7 @@ defmodule HiveWeb.ForageLive.Index do
   end
 
   defp apply_params(params, uri, socket) do
-    {:noreply, assign_params(socket, params, uri)}
+    {:noreply, assign_params(socket, params, uri, nil)}
   end
 
   defp maybe_redirect_to_item(%{"item" => item_id}, _uri, socket) when is_binary(item_id) do
@@ -415,12 +411,29 @@ defmodule HiveWeb.ForageLive.Index do
 
   defp maybe_redirect_to_item(params, uri, socket), do: apply_params(params, uri, socket)
 
-  defp assign_params(socket, params, uri) do
-    available_filters = define_filters(socket.assigns.current_user)
+  defp assign_category_params(socket, params, uri, type) do
+    source = Forage.get_source!(source_id(type))
+
+    if Forage.can_access?(source, socket.assigns.current_user) do
+      {:noreply, assign_params(socket, params, uri, type)}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, dgettext("dashboard_forage", "You cannot view that forage source."))
+       |> push_navigate(to: ~p"/forage")}
+    end
+  end
+
+  defp assign_params(socket, params, uri, fixed_type) do
+    available_filters =
+      socket.assigns.current_user
+      |> define_filters()
+      |> maybe_hide_type_filter(fixed_type)
+
     page = Query.parse_page(params["page"])
     query = params["q"] || ""
     active_filters = Operations.decode_filters_from_query(params, available_filters)
-    base_opts = list_opts(query, active_filters)
+    base_opts = list_opts(query, active_filters, fixed_type)
 
     {all_items, _all_meta} =
       Forage.list_forage_items_for_user(
@@ -435,10 +448,10 @@ defmodule HiveWeb.ForageLive.Index do
       )
 
     stats = stats(all_items, meta)
-    query_params = Query.query_params(uri)
 
     socket
-    |> assign(:uri, uri_from_query_params(query_params))
+    |> assign(:page_title, page_title_for_type(fixed_type, socket.assigns.product_name))
+    |> assign(:uri, relative_uri(uri))
     |> assign(:available_filters, available_filters)
     |> assign(:active_filters, active_filters)
     |> assign(:items, items)
@@ -446,14 +459,14 @@ defmodule HiveWeb.ForageLive.Index do
     |> assign(:stats, stats)
     |> assign(:query, query)
     |> assign(:search_form, to_form(%{"query" => query}, as: :search))
-    |> assign(OpenGraph.assigns(open_graph(stats)))
+    |> assign(OpenGraph.assigns(open_graph_for_type(fixed_type, stats)))
     |> assign_selected_item(params["item"])
   end
 
-  defp list_opts(query, active_filters) do
+  defp list_opts(query, active_filters, fixed_type) do
     [
       query: Query.present_string(query),
-      type: filter_value(active_filters, "type"),
+      type: fixed_type || filter_value(active_filters, "type"),
       status: filter_value(active_filters, "status"),
       domain_id: filter_value(active_filters, "domain"),
       repository_id: filter_value(active_filters, "repository")
@@ -483,7 +496,7 @@ defmodule HiveWeb.ForageLive.Index do
   end
 
   defp page_link(uri, page) do
-    query_path(Query.put(uri.query, "page", Integer.to_string(page)))
+    query_path(uri, Query.put(uri.query, "page", Integer.to_string(page)))
   end
 
   defp item_link(_uri, item), do: Show.item_path(item)
@@ -500,16 +513,20 @@ defmodule HiveWeb.ForageLive.Index do
     |> URI.decode_query()
   end
 
-  defp uri_from_query_params(params) do
-    case URI.encode_query(params) do
-      "" -> URI.parse("")
-      query -> URI.parse("?" <> query)
-    end
+  defp relative_uri(uri) do
+    uri
+    |> URI.parse()
+    |> Map.take([:path, :query])
+    |> then(&struct(URI, &1))
   end
 
-  defp query_path(nil), do: "/forage"
-  defp query_path(""), do: "/forage"
-  defp query_path(query), do: "/forage?#{query}"
+  defp query_path(uri, params) when is_map(params), do: query_path(uri, URI.encode_query(params))
+
+  defp query_path(uri, query) do
+    uri
+    |> Map.put(:query, if(query in [nil, ""], do: nil, else: query))
+    |> URI.to_string()
+  end
 
   defp assign_selected_item(socket, nil), do: clear_selected_item(socket)
   defp assign_selected_item(socket, ""), do: clear_selected_item(socket)
@@ -559,7 +576,13 @@ defmodule HiveWeb.ForageLive.Index do
 
   defp refresh_from_current_params(socket) do
     params = current_query_params(socket)
-    assign_params(socket, params, URI.to_string(socket.assigns.uri))
+
+    assign_params(
+      socket,
+      params,
+      URI.to_string(socket.assigns.uri),
+      legacy_type(socket.assigns.live_action)
+    )
   end
 
   defp item_edit_changeset(%{source_record: %FeatureRequest{} = item}) do
@@ -678,6 +701,37 @@ defmodule HiveWeb.ForageLive.Index do
   defp legacy_type(:github_issues), do: :github_issue
   defp legacy_type(:grafana_alerts), do: :grafana_alert
   defp legacy_type(_action), do: nil
+
+  defp source_id(:feature_request), do: :feature_requests
+  defp source_id(:bug_report), do: :bug_reports
+  defp source_id(:feedback), do: :feedback
+  defp source_id(:github_issue), do: :github_issues
+  defp source_id(:grafana_alert), do: :grafana_alerts
+
+  defp maybe_hide_type_filter(filters, nil), do: filters
+  defp maybe_hide_type_filter(filters, _type), do: Enum.reject(filters, &(&1.id == "type"))
+
+  defp open_graph_for_type(nil, stats), do: open_graph(stats)
+
+  defp open_graph_for_type(type, _stats) do
+    type
+    |> source_id()
+    |> Forage.get_source!()
+    |> Map.fetch!(:path)
+    |> open_graph_for_path()
+  end
+
+  defp page_title_for_type(nil, product_name),
+    do: dgettext("dashboard_forage", "Forage · %{product}", product: product_name)
+
+  defp page_title_for_type(type, product_name) do
+    source = source_id(type) |> Forage.get_source!()
+
+    dgettext("dashboard_forage", "%{source} · %{product}",
+      source: source.label,
+      product: product_name
+    )
+  end
 
   @impl true
   def render(assigns) do

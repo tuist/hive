@@ -42,6 +42,9 @@ defmodule HiveWeb.AuthControllerTest do
 
     response = html_response(conn, 200)
     assert response =~ "Log in to Hive"
+    assert response =~ ~s|name="description"|
+    assert response =~ ~s|rel="canonical" href="#{HiveWeb.Endpoint.url()}/login"|
+    assert response =~ ~s|name="robots" content="noindex, follow"|
     assert response =~ ~s|property="og:image"|
     assert response =~ ~s|name="twitter:card" content="summary_large_image"|
     assert response =~ "Continue with Google"

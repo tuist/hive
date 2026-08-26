@@ -36,6 +36,33 @@ defmodule HiveWeb.LayoutsTest do
 
       assert html =~ ~s(<link rel="icon" href="https://example.com/logo.png")
     end
+
+    test "renders a description, canonical URL, and crawl directive from page metadata" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <Layouts.app
+          title="Sign in · Hive"
+          open_graph={%{
+            description: "Sign in to Hive.",
+            image: "https://example.com/card.jpg",
+            image_height: 1008,
+            image_width: 1920,
+            robots: "noindex, follow",
+            title: "Sign in · Hive",
+            twitter_card: "summary_large_image",
+            url: "https://example.com/login"
+          }}
+        >
+          Body content here
+        </Layouts.app>
+        """)
+
+      assert html =~ ~s(<meta name="description" content="Sign in to Hive.")
+      assert html =~ ~s(<link rel="canonical" href="https://example.com/login")
+      assert html =~ ~s(<meta name="robots" content="noindex, follow")
+    end
   end
 
   describe "flash_group/1" do
