@@ -88,6 +88,23 @@ request, token, or cost totals.
 Pricing is an estimate based on the values entered on the profile. Update
 those values when the provider changes its rates.
 
+## Model Context Protocol access
+
+Instance administrators can inspect providers, profiles, tokens, and usage
+through [Model Context Protocol](https://modelcontextprotocol.io/) tools:
+
+- `list_inference_providers` returns provider endpoints and configuration
+  status, never credentials.
+- `list_inference_profiles` returns profile routing and pricing details.
+- `list_inference_tokens` returns token metadata, never token values.
+- `get_inference_usage` returns request, token, and estimated-cost totals for
+  the whole organization, one profile, or one token.
+
+For a custom cost period, pass both `start_at` and `end_at` to
+`get_inference_usage`. Each accepts an inclusive ISO 8601 date or datetime;
+date-only values cover the whole start or end day. When neither value is
+provided, the tool uses the last 30 days.
+
 ## Agentic workflows
 
 Hive uses gateway profiles for its own language-model features. Open a

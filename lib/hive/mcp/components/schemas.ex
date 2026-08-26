@@ -401,6 +401,144 @@ defmodule Hive.MCP.Components.Schemas do
     }
   end
 
+  def inference_profile do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "name" => %{"type" => "string"},
+        "description" => %{"type" => ["string", "null"]},
+        "upstream_provider" => %{"type" => "string"},
+        "upstream_model" => %{"type" => "string"},
+        "input_cost_per_million" => %{"type" => ["string", "null"]},
+        "output_cost_per_million" => %{"type" => ["string", "null"]},
+        "enabled" => %{"type" => "boolean"},
+        "hive_inference" => %{"type" => "boolean"},
+        "hive_coding" => %{"type" => "boolean"},
+        "hive_embedding" => %{"type" => "boolean"},
+        "last_used_at" => %{"type" => ["string", "null"]},
+        "token_count" => %{"type" => "integer"},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "name",
+        "description",
+        "upstream_provider",
+        "upstream_model",
+        "input_cost_per_million",
+        "output_cost_per_million",
+        "enabled",
+        "hive_inference",
+        "hive_coding",
+        "hive_embedding",
+        "last_used_at",
+        "token_count",
+        "inserted_at",
+        "updated_at"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def inference_provider do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "base_url" => %{"type" => ["string", "null"]},
+        "configured" => %{"type" => "boolean"},
+        "credential_configured" => %{"type" => "boolean"},
+        "endpoint_configured" => %{"type" => "boolean"},
+        "profile_count" => %{"type" => "integer"},
+        "source" => %{"type" => "string", "enum" => ["environment", "database", "reference"]},
+        "timeout" => %{"type" => ["integer", "null"]}
+      },
+      "required" => [
+        "id",
+        "base_url",
+        "configured",
+        "credential_configured",
+        "endpoint_configured",
+        "profile_count",
+        "source",
+        "timeout"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def inference_token do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "name" => %{"type" => "string"},
+        "profile" => %{
+          "type" => "object",
+          "properties" => %{
+            "id" => %{"type" => "string"},
+            "name" => %{"type" => "string"}
+          },
+          "required" => ["id", "name"],
+          "additionalProperties" => false
+        },
+        "hive_role" => %{"type" => ["string", "null"]},
+        "enabled" => %{"type" => "boolean"},
+        "expires_at" => %{"type" => ["string", "null"]},
+        "last_used_at" => %{"type" => ["string", "null"]},
+        "inserted_at" => %{"type" => "string"},
+        "updated_at" => %{"type" => "string"}
+      },
+      "required" => [
+        "id",
+        "name",
+        "profile",
+        "hive_role",
+        "enabled",
+        "expires_at",
+        "last_used_at",
+        "inserted_at",
+        "updated_at"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def inference_usage do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "request_count" => %{"type" => "integer"},
+        "input_tokens" => %{"type" => "integer"},
+        "output_tokens" => %{"type" => "integer"},
+        "total_tokens" => %{"type" => "integer"},
+        "cost_usd" => %{"type" => "string"}
+      },
+      "required" => [
+        "request_count",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "cost_usd"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def inference_usage_period do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "start_at" => %{"type" => "string"},
+        "end_at" => %{"type" => "string"}
+      },
+      "required" => ["start_at", "end_at"],
+      "additionalProperties" => false
+    }
+  end
+
   def pagination do
     %{
       "type" => "object",
