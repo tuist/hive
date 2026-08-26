@@ -90,4 +90,71 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
     assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
     assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
   end
+
+  test "perform/1 leaves an account-scoped failure alone during its cooldown" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  test "perform/1 reconsiders an account-scoped failure once the cooldown passes" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+    backdate_failure!(issue.id, 7_200)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+
+    issue_id = issue.id
+
+    assert [%Oban.Job{args: %{"issue_id" => ^issue_id}}] =
+             all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  test "perform/1 never reconsiders a record-scoped failure" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_provider_rejected_request)
+    backdate_failure!(issue.id, 7_200)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  test "re-marking an account-scoped failure refreshes its cooldown" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+    backdate_failure!(issue.id, 7_200)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  defp backdate_failure!(issue_id, seconds_ago) do
+    failed_at =
+      DateTime.utc_now() |> DateTime.add(-seconds_ago, :second) |> DateTime.truncate(:second)
+
+    Repo.update_all(
+      from(issue in GitHubIssue, where: issue.id == ^issue_id),
+      set: [classification_failed_at: failed_at]
+    )
+  end
 end

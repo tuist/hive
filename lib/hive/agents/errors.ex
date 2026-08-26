@@ -64,6 +64,23 @@ defmodule Hive.Agents.Errors do
 
   def hard_failure?(reason), do: not is_nil(hard_failure_reason(reason))
 
+  @account_failure_reasons [:llm_credit_limit, :llm_provider_unavailable]
+
+  @doc """
+  Failure reasons that describe the account rather than the record in flight.
+
+  A credit limit or a suspended provider account fails every record equally, so
+  the reason says nothing about the record that happened to be processing when
+  the account went down.
+  """
+  def account_failure_reasons, do: @account_failure_reasons
+
+  @doc "The account-scoped reasons as stored on a record."
+  def account_failure_names, do: Enum.map(@account_failure_reasons, &to_string/1)
+
+  @doc "True when `reason` describes the account rather than the record."
+  def account_failure?(reason), do: hard_failure_reason(reason) in @account_failure_reasons
+
   def hard_failure_reason(reason) do
     text = reason_text(reason)
 

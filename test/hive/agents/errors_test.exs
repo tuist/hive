@@ -78,4 +78,23 @@ defmodule Hive.Agents.ErrorsTest do
       assert message =~ "text: cannot be empty"
     end
   end
+
+  describe "account_failure?/1" do
+    test "credit and availability failures describe the account" do
+      assert Errors.account_failure?("Your credit limit has been reached")
+      assert Errors.account_failure?("account suspended")
+      assert Errors.account_failure?("monthly spending limit exceeded")
+    end
+
+    test "credential and request failures describe the record or the config" do
+      refute Errors.account_failure?("invalid api key")
+      refute Errors.account_failure?(:some_other_reason)
+    end
+
+    test "account failure names round-trip through what is stored on a record" do
+      assert "llm_credit_limit" in Errors.account_failure_names()
+      assert "llm_provider_unavailable" in Errors.account_failure_names()
+      refute "llm_invalid_credentials" in Errors.account_failure_names()
+    end
+  end
 end
