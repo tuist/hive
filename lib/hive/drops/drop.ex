@@ -1,8 +1,8 @@
 defmodule Hive.Drops.Drop do
   @moduledoc """
-  A shipped-update entry. Sourced from either a user-facing item
-  generated from a connected repository's GitHub release, or from an
-  operator-registered RSS/Atom feed. Each drop is associated to zero or
+  A shipped-update entry. Sourced from either individual user-facing work in a
+  connected repository's GitHub release or an operator-registered RSS/Atom feed. Each drop is
+  associated to zero or
   more domains through
   `Hive.Drops.DropDomain`; the classifier populates that association.
   """

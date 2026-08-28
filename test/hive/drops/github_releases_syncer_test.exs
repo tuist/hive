@@ -6,8 +6,9 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
   import Ecto.Query
 
   alias Hive.Drops
-  alias Hive.Drops.Drop
   alias Hive.Drops.DomainClassificationWorker
+  alias Hive.Drops.Drop
+  alias Hive.Drops.DropDomain
   alias Hive.Drops.GitHubReleaseIngestion
   alias Hive.Drops.GitHubReleasesSyncer
   alias Hive.Domains
@@ -150,25 +151,25 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
 
     assert drops_by_title
            |> Map.fetch!("Generated project paths stay stable")
-           |> Enum.map(& &1.number) == [42]
+           |> Enum.map(& &1.number)
+           |> Enum.sort() == [42]
 
     assert drops_by_title
            |> Map.fetch!("Project cache warmups finish faster")
-           |> Enum.map(& &1.number) == [41]
+           |> Enum.map(& &1.number)
+           |> Enum.sort() == [41]
 
     issue_41 = Enum.find(github_issues, &(&1.number == 41))
-    assert [release_drop] = Drops.list_release_drops_for_github_issue(issue_41)
-    assert release_drop.version == "v1.2.0"
-    assert release_drop.title == "Project cache warmups finish faster"
 
-    drop_ids = Enum.map(drops, & &1.id) |> Enum.sort()
+    assert issue_41
+           |> Drops.list_release_drops_for_github_issue()
+           |> Enum.map(& &1.title)
+           |> Enum.sort() == [
+             "Project cache warmups finish faster"
+           ]
 
-    enqueued_ids =
-      all_enqueued(worker: DomainClassificationWorker)
-      |> Enum.map(& &1.args["drop_id"])
-      |> Enum.sort()
-
-    assert enqueued_ids == drop_ids
+    assert Repo.aggregate(DropDomain, :count) == 2
+    assert [] = all_enqueued(worker: DomainClassificationWorker)
 
     assert :ok =
              GitHubReleasesSyncer.sync_now(
@@ -345,16 +346,19 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     refute_received :unexpected_transient_failure_retry
   end
 
-  test "evaluates at most five historical releases per repository per sync" do
-    repository = setup_repository!()
-    owner = repository.owner
-    name = repository.name
+  test "paces historical release evaluations across sync cycles" do
+    first_repository = setup_repository!()
+    second_repository = setup_repository!()
     parent = self()
 
-    releases = Enum.map(1..7, &%Releases{tag_name: "v3.0.#{&1}", body: "Release #{&1}"})
+    releases = Enum.map(1..2, &%Releases{tag_name: "v3.0.#{&1}", body: "Release #{&1}"})
 
     stub(Client, :config, fn -> {:ok, %Client.Config{}} end)
-    stub(Releases, :list_releases, fn %{owner: ^owner, name: ^name} -> {:ok, releases} end)
+
+    stub(Releases, :list_releases, fn repository ->
+      assert repository.id in [first_repository.id, second_repository.id]
+      {:ok, releases}
+    end)
 
     item_generator = fn _repository, release, _opts ->
       send(parent, {:evaluated_release, release.tag_name})
@@ -362,15 +366,26 @@ defmodule Hive.Drops.GitHubReleasesSyncerTest do
     end
 
     assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
-
-    assert Enum.map(1..5, &"v3.0.#{&1}") == receive_release_tags(5)
+    assert_receive {:evaluated_release, first_tag}
     refute_receive {:evaluated_release, _tag}
+    assert Repo.aggregate(GitHubReleaseIngestion, :count) == 1
+
+    Enum.each(1..3, fn _index ->
+      assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
+    end)
+
+    assert Enum.sort([first_tag | receive_release_tags(3)]) == [
+             "v3.0.1",
+             "v3.0.1",
+             "v3.0.2",
+             "v3.0.2"
+           ]
+
+    refute_receive {:evaluated_release, _tag}
+    assert Repo.aggregate(GitHubReleaseIngestion, :count) == 4
 
     assert :ok = GitHubReleasesSyncer.sync_now(item_generator: item_generator)
-    assert ["v3.0.6", "v3.0.7"] == receive_release_tags(2)
     refute_receive {:evaluated_release, _tag}
-
-    assert Repo.aggregate(GitHubReleaseIngestion, :count) == 7
   end
 
   test "reevaluates a release when its content fingerprint changes" do

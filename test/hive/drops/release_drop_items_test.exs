@@ -1,300 +1,199 @@
 defmodule Hive.Drops.ReleaseDropItemsTest do
   use ExUnit.Case, async: true
+  use Mimic
 
+  alias Hive.Agents
+  alias Hive.Agents.Sessions
+  alias Hive.Domains.GitHubRepository
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.Drops.ReleaseDropItems
+  alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
-  alias Hive.Domains.GitHubRepository
 
-  test "release drop item agent receives pre-fetched evidence without tools" do
+  test "release drop generation has no model tools" do
     assert ReleaseDropItemAgent.tools() == []
   end
 
-  test "generates normalized items from the agent output" do
+  test "builds individual feature drops from directly referenced GitHub work" do
     repository = %GitHubRepository{owner: "tuist", name: "hive"}
 
     release = %Releases{
       tag_name: "v1.2.0",
       name: "Hive 1.2.0",
-      body: """
-      ## What's changed
-
-      - Faster cache warmups in #41
-      - Stable generated project paths in https://github.com/tuist/hive/pull/42.
-      """,
-      html_url: "https://github.com/tuist/hive/releases/tag/v1.2.0",
-      published_at: "2026-06-18T09:30:00Z"
+      body: "Cache warmups are faster in #41. Generated paths are stable in #42.",
+      html_url: "https://github.com/tuist/hive/releases/tag/v1.2.0"
     }
 
-    runner = fn input ->
-      assert input.release.repository == "tuist/hive"
+    issue_fetcher = fn
+      %GitHubRepository{owner: "tuist", name: "hive"}, 41 ->
+        {:ok,
+         %Issues{
+           number: 41,
+           title: "Faster cache warmups",
+           body: "Projects reuse cache metadata before planning work.",
+           state: "closed",
+           html_url: "https://github.com/tuist/hive/issues/41"
+         }}
 
-      assert Enum.map(input.release.references, & &1.url) == [
-               "https://github.com/tuist/hive/pull/42",
-               "https://github.com/tuist/hive/issues/41"
+      %GitHubRepository{owner: "tuist", name: "hive"}, 42 ->
+        {:ok,
+         %Issues{
+           number: 42,
+           title: "Stable generated paths",
+           body: "Generated projects preserve path casing across machines.",
+           state: "closed",
+           html_url: "https://github.com/tuist/hive/pull/42"
+         }}
+    end
+
+    runner = fn %{release: input} ->
+      assert input.repository == "tuist/hive"
+      assert input.tag == "v1.2.0"
+
+      assert input.references == [
+               %{
+                 url: "https://github.com/tuist/hive/issues/41",
+                 number: 41,
+                 title: "Faster cache warmups",
+                 body: "Projects reuse cache metadata before planning work.",
+                 state: "closed"
+               },
+               %{
+                 url: "https://github.com/tuist/hive/pull/42",
+                 number: 42,
+                 title: "Stable generated paths",
+                 body: "Generated projects preserve path casing across machines.",
+                 state: "closed"
+               }
              ]
-
-      assert Enum.all?(input.release.references, &(&1.content == "Fetched release evidence"))
-
-      assert Enum.all?(
-               input.release.references,
-               &(Enum.sort(Map.keys(&1)) == [:content, :title, :url])
-             )
 
       {:ok,
        %{
-         "items" => [
+         items: [
            %{
-             "title" => "Project cache warmups finish faster",
-             "body" => "Warmups now reuse existing cache metadata before planning work.",
-             "source_urls" => [
-               "https://github.com/tuist/hive/issues/41",
-               "https://github.com/tuist/hive/issues/41"
-             ]
+             title: "Faster cache warmups",
+             body: "Projects now start work with reusable cache metadata.",
+             source_urls: ["https://github.com/tuist/hive/issues/41"]
            },
            %{
-             "title" => "",
-             "body" => "This invalid item should be ignored.",
-             "source_urls" => ["https://github.com/tuist/hive/pull/42"]
-           },
-           %{
-             "title" => "Private link",
-             "body" => "This invalid item should also be ignored.",
-             "source_urls" => ["http://localhost/private"]
+             title: "Stable generated paths",
+             body: "Generated projects preserve path casing across machines.",
+             source_urls: ["https://github.com/tuist/hive/pull/42"]
            }
          ]
        }}
     end
 
-    fetcher = fn url ->
+    assert {:ok, items} =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> true end,
+               issue_fetcher: issue_fetcher,
+               runner: runner
+             )
+
+    assert Enum.map(items, & &1.title) == ["Faster cache warmups", "Stable generated paths"]
+  end
+
+  test "does not call the model when a release has no direct GitHub evidence" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    release = %Releases{tag_name: "v1.2.0", body: "Improves project generation."}
+
+    assert {:ok, []} =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> true end,
+               runner: fn _input -> flunk("the model should not run") end
+             )
+  end
+
+  test "skips generation when agents are disabled" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    release = %Releases{tag_name: "v1.2.0", body: "See #41."}
+
+    assert :skipped =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> false end,
+               runner: fn _input -> flunk("the model should not run") end
+             )
+  end
+
+  test "limits the prompt to the release and six trimmed GitHub references" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    body = Enum.map_join(1..8, " ", &"##{&1}") <> String.duplicate("x", 7_000)
+    release = %Releases{tag_name: "v1.2.0", body: body}
+
+    issue_fetcher = fn _repository, number ->
       {:ok,
-       %{
-         final_url: url,
-         title: "Reference",
-         content_type: "text/html",
-         content: "Fetched release evidence",
-         truncated: false
+       %Issues{
+         number: number,
+         title: "Issue #{number}",
+         body: String.duplicate("a", 2_100),
+         state: :closed,
+         html_url: "https://github.com/tuist/hive/issues/#{number}"
        }}
     end
+
+    runner = fn %{release: input} ->
+      assert String.length(input.body) == 6_000
+      assert length(input.references) == 6
+      assert Enum.all?(input.references, &(String.length(&1.body) == 2_000))
+      {:ok, %{items: []}}
+    end
+
+    assert {:ok, []} =
+             ReleaseDropItems.generate(repository, release,
+               agents_enabled?: fn -> true end,
+               issue_fetcher: issue_fetcher,
+               runner: runner
+             )
+  end
+
+  test "uses one model turn and normalizes the structured result" do
+    repository = %GitHubRepository{owner: "tuist", name: "hive"}
+    release = %Releases{tag_name: "v1.2.0", body: "See #41."}
+
+    stub(Agents, :enabled?, fn -> true end)
+
+    expect(Sessions, :run_operation, fn ReleaseDropItemAgent,
+                                        :generate_drop_items,
+                                        %{release: %{references: [_reference]}},
+                                        agent_opts ->
+      assert agent_opts[:max_turns] == 1
+
+      {:ok,
+       %{
+         "items" => [
+           %{
+             "title" => "A feature",
+             "body" => "A user-facing change.",
+             "source_urls" => [
+               "https://github.com/tuist/hive/issues/41",
+               "https://github.com/tuist/hive/issues/999"
+             ]
+           }
+         ]
+       }}
+    end)
 
     assert {:ok,
             [
               %{
-                title: "Project cache warmups finish faster",
-                body: "Warmups now reuse existing cache metadata before planning work.",
+                title: "A feature",
+                body: "A user-facing change.",
                 source_urls: ["https://github.com/tuist/hive/issues/41"]
               }
             ]} =
              ReleaseDropItems.generate(repository, release,
-               agents_enabled?: fn -> true end,
-               fetcher: fetcher,
-               runner: runner
+               issue_fetcher: fn _repository, 41 ->
+                 {:ok,
+                  %Issues{
+                    number: 41,
+                    title: "A feature",
+                    body: "Evidence.",
+                    state: "closed",
+                    html_url: "https://github.com/tuist/hive/issues/41"
+                  }}
+               end,
+               agent_opts: [max_turns: 3]
              )
-  end
-
-  test "keeps failed reference metadata out of the model input" do
-    repository = %GitHubRepository{owner: "tuist", name: "hive"}
-    successful_url = "https://example.com/shipped"
-    failed_url = "https://example.com/unavailable"
-    release = %Releases{body: "See #{successful_url} and #{failed_url}"}
-
-    fetcher = fn
-      ^successful_url ->
-        {:ok, %{content: "User-facing evidence", final_url: successful_url}}
-
-      ^failed_url ->
-        {:error, "upstream unavailable"}
-    end
-
-    runner = fn input ->
-      assert input.release.references == [
-               %{url: successful_url, content: "User-facing evidence"}
-             ]
-
-      {:ok, %{items: []}}
-    end
-
-    assert {:ok, []} =
-             ReleaseDropItems.generate(repository, release,
-               agents_enabled?: fn -> true end,
-               fetcher: fetcher,
-               runner: runner
-             )
-  end
-
-  test "fetches links discovered in release evidence" do
-    repository = %GitHubRepository{owner: "tuist", name: "hive"}
-    seed_url = "https://example.com/release-notes"
-    release = %Releases{body: "See #{seed_url}"}
-
-    discovered_urls =
-      Enum.map(1..8, &"https://example.com/evidence/#{&1}")
-
-    fetcher = fn
-      ^seed_url ->
-        {:ok,
-         %{
-           content: Enum.join(discovered_urls, "\n"),
-           final_url: seed_url,
-           content_type: "text/plain"
-         }}
-
-      url ->
-        {:ok, %{content: "Evidence for #{url}", final_url: url, content_type: "text/plain"}}
-    end
-
-    runner = fn input ->
-      assert Enum.map(input.release.references, & &1.url) ==
-               [seed_url | discovered_urls]
-
-      {:ok, %{items: []}}
-    end
-
-    assert {:ok, []} =
-             ReleaseDropItems.generate(repository, release,
-               agents_enabled?: fn -> true end,
-               fetcher: fetcher,
-               runner: runner
-             )
-  end
-
-  test "recursively fetches links discovered in fetched evidence" do
-    repository = %GitHubRepository{owner: "tuist", name: "hive"}
-    seed_url = "https://example.com/release-notes"
-    second_url = "https://example.com/evidence/second"
-    third_url = "https://example.com/evidence/third"
-    release = %Releases{body: "See #{seed_url}"}
-
-    fetcher = fn
-      ^seed_url ->
-        {:ok, %{content: second_url, final_url: seed_url, content_type: "text/plain"}}
-
-      ^second_url ->
-        {:ok, %{content: third_url, final_url: second_url, content_type: "text/plain"}}
-
-      ^third_url ->
-        {:ok, %{content: "Final evidence", final_url: third_url, content_type: "text/plain"}}
-    end
-
-    runner = fn input ->
-      assert Enum.map(input.release.references, & &1.url) == [seed_url, second_url, third_url]
-      {:ok, %{items: []}}
-    end
-
-    assert {:ok, []} =
-             ReleaseDropItems.generate(repository, release,
-               agents_enabled?: fn -> true end,
-               fetcher: fetcher,
-               runner: runner
-             )
-  end
-
-  test "bounds the complete release evidence traversal" do
-    repository = %GitHubRepository{owner: "tuist", name: "hive"}
-    seed_url = "https://example.com/release-notes"
-    release = %Releases{body: "See #{seed_url}"}
-    discovered_urls = Enum.map(1..55, &"https://example.com/evidence/#{&1}")
-
-    fetcher = fn
-      ^seed_url ->
-        {:ok,
-         %{
-           content: Enum.join(discovered_urls, "\n"),
-           final_url: seed_url,
-           content_type: "text/plain"
-         }}
-
-      url ->
-        {:ok, %{content: "Evidence for #{url}", final_url: url, content_type: "text/plain"}}
-    end
-
-    runner = fn input ->
-      assert Enum.map(input.release.references, & &1.url) ==
-               [seed_url | Enum.take(discovered_urls, 11)]
-
-      {:ok, %{items: []}}
-    end
-
-    assert {:ok, []} =
-             ReleaseDropItems.generate(repository, release,
-               agents_enabled?: fn -> true end,
-               fetcher: fetcher,
-               runner: runner
-             )
-  end
-
-  test "skips when agents are disabled" do
-    repository = %GitHubRepository{owner: "tuist", name: "hive"}
-    release = %Releases{body: "See https://github.com/tuist/hive/issues/41"}
-
-    assert :skipped =
-             ReleaseDropItems.generate(repository, release, agents_enabled?: fn -> false end)
-  end
-
-  describe "reference budget" do
-    setup do
-      repository = %GitHubRepository{owner: "tuist", name: "hive"}
-
-      release = %Releases{
-        tag_name: "v2.0.0",
-        name: "Hive 2.0.0",
-        body: Enum.map_join(1..40, "\n", &"- See https://example.com/doc-#{&1}"),
-        html_url: "https://github.com/tuist/hive/releases/tag/v2.0.0",
-        published_at: "2026-08-26T09:30:00Z"
-      }
-
-      fetcher = fn url ->
-        {:ok, %{content: String.duplicate("x", 7_000), title: "Doc", final_url: url}}
-      end
-
-      {:ok, repository: repository, release: release, fetcher: fetcher}
-    end
-
-    test "bounds the characters reference content contributes to the prompt", ctx do
-      test_pid = self()
-
-      runner = fn input ->
-        total =
-          input.release.references
-          |> Enum.map(&String.length(&1.content))
-          |> Enum.sum()
-
-        send(test_pid, {:budget, length(input.release.references), total})
-        {:ok, %{items: []}}
-      end
-
-      assert {:ok, []} =
-               ReleaseDropItems.generate(ctx.repository, ctx.release,
-                 agents_enabled?: fn -> true end,
-                 fetcher: ctx.fetcher,
-                 runner: runner
-               )
-
-      assert_received {:budget, count, total}
-
-      # Without a budget this release would carry 40 documents of 12k characters.
-      assert total <= 60_000
-      assert count <= 12
-    end
-
-    test "marks the reference that straddles the limit as truncated", ctx do
-      test_pid = self()
-
-      runner = fn input ->
-        send(test_pid, {:refs, input.release.references})
-        {:ok, %{items: []}}
-      end
-
-      assert {:ok, []} =
-               ReleaseDropItems.generate(ctx.repository, ctx.release,
-                 agents_enabled?: fn -> true end,
-                 fetcher: ctx.fetcher,
-                 runner: runner
-               )
-
-      assert_received {:refs, references}
-
-      assert Enum.any?(references, &Map.get(&1, :truncated))
-    end
   end
 end

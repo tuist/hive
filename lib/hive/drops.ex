@@ -1,7 +1,8 @@
 defmodule Hive.Drops do
   @moduledoc """
-  Shipped-update entries from GitHub release drop items and RSS/Atom
-  changelogs. Drops are read-only from the dashboard's perspective;
+  Shipped-update entries from GitHub releases and RSS/Atom changelogs.
+  Individual GitHub release drops are grounded in the release notes and
+  directly referenced GitHub work. Drops are read-only from the dashboard's perspective;
   their data is reconciled by the `Hive.Drops.GitHubReleasesSyncer` and
   `Hive.Drops.RssSyncer`, and routed to domains by
   `Hive.Drops.DomainClassification`.
