@@ -126,7 +126,7 @@ Hive currently uses language models for:
 | Slack conversations | Reads the triggering mention with its surrounding thread, streams replies with live status updates, captures requested Forage items, gives unlinked people a direct profile-connection path, and starts objective-specific Flights from Grafana alert threads. |
 | GitHub issue classification | Links mirrored issues to the relevant project domains. |
 | Forage Flights | Investigates, reproduces, or fixes a Grafana alert or GitHub issue in an isolated repository snapshot, preserves the portable agent session, and returns a pull request or report after a member starts the Flight. |
-| Drop generation | Turns release evidence into user-facing shipped improvements. Linked pages are followed to a bounded number of documents and a bounded total size, so one release that links a hub page cannot dominate a request. |
+| Drop generation | Extracts individual, user-facing feature drops from published GitHub releases. Hive supplies release notes and up to six directly referenced GitHub issues or pull requests, never crawling linked webpages. The model receives one turn per release, and the scheduled backlog advances by one release at a time. A release from a project with one domain is linked directly; multi-domain releases use the normal drop classification workflow. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
 | Postmortem semantic retrieval | Stores a durable vector for each published postmortem so related incidents can be found by meaning. |
@@ -136,6 +136,10 @@ when Hive inference is configured. Flights are different: an organization
 member must start each Flight from the Forage item, a Grafana alert thread in
 Slack, or a connected client. When inference is not configured, Hive continues
 to run and uses the documented non-model behavior for each feature.
+
+Hive's built-in inference token caps each model response at 1,200 tokens. It
+is a final guardrail for workflows using the **Use for Hive inference** profile,
+not a replacement for their own durable state and bounded input design.
 
 Flights also require a [sandbox runner](/reference/configuration#coding-runs)
 and a GitHub App with permission to write repository contents and pull

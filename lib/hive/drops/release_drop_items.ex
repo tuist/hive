@@ -1,49 +1,49 @@
 defmodule Hive.Drops.ReleaseDropItems do
   @moduledoc """
-  Builds the input for the release drop item agent and normalizes its
-  structured output before the syncer persists anything.
+  Builds bounded GitHub issue evidence for the release drop item agent and
+  normalizes its structured output before the syncer persists anything.
   """
 
   alias Hive.Agents
   alias Hive.Agents.Sessions
-  alias Hive.Agents.Tools.FetchUrlContent
+  alias Hive.Domains.GitHubRepository
   alias Hive.Drops.Agents.ReleaseDropItemAgent
   alias Hive.GitHub.IssueRefs
+  alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
-  alias Hive.Domains.GitHubRepository
+  alias Hive.Repo
   alias Hive.URL
 
-  @max_release_body_length 20_000
-  @max_reference_urls 40
-  @max_fetched_reference_urls 12
-
-  # References are crawled breadth-first out of the release body, so a release
-  # that links a hub page pulls in a long tail of documents. Bound the total
-  # characters that reach the prompt rather than just the document count: at the
-  # previous 50 documents x 12k characters each, a single release could carry a
-  # six-figure token prompt, and `max_turns` resent it on every turn.
-  @max_reference_content_chars 60_000
-  @fetch_concurrency 8
-  @fetch_timeout 45_000
-  @url_re ~r{https?://[^\s<>\]\)"]+}i
+  @max_release_body_length 6_000
+  @max_references 6
+  @max_reference_body_length 2_000
+  @max_items 6
 
   @doc """
-  Generates user-facing drop items for a GitHub release.
+  Generates individual, user-facing drop items for a GitHub release.
 
-  Returns `:skipped` when agents are disabled or the LLM is not
-  configured. Returns `{:ok, items}` with normalized maps when the agent
-  succeeds.
+  Hive supplies only the release notes and directly referenced GitHub issues
+  or pull requests. It never follows arbitrary links in the release body.
+  Returns `:skipped` when agents are disabled or the model is not configured.
   """
   def generate(%GitHubRepository{} = repository, %Releases{} = release, opts \\ []) do
     if agents_enabled?(opts) do
-      references = fetch_references(repository, release, opts)
-      input = build_input(repository, release, references)
-
-      input
-      |> run_generator(opts)
-      |> handle_agent_result()
+      generate_from_references(repository, release, opts)
     else
       :skipped
+    end
+  end
+
+  defp generate_from_references(repository, release, opts) do
+    case fetch_references(repository, release, opts) do
+      [] ->
+        {:ok, []}
+
+      references ->
+        repository
+        |> build_input(release, references)
+        |> then(fn input -> {input, run_generator(input, opts)} end)
+        |> then(fn {input, result} -> handle_agent_result(result, input) end)
     end
   end
 
@@ -53,145 +53,68 @@ defmodule Hive.Drops.ReleaseDropItems do
         repository: "#{repository.owner}/#{repository.name}",
         tag: release.tag_name || "",
         title: release.name || "",
-        body: truncate(release.body || ""),
+        body: truncate(release.body || "", @max_release_body_length),
         url: release.html_url || "",
         published_at: release.published_at || release.created_at || "",
-        references: references |> Enum.filter(&successful_reference?/1) |> take_within_budget()
+        references: Enum.take(references, @max_references)
       }
     }
   end
 
   defp fetch_references(repository, release, opts) do
-    seed_urls = reference_urls(repository, release.body || "")
-    fetcher = Keyword.get(opts, :fetcher, &FetchUrlContent.fetch/1)
+    issue_fetcher = Keyword.get(opts, :issue_fetcher, &Issues.get_issue/2)
 
-    fetch_reference_queue(seed_urls, MapSet.new(seed_urls), fetcher, [])
+    release
+    |> issue_refs(repository)
+    |> Enum.flat_map(fn ref -> fetch_reference(ref, repository, issue_fetcher) end)
   end
 
-  defp fetch_reference_queue([], _seen_urls, _fetcher, references), do: references
+  defp issue_refs(release, repository) do
+    (release.body || "")
+    |> IssueRefs.extract(
+      default_repo: {repository.owner, repository.name},
+      limit: @max_references
+    )
+  end
 
-  defp fetch_reference_queue(urls, seen_urls, fetcher, references) do
-    remaining = @max_fetched_reference_urls - length(references)
-
-    if remaining <= 0 or content_length(references) >= @max_reference_content_chars do
-      references
+  defp fetch_reference(ref, source_repository, issue_fetcher) do
+    with %GitHubRepository{} = repository <- repository_for_ref(ref, source_repository),
+         {:ok, issue} <- issue_fetcher.(repository, ref.number),
+         reference when not is_nil(reference) <- reference_from_issue(issue, ref) do
+      [reference]
     else
-      crawl(urls, seen_urls, fetcher, references, remaining)
+      _ -> []
     end
   end
 
-  defp crawl(urls, seen_urls, fetcher, references, remaining) do
-    urls = Enum.take(urls, remaining)
-    fetched_references = fetch_url_batch(urls, fetcher)
-    references = references ++ fetched_references
-    remaining = @max_fetched_reference_urls - length(references)
-
-    discovered_urls =
-      fetched_references
-      |> Enum.flat_map(&urls_from_reference/1)
-      |> Enum.reject(&MapSet.member?(seen_urls, &1))
-      |> Enum.uniq()
-      |> Enum.take(remaining)
-
-    seen_urls = Enum.reduce(discovered_urls, seen_urls, &MapSet.put(&2, &1))
-
-    fetch_reference_queue(discovered_urls, seen_urls, fetcher, references)
+  defp repository_for_ref(ref, %GitHubRepository{owner: owner, name: name} = repository) do
+    if ref.owner == owner and ref.name == name do
+      repository
+    else
+      Repo.get_by(GitHubRepository, owner: ref.owner, name: ref.name)
+    end
   end
 
-  # Keeps references whole until the character budget runs out, then trims the
-  # one that straddles the limit so the prompt stays bounded.
-  defp take_within_budget(references) do
-    references
-    |> Enum.reduce({[], @max_reference_content_chars}, fn reference, {kept, left} ->
-      size = reference |> Map.get(:content, "") |> String.length()
-
-      cond do
-        left <= 0 -> {kept, 0}
-        size <= left -> {[reference | kept], left - size}
-        true -> {[trim_reference(reference, left) | kept], 0}
+  defp reference_from_issue(issue, ref) do
+    url =
+      issue
+      |> get_value(:html_url)
+      |> clean_url()
+      |> case do
+        nil -> "https://github.com/#{ref.owner}/#{ref.name}/issues/#{ref.number}"
+        value -> value
       end
-    end)
-    |> elem(0)
-    |> Enum.reverse()
+
+    if public_url?(url) do
+      %{
+        url: url,
+        number: ref.number,
+        title: issue |> get_value(:title) |> clean_text() || "",
+        body: issue |> get_value(:body) |> clean_text() |> truncate(@max_reference_body_length),
+        state: issue |> get_value(:state) |> normalize_state()
+      }
+    end
   end
-
-  defp trim_reference(reference, budget) do
-    reference
-    |> Map.put(:content, reference |> Map.get(:content, "") |> String.slice(0, budget))
-    |> Map.put(:truncated, true)
-  end
-
-  defp content_length(references) do
-    Enum.reduce(references, 0, fn reference, total ->
-      total + (reference |> Map.get(:content, "") |> String.length())
-    end)
-  end
-
-  defp fetch_url_batch([], _fetcher), do: []
-
-  defp fetch_url_batch(urls, fetcher) do
-    urls
-    |> Task.async_stream(
-      fn url -> normalize_fetch_result(url, fetcher.(url)) end,
-      max_concurrency: @fetch_concurrency,
-      ordered: true,
-      on_timeout: :kill_task,
-      timeout: @fetch_timeout
-    )
-    |> Enum.zip(urls)
-    |> Enum.map(fn
-      {{:ok, reference}, _url} -> reference
-      {{:exit, _reason}, url} -> %{url: url, error: "The reference fetch timed out."}
-    end)
-  end
-
-  defp normalize_fetch_result(url, {:ok, result}) when is_map(result) do
-    final_url = fetch_value(result, :final_url, url)
-
-    %{
-      url: url,
-      content: fetch_value(result, :content, "")
-    }
-    |> maybe_put_reference(:final_url, if(final_url == url, do: nil, else: final_url))
-    |> maybe_put_reference(:title, fetch_value(result, :title, nil))
-    |> maybe_put_reference(:truncated, if(fetch_value(result, :truncated, false), do: true))
-  end
-
-  defp normalize_fetch_result(url, {:error, reason}) do
-    %{url: url, error: fetch_error(reason)}
-  end
-
-  defp normalize_fetch_result(url, other) do
-    %{url: url, error: fetch_error(other)}
-  end
-
-  defp fetch_value(result, key, default) do
-    Map.get(result, key) || Map.get(result, Atom.to_string(key)) || default
-  end
-
-  defp successful_reference?(reference) when is_map(reference) do
-    is_binary(Map.get(reference, :content) || Map.get(reference, "content"))
-  end
-
-  defp successful_reference?(_reference), do: false
-
-  defp maybe_put_reference(reference, _key, value) when value in [nil, ""], do: reference
-  defp maybe_put_reference(reference, key, value), do: Map.put(reference, key, value)
-
-  defp urls_from_reference(%{content: content}) when is_binary(content),
-    do: urls_from_text(content)
-
-  defp urls_from_reference(_reference), do: []
-
-  defp urls_from_text(text) do
-    @url_re
-    |> Regex.scan(text)
-    |> Enum.map(fn [url] -> clean_url(url) end)
-    |> Enum.filter(&public_url?/1)
-  end
-
-  defp fetch_error(reason) when is_binary(reason), do: String.slice(reason, 0, 500)
-  defp fetch_error(reason), do: reason |> inspect() |> String.slice(0, 500)
 
   defp run_generator(input, opts) do
     runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
@@ -200,120 +123,89 @@ defmodule Hive.Drops.ReleaseDropItems do
 
   defp run_agent(input, opts) do
     agent = Keyword.get(opts, :agent, ReleaseDropItemAgent)
-    agent_opts = Keyword.get(opts, :agent_opts, [])
+    agent_opts = opts |> Keyword.get(:agent_opts, []) |> Keyword.put(:max_turns, 1)
 
     Sessions.run_operation(agent, :generate_drop_items, input, agent_opts)
   end
 
-  defp handle_agent_result({:ok, %{items: items}}), do: {:ok, normalize_items(items)}
-  defp handle_agent_result({:ok, %{"items" => items}}), do: {:ok, normalize_items(items)}
-  defp handle_agent_result({:error, :llm_not_configured}), do: :skipped
-  defp handle_agent_result(other), do: other
+  defp handle_agent_result({:ok, %{items: items}}, input),
+    do: {:ok, normalize_items(items, allowed_source_urls(input))}
 
-  defp normalize_items(items) when is_list(items) do
+  defp handle_agent_result({:ok, %{"items" => items}}, input),
+    do: {:ok, normalize_items(items, allowed_source_urls(input))}
+
+  defp handle_agent_result({:error, :llm_not_configured}, _input), do: :skipped
+  defp handle_agent_result(other, _input), do: other
+
+  defp normalize_items(items, allowed_urls) when is_list(items) do
     items
-    |> Enum.map(&normalize_item/1)
+    |> Enum.map(&normalize_item(&1, allowed_urls))
     |> Enum.reject(&is_nil/1)
+    |> Enum.take(@max_items)
   end
 
-  defp normalize_items(_items), do: []
+  defp normalize_items(_items, _allowed_urls), do: []
 
-  defp normalize_item(item) when is_map(item) do
+  defp normalize_item(item, allowed_urls) when is_map(item) do
     title = item |> get_value(:title) |> clean_text()
     body = item |> get_value(:body) |> clean_text()
-    source_urls = item |> get_value(:source_urls) |> normalize_source_urls()
+    source_urls = item |> get_value(:source_urls) |> normalize_source_urls(allowed_urls)
 
     if title && body && source_urls != [] do
       %{title: title, body: body, source_urls: source_urls}
     end
   end
 
-  defp normalize_item(_item), do: nil
+  defp normalize_item(_item, _allowed_urls), do: nil
 
-  defp reference_urls(%GitHubRepository{} = repository, body) do
-    body_urls = urls_from_body(body)
-
-    body_urls
-    |> Kernel.++(urls_from_refs(repository, body, body_urls))
-    |> Enum.uniq()
-    |> Enum.take(@max_reference_urls)
-  end
-
-  defp urls_from_body(body) do
-    @url_re
-    |> Regex.scan(body)
-    |> Enum.map(fn [url] -> clean_url(url) end)
-    |> Enum.filter(&public_url?/1)
-  end
-
-  defp urls_from_refs(repository, body, body_urls) do
-    body
-    |> IssueRefs.extract(
-      default_repo: {repository.owner, repository.name},
-      limit: @max_reference_urls
-    )
-    |> Enum.reject(&ref_already_has_url?(&1, body_urls))
-    |> Enum.map(fn ref -> "https://github.com/#{ref.owner}/#{ref.name}/issues/#{ref.number}" end)
-  end
-
-  defp ref_already_has_url?(ref, urls) do
-    Enum.any?(urls, fn url ->
-      case URI.parse(url) do
-        %URI{host: host, path: path} when is_binary(host) and is_binary(path) ->
-          host = String.downcase(host)
-          path_parts = path |> String.trim_leading("/") |> String.split("/")
-
-          host in ["github.com", "www.github.com"] and
-            github_ref_path?(path_parts, ref)
-
-        _ ->
-          false
-      end
-    end)
-  end
-
-  defp github_ref_path?([owner, name, type, number], ref)
-       when type in ["issues", "pull"] do
-    String.downcase(owner) == ref.owner and String.downcase(name) == ref.name and
-      Integer.to_string(ref.number) == number
-  end
-
-  defp github_ref_path?(_path_parts, _ref), do: false
-
-  defp normalize_source_urls(urls) when is_list(urls) do
+  defp normalize_source_urls(urls, allowed_urls) when is_list(urls) do
     urls
     |> Enum.filter(&is_binary/1)
     |> Enum.map(&clean_url/1)
-    |> Enum.filter(&public_url?/1)
+    |> Enum.filter(&(public_url?(&1) and &1 in allowed_urls))
     |> Enum.uniq()
-    |> Enum.take(10)
+    |> Enum.take(@max_references)
   end
 
-  defp normalize_source_urls(url) when is_binary(url), do: normalize_source_urls([url])
-  defp normalize_source_urls(_urls), do: []
+  defp normalize_source_urls(url, allowed_urls) when is_binary(url),
+    do: normalize_source_urls([url], allowed_urls)
 
-  defp clean_url(url) when is_binary(url) do
-    url
+  defp normalize_source_urls(_urls, _allowed_urls), do: []
+
+  defp allowed_source_urls(%{release: release}) do
+    [release.url | Enum.map(release.references, & &1.url)]
+    |> Enum.map(&clean_url/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp normalize_state(state) when is_atom(state), do: Atom.to_string(state)
+  defp normalize_state(state) when is_binary(state), do: state
+  defp normalize_state(_state), do: ""
+
+  defp clean_url(value) when is_binary(value) do
+    value
     |> String.trim()
     |> String.trim_trailing(".")
     |> String.trim_trailing(",")
     |> String.trim_trailing(";")
     |> String.trim_trailing(":")
+    |> case do
+      "" -> nil
+      url -> url
+    end
   end
 
-  defp public_url?(url) when is_binary(url) do
-    match?({:ok, _uri}, URL.validate_public(url))
-  end
+  defp clean_url(_value), do: nil
 
+  defp public_url?(url) when is_binary(url), do: match?({:ok, _uri}, URL.validate_public(url))
   defp public_url?(_url), do: false
 
   defp get_value(map, key) when is_map(map),
     do: Map.get(map, key) || Map.get(map, Atom.to_string(key))
 
   defp clean_text(value) when is_binary(value) do
-    value
-    |> String.trim()
-    |> case do
+    case String.trim(value) do
       "" -> nil
       text -> text
     end
@@ -326,9 +218,9 @@ defmodule Hive.Drops.ReleaseDropItems do
     fun.()
   end
 
-  defp truncate(value) when is_binary(value) do
-    if String.length(value) > @max_release_body_length,
-      do: String.slice(value, 0, @max_release_body_length),
-      else: value
+  defp truncate(nil, _limit), do: ""
+
+  defp truncate(value, limit) when is_binary(value) do
+    if String.length(value) > limit, do: String.slice(value, 0, limit), else: value
   end
 end

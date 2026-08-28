@@ -25,6 +25,7 @@ defmodule HiveWeb.InferenceController do
   def chat_completions(conn, params) do
     binding = conn.assigns.inference_model_binding
     token = conn.assigns.inference_token
+    params = Inference.cap_hive_inference_output(token, params)
 
     with {:ok, requested_model} <- fetch_requested_model(params),
          true <- Inference.model_allowed?(binding, requested_model),

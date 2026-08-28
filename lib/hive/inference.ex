@@ -17,6 +17,7 @@ defmodule Hive.Inference do
   @config_key {__MODULE__, :config}
   @token_bytes 32
   @token_prefix "hinf_"
+  @hive_inference_max_output_tokens 1_200
   @token_attr_key_map %{
     "name" => :name,
     "enabled" => :enabled,
@@ -365,6 +366,22 @@ defmodule Hive.Inference do
   def relay_request(%ModelBinding{} = binding, body, opts \\ []) when is_map(body) do
     relay_request_to(binding, "chat/completions", body, stream?(body), opts)
   end
+
+  @doc false
+  def cap_hive_inference_output(%Token{hive_role: "inference"}, body) when is_map(body) do
+    body
+    |> Map.drop([
+      "max_tokens",
+      "max_completion_tokens",
+      "max_output_tokens",
+      :max_tokens,
+      :max_completion_tokens,
+      :max_output_tokens
+    ])
+    |> Map.put("max_tokens", @hive_inference_max_output_tokens)
+  end
+
+  def cap_hive_inference_output(%Token{}, body) when is_map(body), do: body
 
   @doc false
   def streaming_required?(%{

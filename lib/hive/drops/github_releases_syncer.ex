@@ -20,6 +20,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
   alias Hive.Agents.Errors
   alias Hive.Audit
+  alias Hive.Domains.GitHubRepository
   alias Hive.Drops
   alias Hive.Drops.DomainClassificationWorker
   alias Hive.Drops.ReleaseDropItems
@@ -29,10 +30,9 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   alias Hive.GitHub.IssueRefs
   alias Hive.GitHub.Issues
   alias Hive.GitHub.Releases
-  alias Hive.Domains.GitHubRepository
   alias Hive.Repo
 
-  @max_release_evaluations_per_sync 5
+  @max_release_evaluations_per_sync 1
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -46,7 +46,11 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   def sync_now(opts \\ []) do
     state = %{
       generator_opts: Keyword.get(opts, :generator_opts, []),
-      item_generator: Keyword.get(opts, :item_generator, &ReleaseDropItems.generate/3)
+      item_generator: Keyword.get(opts, :item_generator, &ReleaseDropItems.generate/3),
+      remaining_evaluations:
+        opts
+        |> Keyword.get(:max_release_evaluations, @max_release_evaluations_per_sync)
+        |> max(0)
     }
 
     run_sync(state)
@@ -65,21 +69,23 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
     end
   end
 
-  defp sync_project_repositories(state) do
-    case Enum.reduce_while(
-           list_project_repositories(),
-           :ok,
-           &sync_project_repository(&1, &2, state)
-         ) do
-      _result -> :ok
-    end
-  end
+  defp sync_project_repositories(%{remaining_evaluations: 0}), do: :ok
 
-  defp sync_project_repository(repository, :ok, state) do
-    case sync_project_repository(repository, state) do
-      :ok -> {:cont, :ok}
-      {:halt, _reason} = result -> {:halt, result}
-    end
+  defp sync_project_repositories(state) do
+    list_project_repositories()
+    |> Enum.reduce_while({:ok, state}, fn repository, {:ok, state} ->
+      case sync_project_repository(repository, state) do
+        {:ok, %{remaining_evaluations: 0} = state} ->
+          {:halt, {:ok, state}}
+
+        {:ok, state} ->
+          {:cont, {:ok, state}}
+
+        {:halt, reason, state} ->
+          {:halt, {:halt, reason, state}}
+      end
+    end)
+    |> ignore_sync_result()
   end
 
   defp list_project_repositories do
@@ -105,38 +111,36 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
             inspect(reason)
         )
 
-        :ok
+        {:ok, state}
     end
   end
+
+  defp ignore_sync_result(_result), do: :ok
+
+  defp sync_releases(_domains, _repository, _releases, %{remaining_evaluations: 0} = state),
+    do: {:ok, state}
 
   defp sync_releases(domains, repository, releases, state) do
     releases
-    |> Enum.reduce_while(
-      0,
-      &sync_release(&1, &2, domains, repository, state)
-    )
-    |> case do
-      {:halt, _reason} = result -> result
-      _evaluation_count -> :ok
-    end
+    |> Enum.reduce_while({:ok, state}, fn release, {:ok, state} ->
+      case upsert_release_items(domains, repository, release, state) do
+        :not_due ->
+          {:cont, {:ok, state}}
+
+        :evaluated ->
+          evaluation_result(state)
+
+        {:halt, reason} ->
+          {:halt, {:halt, reason, state}}
+      end
+    end)
   end
 
-  defp sync_release(
-         _release,
-         evaluation_count,
-         _domains,
-         _repository,
-         _state
-       )
-       when evaluation_count >= @max_release_evaluations_per_sync,
-       do: {:halt, evaluation_count}
+  defp evaluation_result(state) do
+    state = %{state | remaining_evaluations: state.remaining_evaluations - 1}
+    action = if state.remaining_evaluations == 0, do: :halt, else: :cont
 
-  defp sync_release(release, evaluation_count, domains, repository, state) do
-    case upsert_release_items(domains, repository, release, state) do
-      :not_due -> {:cont, evaluation_count}
-      :evaluated -> {:cont, evaluation_count + 1}
-      {:halt, _reason} = result -> {:halt, result}
-    end
+    {action, {:ok, state}}
   end
 
   defp upsert_release_items(domains, repository, %Releases{} = release, state) do
@@ -308,9 +312,7 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
 
         record_audit(drop, domains, repository, release, item)
 
-        if is_nil(drop.classified_at) and is_nil(drop.classification_failed_at) do
-          DomainClassificationWorker.enqueue(drop.id)
-        end
+        classify_or_link_drop(drop, domains)
 
         :ok
 
@@ -335,9 +337,20 @@ defmodule Hive.Drops.GitHubReleasesSyncer do
   end
 
   defp release_item_issue_refs(item, repository) do
-    item.source_urls
+    item
+    |> Map.get(:source_urls, [])
     |> Enum.join("\n")
     |> IssueRefs.extract(default_repo: {repository.owner, repository.name}, limit: 10)
+  end
+
+  defp classify_or_link_drop(drop, [domain]) do
+    Drops.replace_drop_domains(drop, [domain.id])
+  end
+
+  defp classify_or_link_drop(drop, _domains) do
+    if is_nil(drop.classified_at) and is_nil(drop.classification_failed_at) do
+      DomainClassificationWorker.enqueue(drop.id)
+    end
   end
 
   defp fetch_or_upsert_issue(ref, source_repository) do

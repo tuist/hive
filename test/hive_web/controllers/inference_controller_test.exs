@@ -55,6 +55,40 @@ defmodule HiveWeb.InferenceControllerTest do
     assert {"authorization", "Bearer upstream-token"} in Keyword.fetch!(request, :headers)
   end
 
+  test "POST /inference/v1/chat/completions caps Hive inference output", %{conn: conn} do
+    parent = self()
+
+    put_relay_config(fn request ->
+      send(parent, {:upstream_request, request})
+
+      {:ok,
+       Req.Response.new(
+         status: 200,
+         headers: [{"content-type", "application/json"}],
+         body: %{"id" => "chatcmpl-test", "object" => "chat.completion"}
+       )}
+    end)
+
+    {binding, _token_value} = relay_token!(hive_inference: true)
+    {:ok, {_token, token_value}} = Inference.ensure_hive_token(binding, :inference)
+
+    conn
+    |> put_req_header("authorization", "Bearer #{token_value}")
+    |> post(~p"/inference/v1/chat/completions", %{
+      "model" => "blick-code-review",
+      "messages" => [%{"role" => "user", "content" => "Review this change."}],
+      "max_tokens" => 10_000,
+      "max_completion_tokens" => 8_000,
+      "max_output_tokens" => 6_000
+    })
+    |> json_response(200)
+
+    assert_received {:upstream_request, request}
+    assert Keyword.fetch!(request, :json)["max_tokens"] == 1_200
+    refute Map.has_key?(Keyword.fetch!(request, :json), "max_completion_tokens")
+    refute Map.has_key?(Keyword.fetch!(request, :json), "max_output_tokens")
+  end
+
   test "POST /inference/v1/chat/completions forwards Together.ai models", %{conn: conn} do
     parent = self()
 

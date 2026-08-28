@@ -1,7 +1,7 @@
 defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
   @moduledoc """
-  Condukt agent that turns a GitHub release body into user-facing drop
-  items from bounded evidence fetched before the model request.
+  Condukt agent that turns bounded GitHub release evidence into individual,
+  user-facing drop items.
   """
 
   use Condukt
@@ -12,12 +12,12 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
     type: "object",
     properties: %{
       url: %{type: "string"},
-      final_url: %{type: "string"},
+      number: %{type: "integer"},
       title: %{type: "string"},
-      content: %{type: "string"},
-      truncated: %{type: "boolean"}
+      body: %{type: "string"},
+      state: %{type: "string"}
     },
-    required: ["url", "content"],
+    required: ["url", "number", "title", "body", "state"],
     additionalProperties: false
   }
 
@@ -30,7 +30,7 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
       body: %{type: "string"},
       url: %{type: "string"},
       published_at: %{type: "string"},
-      references: %{type: "array", items: @reference_schema}
+      references: %{type: "array", items: @reference_schema, maxItems: 6}
     },
     required: ["repository", "body", "references"],
     additionalProperties: false
@@ -41,7 +41,7 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
     properties: %{
       title: %{type: "string", minLength: 1, maxLength: 120},
       body: %{type: "string", minLength: 1, maxLength: 800},
-      source_urls: %{type: "array", items: %{type: "string"}, minItems: 1}
+      source_urls: %{type: "array", items: %{type: "string"}, minItems: 1, maxItems: 6}
     },
     required: ["title", "body", "source_urls"],
     additionalProperties: false
@@ -49,18 +49,14 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
 
   @input_schema %{
     type: "object",
-    properties: %{
-      release: @release_schema
-    },
+    properties: %{release: @release_schema},
     required: ["release"],
     additionalProperties: false
   }
 
   @output_schema %{
     type: "object",
-    properties: %{
-      items: %{type: "array", items: @item_schema}
-    },
+    properties: %{items: %{type: "array", items: @item_schema, maxItems: 6}},
     required: ["items"],
     additionalProperties: false
   }
@@ -68,29 +64,17 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
   @impl true
   def system_prompt do
     """
-    You turn GitHub releases into Hive drop items.
+    You turn GitHub releases into individual Hive drop items.
 
-    A release is only an envelope. It should not become a drop by itself.
-    Hive has already fetched the issue, pull request, changelog, and doc
-    addresses referenced by the release. Your job is to review that bounded
-    evidence and produce one item for each user-facing improvement that
-    actually landed.
+    Evidence contains the release notes and directly referenced GitHub issues
+    or pull requests. Produce one item for each concrete user-facing feature
+    supported by that evidence. Do not combine unrelated features. Exclude
+    dependency bumps, release automation, continuous-integration-only work,
+    refactors, tests, and documentation-only changes unless the evidence shows
+    a concrete user-facing outcome.
 
-    Rules:
-    - Read every entry in `references` that might describe shipped work.
-      References that could not be fetched are not included as evidence.
-    - Merge several references into one item when they describe the same
-      improvement. Split them when users would understand them as
-      different shipped changes.
-    - Exclude dependency bumps, release automation, CI-only work,
-      refactors, tests, and docs-only changes unless the fetched context
-      shows a concrete user-facing outcome.
-    - Do not invent context. If a reference cannot be fetched or does
-      not explain a user-facing improvement, omit it.
-    - Write titles and bodies for product users, not maintainers reading
-      commit logs. Mention the outcome, not the implementation detail,
-      unless the implementation detail is what users experience.
-    - Every item must include the source URLs you used to justify it.
+    Use only the supplied source URLs. Do not invent context or links. Return
+    an empty list when no user-facing feature is supported by the evidence.
 
     #{StyleGuide.prose_rules()}
     """
@@ -103,10 +87,8 @@ defmodule Hive.Drops.Agents.ReleaseDropItemAgent do
     input: @input_schema,
     output: @output_schema,
     instructions: """
-    Read the release body and the fetched references, then return the
-    user-facing shipped improvements in `items`. Return an empty list when
-    the release contains no user-facing improvement that can be supported
-    by the provided evidence.
+    Use the structured release and reference evidence to return at most six
+    distinct user-facing shipped improvements in `items`.
     """
   )
 end
