@@ -699,7 +699,7 @@ defmodule Hive.Errors do
 
   defp row_to_event([event_id, ts, level, env, release, ex_type, ex_value, fn_, file, payload]) do
     %{
-      event_id: event_id,
+      event_id: normalize_uuid(event_id),
       timestamp: ts,
       level: level,
       environment: env,
@@ -711,6 +711,20 @@ defmodule Hive.Errors do
       payload: safe_decode(payload)
     }
   end
+
+  # ClickHouse returns UUID columns as 16 raw bytes over the wire.
+  # Convert to canonical `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` form
+  # so callers can render it in URLs and compare against SDK-supplied
+  # event ids.
+  defp normalize_uuid(<<_::binary-size(16)>> = bin) do
+    case Ecto.UUID.load(bin) do
+      {:ok, canonical} -> canonical
+      _ -> Base.encode16(bin, case: :lower)
+    end
+  end
+
+  defp normalize_uuid(bin) when is_binary(bin), do: bin
+  defp normalize_uuid(other), do: to_string(other)
 
   @doc """
   Returns per-issue event counts within a time window.
@@ -903,20 +917,7 @@ defmodule Hive.Errors do
 
       {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params)
 
-      Enum.map(rows, fn [event_id, ts, level, env, release, ex_type, ex_value, fn_, file, payload] ->
-        %{
-          event_id: event_id,
-          timestamp: ts,
-          level: level,
-          environment: env,
-          release: release,
-          exception_type: ex_type,
-          exception_value: ex_value,
-          top_frame_function: fn_,
-          top_frame_filename: file,
-          payload: safe_decode(payload)
-        }
-      end)
+      Enum.map(rows, fn row -> row_to_event(row) end)
     else
       []
     end
