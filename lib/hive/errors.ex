@@ -612,6 +612,67 @@ defmodule Hive.Errors do
   end
 
   @doc """
+  Fetches a single event by its `event_id` under an issue. Returns
+  the same shape as `list_events_for_issue/2` entries or `nil` when
+  the event does not exist (or ClickHouse is disabled).
+
+  Accepts the `event_id` either in canonical UUID form
+  (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) or as the 32-character
+  hex string SDKs and our own randomizer emit.
+  """
+  def fetch_event(issue_id, event_id) when is_binary(issue_id) and is_binary(event_id) do
+    if enabled?() do
+      canonical = canonical_event_id(event_id)
+
+      query = """
+      SELECT event_id, timestamp, level, environment, release, exception_type,
+             exception_value, top_frame_function, top_frame_filename, payload
+      FROM errors_events
+      WHERE issue_id = {issue_id:String}
+        AND event_id = {event_id:UUID}
+      LIMIT 1
+      """
+
+      params = %{"issue_id" => issue_id, "event_id" => canonical}
+
+      case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
+        {:ok, %{rows: [row]}} -> row_to_event(row)
+        _ -> nil
+      end
+    end
+  rescue
+    _ -> nil
+  end
+
+  def fetch_event(_, _), do: nil
+
+  defp canonical_event_id(<<a::binary-size(8), ?-, b::binary-size(4), ?-, c::binary-size(4), ?-, d::binary-size(4), ?-, e::binary-size(12)>> = uuid)
+       when byte_size(uuid) == 36,
+       do: "#{a}-#{b}-#{c}-#{d}-#{e}"
+
+  defp canonical_event_id(hex) when is_binary(hex) and byte_size(hex) == 32 do
+    <<a::binary-size(8), b::binary-size(4), c::binary-size(4), d::binary-size(4), e::binary-size(12)>> = hex
+    "#{a}-#{b}-#{c}-#{d}-#{e}"
+  end
+
+  defp canonical_event_id(other), do: other
+
+  defp row_to_event([event_id, ts, level, env, release, ex_type, ex_value, fn_, file, payload]) do
+    %{
+      event_id: event_id,
+      timestamp: ts,
+      level: level,
+      environment: env,
+      release: release,
+      exception_type: ex_type,
+      exception_value: ex_value,
+      top_frame_function: fn_,
+      top_frame_filename: file,
+      payload: safe_decode(payload)
+    }
+  end
+
+  @doc """
   Returns per-issue event counts within a time window.
   Result: `%{issue_id => count}`.
   """

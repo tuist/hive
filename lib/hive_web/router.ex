@@ -259,6 +259,7 @@ defmodule HiveWeb.Router do
         root_layout: {HiveWeb.Layouts, :root} do
         live "/errors", ErrorsLive.Index
         live "/errors/:id", ErrorsLive.Show
+        live "/errors/:id/events/:event_id", ErrorsLive.Event
       end
 
       live_session :account,

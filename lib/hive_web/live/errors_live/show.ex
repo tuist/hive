@@ -419,10 +419,15 @@ defmodule HiveWeb.ErrorsLive.Show do
           <.card_section>
             <.table id="error-events-table" rows={@events}>
               <:col :let={event} label={dgettext("dashboard_errors", "Time")}>
-                <.text_cell
-                  label={relative_time(to_datetime(event.timestamp))}
-                  {%{title: format_datetime(event.timestamp)}}
-                />
+                <.link
+                  navigate={~p"/errors/#{@issue.id}/events/#{normalize_event_id(event.event_id)}"}
+                  data-part="event-link"
+                >
+                  <.text_cell
+                    label={relative_time(to_datetime(event.timestamp))}
+                    {%{title: format_datetime(event.timestamp)}}
+                  />
+                </.link>
               </:col>
               <:col :let={event} label={dgettext("dashboard_errors", "Level")}>
                 <.badge_cell
@@ -651,6 +656,9 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp truncate_display(text, max) when is_binary(text) do
     if String.length(text) > max, do: String.slice(text, 0, max) <> "…", else: text
   end
+
+  defp normalize_event_id(id) when is_binary(id), do: String.replace(id, "-", "")
+  defp normalize_event_id(other), do: other |> to_string() |> String.replace("-", "")
 
   defp latest_message(payload) do
     case payload["message"] do
