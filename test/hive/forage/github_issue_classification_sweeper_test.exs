@@ -148,6 +148,38 @@ defmodule Hive.Forage.GitHubIssueClassificationSweeperTest do
     assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
   end
 
+  test "perform/1 skips a transient-exhausted tombstone within its 24h cooldown" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_transient_exhausted)
+    # Older than the 1h SQL cutoff so it clears the DB filter but still
+    # inside the 24h per-reason cooldown.
+    backdate_failure!(issue.id, 7_200)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+    assert [] = all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
+  test "perform/1 reconsiders a transient-exhausted tombstone after 24h" do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+
+    repository = create_repository!()
+    issue = insert_issue!(repository, 1)
+
+    GitHubIssueClassification.mark_failed(issue.id, :llm_transient_exhausted)
+    backdate_failure!(issue.id, 90_000)
+
+    assert :ok = perform_job(GitHubIssueClassificationSweeper, %{})
+
+    issue_id = issue.id
+
+    assert [%Oban.Job{args: %{"issue_id" => ^issue_id}}] =
+             all_enqueued(worker: GitHubIssueClassificationWorker)
+  end
+
   defp backdate_failure!(issue_id, seconds_ago) do
     failed_at =
       DateTime.utc_now() |> DateTime.add(-seconds_ago, :second) |> DateTime.truncate(:second)

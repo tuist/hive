@@ -5,6 +5,7 @@ defmodule Hive.Domains.Evolution do
 
   import Ecto.Query
 
+  alias Hive.Agents.Errors
   alias Hive.Agents.Sessions
   alias Hive.Forage.FeatureRequest
   alias Hive.Forage.GitHubIssue
@@ -49,17 +50,33 @@ defmodule Hive.Domains.Evolution do
       input.work_items == [] ->
         {:ok, empty_result()}
 
-      evaluation_exists?(fingerprint) ->
+      skip_fingerprint?(fingerprint) ->
         {:ok, empty_result()}
 
       true ->
         runner = Keyword.get(opts, :runner, &run_agent(&1, opts))
+        run_and_record(runner, input, fingerprint)
+    end
+  end
 
-        with {:ok, plan} <- runner.(input),
-             {:ok, result} <- apply_plan(plan),
-             {:ok, _evaluation} <- record_evaluation(fingerprint, input, result) do
-          {:ok, result}
-        end
+  defp run_and_record(runner, input, fingerprint) do
+    case runner.(input) do
+      {:ok, plan} ->
+        record_successful_run(fingerprint, input, plan)
+
+      {:error, :llm_not_configured} = error ->
+        error
+
+      {:error, reason} ->
+        record_failed_evaluation(fingerprint, input, reason)
+        {:error, Errors.sanitize_reason(reason, :domain_evolution_failed)}
+    end
+  end
+
+  defp record_successful_run(fingerprint, input, plan) do
+    with {:ok, result} <- apply_plan(plan),
+         {:ok, _evaluation} <- record_evaluation(fingerprint, input, result) do
+      {:ok, result}
     end
   end
 
@@ -101,26 +118,83 @@ defmodule Hive.Domains.Evolution do
     Sessions.run_operation(agent, :evolve_domains, input, agent_opts)
   end
 
-  defp evaluation_exists?(fingerprint) do
-    EvolutionEvaluation
-    |> where([evaluation], evaluation.fingerprint == ^fingerprint)
-    |> Repo.exists?()
+  defp skip_fingerprint?(fingerprint) do
+    case Repo.get_by(EvolutionEvaluation, fingerprint: fingerprint) do
+      nil ->
+        false
+
+      %EvolutionEvaluation{outcome: outcome} when outcome in [:changed, :noop] ->
+        true
+
+      %EvolutionEvaluation{outcome: :failed, reason: reason, evaluated_at: evaluated_at} ->
+        within_reason_cooldown?(reason, evaluated_at)
+    end
+  end
+
+  defp within_reason_cooldown?(nil, _evaluated_at), do: true
+
+  defp within_reason_cooldown?(reason, evaluated_at) do
+    case Errors.reconsideration_cooldown(reason) do
+      nil ->
+        # Non-reconsiderable failure: skip until the input fingerprint changes.
+        true
+
+      cooldown ->
+        cutoff = DateTime.utc_now() |> DateTime.add(-cooldown, :second)
+        DateTime.compare(evaluated_at, cutoff) != :lt
+    end
   end
 
   defp record_evaluation(fingerprint, input, result) do
     changed? = result.created != [] or result.updated != []
 
-    %EvolutionEvaluation{}
-    |> EvolutionEvaluation.changeset(%{
+    upsert_evaluation(fingerprint, %{
       fingerprint: fingerprint,
       outcome: if(changed?, do: :changed, else: :noop),
+      reason: nil,
       work_items_count: length(input.work_items),
       created_count: length(result.created),
       updated_count: length(result.updated),
       skipped_count: length(result.skipped),
       evaluated_at: DateTime.utc_now() |> DateTime.truncate(:second)
     })
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:fingerprint])
+  end
+
+  defp record_failed_evaluation(fingerprint, input, reason) do
+    hard_reason = Errors.hard_failure_reason(reason)
+    unavailable? = Errors.provider_unavailable?(reason)
+
+    stored_reason =
+      cond do
+        hard_reason -> hard_reason
+        unavailable? -> :llm_provider_unavailable
+        true -> :agent_failed
+      end
+
+    upsert_evaluation(fingerprint, %{
+      fingerprint: fingerprint,
+      outcome: :failed,
+      reason: to_string(stored_reason),
+      work_items_count: length(input.work_items),
+      created_count: 0,
+      updated_count: 0,
+      skipped_count: 0,
+      evaluated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+  end
+
+  defp upsert_evaluation(fingerprint, attrs) do
+    case Repo.get_by(EvolutionEvaluation, fingerprint: fingerprint) do
+      nil ->
+        %EvolutionEvaluation{}
+        |> EvolutionEvaluation.changeset(attrs)
+        |> Repo.insert()
+
+      existing ->
+        existing
+        |> EvolutionEvaluation.changeset(attrs)
+        |> Repo.update()
+    end
   end
 
   defp input_fingerprint(input) do

@@ -9,7 +9,8 @@ defmodule Hive.Domains.EvolutionEvaluation do
 
   schema "domain_evolution_evaluations" do
     field :fingerprint, :string
-    field :outcome, Ecto.Enum, values: [:changed, :noop]
+    field :outcome, Ecto.Enum, values: [:changed, :noop, :failed]
+    field :reason, :string
     field :work_items_count, :integer
     field :created_count, :integer
     field :updated_count, :integer
@@ -24,6 +25,7 @@ defmodule Hive.Domains.EvolutionEvaluation do
     |> cast(attrs, [
       :fingerprint,
       :outcome,
+      :reason,
       :work_items_count,
       :created_count,
       :updated_count,

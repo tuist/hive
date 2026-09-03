@@ -35,16 +35,16 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"issue_id" => issue_id}}) do
+  def perform(%Oban.Job{args: %{"issue_id" => issue_id}} = job) do
     issue_id
     |> GitHubIssueClassification.classify()
-    |> handle_classification_result(issue_id)
+    |> handle_classification_result(job, issue_id)
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
-      handle_classification_result({:error, error}, issue_id)
+      handle_classification_result({:error, error}, job, issue_id)
   end
 
-  defp handle_classification_result(result, issue_id) do
+  defp handle_classification_result(result, job, issue_id) do
     case result do
       {:ok, _domain_ids} ->
         Hive.Domains.schedule_evolution()
@@ -56,11 +56,11 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
         :ok
 
       {:error, reason} ->
-        handle_classification_error(issue_id, reason)
+        handle_classification_error(job, issue_id, reason)
     end
   end
 
-  defp handle_classification_error(issue_id, reason) do
+  defp handle_classification_error(job, issue_id, reason) do
     sanitized_reason = Errors.sanitize_reason(reason)
 
     cond do
@@ -72,6 +72,15 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
         )
 
         {:cancel, hard_reason}
+
+      Errors.terminal_attempt?(job) ->
+        :ok = GitHubIssueClassification.mark_failed(issue_id, :llm_transient_exhausted)
+
+        Logger.warning(
+          "[Forage.GitHubIssueClassificationWorker] Retry attempts exhausted for issue #{issue_id}, tombstoning: #{inspect(sanitized_reason)}"
+        )
+
+        {:discard, :llm_transient_exhausted}
 
       Errors.provider_unavailable?(reason) ->
         Logger.warning(

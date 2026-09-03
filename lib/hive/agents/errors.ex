@@ -40,46 +40,105 @@ defmodule Hive.Agents.Errors do
     "too many requests"
   ]
 
+  # Fragments that indicate transient transport-layer failures rather than a
+  # malformed local request. Matched against a status-less `ReqLLM.Error.API.Request`
+  # message; a local parameter error is caught earlier by `invalid_request?/1`.
+  @transport_fragments [
+    "closed",
+    "connection refused",
+    "econnrefused",
+    "handshake",
+    "nxdomain",
+    "timeout",
+    "tls"
+  ]
+
+  # Reason atoms sweepers reconsider after a per-reason cooldown. Each row's
+  # cooldown is the smallest interval that keeps the load off during a real
+  # outage but lets us retry once conditions might have changed. The shortest
+  # cooldown is used to filter candidate rows in the sweeper query; the
+  # per-reason cooldown is applied in-memory before enqueueing so a
+  # 1h-cooldown row is not delayed by the 24h ceiling of another reason.
+  @reconsiderable_reasons %{
+    llm_credit_limit: 3_600,
+    llm_provider_unavailable: 3_600,
+    llm_transient_exhausted: 86_400
+  }
+
   @doc """
   Returns true for provider-side availability failures that are not fixed by
   immediately retrying the same job.
+
+  Includes explicit HTTP statuses (5xx, 408, 429), transport-layer failures
+  such as timeouts and TLS handshake errors, and message fragments naming a
+  known provider unavailability condition. Malformed local requests are not
+  considered provider unavailability.
   """
-  def provider_unavailable?(%ReqLLM.Error.API.Request{} = error) do
-    provider_unavailable_error?(error)
-  end
-
-  def provider_unavailable?(%ReqLLM.Error.API.Response{} = error) do
-    provider_unavailable_error?(error)
-  end
-
-  def provider_unavailable?({:fallback_failed, reason, fallback_reason}) do
-    provider_unavailable?(reason) or provider_unavailable?(fallback_reason)
-  end
-
-  def provider_unavailable?({tag, reason}) when is_atom(tag) do
-    provider_unavailable?(reason)
-  end
-
-  def provider_unavailable?(_reason), do: false
+  def provider_unavailable?(reason), do: unavailability_signal(reason) != nil
 
   def hard_failure?(reason), do: not is_nil(hard_failure_reason(reason))
 
-  @account_failure_reasons [:llm_credit_limit, :llm_provider_unavailable]
+  @doc """
+  Reasons a sweeper reconsiders after a per-reason cooldown, atom form.
+  """
+  def reconsiderable_reasons, do: Map.keys(@reconsiderable_reasons)
+
+  @doc "The reconsiderable reasons as stored on a record (string form)."
+  def reconsiderable_reason_names, do: Enum.map(reconsiderable_reasons(), &to_string/1)
 
   @doc """
-  Failure reasons that describe the account rather than the record in flight.
+  Seconds a sweeper waits before reconsidering a row tombstoned with `reason`.
 
-  A credit limit or a suspended provider account fails every record equally, so
-  the reason says nothing about the record that happened to be processing when
-  the account went down.
+  Returns `nil` when the reason is not reconsiderable, meaning the row stays
+  tombstoned until its inputs change.
   """
-  def account_failure_reasons, do: @account_failure_reasons
+  def reconsideration_cooldown(reason) when is_atom(reason),
+    do: Map.get(@reconsiderable_reasons, reason)
 
-  @doc "The account-scoped reasons as stored on a record."
-  def account_failure_names, do: Enum.map(@account_failure_reasons, &to_string/1)
+  def reconsideration_cooldown(reason) when is_binary(reason) do
+    case reason_atom(reason) do
+      nil -> nil
+      atom -> Map.get(@reconsiderable_reasons, atom)
+    end
+  end
 
-  @doc "True when `reason` describes the account rather than the record."
-  def account_failure?(reason), do: hard_failure_reason(reason) in @account_failure_reasons
+  def reconsideration_cooldown(_reason), do: nil
+
+  @doc """
+  Shortest reconsideration cooldown across every reconsiderable reason.
+
+  Sweepers use this as the SQL cutoff and then apply the per-reason cooldown
+  in-memory before enqueueing, so a short cooldown is not blocked behind a
+  long one.
+  """
+  def shortest_reconsideration_cooldown do
+    @reconsiderable_reasons |> Map.values() |> Enum.min()
+  end
+
+  @doc "True when `reason` will be reconsidered by the sweeper after a cooldown."
+  def reconsiderable?(reason) do
+    reason
+    |> hard_failure_reason()
+    |> then(&(&1 in reconsiderable_reasons()))
+  end
+
+  @doc """
+  Returns true when a job is on (or past) its final Oban attempt.
+
+  Callers use it to move retry-exhausted work into a durable tombstone so the
+  sweeper does not re-enqueue the same row indefinitely.
+  """
+  def terminal_attempt?(%{attempt: attempt, max_attempts: max_attempts})
+      when is_integer(attempt) and is_integer(max_attempts) do
+    attempt >= max_attempts
+  end
+
+  def terminal_attempt?(_job), do: false
+
+  defp reason_atom("llm_credit_limit"), do: :llm_credit_limit
+  defp reason_atom("llm_provider_unavailable"), do: :llm_provider_unavailable
+  defp reason_atom("llm_transient_exhausted"), do: :llm_transient_exhausted
+  defp reason_atom(_reason), do: nil
 
   def hard_failure_reason(reason) do
     text = reason_text(reason)
@@ -160,12 +219,39 @@ defmodule Hive.Agents.Errors do
 
   defp invalid_request?(_reason), do: false
 
-  defp provider_unavailable_error?(error) do
-    message = error |> Exception.message() |> String.downcase()
+  @doc false
+  # Returns the specific signal that classifies `reason` as provider
+  # unavailability, or `nil` when the reason is not a provider outage.
+  #
+  # Malformed local requests (`ReqLLM.Error.Invalid.Parameter` and their
+  # wrappers) are never reported as provider unavailability so retrying them
+  # is not confused with waiting out an outage.
+  def unavailability_signal(reason) do
+    cond do
+      invalid_request?(reason) -> nil
+      transport_failure?(reason) -> :transport
+      status_5xx?(status_code(reason)) -> :status_5xx
+      status_code(reason) == 408 -> :status_408
+      status_code(reason) == 429 -> :status_429
+      message_matches_unavailability?(reason) -> :message_fragment
+      true -> nil
+    end
+  end
 
-    Enum.any?(@provider_unavailable_fragments, &String.contains?(message, &1)) or
-      (Map.get(error, :status) == 429 and
-         Enum.any?(@rate_limited_fragments, &String.contains?(message, &1)))
+  defp status_5xx?(status) when is_integer(status) and status >= 500 and status <= 599, do: true
+  defp status_5xx?(_status), do: false
+
+  defp transport_failure?(reason) do
+    status_code(reason) == nil and
+      contains_any?(reason_text(reason), @transport_fragments) and
+      not contains_any?(reason_text(reason), ["invalid parameter"])
+  end
+
+  defp message_matches_unavailability?(reason) do
+    text = reason_text(reason)
+
+    contains_any?(text, @provider_unavailable_fragments) or
+      contains_any?(text, @rate_limited_fragments)
   end
 
   defp reason_text(reason) do

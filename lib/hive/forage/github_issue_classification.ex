@@ -145,21 +145,22 @@ defmodule Hive.Forage.GitHubIssueClassification do
   @doc """
   Records a terminal failure so scheduled sweeps do not repeat the model request.
 
-  An account-scoped failure refreshes its own timestamp, which is what paces the
-  sweeper's reconsideration window; a record-scoped failure is written once and
+  A reconsiderable failure (credit exhaustion, provider outage, transient
+  retries exhausted) refreshes its own timestamp, which is what paces the
+  sweeper's per-reason cooldown; a record-scoped failure is written once and
   left alone.
   """
   def mark_failed(issue_id, reason)
       when is_binary(issue_id) and (is_atom(reason) or is_binary(reason)) do
     failed_at = DateTime.utc_now() |> DateTime.truncate(:second)
-    account_failures = Errors.account_failure_names()
+    reconsiderable = Errors.reconsiderable_reason_names()
 
     GitHubIssue
     |> where(
       [issue],
       issue.id == ^issue_id and is_nil(issue.classified_at) and
         (is_nil(issue.classification_failed_at) or
-           issue.classification_failure in ^account_failures)
+           issue.classification_failure in ^reconsiderable)
     )
     |> Repo.update_all(
       set: [classification_failure: to_string(reason), classification_failed_at: failed_at]

@@ -79,22 +79,108 @@ defmodule Hive.Agents.ErrorsTest do
     end
   end
 
-  describe "account_failure?/1" do
-    test "credit and availability failures describe the account" do
-      assert Errors.account_failure?("Your credit limit has been reached")
-      assert Errors.account_failure?("account suspended")
-      assert Errors.account_failure?("monthly spending limit exceeded")
+  describe "reconsiderable_reasons/0 and reconsideration_cooldown/1" do
+    test "credit, availability, and transient-exhausted reasons are reconsidered" do
+      assert :llm_credit_limit in Errors.reconsiderable_reasons()
+      assert :llm_provider_unavailable in Errors.reconsiderable_reasons()
+      assert :llm_transient_exhausted in Errors.reconsiderable_reasons()
+      refute :llm_invalid_credentials in Errors.reconsiderable_reasons()
+      refute :llm_provider_rejected_request in Errors.reconsiderable_reasons()
     end
 
-    test "credential and request failures describe the record or the config" do
-      refute Errors.account_failure?("invalid api key")
-      refute Errors.account_failure?(:some_other_reason)
+    test "record-stored names round-trip through the string form" do
+      assert "llm_credit_limit" in Errors.reconsiderable_reason_names()
+      assert "llm_provider_unavailable" in Errors.reconsiderable_reason_names()
+      assert "llm_transient_exhausted" in Errors.reconsiderable_reason_names()
     end
 
-    test "account failure names round-trip through what is stored on a record" do
-      assert "llm_credit_limit" in Errors.account_failure_names()
-      assert "llm_provider_unavailable" in Errors.account_failure_names()
-      refute "llm_invalid_credentials" in Errors.account_failure_names()
+    test "account outages get a short cooldown, retry-exhausted a long one" do
+      assert Errors.reconsideration_cooldown(:llm_credit_limit) == 3_600
+      assert Errors.reconsideration_cooldown(:llm_provider_unavailable) == 3_600
+      assert Errors.reconsideration_cooldown(:llm_transient_exhausted) == 86_400
+      assert Errors.reconsideration_cooldown("llm_provider_unavailable") == 3_600
+      assert Errors.reconsideration_cooldown(:llm_invalid_credentials) == nil
+    end
+
+    test "shortest cooldown is the sweeper SQL cutoff" do
+      assert Errors.shortest_reconsideration_cooldown() == 3_600
+    end
+  end
+
+  describe "provider_unavailable?/1" do
+    test "5xx responses from the gateway are unavailability, not permanent" do
+      reason =
+        ReqLLM.Error.API.Request.exception(
+          reason: "Provider response error (502): The upstream provider request failed.",
+          status: 502,
+          response_body: "bad gateway",
+          request_body: "full prompt body"
+        )
+
+      assert Errors.provider_unavailable?(reason)
+      assert Errors.unavailability_signal(reason) == :status_5xx
+      refute Errors.hard_failure?(reason)
+    end
+
+    test "408 request timeouts and 429 rate limits count as unavailable" do
+      timeout =
+        ReqLLM.Error.API.Request.exception(
+          reason: "Provider response error (408): Request timed out.",
+          status: 408,
+          response_body: "request timeout",
+          request_body: "full prompt body"
+        )
+
+      rate =
+        ReqLLM.Error.API.Request.exception(
+          reason: "Provider response error (429): rate limit hit",
+          status: 429,
+          response_body: "too many requests",
+          request_body: "full prompt body"
+        )
+
+      assert Errors.provider_unavailable?(timeout)
+      assert Errors.provider_unavailable?(rate)
+    end
+
+    test "transport failures with no status count as unavailable" do
+      tls =
+        ReqLLM.Error.API.Request.exception(
+          reason: "TLS client: In state wait_cert_cr generated CLIENT ALERT",
+          status: nil,
+          response_body: "",
+          request_body: ""
+        )
+
+      assert Errors.provider_unavailable?(tls)
+      assert Errors.unavailability_signal(tls) == :transport
+    end
+
+    test "malformed local requests are not treated as provider unavailability" do
+      reason =
+        ReqLLM.Error.Invalid.Parameter.exception(
+          parameter: "model: openai:hive-inference does not support embedding operations"
+        )
+
+      refute Errors.provider_unavailable?(reason)
+      assert Errors.hard_failure_reason(reason) == :llm_provider_rejected_request
+    end
+  end
+
+  describe "terminal_attempt?/1" do
+    test "true when the job is on its last Oban attempt" do
+      assert Errors.terminal_attempt?(%{attempt: 3, max_attempts: 3})
+      assert Errors.terminal_attempt?(%{attempt: 4, max_attempts: 3})
+    end
+
+    test "false while attempts remain" do
+      refute Errors.terminal_attempt?(%{attempt: 1, max_attempts: 3})
+      refute Errors.terminal_attempt?(%{attempt: 2, max_attempts: 3})
+    end
+
+    test "false when the shape does not carry attempts" do
+      refute Errors.terminal_attempt?(%{})
+      refute Errors.terminal_attempt?(nil)
     end
   end
 end

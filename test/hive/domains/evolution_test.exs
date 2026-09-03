@@ -219,6 +219,97 @@ defmodule Hive.Domains.EvolutionTest do
     assert Repo.aggregate(EvolutionEvaluation, :count) == 2
   end
 
+  test "evolve_from_work_items/1 records a failed evaluation and skips retries with unchanged input" do
+    test_pid = self()
+    user = user()
+
+    {:ok, _feature_request} =
+      Forage.create_feature_request(
+        %{
+          "title" => "Cache the cache",
+          "description" => "Persist a memoized index of prior lookups."
+        },
+        user
+      )
+
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (502): The upstream provider request failed.",
+        status: 502,
+        response_body: "502",
+        request_body: ""
+      )
+
+    runner = fn _input ->
+      send(test_pid, :runner_called)
+      {:error, error}
+    end
+
+    assert {:error, _} = Domains.evolve_from_work_items(runner: runner)
+    assert_receive :runner_called
+
+    assert %EvolutionEvaluation{outcome: :failed, reason: "llm_provider_unavailable"} =
+             Repo.one!(EvolutionEvaluation)
+
+    assert {:ok, %{created: [], updated: [], skipped: []}} =
+             Domains.evolve_from_work_items(runner: runner)
+
+    refute_receive :runner_called
+  end
+
+  test "evolve_from_work_items/1 re-evaluates a failed fingerprint once its cooldown passes" do
+    test_pid = self()
+    user = user()
+
+    {:ok, _feature_request} =
+      Forage.create_feature_request(
+        %{
+          "title" => "Delta ingestion",
+          "description" => "Ship a per-domain change stream so evolution can see novelty."
+        },
+        user
+      )
+
+    error =
+      ReqLLM.Error.API.Request.exception(
+        reason: "Provider response error (502): The upstream provider request failed.",
+        status: 502,
+        response_body: "502",
+        request_body: ""
+      )
+
+    runner = fn _input ->
+      send(test_pid, :runner_called)
+      {:error, error}
+    end
+
+    assert {:error, _} = Domains.evolve_from_work_items(runner: runner)
+    assert_receive :runner_called
+
+    evaluation = Repo.one!(EvolutionEvaluation)
+    past = DateTime.utc_now() |> DateTime.add(-90_000, :second) |> DateTime.truncate(:second)
+
+    Repo.update_all(
+      from(evaluation in EvolutionEvaluation,
+        where: evaluation.id == ^evaluation.id
+      ),
+      set: [evaluated_at: past]
+    )
+
+    success_runner = fn _input ->
+      send(test_pid, :retry_runner_called)
+      {:ok, %{changes: []}}
+    end
+
+    assert {:ok, %{created: [], updated: [], skipped: []}} =
+             Domains.evolve_from_work_items(runner: success_runner)
+
+    assert_receive :retry_runner_called
+
+    assert %EvolutionEvaluation{outcome: :noop, reason: nil} =
+             Repo.one!(EvolutionEvaluation)
+  end
+
   test "apply_plan/1 links new domains to the requested project" do
     {:ok, project} = Projects.create_project(%{name: "Atlas", visibility: "public"})
 
