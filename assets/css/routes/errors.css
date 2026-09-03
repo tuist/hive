@@ -300,6 +300,223 @@
     color: var(--noora-surface-label-primary);
   }
 
+  & [data-part="tags"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--noora-spacing-2) var(--noora-spacing-6);
+  }
+
+  & [data-part="tag-pair"] {
+    display: grid;
+    grid-template-columns: minmax(140px, 200px) 1fr;
+    gap: var(--noora-spacing-4);
+    padding: var(--noora-spacing-2) 0;
+    border-bottom: 1px solid var(--noora-surface-border);
+  }
+
+  & [data-part="tag-pair"] dt {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="tag-pair"] dd {
+    margin: 0;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    overflow-wrap: anywhere;
+  }
+
+  & [data-part="contexts-grid"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--noora-spacing-4);
+  }
+
+  & [data-part="context-card"] {
+    border: 1px solid var(--noora-surface-border);
+    border-radius: var(--noora-radius-small);
+    padding: var(--noora-spacing-4);
+    background: var(--noora-surface-tertiary);
+  }
+
+  & [data-part="context-title"] {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+    margin-bottom: var(--noora-spacing-3);
+  }
+
+  & [data-part="context-row"] {
+    display: grid;
+    grid-template-columns: minmax(100px, 140px) 1fr;
+    gap: var(--noora-spacing-3);
+    padding: var(--noora-spacing-1) 0;
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="context-row"] dt {
+    color: var(--noora-surface-label-secondary);
+  }
+
+  & [data-part="context-row"] dd {
+    margin: 0;
+    color: var(--noora-surface-label-primary);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  & [data-part="kv-list"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+  }
+
+  & [data-part="kv-row"] {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) 1fr;
+    gap: var(--noora-spacing-4);
+    padding: var(--noora-spacing-2) 0;
+    border-bottom: 1px solid var(--noora-surface-border);
+    align-items: baseline;
+  }
+
+  & [data-part="kv-row"] dt {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="kv-row"] dd {
+    margin: 0;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    overflow-wrap: anywhere;
+  }
+
+  & [data-part="kv-row"] pre {
+    margin: 0;
+    padding: var(--noora-spacing-2);
+    background: var(--noora-surface-secondary);
+    border-radius: var(--noora-radius-small);
+    overflow-x: auto;
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
+  }
+
+  & [data-part="request"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-4);
+  }
+
+  & [data-part="request-line"] {
+    display: flex;
+    align-items: baseline;
+    gap: var(--noora-spacing-3);
+    padding: var(--noora-spacing-3);
+    background: var(--noora-surface-tertiary);
+    border-radius: var(--noora-radius-small);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
+  & [data-part="request-line"] strong {
+    color: var(--noora-surface-label-primary);
+    font-weight: var(--noora-font-weight-medium);
+  }
+
+  & [data-part="request-line"] span {
+    color: var(--noora-surface-label-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  & [data-part="request-field"] dt {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+    margin-bottom: var(--noora-spacing-2);
+  }
+
+  & [data-part="breadcrumbs-list"] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+  }
+
+  & [data-part="crumb"] {
+    padding: var(--noora-spacing-3);
+    border-left: 3px solid var(--noora-surface-border);
+    background: var(--noora-surface-tertiary);
+    border-radius: var(--noora-radius-small);
+
+    &[data-level="error"],
+    &[data-level="fatal"] {
+      border-left-color: var(--noora-surface-status-destructive, currentColor);
+    }
+
+    &[data-level="warning"] {
+      border-left-color: var(--noora-surface-status-warning, currentColor);
+    }
+  }
+
+  & [data-part="crumb-header"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    color: var(--noora-surface-label-secondary);
+  }
+
+  & [data-part="crumb-time"] {
+    color: var(--noora-surface-label-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  & [data-part="crumb-category"] {
+    color: var(--noora-surface-label-primary);
+    font-weight: var(--noora-font-weight-medium);
+  }
+
+  & [data-part="crumb-message"] {
+    margin-top: var(--noora-spacing-2);
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    overflow-wrap: anywhere;
+  }
+
+  & [data-part="crumb-data"] {
+    margin: var(--noora-spacing-2) 0 0;
+    padding: var(--noora-spacing-2);
+    background: var(--noora-surface-secondary);
+    border-radius: var(--noora-radius-small);
+    overflow-x: auto;
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
+  }
+
+  & [data-part="package-list"] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-1);
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
+  }
+
+  & [data-part="context"] [data-part="context-current"] {
+    display: block;
+    background: color-mix(in srgb, var(--noora-surface-status-destructive, currentColor) 12%, transparent);
+    color: var(--noora-surface-label-primary);
+  }
+
+  & [data-part="context"] [data-part="context-line"] {
+    display: block;
+    color: var(--noora-surface-label-secondary);
+  }
+
+  & [data-part="frame"] [data-part="module"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-xsmall);
+  }
+
   @media (max-width: 960px) {
     & [data-part="header"] {
       flex-direction: column;

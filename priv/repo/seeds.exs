@@ -2180,8 +2180,45 @@ if Hive.Errors.enabled?() do
         "module" => fixture.module,
         "filename" => fixture.filename,
         "lineno" => 42,
-        "context_line" => "    #{fixture.function |> String.split("/") |> hd()}(input)",
+        "pre_context" => [
+          "  # Attempt to serialize the incoming payload.",
+          "  # Fails when the caller sent a struct without the protocol.",
+          "  def #{fixture.function |> String.split("/") |> hd()}(input) do",
+          "    input"
+        ],
+        "context_line" => "    |> Jason.encode!(input)",
+        "post_context" => [
+          "    |> maybe_broadcast()",
+          "  end",
+          "",
+          "  defp maybe_broadcast(payload), do: :ok"
+        ],
         "in_app" => true
+      }
+    ]
+
+    request_id = "req-" <> (:crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower))
+
+    breadcrumbs = [
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -8, :second)),
+        "category" => "http",
+        "level" => "info",
+        "message" => "GET /widgets/#{rem(offset_minutes, 500)} 200",
+        "data" => %{"status_code" => 200, "duration_ms" => 42}
+      },
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -4, :second)),
+        "category" => "db.query",
+        "level" => "debug",
+        "message" => "SELECT id, name FROM widgets WHERE id = $1",
+        "data" => %{"duration_ms" => 3.2, "row_count" => 1}
+      },
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -1, :second)),
+        "category" => "app.lifecycle",
+        "level" => "warning",
+        "message" => "Circuit breaker half-open"
       }
     ]
 
@@ -2192,6 +2229,7 @@ if Hive.Errors.enabled?() do
       "level" => fixture.level,
       "environment" => environment,
       "release" => "1.2.3",
+      "dist" => "canary",
       "server_name" => "web-#{rem(offset_minutes, 3) + 1}.example.com",
       "transaction" => "MyAppWeb.WidgetController#show",
       "logger" => "elixir",
@@ -2200,23 +2238,74 @@ if Hive.Errors.enabled?() do
           %{
             "type" => fixture.exception_type,
             "value" => fixture.exception_value,
+            "mechanism" => %{"type" => "generic", "handled" => false},
             "stacktrace" => %{"frames" => frames}
           }
         ]
       },
-      "sdk" => %{"name" => "sentry.python", "version" => "1.44.1"},
+      "sdk" => %{
+        "name" => "sentry.elixir",
+        "version" => "10.0.0",
+        "integrations" => ["oban", "phoenix", "plug", "logger"],
+        "packages" => [
+          %{"name" => "hex:sentry", "version" => "10.0.0"}
+        ]
+      },
       "tags" => %{
         "environment" => environment,
         "server" => "web-#{rem(offset_minutes, 3) + 1}",
-        "runtime" => "beam"
+        "runtime" => "beam",
+        "request_id" => request_id,
+        "handled" => "no",
+        "mechanism" => "generic"
       },
       "user" => %{
         "id" => "user-#{rem(offset_minutes, 25) + 1}",
-        "email" => "user#{rem(offset_minutes, 25) + 1}@example.com"
+        "email" => "user#{rem(offset_minutes, 25) + 1}@example.com",
+        "ip_address" => "127.0.0.#{rem(offset_minutes, 200) + 1}",
+        "geo" => %{"city" => "Falkenstein", "country_code" => "DE", "region" => "Saxony"}
       },
+      "contexts" => %{
+        "os" => %{"name" => "linux", "version" => "6.8.0", "kernel_version" => "6.8.0-40-generic"},
+        "runtime" => %{
+          "name" => "elixir",
+          "version" => "1.20.2 (compiled with Erlang/OTP 29)"
+        },
+        "browser" => %{"name" => "Chrome", "version" => "127.0.0"},
+        "device" => %{"family" => "Mac", "model" => "MacBookPro18,1", "arch" => "arm64"},
+        "app" => %{"app_name" => "MyApp", "app_version" => "1.2.3", "app_build" => "2026090301"},
+        "trace" => %{
+          "trace_id" => 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+          "span_id" => 8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+          "op" => "http.server",
+          "status" => "internal_error"
+        },
+        "culture" => %{"locale" => "en-US", "timezone" => "Europe/Berlin"}
+      },
+      "modules" => %{
+        "phoenix" => "1.8.9",
+        "phoenix_live_view" => "1.0.0",
+        "ecto" => "3.13.6",
+        "ecto_sql" => "3.13.5",
+        "postgrex" => "0.20.0",
+        "plug" => "1.16.0"
+      },
+      "extra" => %{
+        "widget_id" => rem(offset_minutes, 500),
+        "attempt" => 1,
+        "shard" => "shard-#{rem(offset_minutes, 8)}"
+      },
+      "breadcrumbs" => %{"values" => breadcrumbs},
       "request" => %{
         "url" => "https://example.com/widgets/#{rem(offset_minutes, 500)}",
-        "method" => "GET"
+        "method" => "GET",
+        "query_string" => "expand=meta&fields=name,description",
+        "headers" => %{
+          "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15",
+          "Accept" => "application/json",
+          "X-Request-Id" => request_id,
+          "Authorization" => "[filtered]"
+        }
       }
     }
   end

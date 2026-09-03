@@ -40,12 +40,15 @@ defmodule HiveWeb.ErrorsLive.Show do
     with true <- Policy.authorize?(:error_issue_read, user, nil) || :unauthorized,
          {:ok, issue} <- Errors.fetch_issue(id) do
       events = Errors.list_events_for_issue(issue.id, limit: 10)
+      latest = List.first(events) || %{}
+      payload = latest[:payload] || %{}
 
       {:ok,
        socket
        |> assign(:issue, issue)
        |> assign(:events, events)
        |> assign(:latest_event, List.first(events))
+       |> assign(:latest_payload, payload)
        |> assign(
          :page_title,
          dgettext("dashboard_errors", "%{title} · %{product}",
@@ -66,17 +69,9 @@ defmodule HiveWeb.ErrorsLive.Show do
     end
   end
 
-  def handle_event("resolve", _params, socket) do
-    update_status(socket, :resolved)
-  end
-
-  def handle_event("unresolve", _params, socket) do
-    update_status(socket, :unresolved)
-  end
-
-  def handle_event("ignore", _params, socket) do
-    update_status(socket, :ignored)
-  end
+  def handle_event("resolve", _params, socket), do: update_status(socket, :resolved)
+  def handle_event("unresolve", _params, socket), do: update_status(socket, :unresolved)
+  def handle_event("ignore", _params, socket), do: update_status(socket, :ignored)
 
   defp update_status(socket, status) do
     case Errors.update_issue_status(socket.assigns.issue, status) do
@@ -139,7 +134,7 @@ defmodule HiveWeb.ErrorsLive.Show do
             <.button
               :if={@issue.status == :resolved}
               variant="secondary"
-              label={dgettext("dashboard_errors", "Unresolve")}
+              label={dgettext("dashboard_errors", "Reopen")}
               phx-click="unresolve"
             />
             <.button
@@ -186,13 +181,13 @@ defmodule HiveWeb.ErrorsLive.Show do
                 <div>
                   <dt>{dgettext("dashboard_errors", "First seen")}</dt>
                   <dd title={format_datetime(@issue.first_seen)}>
-                    {format_date(@issue.first_seen)}
+                    {relative_time(@issue.first_seen)}
                   </dd>
                 </div>
                 <div>
                   <dt>{dgettext("dashboard_errors", "Last seen")}</dt>
                   <dd title={format_datetime(@issue.last_seen)}>
-                    {format_date(@issue.last_seen)}
+                    {relative_time(@issue.last_seen)}
                   </dd>
                 </div>
               </dl>
@@ -214,7 +209,9 @@ defmodule HiveWeb.ErrorsLive.Show do
               <div data-part="event-meta">
                 <span>{format_datetime(@latest_event.timestamp)}</span>
                 <span :if={present?(@latest_event.release)}>
-                  · {dgettext("dashboard_errors", "Release %{release}", release: @latest_event.release)}
+                  · {dgettext("dashboard_errors", "Release %{release}",
+                    release: @latest_event.release
+                  )}
                 </span>
                 <span :if={present?(@latest_event.environment)}>
                   · {@latest_event.environment}
@@ -224,19 +221,172 @@ defmodule HiveWeb.ErrorsLive.Show do
 
             <div data-part="stack-frames">
               <div
-                :for={frame <- stack_frames(@latest_event)}
+                :for={frame <- stack_frames(@latest_payload)}
                 data-part="frame"
                 data-in-app={to_string(frame["in_app"] == true)}
               >
                 <div data-part="frame-header">
                   <span data-part="function">{frame["function"] || "?"}</span>
+                  <span data-part="module" :if={frame["module"]}>{frame["module"]}</span>
                   <span :if={frame["filename"]} data-part="location">
                     {frame["filename"]}<span :if={frame["lineno"]}>:{frame["lineno"]}</span>
                   </span>
                 </div>
-                <pre :if={frame["context_line"]} data-part="context"><code>{frame["context_line"]}</code></pre>
+                <pre :if={source_context(frame) != []} data-part="context"><code><span :for={line <- source_context(frame)} data-part={context_line_part(line, frame)}>{format_context_line(line)}</span></code></pre>
               </div>
             </div>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={tag_pairs(@issue, @latest_payload) != []}
+          title={dgettext("dashboard_errors", "Tags")}
+          icon="tag"
+        >
+          <.card_section>
+            <dl data-part="tags">
+              <div :for={{key, value} <- tag_pairs(@issue, @latest_payload)} data-part="tag-pair">
+                <dt>{key}</dt>
+                <dd>{value}</dd>
+              </div>
+            </dl>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={contexts(@latest_payload) != []}
+          title={dgettext("dashboard_errors", "Contexts")}
+          icon="stack"
+        >
+          <.card_section>
+            <div data-part="contexts-grid">
+              <div :for={{name, data} <- contexts(@latest_payload)} data-part="context-card">
+                <div data-part="context-title">{format_context_name(name)}</div>
+                <dl>
+                  <div :for={{k, v} <- flatten_context(data)} data-part="context-row">
+                    <dt>{k}</dt>
+                    <dd>{format_context_value(v)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={request_data(@latest_payload)}
+          title={dgettext("dashboard_errors", "Request")}
+          icon="server"
+        >
+          <.card_section>
+            <% req = request_data(@latest_payload) %>
+            <dl data-part="request">
+              <div :if={req["method"] || req["url"]} data-part="request-line">
+                <strong>{req["method"] || "GET"}</strong>
+                <span>{req["url"]}</span>
+              </div>
+              <div :if={req["query_string"]} data-part="request-field">
+                <dt>{dgettext("dashboard_errors", "Query string")}</dt>
+                <dd><code>{req["query_string"]}</code></dd>
+              </div>
+              <div :if={is_map(req["headers"]) and map_size(req["headers"]) > 0} data-part="request-field">
+                <dt>{dgettext("dashboard_errors", "Headers")}</dt>
+                <dd>
+                  <dl data-part="kv-list">
+                    <div :for={{k, v} <- Enum.sort(req["headers"])} data-part="kv-row">
+                      <dt>{k}</dt>
+                      <dd>{v}</dd>
+                    </div>
+                  </dl>
+                </dd>
+              </div>
+              <div :if={req["data"]} data-part="request-field">
+                <dt>{dgettext("dashboard_errors", "Body")}</dt>
+                <dd><pre>{format_context_value(req["data"])}</pre></dd>
+              </div>
+            </dl>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={event_breadcrumbs(@latest_payload) != []}
+          title={dgettext("dashboard_errors", "Breadcrumbs")}
+          icon="list"
+        >
+          <.card_section>
+            <ol data-part="breadcrumbs-list">
+              <li :for={crumb <- event_breadcrumbs(@latest_payload)} data-part="crumb" data-level={crumb["level"] || "info"}>
+                <div data-part="crumb-header">
+                  <span data-part="crumb-time">{format_datetime(crumb["timestamp"])}</span>
+                  <span data-part="crumb-category">{crumb["category"] || crumb["type"] || "log"}</span>
+                  <span data-part="crumb-level">{crumb["level"] || "info"}</span>
+                </div>
+                <div :if={crumb["message"]} data-part="crumb-message">{crumb["message"]}</div>
+                <pre :if={is_map(crumb["data"]) and map_size(crumb["data"]) > 0} data-part="crumb-data"><code>{format_context_value(crumb["data"])}</code></pre>
+              </li>
+            </ol>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={extra_pairs(@latest_payload) != []}
+          title={dgettext("dashboard_errors", "Additional data")}
+          icon="database"
+        >
+          <.card_section>
+            <dl data-part="kv-list">
+              <div :for={{k, v} <- extra_pairs(@latest_payload)} data-part="kv-row">
+                <dt>{k}</dt>
+                <dd><pre>{format_context_value(v)}</pre></dd>
+              </div>
+            </dl>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={module_pairs(@latest_payload) != []}
+          title={dgettext("dashboard_errors", "Modules")}
+          icon="package"
+        >
+          <.card_section>
+            <dl data-part="kv-list">
+              <div :for={{name, version} <- module_pairs(@latest_payload)} data-part="kv-row">
+                <dt>{name}</dt>
+                <dd>{version}</dd>
+              </div>
+            </dl>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={sdk_info(@latest_payload)}
+          title={dgettext("dashboard_errors", "SDK")}
+          icon="code"
+        >
+          <.card_section>
+            <% sdk = sdk_info(@latest_payload) %>
+            <dl data-part="kv-list">
+              <div :if={sdk["name"]} data-part="kv-row">
+                <dt>{dgettext("dashboard_errors", "Name")}</dt>
+                <dd>{sdk["name"]}</dd>
+              </div>
+              <div :if={sdk["version"]} data-part="kv-row">
+                <dt>{dgettext("dashboard_errors", "Version")}</dt>
+                <dd>{sdk["version"]}</dd>
+              </div>
+              <div :if={is_list(sdk["integrations"]) and sdk["integrations"] != []} data-part="kv-row">
+                <dt>{dgettext("dashboard_errors", "Integrations")}</dt>
+                <dd>{Enum.join(sdk["integrations"], ", ")}</dd>
+              </div>
+              <div :if={is_list(sdk["packages"]) and sdk["packages"] != []} data-part="kv-row">
+                <dt>{dgettext("dashboard_errors", "Packages")}</dt>
+                <dd>
+                  <ul data-part="package-list">
+                    <li :for={pkg <- sdk["packages"]}>{pkg["name"]}@{pkg["version"]}</li>
+                  </ul>
+                </dd>
+              </div>
+            </dl>
           </.card_section>
         </.card>
 
@@ -267,10 +417,7 @@ defmodule HiveWeb.ErrorsLive.Show do
                 <.text_cell label={event.release || "-"} />
               </:col>
               <:col :let={event} label={dgettext("dashboard_errors", "Message")}>
-                <.text_cell
-                  label={event.exception_type || "-"}
-                  sublabel={event.exception_value}
-                />
+                <.text_cell label={event.exception_type || "-"} sublabel={event.exception_value} />
               </:col>
               <:empty_state>
                 <.table_empty_state
@@ -308,9 +455,9 @@ defmodule HiveWeb.ErrorsLive.Show do
     |> push_navigate(to: ~p"/")
   end
 
-  defp stack_frames(%{
-         payload: %{"exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}}
-       })
+  ## Stack trace
+
+  defp stack_frames(%{"exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}})
        when is_list(frames) do
     frames
     |> Enum.reverse()
@@ -319,22 +466,194 @@ defmodule HiveWeb.ErrorsLive.Show do
 
   defp stack_frames(_), do: []
 
+  # Returns [{line_number | nil, line_source}] with the context_line
+  # first, pre_context above and post_context below.
+  defp source_context(frame) do
+    pre = list(frame["pre_context"])
+    ctx = frame["context_line"]
+    post = list(frame["post_context"])
+
+    if ctx == nil and pre == [] and post == [] do
+      []
+    else
+      base_line = frame["lineno"] || 0
+      pre_count = length(pre)
+
+      pre_with_line = Enum.with_index(pre, fn line, i -> {base_line - pre_count + i, line, :pre} end)
+      current = if ctx, do: [{base_line, ctx, :current}], else: []
+
+      post_with_line =
+        Enum.with_index(post, fn line, i -> {base_line + i + 1, line, :post} end)
+
+      pre_with_line ++ current ++ post_with_line
+    end
+  end
+
+  defp context_line_part({_, _, :current}, _), do: "context-current"
+  defp context_line_part(_, _), do: "context-line"
+
+  defp format_context_line({line, source, _}) do
+    prefix = if line, do: String.pad_leading("#{line}", 4), else: "    "
+    "#{prefix}  #{source}\n"
+  end
+
+  ## Tags
+
+  defp tag_pairs(issue, payload) do
+    payload_tags = as_map(payload["tags"])
+
+    base =
+      [
+        {"environment", get(payload, "environment", "")},
+        {"level", to_string(issue.level)},
+        {"platform", get(payload, "platform", "")},
+        {"release", get(payload, "release", "")},
+        {"dist", get(payload, "dist", "")},
+        {"server_name", get(payload, "server_name", "")},
+        {"transaction", get(payload, "transaction", "")},
+        {"logger", get(payload, "logger", "")}
+      ]
+
+    (base ++ Enum.to_list(payload_tags))
+    |> Enum.reject(fn {_, v} -> v == "" or is_nil(v) end)
+    |> Enum.uniq_by(&elem(&1, 0))
+    |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  ## Contexts
+
+  # Standard Sentry context keys we render explicitly. Anything else in
+  # `contexts` still shows up under its raw name.
+  @known_contexts ~w(user os runtime device browser app culture trace cloud_resource state response replay)
+
+  defp contexts(payload) do
+    map = as_map(payload["contexts"])
+
+    user =
+      case as_map(payload["user"]) do
+        empty when map_size(empty) == 0 -> nil
+        u -> u
+      end
+
+    map = if user, do: Map.put_new(map, "user", user), else: map
+
+    map
+    |> Enum.filter(fn {_k, v} -> is_map(v) and map_size(v) > 0 end)
+    |> Enum.sort_by(fn {k, _} -> context_order(k) end)
+  end
+
+  defp context_order(name) do
+    case Enum.find_index(@known_contexts, &(&1 == name)) do
+      nil -> length(@known_contexts) + :erlang.phash2(name, 1000)
+      idx -> idx
+    end
+  end
+
+  defp format_context_name(name) do
+    name
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.split(" ")
+    |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp flatten_context(map) when is_map(map) do
+    map
+    |> Enum.reject(fn {k, _} -> k == "type" end)
+    |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  defp flatten_context(_), do: []
+
+  defp format_context_value(nil), do: "-"
+  defp format_context_value(v) when is_binary(v), do: v
+  defp format_context_value(v) when is_number(v) or is_boolean(v), do: to_string(v)
+  defp format_context_value(v), do: Jason.encode!(v, pretty: true)
+
+  ## Request
+
+  defp request_data(payload) do
+    case as_map(payload["request"]) do
+      empty when map_size(empty) == 0 -> nil
+      m -> m
+    end
+  end
+
+  ## Breadcrumbs
+
+  defp event_breadcrumbs(payload) do
+    case payload["breadcrumbs"] do
+      %{"values" => values} when is_list(values) -> values
+      values when is_list(values) -> values
+      _ -> []
+    end
+  end
+
+  ## Extra / additional data
+
+  defp extra_pairs(payload) do
+    payload["extra"]
+    |> as_map()
+    |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  ## Modules
+
+  defp module_pairs(payload) do
+    payload["modules"]
+    |> as_map()
+    |> Enum.sort_by(&elem(&1, 0))
+  end
+
+  ## SDK
+
+  defp sdk_info(payload) do
+    case as_map(payload["sdk"]) do
+      empty when map_size(empty) == 0 -> nil
+      m -> m
+    end
+  end
+
+  ## Helpers
+
+  defp as_map(m) when is_map(m), do: m
+  defp as_map(_), do: %{}
+
+  defp list(l) when is_list(l), do: l
+  defp list(_), do: []
+
+  defp get(map, key, default) when is_map(map), do: Map.get(map, key, default) || default
+  defp get(_, _, default), do: default
+
   defp present?(value) when is_binary(value) and byte_size(value) > 0, do: true
   defp present?(_), do: false
 
   defp project_name(%Issue{project: %{name: name}}), do: name
   defp project_name(_), do: "-"
 
-  defp format_datetime(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%H:%M:%S UTC")
+  defp format_datetime(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M:%S UTC")
+  defp format_datetime(%NaiveDateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M:%S UTC")
+  defp format_datetime(bin) when is_binary(bin), do: bin
+  defp format_datetime(_), do: "-"
 
-  defp format_datetime(%NaiveDateTime{} = datetime),
-    do: Calendar.strftime(datetime, "%H:%M:%S UTC")
+  defp format_date(%DateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y")
+  defp format_date(%NaiveDateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y")
+  defp format_date(_), do: "-"
 
-  defp format_datetime(_datetime), do: "-"
+  defp relative_time(%DateTime{} = dt) do
+    diff = DateTime.diff(DateTime.utc_now(), dt, :second)
 
-  defp format_date(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
-  defp format_date(%NaiveDateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
-  defp format_date(_datetime), do: "-"
+    cond do
+      diff < 60 -> dgettext("dashboard_errors", "%{n}s ago", n: diff)
+      diff < 3600 -> dgettext("dashboard_errors", "%{n}m ago", n: div(diff, 60))
+      diff < 86_400 -> dgettext("dashboard_errors", "%{n}h ago", n: div(diff, 3600))
+      diff < 30 * 86_400 -> dgettext("dashboard_errors", "%{n}d ago", n: div(diff, 86_400))
+      diff < 365 * 86_400 -> dgettext("dashboard_errors", "%{n}mo ago", n: div(diff, 30 * 86_400))
+      true -> dgettext("dashboard_errors", "%{n}y ago", n: div(diff, 365 * 86_400))
+    end
+  end
+
+  defp relative_time(_), do: "-"
 
   defp status_label(:unresolved), do: dgettext("dashboard_errors", "Unresolved")
   defp status_label(:resolved), do: dgettext("dashboard_errors", "Resolved")
