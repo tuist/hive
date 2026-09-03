@@ -13,6 +13,7 @@ defmodule Hive.Drops.DomainClassificationSweeper do
 
   require Logger
 
+  alias Hive.Agents.Errors
   alias Hive.Drops
   alias Hive.Drops.DomainClassificationWorker
 
@@ -20,12 +21,30 @@ defmodule Hive.Drops.DomainClassificationSweeper do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    drops = Drops.list_unclassified_drops(limit: @batch_size)
+    now = DateTime.utc_now()
+
+    drops =
+      [limit: @batch_size]
+      |> Drops.list_unclassified_drops()
+      |> Enum.filter(&past_reason_cooldown?(&1, now))
 
     Enum.each(drops, fn drop -> DomainClassificationWorker.enqueue(drop.id) end)
 
     Logger.debug("[Drops.DomainClassificationSweeper] Enqueued #{length(drops)} pending drops")
 
     :ok
+  end
+
+  defp past_reason_cooldown?(%{classification_failed_at: nil}, _now), do: true
+  defp past_reason_cooldown?(%{classification_failure: nil}, _now), do: true
+
+  defp past_reason_cooldown?(
+         %{classification_failure: reason, classification_failed_at: failed_at},
+         now
+       ) do
+    case Errors.reconsideration_cooldown(reason) do
+      nil -> false
+      cooldown -> DateTime.compare(failed_at, DateTime.add(now, -cooldown, :second)) == :lt
+    end
   end
 end

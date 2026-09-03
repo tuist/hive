@@ -31,22 +31,22 @@ defmodule Hive.Postmortems.EmbeddingWorker do
   end
 
   defp handle_error(job, id, content_hash, reason) do
-    case Errors.hard_failure_reason(reason) do
-      nil ->
-        if job.attempt >= job.max_attempts do
-          failure_reason =
-            reason
-            |> Errors.sanitize_reason(:postmortem_embedding_failed)
-            |> inspect(limit: 20, printable_limit: 500)
-
-          :ok = Postmortems.mark_embedding_failed(id, content_hash, failure_reason)
-        end
-
-        Errors.oban_error(reason, :postmortem_embedding_failed)
-
-      hard_reason ->
+    cond do
+      hard_reason = Errors.hard_failure_reason(reason) ->
         :ok = Postmortems.mark_embedding_failed(id, content_hash, hard_reason)
         {:cancel, hard_reason}
+
+      Errors.terminal_attempt?(job) ->
+        :ok =
+          Postmortems.mark_embedding_failed(id, content_hash, "llm_transient_exhausted")
+
+        {:discard, :llm_transient_exhausted}
+
+      Errors.provider_unavailable?(reason) ->
+        {:snooze, @embedding_unavailable_snooze_seconds}
+
+      true ->
+        {:error, Errors.sanitize_reason(reason, :postmortem_embedding_failed)}
     end
   end
 end

@@ -5,16 +5,16 @@ defmodule Hive.Postmortems.EmbeddingWorkerTest do
   alias Hive.Postmortems
   alias Hive.Postmortems.EmbeddingWorker
 
-  test "records a durable failure after the final transient attempt" do
+  test "tombstones the record with :llm_transient_exhausted on the final attempt" do
     expect(Postmortems, :index_postmortem, fn "postmortem-id", "content-hash" ->
       {:error, :timeout}
     end)
 
     expect(Postmortems, :mark_embedding_failed, fn
-      "postmortem-id", "content-hash", ":timeout" -> :ok
+      "postmortem-id", "content-hash", "llm_transient_exhausted" -> :ok
     end)
 
-    assert {:error, :timeout} =
+    assert {:discard, :llm_transient_exhausted} =
              EmbeddingWorker.perform(%Oban.Job{
                args: %{
                  "postmortem_id" => "postmortem-id",
@@ -25,14 +25,14 @@ defmodule Hive.Postmortems.EmbeddingWorkerTest do
              })
   end
 
-  test "keeps transient failures pending while attempts remain" do
+  test "snoozes provider-unavailable failures while attempts remain" do
     expect(Postmortems, :index_postmortem, fn "postmortem-id", "content-hash" ->
       {:error, :timeout}
     end)
 
     reject(&Postmortems.mark_embedding_failed/3)
 
-    assert {:error, :timeout} =
+    assert {:snooze, 3_600} =
              EmbeddingWorker.perform(%Oban.Job{
                args: %{
                  "postmortem_id" => "postmortem-id",

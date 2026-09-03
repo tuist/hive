@@ -284,23 +284,56 @@ defmodule HiveWeb.InferenceController do
     {:ok, usage} =
       Inference.record_usage(binding, token, response, usage_payload, operation: operation)
 
-    Audit.record(:"inference.relayed", %{
-      target_type: "inference_model",
-      target_id: binding.id,
-      target_label: binding.name,
-      metadata: %{
+    status = response_status(response)
+    error_category = upstream_error_category(status, response)
+
+    metadata =
+      %{
         "operation" => usage.operation,
         "upstream_provider" => binding.upstream_provider,
         "upstream_model" => binding.upstream_model,
-        "status" => response_status(response),
+        "status" => status,
         "token_id" => token.id,
         "input_tokens" => usage.input_tokens,
         "output_tokens" => usage.output_tokens,
         "total_tokens" => usage.total_tokens,
         "cost_usd" => usage.cost_usd
       }
+      |> maybe_put_error_category(error_category)
+
+    Audit.record(:"inference.relayed", %{
+      target_type: "inference_model",
+      target_id: binding.id,
+      target_label: binding.name,
+      metadata: metadata
     })
   end
+
+  defp maybe_put_error_category(metadata, nil), do: metadata
+
+  defp maybe_put_error_category(metadata, category),
+    do: Map.put(metadata, "upstream_error_category", to_string(category))
+
+  # Classifies non-success upstream responses so operators can distinguish
+  # credit exhaustion from overload from a malformed request without reading
+  # per-provider strings out of logs.
+  defp upstream_error_category(status, _response) when is_integer(status) and status < 400,
+    do: nil
+
+  defp upstream_error_category(status, response) do
+    body_fragment = response |> response_body() |> body_fragment()
+    reason = {:llm_response_failed, status, body_fragment || ""}
+
+    cond do
+      category = Hive.Agents.Errors.hard_failure_reason(reason) -> category
+      Hive.Agents.Errors.provider_unavailable?(reason) -> :llm_provider_unavailable
+      true -> :llm_gateway_error
+    end
+  end
+
+  defp body_fragment(body) when is_binary(body), do: String.slice(body, 0, 500)
+  defp body_fragment(body) when is_map(body) or is_list(body), do: inspect(body, limit: 20)
+  defp body_fragment(_body), do: ""
 
   defp fetch_requested_model(%{"model" => model}) when is_binary(model) and model != "",
     do: {:ok, model}
