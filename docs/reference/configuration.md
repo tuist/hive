@@ -440,6 +440,43 @@ link unfurling.
 
 Optional comma-separated Slack workspace identifier allowlist.
 
+## ClickHouse
+
+### HIVE_CLICKHOUSE_ENABLED {#hive_clickhouse_enabled}
+
+Set to `true` or `1` to connect Hive to
+[ClickHouse](https://clickhouse.com/). It defaults to enabled in development
+and disabled in other environments. The Helm chart configures the connection
+automatically when `clickhouse.enabled=true`.
+
+### HIVE_CLICKHOUSE_HOST {#hive_clickhouse_host}
+
+ClickHouse host name. Defaults to `localhost`.
+
+### HIVE_CLICKHOUSE_PORT {#hive_clickhouse_port}
+
+ClickHouse Hypertext Transfer Protocol port. Defaults to `8123`.
+
+### HIVE_CLICKHOUSE_DATABASE {#hive_clickhouse_database}
+
+ClickHouse database name. Defaults to `hive` in production. In development,
+Hive derives a database name from the same per-worktree suffix used for its
+PostgreSQL database, so concurrent checkouts do not share data.
+
+### HIVE_CLICKHOUSE_USERNAME {#hive_clickhouse_username}
+
+ClickHouse user name. Defaults to `default`.
+
+### HIVE_CLICKHOUSE_PASSWORD {#hive_clickhouse_password}
+
+ClickHouse password. The Helm chart derives this from the existing Hive
+application secret, so it does not require another stored credential.
+
+### HIVE_CLICKHOUSE_POOL_SIZE {#hive_clickhouse_pool_size}
+
+Maximum number of ClickHouse connections for each read and write pool.
+Defaults to `5`.
+
 ## Observability
 
 ### SENTRY_DSN {#sentry_dsn}

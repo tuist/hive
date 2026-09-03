@@ -154,6 +154,20 @@ postgres:
       accessKeyRemoteRef: "hive-postgres-backup/username"
       secretKeyRemoteRef: "hive-postgres-backup/credential"
 
+clickhouse:
+  enabled: true
+  nodeSelector:
+    node.cluster.x-k8s.io/pool: general
+  persistence:
+    size: 50Gi
+    storageClass: hcloud-volumes
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 4Gi
+
 # Log-shipping pipeline disabled to keep the workload on a single small
 # worker: it consumed 1 vCPU / 2Gi + a 50Gi cache volume. Errors are still
 # captured by Sentry and live logs via `kubectl logs`. Flip back to `true`

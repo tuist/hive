@@ -35,7 +35,9 @@ defmodule Hive.MixProject do
     [
       {:phoenix, "~> 1.8.4"},
       {:phoenix_ecto, "~> 4.5"},
-      {:ecto_sql, "~> 3.13"},
+      {:ecto_sql, "~> 3.13.0"},
+      {:ecto_ch,
+       github: "tuist/ecto_ch", ref: "4554ec285a5925ec26128d690c0241cc644fd4fc", override: true},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_view, "~> 1.1.30"},

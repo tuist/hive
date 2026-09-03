@@ -40,6 +40,10 @@ spec:
             - |
               echo "Waiting for ${PGHOST}:${PGPORT}..."
               until (echo > /dev/tcp/$PGHOST/$PGPORT) >/dev/null 2>&1; do sleep 2; done
+              {{- if .Values.clickhouse.enabled }}
+              echo "Waiting for ${HIVE_CLICKHOUSE_HOST}:${HIVE_CLICKHOUSE_PORT}..."
+              until (echo > /dev/tcp/$HIVE_CLICKHOUSE_HOST/$HIVE_CLICKHOUSE_PORT) >/dev/null 2>&1; do sleep 2; done
+              {{- end }}
               export DATABASE_URL="ecto://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
               exec /app/bin/hive eval "Hive.Release.migrate"
           env:
@@ -50,6 +54,7 @@ spec:
               value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
             {{- end }}
             {{- include "hive.codingRunsEnv" . | nindent 12 }}
+            {{- include "hive.clickhouseEnv" . | nindent 12 }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
@@ -105,6 +110,7 @@ spec:
               value: {{ printf "http://%s:%v" (include "hive.vectorName" .) .Values.vector.service.port | quote }}
             {{- end }}
             {{- include "hive.codingRunsEnv" . | nindent 12 }}
+            {{- include "hive.clickhouseEnv" . | nindent 12 }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}

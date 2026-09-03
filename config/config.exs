@@ -6,6 +6,8 @@ config :hive,
   ecto_repos: [Hive.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id_type: :binary_id]
 
+config :hive, Hive.ClickHouseRepo, read_only: true
+
 config :hive, HiveWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,

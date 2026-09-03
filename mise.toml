@@ -20,6 +20,19 @@ kotlin = "2.1.0"
 android-sdk = "21.0"
 "github:tuist/once" = { version = "0.28.0", exe = "once" }
 
+[tools."github:ClickHouse/ClickHouse"]
+version = "26.1.2.11-stable"
+version_prefix = "v"
+
+[tools."github:ClickHouse/ClickHouse".platforms]
+macos-arm64 = { asset_pattern = "clickhouse-macos-aarch64" }
+macos-x64 = { asset_pattern = "clickhouse-macos" }
+linux-x64 = { asset_pattern = "clickhouse-common-static-*-amd64.tgz" }
+linux-arm64 = { asset_pattern = "clickhouse-common-static-*-arm64.tgz" }
+
+[hooks]
+enter = { task = "clickhouse:start" }
+
 [env]
 ANDROID_HOME = "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0"
 ANDROID_SDK_ROOT = "{{env.HOME}}/.local/share/mise/installs/android-sdk/21.0"
@@ -35,6 +48,14 @@ run = '''
 set -eu
 rustup target add aarch64-apple-ios-sim aarch64-linux-android
 '''
+
+[tasks."clickhouse:start"]
+description = "Start the local ClickHouse server"
+run = "mise/tasks/clickhouse/start.sh"
+
+[tasks."clickhouse:stop"]
+description = "Stop the local ClickHouse server"
+run = "mise/tasks/clickhouse/stop.sh"
 
 [tasks."mobile:test"]
 description = "Run the shared Rust core tests through Once"

@@ -73,6 +73,28 @@ credential when the provider supports revocation.
 Do not rotate `SECRET_KEY_BASE` during a routine release. Changing it
 invalidates existing sessions.
 
+## ClickHouse
+
+The Helm chart can run a single-node [ClickHouse](https://clickhouse.com/)
+database with a persistent volume:
+
+```yaml
+clickhouse:
+  enabled: true
+  persistence:
+    size: 50Gi
+    storageClass: your-block-storage-class
+```
+
+The ClickHouse volume survives pod replacement. Back up or snapshot the
+volume according to the storage provider's recovery model.
+
+The embedded deployment is intentionally a single stateful server. Use the
+`nodeSelector` and `tolerations` chart values to place it on a dedicated
+cluster worker when needed. It does not provide high availability, so use a
+managed ClickHouse service for installations that require it. Leaving
+ClickHouse disabled does not affect features that only use PostgreSQL.
+
 ## Error reporting
 
 Set [`SENTRY_DSN`](/reference/configuration#sentry_dsn) to send unhandled
