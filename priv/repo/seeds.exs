@@ -2223,22 +2223,34 @@ if Hive.Errors.enabled?() do
 
   Enum.each(Projects.list_projects(), fn project ->
     Enum.each(error_fixtures, fn fixture ->
-      # Spread events across the last 30 days so the trend column has
-      # something to draw and the date picker's presets each land on
-      # meaningfully different totals. Minutes-between-events is scaled
-      # to the requested occurrences: bigger issues cluster more
-      # densely, smaller ones look intermittent.
-      window_minutes = 30 * 24 * 60
-      spacing = div(window_minutes, fixture.occurrences)
+      # Two overlapping streams so the trend sparkline shows real
+      # variation and each date-picker preset lands on a different
+      # total:
+      #
+      #   * A background stream evenly spaced across the last 30 days
+      #     — populates the 12M/30D views.
+      #   * A recent burst densely clustered in the last few hours —
+      #     populates the 1H/24H views and gives the sparkline shape.
+      background_count = fixture.occurrences
+      background_window_minutes = 30 * 24 * 60
+      background_spacing = div(background_window_minutes, background_count)
 
-      1..fixture.occurrences
-      |> Enum.each(fn i ->
-        offset_minutes = i * spacing
+      for i <- 1..background_count do
+        offset_minutes = i * background_spacing
         environment = Enum.at(environments_pool, rem(i, length(environments_pool)))
         payload = build_event.(project, fixture, offset_minutes, environment)
-        event = ErrorsSentryEvent.parse(payload)
-        ErrorsSeeds.record_event(project, event)
-      end)
+        ErrorsSeeds.record_event(project, ErrorsSentryEvent.parse(payload))
+      end
+
+      recent_count = max(6, div(fixture.occurrences, 2))
+      recent_spacing_minutes = max(1, div(6 * 60, recent_count))
+
+      for i <- 1..recent_count do
+        offset_minutes = i * recent_spacing_minutes
+        environment = Enum.at(environments_pool, rem(i, length(environments_pool)))
+        payload = build_event.(project, fixture, offset_minutes, environment)
+        ErrorsSeeds.record_event(project, ErrorsSentryEvent.parse(payload))
+      end
     end)
   end)
 

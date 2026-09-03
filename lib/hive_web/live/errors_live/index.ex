@@ -279,37 +279,42 @@ defmodule HiveWeb.ErrorsLive.Index do
                 </.link>
               </:col>
               <:col :let={issue} label={dgettext("dashboard_errors", "Last seen")}>
-                <.text_cell
-                  label={relative_time(issue.last_seen)}
-                  sublabel={format_datetime(issue.last_seen)}
-                />
+                <span data-part="relative" title={format_datetime(issue.last_seen)}>
+                  {relative_time(issue.last_seen)}
+                </span>
               </:col>
               <:col :let={issue} label={dgettext("dashboard_errors", "Age")}>
-                <.text_cell
-                  label={relative_time(issue.first_seen)}
-                  sublabel={format_datetime(issue.first_seen)}
-                />
+                <span data-part="relative" title={format_datetime(issue.first_seen)}>
+                  {relative_time(issue.first_seen)}
+                </span>
               </:col>
               <:col :let={issue} label={dgettext("dashboard_errors", "Trend")}>
-                <div data-part="trend">
+                <div
+                  data-part="trend"
+                  title={
+                    dgettext("dashboard_errors", "%{count} events in the selected window",
+                      count: format_integer(events_in_window(issue, @window_counts))
+                    )
+                  }
+                >
                   <.chart
                     id={"trend-#{issue.id}"}
                     type="bar"
                     series={Map.get(@trend_series, issue.id, [])}
                     show_legend={false}
                     extra_options={sparkline_options()}
+                    style="width: 140px; height: 40px;"
                   />
                 </div>
               </:col>
               <:col :let={issue} label={dgettext("dashboard_errors", "Events")}>
-                <.text_cell
-                  label={format_integer(events_in_window(issue, @window_counts))}
-                  sublabel={
-                    dgettext("dashboard_errors", "%{total} total",
-                      total: format_integer(issue.event_count)
-                    )
-                  }
-                />
+                <span data-part="events" title={
+                  dgettext("dashboard_errors", "%{total} total across all time",
+                    total: format_integer(issue.event_count)
+                  )
+                }>
+                  {format_integer(events_in_window(issue, @window_counts))}
+                </span>
               </:col>
               <:empty_state>
                 <.table_empty_state

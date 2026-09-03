@@ -74,19 +74,25 @@ defmodule Hive.Errors do
 
     changeset = Issue.changeset(%Issue{}, attrs)
 
+    on_conflict_query =
+      from(existing in Issue,
+        update: [
+          inc: [event_count: 1],
+          set: [
+            last_seen: fragment("GREATEST(?, ?)", existing.last_seen, ^now),
+            first_seen: fragment("LEAST(?, ?)", existing.first_seen, ^now),
+            title: ^title,
+            culprit: ^culprit,
+            level: ^String.to_atom(event.level),
+            platform: ^event.platform,
+            status: :unresolved,
+            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
+          ]
+        ]
+      )
+
     case Repo.insert(changeset,
-           on_conflict: [
-             inc: [event_count: 1],
-             set: [
-               last_seen: now,
-               title: title,
-               culprit: culprit,
-               level: String.to_atom(event.level),
-               platform: event.platform,
-               status: :unresolved,
-               updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
-             ]
-           ],
+           on_conflict: on_conflict_query,
            conflict_target: [:project_id, :fingerprint],
            returning: true
          ) do
@@ -503,24 +509,23 @@ defmodule Hive.Errors do
   defp bucket_expr(:hour), do: "toStartOfHour(timestamp)"
   defp bucket_expr(:day), do: "toStartOfDay(timestamp)"
 
-  defp time_buckets(from, to, :minute) do
-    stream_buckets(from, to, 300, :second)
-  end
-
-  defp time_buckets(from, to, :hour) do
-    stream_buckets(from, to, 3600, :second)
-  end
-
-  defp time_buckets(from, to, :day) do
-    stream_buckets(from, to, 86_400, :second)
-  end
-
-  defp stream_buckets(from, to, seconds, unit) do
-    start = DateTime.add(from, 0, unit) |> DateTime.truncate(:second)
+  defp time_buckets(from, to, unit) do
+    seconds = bucket_seconds(unit)
+    start = align_to_bucket(from, seconds)
     stop = to |> DateTime.truncate(:second)
 
     Stream.iterate(start, &DateTime.add(&1, seconds, :second))
     |> Enum.take_while(&(DateTime.compare(&1, stop) != :gt))
+  end
+
+  defp bucket_seconds(:minute), do: 300
+  defp bucket_seconds(:hour), do: 3600
+  defp bucket_seconds(:day), do: 86_400
+
+  defp align_to_bucket(%DateTime{} = dt, seconds) do
+    unix = DateTime.to_unix(dt)
+    aligned = div(unix, seconds) * seconds
+    DateTime.from_unix!(aligned)
   end
 
   defp bucket_key(%DateTime{} = dt), do: DateTime.to_unix(dt)

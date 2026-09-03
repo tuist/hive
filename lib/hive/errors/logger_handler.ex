@@ -162,9 +162,9 @@ defmodule Hive.Errors.LoggerHandler do
     end
   end
 
-  defp maybe_put_exception(payload, %{crash_reason: {reason, stacktrace}})
+  defp maybe_put_exception(payload, %{crash_reason: {reason, stacktrace}} = meta)
        when is_list(stacktrace) do
-    {type, value} = format_reason(reason)
+    {type, value} = format_reason(reason, meta)
 
     Map.put(payload, "exception", %{
       "values" => [
@@ -205,15 +205,57 @@ defmodule Hive.Errors.LoggerHandler do
     end)
   end
 
-  defp format_reason(reason) when is_exception(reason) do
+  defp format_reason(reason, _meta) when is_exception(reason) do
     {inspect(reason.__struct__), Exception.message(reason)}
   end
 
-  defp format_reason({:nocatch, value}), do: {"throw", inspect(value)}
+  defp format_reason({:nocatch, value}, _meta), do: {"throw", inspect(value)}
 
-  defp format_reason(reason) do
-    {"process_exit", inspect(reason)}
+  # Oban wraps failed jobs as `Oban.PerformError` on the crash_reason, but
+  # workers that return `{:error, reason}` or `{:discard, reason}` show up
+  # as a job state map. Prefer the worker name + reason for the title,
+  # which is closer to what Sentry's Oban integration produces than a raw
+  # map dump.
+  defp format_reason(%{state: state} = job, meta) when state in [:discard, :failure] do
+    worker = worker_name(job, meta)
+    value = format_state_reason(job, meta, state)
+    {"Oban.#{Macro.camelize(to_string(state))}Error", "#{worker}: #{value}"}
   end
+
+  defp format_reason({{:nocatch, value}, _stacktrace}, meta),
+    do: format_reason({:nocatch, value}, meta)
+
+  defp format_reason({reason, _}, meta) when is_exception(reason),
+    do: format_reason(reason, meta)
+
+  defp format_reason(reason, _meta) do
+    {"process_exit", truncate(inspect(reason), 500)}
+  end
+
+  defp worker_name(job, _meta) do
+    case job do
+      %{worker: worker} when is_binary(worker) -> worker
+      %{worker: worker} when is_atom(worker) -> inspect(worker)
+      _ -> "Oban.Worker"
+    end
+  end
+
+  defp format_state_reason(job, _meta, state) do
+    reason =
+      case job do
+        %{error: error} when not is_nil(error) -> inspect(error)
+        %{result: result} when not is_nil(result) -> inspect(result)
+        _ -> to_string(state)
+      end
+
+    truncate(reason, 200)
+  end
+
+  defp truncate(binary, max) when is_binary(binary) and byte_size(binary) > max do
+    String.slice(binary, 0, max) <> "..."
+  end
+
+  defp truncate(binary, _max), do: binary
 
   defp stacktrace_frames(frames) do
     frames
