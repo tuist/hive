@@ -57,6 +57,35 @@ app.kubernetes.io/component: vector
 app.kubernetes.io/component: vector
 {{- end -}}
 
+{{- define "hive.clickhouseName" -}}
+{{ include "hive.fullname" . }}-clickhouse
+{{- end -}}
+
+{{- define "hive.clickhouseLabels" -}}
+{{ include "hive.labels" . }}
+app.kubernetes.io/component: clickhouse
+{{- end -}}
+
+{{- define "hive.clickhouseSelectorLabels" -}}
+{{ include "hive.selectorLabels" . }}
+app.kubernetes.io/component: clickhouse
+{{- end -}}
+
+{{- define "hive.clickhouseEnv" -}}
+{{- if .Values.clickhouse.enabled }}
+- name: HIVE_CLICKHOUSE_ENABLED
+  value: "true"
+- name: HIVE_CLICKHOUSE_HOST
+  value: {{ include "hive.clickhouseName" . | quote }}
+- name: HIVE_CLICKHOUSE_PORT
+  value: {{ .Values.clickhouse.service.httpPort | quote }}
+- name: HIVE_CLICKHOUSE_DATABASE
+  value: {{ .Values.clickhouse.database | quote }}
+- name: HIVE_CLICKHOUSE_USERNAME
+  value: {{ .Values.clickhouse.username | quote }}
+{{- end }}
+{{- end -}}
+
 {{- define "hive.codingSandboxNamespace" -}}
 {{- .Values.codingRuns.kubernetes.namespace | default .Release.Namespace -}}
 {{- end -}}

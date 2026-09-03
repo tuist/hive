@@ -192,6 +192,43 @@ postgres:
       accessKeyRemoteRef: ""
       secretKeyRemoteRef: ""
 
+# Optional ClickHouse database for high-volume event data.
+# A single stateful server is appropriate for small Hive installations. Larger
+# deployments can disable it and provide HIVE_CLICKHOUSE_* values directly.
+clickhouse:
+  enabled: false
+  image:
+    repository: clickhouse/clickhouse-server
+    tag: "26.1.2.11"
+    pullPolicy: IfNotPresent
+  database: hive
+  username: default
+  service:
+    httpPort: 8123
+    nativePort: 9000
+  persistence:
+    size: 50Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  nodeSelector: {}
+  tolerations: []
+  probes:
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    liveness:
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+
 # Optional vector database used by agentic features that need embedding search.
 # It mirrors Atlas' opendata-vector deployment: vectors are persisted in an
 # S3-compatible bucket and a PVC is used only as a local cache. Disabled by
