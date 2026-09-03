@@ -31,21 +31,24 @@ defmodule Hive.MCP.Components.Tools.GetProjectErrorDsn do
   def call(conn, %{"project_id" => project_id}) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Policy.authorize?(:error_project_key_read, user, nil) ->
-        json_response(%{error: "forbidden"})
+    if Policy.authorize?(:error_project_key_read, user, nil) do
+      fetch_dsn(project_id, user)
+    else
+      json_response(%{error: "forbidden"})
+    end
+  end
 
-      true ->
-        case Projects.fetch_visible_project(project_id, user) do
-          {:ok, project} ->
-            case Errors.primary_project_key(project) do
-              nil -> json_response(%{error: "unavailable"})
-              key -> json_response(%{key: Errors.serialize_project_key(key, Endpoint.url())})
-            end
+  defp fetch_dsn(project_id, user) do
+    case Projects.fetch_visible_project(project_id, user) do
+      {:ok, project} -> serialize_key(project)
+      {:error, :not_found} -> json_response(%{error: "not_found"})
+    end
+  end
 
-          {:error, :not_found} ->
-            json_response(%{error: "not_found"})
-        end
+  defp serialize_key(project) do
+    case Errors.primary_project_key(project) do
+      nil -> json_response(%{error: "unavailable"})
+      key -> json_response(%{key: Errors.serialize_project_key(key, Endpoint.url())})
     end
   end
 end

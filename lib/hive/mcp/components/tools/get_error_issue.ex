@@ -25,15 +25,13 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssue do
   def call(conn, %{"id" => id}) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Policy.authorize?(:error_issue_read, user, nil) ->
-        json_response(%{error: "forbidden"})
-
-      true ->
-        case Errors.fetch_issue(id) do
-          {:ok, issue} -> json_response(%{issue: Errors.serialize_issue(issue)})
-          {:error, :not_found} -> json_response(%{error: "not_found"})
-        end
+    if Policy.authorize?(:error_issue_read, user, nil) do
+      case Errors.fetch_issue(id) do
+        {:ok, issue} -> json_response(%{issue: Errors.serialize_issue(issue)})
+        {:error, :not_found} -> json_response(%{error: "not_found"})
+      end
+    else
+      json_response(%{error: "forbidden"})
     end
   end
 end

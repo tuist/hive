@@ -27,29 +27,25 @@ defmodule Hive.Errors.CodeHighlight do
     ctx = frame["context_line"]
     post = list(frame["post_context"])
 
-    cond do
-      ctx == nil and pre == [] and post == [] ->
-        nil
+    if ctx == nil and pre == [] and post == [] do
+      nil
+    else
+      source = build_source(pre, ctx, post)
+      base_line = frame["lineno"] || max(length(pre) + 1, 1)
+      start_line = base_line - length(pre)
+      current_line = length(pre) + 1
 
-      true ->
-        source = build_source(pre, ctx, post)
-        base_line = frame["lineno"] || max(length(pre) + 1, 1)
-        start_line = base_line - length(pre)
-        current_line = length(pre) + 1
-
-        case do_highlight(source, language_for(platform), start_line, current_line) do
-          {:ok, html} -> html
-          :error -> plain_html(source, start_line, current_line)
-        end
+      case do_highlight(source, language_for(platform), start_line, current_line) do
+        {:ok, html} -> html
+        :error -> plain_html(source, start_line, current_line)
+      end
     end
   end
 
   def highlight_frame(_, _), do: nil
 
   defp build_source(pre, ctx, post) do
-    (pre ++ [ctx || ""] ++ post)
-    |> Enum.map(&normalize_line/1)
-    |> Enum.join("\n")
+    Enum.map_join(pre ++ [ctx || ""] ++ post, "\n", &normalize_line/1)
   end
 
   defp normalize_line(nil), do: ""
@@ -73,7 +69,7 @@ defmodule Hive.Errors.CodeHighlight do
     _ -> :error
   end
 
-  defp do_highlight(_source, _language = nil, _start, _current), do: :error
+  defp do_highlight(_source, nil = _language, _start, _current), do: :error
 
   # Fallback when Lumis has no lexer for the platform or raises.
   # Emits a compatible `<pre class="lumis">` structure so the same

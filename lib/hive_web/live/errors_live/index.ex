@@ -415,28 +415,26 @@ defmodule HiveWeb.ErrorsLive.Index do
         :ignored -> :error_issue_ignore
       end
 
-    cond do
-      not Policy.authorize?(action, socket.assigns[:current_user], nil) ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           dgettext("dashboard_errors", "You do not have permission to change this issue.")
-         )}
-
-      true ->
-        with {:ok, issue} <- Errors.fetch_issue(id),
-             {:ok, _updated} <- Errors.update_issue_status(issue, status) do
-          {:noreply, push_patch(socket, to: patch_url(socket), replace: true)}
-        else
-          _ ->
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               dgettext("dashboard_errors", "Could not update the issue.")
-             )}
-        end
+    if Policy.authorize?(action, socket.assigns[:current_user], nil) do
+      with {:ok, issue} <- Errors.fetch_issue(id),
+           {:ok, _updated} <- Errors.update_issue_status(issue, status) do
+        {:noreply, push_patch(socket, to: patch_url(socket), replace: true)}
+      else
+        _ ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             dgettext("dashboard_errors", "Could not update the issue.")
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_errors", "You do not have permission to change this issue.")
+       )}
     end
   end
 

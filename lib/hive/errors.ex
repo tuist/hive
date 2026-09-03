@@ -55,9 +55,8 @@ defmodule Hive.Errors do
       # transient CH failure never doubles the `event_count` for
       # the issue.
       with {:ok, issue} <- ensure_issue(project, event, fingerprint),
-           :ok <- insert_event(project, issue, event, fingerprint),
-           {:ok, issue} <- bump_issue_counters(issue, event) do
-        {:ok, issue}
+           :ok <- insert_event(project, issue, event, fingerprint) do
+        bump_issue_counters(issue, event)
       end
     else
       {:error, :not_configured}
@@ -183,36 +182,7 @@ defmodule Hive.Errors do
   end
 
   defp insert_event(project, issue, event, fingerprint) do
-    row = %{
-      event_id: event.event_id |> to_uuid(),
-      project_id: project.id,
-      issue_id: issue.id,
-      fingerprint: fingerprint,
-      timestamp: DateTime.truncate(event.timestamp, :microsecond),
-      received_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
-      platform: event.platform || "other",
-      level: event.level || "error",
-      environment: event.environment || "production",
-      release: event.release || "",
-      dist: event.dist || "",
-      server_name: event.server_name || "",
-      transaction: event.transaction || "",
-      logger: event.logger || "",
-      exception_type: event.exception_type || "",
-      exception_value: event.exception_value || "",
-      top_frame_function: frame_field(event.top_frame, "function"),
-      top_frame_module: frame_field(event.top_frame, "module"),
-      top_frame_filename: frame_field(event.top_frame, "filename"),
-      user_id: event.user.id || "",
-      user_email: event.user.email || "",
-      user_ip: event.user.ip_address || "",
-      request_url: event.request.url || "",
-      request_method: event.request.method || "",
-      sdk_name: event.sdk_name || "",
-      sdk_version: event.sdk_version || "",
-      tags: event.tags,
-      payload: Jason.encode!(event.payload)
-    }
+    row = build_event_row(project, issue, event, fingerprint)
 
     case IngestRepo.insert_all("errors_events", [row], types: event_column_types()) do
       {_count, _} -> :ok
@@ -220,6 +190,74 @@ defmodule Hive.Errors do
   rescue
     error -> {:error, error}
   end
+
+  # Builds the ClickHouse row map. Kept separate from `insert_event/4`
+  # so its cyclomatic complexity — one branch per string-defaulted
+  # column — doesn't blow past Credo's threshold in the outer
+  # function.
+  defp build_event_row(project, issue, event, fingerprint) do
+    core_columns(project, issue, event, fingerprint)
+    |> Map.merge(event_scalar_columns(event))
+    |> Map.merge(frame_columns(event.top_frame))
+    |> Map.merge(actor_columns(event))
+    |> Map.merge(sdk_columns(event))
+    |> Map.put(:tags, event.tags)
+    |> Map.put(:payload, Jason.encode!(event.payload))
+  end
+
+  defp core_columns(project, issue, event, fingerprint) do
+    %{
+      event_id: event.event_id |> to_uuid(),
+      project_id: project.id,
+      issue_id: issue.id,
+      fingerprint: fingerprint,
+      timestamp: DateTime.truncate(event.timestamp, :microsecond),
+      received_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
+    }
+  end
+
+  defp event_scalar_columns(event) do
+    %{
+      platform: default(event.platform, "other"),
+      level: default(event.level, "error"),
+      environment: default(event.environment, "production"),
+      release: default(event.release, ""),
+      dist: default(event.dist, ""),
+      server_name: default(event.server_name, ""),
+      transaction: default(event.transaction, ""),
+      logger: default(event.logger, ""),
+      exception_type: default(event.exception_type, ""),
+      exception_value: default(event.exception_value, "")
+    }
+  end
+
+  defp frame_columns(frame) do
+    %{
+      top_frame_function: frame_field(frame, "function"),
+      top_frame_module: frame_field(frame, "module"),
+      top_frame_filename: frame_field(frame, "filename")
+    }
+  end
+
+  defp actor_columns(event) do
+    %{
+      user_id: default(event.user.id, ""),
+      user_email: default(event.user.email, ""),
+      user_ip: default(event.user.ip_address, ""),
+      request_url: default(event.request.url, ""),
+      request_method: default(event.request.method, "")
+    }
+  end
+
+  defp sdk_columns(event) do
+    %{
+      sdk_name: default(event.sdk_name, ""),
+      sdk_version: default(event.sdk_version, "")
+    }
+  end
+
+  defp default(nil, fallback), do: fallback
+  defp default(value, _fallback), do: value
 
   # ClickHouse column types for `errors_events`, required by ecto_ch when
   # inserting into a raw table name.
@@ -517,28 +555,19 @@ defmodule Hive.Errors do
   filters. Used by the dashboard's environment filter dropdown.
   """
   def distinct_environments(opts \\ []) do
-    if enabled?() do
-      {clauses, params} = event_window_clauses(opts)
+    if enabled?(), do: do_distinct_environments(opts), else: []
+  end
 
-      where_sql =
-        case clauses do
-          [] -> ""
-          list -> " WHERE " <> Enum.join(list, " AND ")
-        end
+  defp do_distinct_environments(opts) do
+    {clauses, params} = event_window_clauses(opts)
 
-      query = """
-      SELECT DISTINCT environment
-      FROM errors_events
-      #{where_sql}
-      ORDER BY environment
-      """
+    query =
+      "SELECT DISTINCT environment FROM errors_events" <>
+        where_clause(clauses) <> " ORDER BY environment"
 
-      case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
-        {:ok, %{rows: rows}} -> Enum.map(rows, fn [env] -> to_string(env) end)
-        _ -> []
-      end
-    else
-      []
+    case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
+      {:ok, %{rows: rows}} -> Enum.map(rows, fn [env] -> to_string(env) end)
+      _ -> []
     end
   end
 
@@ -551,45 +580,31 @@ defmodule Hive.Errors do
   the events, so callers can skip the intersection entirely.
   """
   def issue_ids_matching_events(opts \\ []) do
-    project_id = Keyword.get(opts, :project_id)
-    environment = Keyword.get(opts, :environment)
-    from = Keyword.get(opts, :from)
-    to = Keyword.get(opts, :to)
-
     cond do
-      not enabled?() ->
-        :all
-
-      is_nil(environment) and is_nil(from) and is_nil(to) ->
-        :all
-
-      true ->
-        {clauses, params} = event_window_clauses(opts)
-
-        where_sql =
-          case clauses do
-            [] -> ""
-            list -> " WHERE " <> Enum.join(list, " AND ")
-          end
-
-        query = """
-        SELECT DISTINCT issue_id
-        FROM errors_events
-        #{where_sql}
-        """
-
-        params =
-          case project_id do
-            nil -> params
-            _ -> params
-          end
-
-        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
-          {:ok, %{rows: rows}} -> Enum.map(rows, fn [id] -> to_string(id) end)
-          _ -> []
-        end
+      not enabled?() -> :all
+      no_event_scoped_filters?(opts) -> :all
+      true -> do_issue_ids_matching_events(opts)
     end
   end
+
+  defp no_event_scoped_filters?(opts) do
+    is_nil(Keyword.get(opts, :environment)) and
+      is_nil(Keyword.get(opts, :from)) and
+      is_nil(Keyword.get(opts, :to))
+  end
+
+  defp do_issue_ids_matching_events(opts) do
+    {clauses, params} = event_window_clauses(opts)
+    query = "SELECT DISTINCT issue_id FROM errors_events" <> where_clause(clauses)
+
+    case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
+      {:ok, %{rows: rows}} -> Enum.map(rows, fn [id] -> to_string(id) end)
+      _ -> []
+    end
+  end
+
+  defp where_clause([]), do: ""
+  defp where_clause(list), do: " WHERE " <> Enum.join(list, " AND ")
 
   @doc """
   Returns `[{bucket_datetime, count}]` for a single issue, with every
@@ -741,12 +756,17 @@ defmodule Hive.Errors do
 
   def fetch_event(_, _), do: nil
 
-  defp canonical_event_id(<<a::binary-size(8), ?-, b::binary-size(4), ?-, c::binary-size(4), ?-, d::binary-size(4), ?-, e::binary-size(12)>> = uuid)
+  defp canonical_event_id(
+         <<a::binary-size(8), ?-, b::binary-size(4), ?-, c::binary-size(4), ?-, d::binary-size(4),
+           ?-, e::binary-size(12)>> = uuid
+       )
        when byte_size(uuid) == 36,
        do: "#{a}-#{b}-#{c}-#{d}-#{e}"
 
   defp canonical_event_id(hex) when is_binary(hex) and byte_size(hex) == 32 do
-    <<a::binary-size(8), b::binary-size(4), c::binary-size(4), d::binary-size(4), e::binary-size(12)>> = hex
+    <<a::binary-size(8), b::binary-size(4), c::binary-size(4), d::binary-size(4),
+      e::binary-size(12)>> = hex
+
     "#{a}-#{b}-#{c}-#{d}-#{e}"
   end
 
@@ -817,50 +837,36 @@ defmodule Hive.Errors do
   end
 
   defp event_window_clauses(opts) do
-    project_id = Keyword.get(opts, :project_id)
-    environment = Keyword.get(opts, :environment)
-    from = Keyword.get(opts, :from)
-    to = Keyword.get(opts, :to)
+    {[], %{}}
+    |> add_project_clause(Keyword.get(opts, :project_id))
+    |> add_environment_clause(Keyword.get(opts, :environment))
+    |> add_from_clause(Keyword.get(opts, :from))
+    |> add_to_clause(Keyword.get(opts, :to))
+  end
 
-    {clauses, params} = {[], %{}}
+  defp add_project_clause(acc, nil), do: acc
 
-    {clauses, params} =
-      case project_id do
-        nil ->
-          {clauses, params}
+  defp add_project_clause({clauses, params}, pid) do
+    {clauses ++ ["project_id = {project_id:String}"], Map.put(params, "project_id", pid)}
+  end
 
-        pid ->
-          {clauses ++ ["project_id = {project_id:String}"], Map.put(params, "project_id", pid)}
-      end
+  defp add_environment_clause(acc, nil), do: acc
+  defp add_environment_clause(acc, ""), do: acc
 
-    {clauses, params} =
-      case environment do
-        nil ->
-          {clauses, params}
+  defp add_environment_clause({clauses, params}, env) do
+    {clauses ++ ["environment = {environment:String}"], Map.put(params, "environment", env)}
+  end
 
-        "" ->
-          {clauses, params}
+  defp add_from_clause(acc, nil), do: acc
 
-        env ->
-          {clauses ++ ["environment = {environment:String}"], Map.put(params, "environment", env)}
-      end
+  defp add_from_clause({clauses, params}, %DateTime{} = from) do
+    {clauses ++ ["timestamp >= {from:DateTime64(6)}"], Map.put(params, "from", from)}
+  end
 
-    {clauses, params} =
-      case from do
-        nil ->
-          {clauses, params}
+  defp add_to_clause(acc, nil), do: acc
 
-        %DateTime{} ->
-          {clauses ++ ["timestamp >= {from:DateTime64(6)}"], Map.put(params, "from", from)}
-      end
-
-    {clauses, params} =
-      case to do
-        nil -> {clauses, params}
-        %DateTime{} -> {clauses ++ ["timestamp <= {to:DateTime64(6)}"], Map.put(params, "to", to)}
-      end
-
-    {clauses, params}
+  defp add_to_clause({clauses, params}, %DateTime{} = to) do
+    {clauses ++ ["timestamp <= {to:DateTime64(6)}"], Map.put(params, "to", to)}
   end
 
   @doc """

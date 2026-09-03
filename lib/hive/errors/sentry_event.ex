@@ -93,23 +93,29 @@ defmodule Hive.Errors.SentryEvent do
   def culprit(%__MODULE__{top_frame: nil, transaction: transaction}), do: transaction
 
   def culprit(%__MODULE__{top_frame: frame, transaction: transaction}) do
-    function = frame["function"] || frame["module"]
-    filename = frame["filename"] || frame["abs_path"]
-    lineno = frame["lineno"]
-
     parts =
-      [
-        function,
-        filename && lineno && "#{filename}:#{lineno}",
-        filename && !lineno && filename
-      ]
-      |> Enum.filter(&(is_binary(&1) and byte_size(&1) > 0))
+      [frame["function"] || frame["module"], location_part(frame)]
+      |> Enum.filter(&present_string?/1)
 
     case parts do
       [] -> transaction
       _ -> Enum.join(parts, " at ")
     end
   end
+
+  defp location_part(frame) do
+    filename = frame["filename"] || frame["abs_path"]
+    lineno = frame["lineno"]
+
+    case {filename, lineno} do
+      {name, line} when is_binary(name) and not is_nil(line) -> "#{name}:#{line}"
+      {name, _} when is_binary(name) -> name
+      _ -> nil
+    end
+  end
+
+  defp present_string?(value) when is_binary(value) and byte_size(value) > 0, do: true
+  defp present_string?(_), do: false
 
   defp exception_values(payload) do
     case payload["exception"] do

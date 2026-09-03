@@ -31,24 +31,24 @@ defmodule Hive.MCP.Components.Tools.RotateProjectErrorDsn do
   def call(conn, %{"project_id" => project_id}) do
     user = conn.assigns[:current_user]
 
-    cond do
-      not Policy.authorize?(:error_project_key_create, user, nil) ->
-        json_response(%{error: "forbidden"})
+    if Policy.authorize?(:error_project_key_create, user, nil) do
+      rotate(project_id, user)
+    else
+      json_response(%{error: "forbidden"})
+    end
+  end
 
-      true ->
-        case Projects.fetch_visible_project(project_id, user) do
-          {:ok, project} ->
-            case Errors.rotate_project_key(project) do
-              {:ok, key} ->
-                json_response(%{key: Errors.serialize_project_key(key, Endpoint.url())})
+  defp rotate(project_id, user) do
+    case Projects.fetch_visible_project(project_id, user) do
+      {:ok, project} -> rotate_key(project)
+      {:error, :not_found} -> json_response(%{error: "not_found"})
+    end
+  end
 
-              {:error, _} ->
-                json_response(%{error: "rotation_failed"})
-            end
-
-          {:error, :not_found} ->
-            json_response(%{error: "not_found"})
-        end
+  defp rotate_key(project) do
+    case Errors.rotate_project_key(project) do
+      {:ok, key} -> json_response(%{key: Errors.serialize_project_key(key, Endpoint.url())})
+      {:error, _} -> json_response(%{error: "rotation_failed"})
     end
   end
 end

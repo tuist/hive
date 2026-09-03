@@ -53,7 +53,10 @@ defmodule HiveWeb.ErrorsLive.Event do
            ],
            id: "error-event-#{event_id}",
            path: "/errors/#{issue.id}/events/#{event_id}",
-           title: dgettext("dashboard_errors", "Event %{short}", short: short_id(event[:event_id] || event_id))
+           title:
+             dgettext("dashboard_errors", "Event %{short}",
+               short: short_id(event[:event_id] || event_id)
+             )
          })
        )}
     else
@@ -331,7 +334,9 @@ defmodule HiveWeb.ErrorsLive.Event do
 
   defp short_id(other), do: other |> to_string() |> short_id()
 
-  defp stack_frames(%{"exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}})
+  defp stack_frames(%{
+         "exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}
+       })
        when is_list(frames) do
     frames |> Enum.reverse() |> Enum.take(30)
   end
@@ -450,7 +455,6 @@ defmodule HiveWeb.ErrorsLive.Event do
 
   defp as_map(m) when is_map(m), do: m
   defp as_map(_), do: %{}
-
 
   defp get(map, key, default) when is_map(map), do: Map.get(map, key, default) || default
   defp get(_, _, default), do: default
