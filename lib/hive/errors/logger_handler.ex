@@ -111,8 +111,60 @@ defmodule Hive.Errors.LoggerHandler do
 
     base
     |> maybe_put_exception(meta)
+    |> maybe_put_report_exception(msg)
     |> maybe_put_request(meta)
   end
+
+  # Some libraries (Oban telemetry, Broadway, GenServer terminate reports)
+  # log a bare Erlang report as `{:report, map}` with no `crash_reason`
+  # metadata. Without a synthesized exception the message dump becomes
+  # the issue title, which produces a wall of `%{state: :discard, ...}`
+  # instead of something like `Oban.DiscardError: Hive.Domains.EvolutionWorker`.
+  # Detect the common shapes here and mint a proper exception.
+  defp maybe_put_report_exception(payload, msg) do
+    if Map.has_key?(payload, "exception") do
+      payload
+    else
+      case msg do
+        {:report, %{event: "background_job_failed"} = report} ->
+          put_oban_exception(payload, report)
+
+        {:report, %{event: "background_job_" <> _rest} = report} ->
+          put_oban_exception(payload, report)
+
+        _ ->
+          payload
+      end
+    end
+  end
+
+  defp put_oban_exception(payload, report) do
+    state = Map.get(report, :state, :error)
+    worker = to_string(Map.get(report, :worker, "Oban.Worker"))
+    error_type = to_string(Map.get(report, :error_type, ""))
+    kind = to_string(Map.get(report, :kind, Map.get(report, :error_kind, "")))
+
+    type = "Oban.#{Macro.camelize(to_string(state))}Error"
+
+    value =
+      [worker, present_or_nil(error_type) || present_or_nil(kind)]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(": ")
+
+    Map.put(payload, "exception", %{
+      "values" => [
+        %{
+          "type" => type,
+          "value" => value,
+          "mechanism" => %{"type" => "oban", "handled" => false}
+        }
+      ]
+    })
+  end
+
+  defp present_or_nil(""), do: nil
+  defp present_or_nil(nil), do: nil
+  defp present_or_nil(v), do: v
 
   defp format_msg({:string, msg}), do: IO.iodata_to_binary(msg)
 

@@ -123,7 +123,7 @@ defmodule HiveWeb.ErrorsLive.Show do
               <span data-part="separator">/</span>
               <span>{project_name(@issue)}</span>
             </div>
-            <h1>{@issue.title}</h1>
+            <h1 title={@issue.title}>{truncate_display(@issue.title, 140)}</h1>
             <p :if={@issue.culprit}>{@issue.culprit}</p>
           </div>
           <div data-part="header-actions">
@@ -207,8 +207,12 @@ defmodule HiveWeb.ErrorsLive.Show do
           <.card_section>
             <div data-part="event-header">
               <div data-part="event-title">
-                <strong>{@latest_event.exception_type}</strong>
-                <span :if={@latest_event.exception_value}>: {@latest_event.exception_value}</span>
+                <strong :if={present?(@latest_event.exception_type)}>{@latest_event.exception_type}</strong>
+                <span :if={present?(@latest_event.exception_type) and present?(@latest_event.exception_value)}>:</span>
+                <span :if={present?(@latest_event.exception_value)}>{@latest_event.exception_value}</span>
+                <span :if={!present?(@latest_event.exception_type) and !present?(@latest_event.exception_value)}>
+                  {latest_message(@latest_payload) || dgettext("dashboard_errors", "No exception recorded")}
+                </span>
               </div>
               <div data-part="event-meta">
                 <span>{format_datetime(@latest_event.timestamp)}</span>
@@ -628,6 +632,21 @@ defmodule HiveWeb.ErrorsLive.Show do
 
   defp present?(value) when is_binary(value) and byte_size(value) > 0, do: true
   defp present?(_), do: false
+
+  defp truncate_display(nil, _), do: ""
+
+  defp truncate_display(text, max) when is_binary(text) do
+    if String.length(text) > max, do: String.slice(text, 0, max) <> "…", else: text
+  end
+
+  defp latest_message(payload) do
+    case payload["message"] do
+      %{"formatted" => formatted} when is_binary(formatted) and formatted != "" -> formatted
+      %{"message" => message} when is_binary(message) and message != "" -> message
+      msg when is_binary(msg) and msg != "" -> msg
+      _ -> nil
+    end
+  end
 
   defp project_name(%Issue{project: %{name: name}}), do: name
   defp project_name(_), do: "-"

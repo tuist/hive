@@ -317,25 +317,26 @@
   }
 
   & [data-part="tag-pair"] {
-    display: grid;
-    grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+    display: flex;
     align-items: baseline;
-    gap: var(--noora-spacing-4);
-    padding: var(--noora-spacing-3) 0;
+    gap: var(--noora-spacing-3);
+    padding: var(--noora-spacing-2) 0;
     border-bottom: 1px solid var(--noora-surface-border);
   }
 
   & [data-part="tag-pair"] dt {
+    flex-shrink: 0;
+    min-width: 120px;
     color: var(--noora-surface-label-secondary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
   }
 
   & [data-part="tag-pair"] dd {
+    flex: 1;
     margin: 0;
     color: var(--noora-surface-label-primary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
     overflow-wrap: anywhere;
-    text-align: right;
   }
 
   @media (max-width: 800px) {
