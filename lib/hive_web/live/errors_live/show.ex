@@ -403,8 +403,8 @@ defmodule HiveWeb.ErrorsLive.Show do
             <.table id="error-events-table" rows={@events}>
               <:col :let={event} label={dgettext("dashboard_errors", "Time")}>
                 <.text_cell
-                  label={format_datetime(event.timestamp)}
-                  sublabel={format_date(event.timestamp)}
+                  label={relative_time(to_datetime(event.timestamp))}
+                  {%{title: format_datetime(event.timestamp)}}
                 />
               </:col>
               <:col :let={event} label={dgettext("dashboard_errors", "Level")}>
@@ -419,9 +419,6 @@ defmodule HiveWeb.ErrorsLive.Show do
               </:col>
               <:col :let={event} label={dgettext("dashboard_errors", "Release")}>
                 <.text_cell label={event.release || "-"} />
-              </:col>
-              <:col :let={event} label={dgettext("dashboard_errors", "Message")}>
-                <.text_cell label={event.exception_type || "-"} sublabel={event.exception_value} />
               </:col>
               <:empty_state>
                 <.table_empty_state
@@ -640,10 +637,6 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp format_datetime(bin) when is_binary(bin), do: bin
   defp format_datetime(_), do: "-"
 
-  defp format_date(%DateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y")
-  defp format_date(%NaiveDateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y")
-  defp format_date(_), do: "-"
-
   defp relative_time(%DateTime{} = dt) do
     diff = DateTime.diff(DateTime.utc_now(), dt, :second)
 
@@ -658,6 +651,18 @@ defmodule HiveWeb.ErrorsLive.Show do
   end
 
   defp relative_time(_), do: "-"
+
+  defp to_datetime(%DateTime{} = dt), do: dt
+  defp to_datetime(%NaiveDateTime{} = ndt), do: DateTime.from_naive!(ndt, "Etc/UTC")
+
+  defp to_datetime(bin) when is_binary(bin) do
+    case DateTime.from_iso8601(bin) do
+      {:ok, dt, _} -> dt
+      _ -> nil
+    end
+  end
+
+  defp to_datetime(_), do: nil
 
   defp status_label(:unresolved), do: dgettext("dashboard_errors", "Unresolved")
   defp status_label(:resolved), do: dgettext("dashboard_errors", "Resolved")

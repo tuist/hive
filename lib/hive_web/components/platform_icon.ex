@@ -1,15 +1,12 @@
 defmodule HiveWeb.PlatformIcon do
   @moduledoc """
-  Renders a small colored badge for a Sentry Software Development Kit
-  `platform` identifier — an "E" on Elixir purple, "JS" on JavaScript
-  yellow, and so on. Falls back to a neutral chip with the first two
-  characters for unknown platforms so any SDK-supplied identifier
-  renders cleanly.
+  Renders the brand logo for a Sentry Software Development Kit
+  `platform` identifier — Elixir's droplet, JavaScript's yellow badge,
+  and so on. Icons come from Simple Icons (MIT-licensed) shipped under
+  `priv/static/images/platforms/`.
 
-  The color palette mirrors the widely recognised brand colors used by
-  GitHub's language chips and the language pages on wikipedia — enough
-  visual differentiation that the badge doubles as a language cue at a
-  glance.
+  Unknown platforms fall back to a neutral letter badge so any
+  identifier a Software Development Kit sends renders as something.
   """
 
   use Phoenix.Component
@@ -20,64 +17,73 @@ defmodule HiveWeb.PlatformIcon do
   attr :rest, :global
 
   def platform_icon(assigns) do
-    {initials, background, foreground, friendly_name} = badge(assigns.platform)
+    key = normalize(assigns.platform)
+    {icon_file, friendly_name} = resolve(key)
 
     assigns =
       assigns
-      |> assign(:initials, initials)
-      |> assign(:background, background)
-      |> assign(:foreground, foreground)
+      |> assign(:icon_file, icon_file)
       |> assign(:friendly_name, friendly_name)
+      |> assign(:letter, letter(key))
 
     ~H"""
     <span class="platform-icon" data-size={@size} title={@friendly_name} {@rest}>
+      <span :if={@icon_file} data-part="logo" aria-hidden="true">
+        <img src={"/images/platforms/#{@icon_file}"} alt={@friendly_name} />
+      </span>
       <span
+        :if={!@icon_file}
         data-part="badge"
-        style={"background: #{@background}; color: #{@foreground};"}
         aria-hidden="true"
       >
-        {@initials}
+        {@letter}
       </span>
       <span :if={@label} data-part="label">{@friendly_name}</span>
     </span>
     """
   end
 
-  # {initials, background, foreground, friendly label}
-  defp badge("elixir"), do: {"E", "#4B275F", "#FFFFFF", "Elixir"}
-  defp badge("erlang"), do: {"ER", "#A90533", "#FFFFFF", "Erlang"}
-  defp badge("javascript"), do: {"JS", "#F7DF1E", "#000000", "JavaScript"}
-  defp badge("node"), do: {"N", "#5FA04E", "#FFFFFF", "Node.js"}
-  defp badge("node.js"), do: {"N", "#5FA04E", "#FFFFFF", "Node.js"}
-  defp badge("typescript"), do: {"TS", "#3178C6", "#FFFFFF", "TypeScript"}
-  defp badge("python"), do: {"Py", "#3776AB", "#FFD343", "Python"}
-  defp badge("ruby"), do: {"R", "#CC342D", "#FFFFFF", "Ruby"}
-  defp badge("go"), do: {"Go", "#00ADD8", "#FFFFFF", "Go"}
-  defp badge("java"), do: {"J", "#F89820", "#FFFFFF", "Java"}
-  defp badge("csharp"), do: {"C#", "#512BD4", "#FFFFFF", "C#"}
-  defp badge("php"), do: {"P", "#777BB4", "#FFFFFF", "PHP"}
-  defp badge("perl"), do: {"Pl", "#39457E", "#FFFFFF", "Perl"}
-  defp badge("rust"), do: {"Rs", "#DEA584", "#000000", "Rust"}
-  defp badge("swift"), do: {"S", "#F05138", "#FFFFFF", "Swift"}
-  defp badge("cocoa"), do: {"", "#000000", "#FFFFFF", "Cocoa"}
-  defp badge("objc"), do: {"OC", "#438EFF", "#FFFFFF", "Objective-C"}
-  defp badge("kotlin"), do: {"K", "#A97BFF", "#000000", "Kotlin"}
-  defp badge("dart"), do: {"D", "#0175C2", "#13B9FD", "Dart"}
-  defp badge("flutter"), do: {"F", "#02569B", "#54C5F8", "Flutter"}
-  defp badge("android"), do: {"A", "#3DDC84", "#000000", "Android"}
-  defp badge("native"), do: {"C", "#00599C", "#FFFFFF", "Native"}
-  defp badge("c"), do: {"C", "#A8B9CC", "#000000", "C"}
-  defp badge("cpp"), do: {"C+", "#00599C", "#FFFFFF", "C++"}
-  defp badge("scala"), do: {"Sc", "#DC322F", "#FFFFFF", "Scala"}
-  defp badge("haskell"), do: {"H", "#5D4F85", "#FFFFFF", "Haskell"}
-  defp badge("clojure"), do: {"Cj", "#5881D8", "#FFFFFF", "Clojure"}
-  defp badge("other"), do: {"?", "#8B8D97", "#FFFFFF", "Other"}
-  defp badge(nil), do: {"?", "#8B8D97", "#FFFFFF", "Unknown"}
-  defp badge(""), do: {"?", "#8B8D97", "#FFFFFF", "Unknown"}
+  defp normalize(nil), do: nil
+  defp normalize(""), do: nil
+  defp normalize(name) when is_binary(name), do: String.downcase(name)
+  defp normalize(name), do: name |> to_string() |> String.downcase()
 
-  defp badge(name) when is_binary(name) do
-    initials = name |> String.slice(0, 2) |> String.upcase()
-    label = String.capitalize(name)
-    {initials, "#8B8D97", "#FFFFFF", label}
-  end
+  # {icon_file | nil, friendly label}
+  defp resolve("elixir"), do: {"elixir.svg", "Elixir"}
+  defp resolve("erlang"), do: {"erlang.svg", "Erlang"}
+  defp resolve("javascript"), do: {"javascript.svg", "JavaScript"}
+  defp resolve("node"), do: {"nodedotjs.svg", "Node.js"}
+  defp resolve("node.js"), do: {"nodedotjs.svg", "Node.js"}
+  defp resolve("typescript"), do: {"typescript.svg", "TypeScript"}
+  defp resolve("python"), do: {"python.svg", "Python"}
+  defp resolve("ruby"), do: {"ruby.svg", "Ruby"}
+  defp resolve("go"), do: {"go.svg", "Go"}
+  defp resolve("java"), do: {"java.svg", "Java"}
+  defp resolve("csharp"), do: {"dotnet.svg", "C#"}
+  defp resolve("dotnet"), do: {"dotnet.svg", ".NET"}
+  defp resolve("php"), do: {"php.svg", "PHP"}
+  defp resolve("perl"), do: {"perl.svg", "Perl"}
+  defp resolve("rust"), do: {"rust.svg", "Rust"}
+  defp resolve("swift"), do: {"swift.svg", "Swift"}
+  defp resolve("cocoa"), do: {"apple.svg", "Cocoa"}
+  defp resolve("objc"), do: {"apple.svg", "Objective-C"}
+  defp resolve("kotlin"), do: {"kotlin.svg", "Kotlin"}
+  defp resolve("dart"), do: {"dart.svg", "Dart"}
+  defp resolve("flutter"), do: {"flutter.svg", "Flutter"}
+  defp resolve("android"), do: {"android.svg", "Android"}
+  defp resolve("c"), do: {"c.svg", "C"}
+  defp resolve("cpp"), do: {"cplusplus.svg", "C++"}
+  defp resolve("cplusplus"), do: {"cplusplus.svg", "C++"}
+  defp resolve("scala"), do: {"scala.svg", "Scala"}
+  defp resolve("haskell"), do: {"haskell.svg", "Haskell"}
+  defp resolve("clojure"), do: {"clojure.svg", "Clojure"}
+  defp resolve("native"), do: {nil, "Native"}
+  defp resolve("other"), do: {nil, "Other"}
+  defp resolve(nil), do: {nil, "Unknown"}
+  defp resolve(name) when is_binary(name), do: {nil, String.capitalize(name)}
+  defp resolve(name), do: {nil, to_string(name)}
+
+  defp letter(nil), do: "?"
+  defp letter(name) when is_binary(name), do: name |> String.slice(0, 2) |> String.upcase()
+  defp letter(_), do: "?"
 end
