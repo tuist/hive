@@ -168,7 +168,7 @@ msgstr ""
 msgid "Create domains before linking them to specs."
 msgstr ""
 
-#: lib/hive_web/live/spec_live/new.ex:168
+#: lib/hive_web/live/spec_live/new.ex:169
 #, elixir-autogen, elixir-format
 msgid "Create spec"
 msgstr ""
@@ -265,7 +265,7 @@ msgstr ""
 msgid "Edit comment"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/edit.ex:170
+#: lib/hive_web/live/spec_live/edit.ex:171
 #, elixir-autogen, elixir-format
 msgid "Edit spec"
 msgstr ""
@@ -345,7 +345,7 @@ msgstr ""
 
 #: lib/hive_web/components/spec_components.ex:34
 #: lib/hive_web/live/spec_live/new.ex:25
-#: lib/hive_web/live/spec_live/new.ex:167
+#: lib/hive_web/live/spec_live/new.ex:168
 #, elixir-autogen, elixir-format
 msgid "New spec"
 msgstr ""
@@ -481,7 +481,7 @@ msgstr ""
 msgid "Save comment"
 msgstr ""
 
-#: lib/hive_web/live/spec_live/edit.ex:171
+#: lib/hive_web/live/spec_live/edit.ex:172
 #, elixir-autogen, elixir-format
 msgid "Save spec"
 msgstr ""
@@ -547,10 +547,10 @@ msgstr ""
 msgid "Spec updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:193
+#: lib/hive_web/components/layouts.ex:194
 #: lib/hive_web/components/spec_components.ex:23
 #: lib/hive_web/components/spec_components.ex:44
-#: lib/hive_web/live/home_live.ex:157
+#: lib/hive_web/live/home_live.ex:158
 #: lib/hive_web/live/spec_live/index.ex:17
 #: lib/hive_web/live/spec_live/index.ex:29
 #, elixir-autogen, elixir-format
@@ -717,7 +717,7 @@ msgstr ""
 msgid "You are no longer following this spec."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:159
+#: lib/hive_web/live/home_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Read the proposals behind upcoming work, and the discussion that shaped each one."
 msgstr ""

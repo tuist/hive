@@ -11,228 +11,228 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:29
+#: lib/hive_web/live/project_live/show.ex:31
 #, elixir-autogen, elixir-format
 msgid "%{count} domains"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:30
+#: lib/hive_web/live/project_live/show.ex:32
 #, elixir-autogen, elixir-format
 msgid "%{count} repositories"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:58
-#: lib/hive_web/live/project_live/show.ex:1038
+#: lib/hive_web/live/project_live/show.ex:60
+#: lib/hive_web/live/project_live/show.ex:1134
 #, elixir-autogen, elixir-format
 msgid "%{project} · Projects · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:526
+#: lib/hive_web/live/project_live/show.ex:622
 #, elixir-autogen, elixir-format
 msgid "Add a GitHub repository that belongs to this project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:262
+#: lib/hive_web/live/project_live/index.ex:263
 #, elixir-autogen, elixir-format
 msgid "Add project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:114
+#: lib/hive_web/live/project_live/index.ex:115
 #, elixir-autogen, elixir-format
 msgid "All projects"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:930
+#: lib/hive_web/live/project_live/show.ex:1026
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this?"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:156
+#: lib/hive_web/live/project_live/index.ex:157
 #, elixir-autogen, elixir-format
 msgid "Atom"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:649
+#: lib/hive_web/live/project_live/show.ex:745
 #, elixir-autogen, elixir-format
 msgid "Attach an existing reusable domain to this project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:311
-#: lib/hive_web/live/project_live/show.ex:618
-#: lib/hive_web/live/project_live/show.ex:692
-#: lib/hive_web/live/project_live/show.ex:887
-#: lib/hive_web/live/project_live/show.ex:966
+#: lib/hive_web/live/project_live/index.ex:312
+#: lib/hive_web/live/project_live/show.ex:714
+#: lib/hive_web/live/project_live/show.ex:788
+#: lib/hive_web/live/project_live/show.ex:983
+#: lib/hive_web/live/project_live/show.ex:1062
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1220
+#: lib/hive_web/live/project_live/show.ex:1316
 #, elixir-autogen, elixir-format
 msgid "Choose a repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:681
+#: lib/hive_web/live/project_live/show.ex:777
 #, elixir-autogen, elixir-format
 msgid "Choose domain"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:299
-#: lib/hive_web/live/project_live/show.ex:352
+#: lib/hive_web/live/project_live/index.ex:300
+#: lib/hive_web/live/project_live/show.ex:390
 #, elixir-autogen, elixir-format
 msgid "Choose visibility"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:739
+#: lib/hive_web/live/project_live/show.ex:835
 #, elixir-autogen, elixir-format
 msgid "Copy this now. It is shown only once."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1009
+#: lib/hive_web/live/project_live/show.ex:1105
 #, elixir-autogen, elixir-format
 msgid "Couldn't create the webhook."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:252
+#: lib/hive_web/live/project_live/index.ex:253
 #, elixir-autogen, elixir-format
 msgid "Create a product, codebase, or service that can own domains and sources."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:172
+#: lib/hive_web/live/project_live/index.ex:173
 #, elixir-autogen, elixir-format
 msgid "Create one to start tracking releases and changelog updates."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:320
+#: lib/hive_web/live/project_live/index.ex:321
 #, elixir-autogen, elixir-format
 msgid "Create project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:761
+#: lib/hive_web/live/project_live/show.ex:857
 #, elixir-autogen, elixir-format
 msgid "Created %{date}"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:976
+#: lib/hive_web/live/project_live/show.ex:1072
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:916
-#: lib/hive_web/live/project_live/show.ex:936
+#: lib/hive_web/live/project_live/show.ex:1012
+#: lib/hive_web/live/project_live/show.ex:1032
 #, elixir-autogen, elixir-format
 msgid "Delete project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:793
+#: lib/hive_web/live/project_live/show.ex:889
 #, elixir-autogen, elixir-format
 msgid "Delete this webhook? The URL will stop working immediately."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:786
-#: lib/hive_web/live/project_live/show.ex:798
-#: lib/hive_web/live/project_live/show.ex:799
+#: lib/hive_web/live/project_live/show.ex:882
+#: lib/hive_web/live/project_live/show.ex:894
+#: lib/hive_web/live/project_live/show.ex:895
 #, elixir-autogen, elixir-format
 msgid "Delete webhook"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:948
+#: lib/hive_web/live/project_live/show.ex:1044
 #, elixir-autogen, elixir-format
 msgid "Deleting the project will permanently remove its project links and sources"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:288
-#: lib/hive_web/live/project_live/show.ex:342
+#: lib/hive_web/live/project_live/index.ex:289
+#: lib/hive_web/live/project_live/show.ex:380
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:743
+#: lib/hive_web/live/project_live/show.ex:839
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:445
-#: lib/hive_web/live/project_live/show.ex:676
+#: lib/hive_web/live/project_live/show.ex:541
+#: lib/hive_web/live/project_live/show.ex:772
 #, elixir-autogen, elixir-format
 msgid "Domain"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1182
+#: lib/hive_web/live/project_live/show.ex:1278
 #, elixir-autogen, elixir-format
 msgid "Domain linked."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1187
+#: lib/hive_web/live/project_live/show.ex:1283
 #, elixir-autogen, elixir-format
 msgid "Domain not found."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:280
+#: lib/hive_web/live/project_live/show.ex:284
 #, elixir-autogen, elixir-format
 msgid "Domain removed from project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:430
+#: lib/hive_web/live/project_live/show.ex:526
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:485
+#: lib/hive_web/live/project_live/show.ex:581
 #, elixir-autogen, elixir-format
 msgid "Drops from this project will appear as Unclassified."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:955
+#: lib/hive_web/live/project_live/show.ex:1051
 #, elixir-autogen, elixir-format
 msgid "Enter this project's name to confirm"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:671
+#: lib/hive_web/live/project_live/show.ex:767
 #, elixir-autogen, elixir-format
 msgid "Every existing domain is already linked to this project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:149
+#: lib/hive_web/live/project_live/index.ex:150
 #, elixir-autogen, elixir-format
 msgid "Feed"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:832
+#: lib/hive_web/live/project_live/show.ex:928
 #, elixir-autogen, elixir-format
 msgid "Generate a URL an external source can post alerts to."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:811
+#: lib/hive_web/live/project_live/show.ex:907
 #, elixir-autogen, elixir-format
 msgid "Generate a webhook to ingest alerts for this project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:896
+#: lib/hive_web/live/project_live/show.ex:992
 #, elixir-autogen, elixir-format
 msgid "Generate webhook"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1080
+#: lib/hive_web/live/project_live/show.ex:1176
 #, elixir-autogen, elixir-format
 msgid "GitHub App is not configured."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1090
+#: lib/hive_web/live/project_live/show.ex:1186
 #, elixir-autogen, elixir-format
 msgid "GitHub App private key is invalid."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1093
+#: lib/hive_web/live/project_live/show.ex:1189
 #, elixir-autogen, elixir-format
 msgid "GitHub repositories could not be loaded."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:565
+#: lib/hive_web/live/project_live/show.ex:661
 #, elixir-autogen, elixir-format
 msgid "GitHub repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1084
+#: lib/hive_web/live/project_live/show.ex:1180
 #, elixir-autogen, elixir-format
 msgid "GitHub returned %{status} while loading repositories."
 msgstr ""
@@ -242,87 +242,87 @@ msgstr ""
 msgid "Grafana"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:66
-#: lib/hive_web/live/project_live/show.ex:1045
+#: lib/hive_web/live/project_live/show.ex:68
+#: lib/hive_web/live/project_live/show.ex:1141
 #, elixir-autogen, elixir-format
 msgid "Hive · %{project} drops"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:779
+#: lib/hive_web/live/project_live/show.ex:875
 #, elixir-autogen, elixir-format
 msgid "Last used"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:648
-#: lib/hive_web/live/project_live/show.ex:656
-#: lib/hive_web/live/project_live/show.ex:701
+#: lib/hive_web/live/project_live/show.ex:744
+#: lib/hive_web/live/project_live/show.ex:752
+#: lib/hive_web/live/project_live/show.ex:797
 #, elixir-autogen, elixir-format
 msgid "Link domain"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:525
-#: lib/hive_web/live/project_live/show.ex:534
-#: lib/hive_web/live/project_live/show.ex:627
+#: lib/hive_web/live/project_live/show.ex:621
+#: lib/hive_web/live/project_live/show.ex:630
+#: lib/hive_web/live/project_live/show.ex:723
 #, elixir-autogen, elixir-format
 msgid "Link repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:422
+#: lib/hive_web/live/project_live/show.ex:518
 #, elixir-autogen, elixir-format
 msgid "Linked repositories appear here."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:389
+#: lib/hive_web/live/project_live/show.ex:485
 #, elixir-autogen, elixir-format
 msgid "Linked repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:280
-#: lib/hive_web/live/project_live/show.ex:335
-#: lib/hive_web/live/project_live/show.ex:757
-#: lib/hive_web/live/project_live/show.ex:860
+#: lib/hive_web/live/project_live/index.ex:281
+#: lib/hive_web/live/project_live/show.ex:373
+#: lib/hive_web/live/project_live/show.ex:853
+#: lib/hive_web/live/project_live/show.ex:956
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:250
+#: lib/hive_web/live/project_live/index.ex:251
 #, elixir-autogen, elixir-format
 msgid "New project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:830
-#: lib/hive_web/live/project_live/show.ex:841
+#: lib/hive_web/live/project_live/show.ex:926
+#: lib/hive_web/live/project_live/show.ex:937
 #, elixir-autogen, elixir-format
 msgid "New webhook"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:129
-#: lib/hive_web/live/project_live/show.ex:452
+#: lib/hive_web/live/project_live/index.ex:130
+#: lib/hive_web/live/project_live/show.ex:548
 #, elixir-autogen, elixir-format
 msgid "No description yet."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:483
+#: lib/hive_web/live/project_live/show.ex:579
 #, elixir-autogen, elixir-format
 msgid "No domains defined"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:170
+#: lib/hive_web/live/project_live/index.ex:171
 #, elixir-autogen, elixir-format
 msgid "No projects yet"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:609
+#: lib/hive_web/live/project_live/show.ex:705
 #, elixir-autogen, elixir-format
 msgid "No repositories available."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:421
+#: lib/hive_web/live/project_live/show.ex:517
 #, elixir-autogen, elixir-format
 msgid "No repositories linked yet"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:809
+#: lib/hive_web/live/project_live/show.ex:905
 #, elixir-autogen, elixir-format
 msgid "No webhooks yet"
 msgstr ""
@@ -332,38 +332,38 @@ msgstr ""
 msgid "Only organization members can create projects."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:244
+#: lib/hive_web/live/project_live/show.ex:248
 #, elixir-autogen, elixir-format
 msgid "Only organization members can delete projects."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:103
+#: lib/hive_web/live/project_live/show.ex:107
 #, elixir-autogen, elixir-format
 msgid "Only organization members can edit projects."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:162
+#: lib/hive_web/live/project_live/show.ex:166
 #, elixir-autogen, elixir-format
 msgid "Only organization members can link domains."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:126
+#: lib/hive_web/live/project_live/show.ex:130
 #, elixir-autogen, elixir-format
 msgid "Only organization members can link repositories."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:189
-#: lib/hive_web/live/project_live/show.ex:232
+#: lib/hive_web/live/project_live/show.ex:193
+#: lib/hive_web/live/project_live/show.ex:236
 #, elixir-autogen, elixir-format
 msgid "Only organization members can manage webhooks."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:287
+#: lib/hive_web/live/project_live/show.ex:291
 #, elixir-autogen, elixir-format
 msgid "Only organization members can remove domains."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:269
+#: lib/hive_web/live/project_live/show.ex:273
 #, elixir-autogen, elixir-format
 msgid "Only organization members can remove repositories."
 msgstr ""
@@ -373,44 +373,44 @@ msgstr ""
 msgid "Owns repositories"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:189
-#: lib/hive_web/live/project_live/index.ex:302
-#: lib/hive_web/live/project_live/show.ex:355
+#: lib/hive_web/live/project_live/index.ex:190
+#: lib/hive_web/live/project_live/index.ex:303
+#: lib/hive_web/live/project_live/show.ex:393
 #, elixir-autogen, elixir-format
 msgid "Private"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:122
-#: lib/hive_web/live/project_live/show.ex:26
+#: lib/hive_web/live/project_live/index.ex:123
+#: lib/hive_web/live/project_live/show.ex:28
 #, elixir-autogen, elixir-format
 msgid "Project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:201
+#: lib/hive_web/live/project_live/index.ex:202
 #, elixir-autogen, elixir-format
 msgid "Project created."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:252
+#: lib/hive_web/live/project_live/show.ex:256
 #, elixir-autogen, elixir-format
 msgid "Project deleted."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:80
+#: lib/hive_web/live/project_live/show.ex:84
 #, elixir-autogen, elixir-format
 msgid "Project not found."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1035
+#: lib/hive_web/live/project_live/show.ex:1131
 #, elixir-autogen, elixir-format
 msgid "Project updated."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:169
-#: lib/hive_web/live/home_live.ex:190
+#: lib/hive_web/components/layouts.ex:170
+#: lib/hive_web/live/home_live.ex:191
 #: lib/hive_web/live/project_live/index.ex:20
 #: lib/hive_web/live/project_live/index.ex:28
-#: lib/hive_web/live/project_live/index.ex:101
+#: lib/hive_web/live/project_live/index.ex:102
 #, elixir-autogen, elixir-format
 msgid "Projects"
 msgstr ""
@@ -425,68 +425,68 @@ msgstr ""
 msgid "Projects · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:188
-#: lib/hive_web/live/project_live/index.ex:301
-#: lib/hive_web/live/project_live/show.ex:354
+#: lib/hive_web/live/project_live/index.ex:189
+#: lib/hive_web/live/project_live/index.ex:302
+#: lib/hive_web/live/project_live/show.ex:392
 #, elixir-autogen, elixir-format
 msgid "Public"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:163
+#: lib/hive_web/live/project_live/index.ex:164
 #, elixir-autogen, elixir-format
 msgid "RSS"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:468
+#: lib/hive_web/live/project_live/show.ex:564
 #, elixir-autogen, elixir-format
 msgid "Remove %{domain} from this project?"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:404
+#: lib/hive_web/live/project_live/show.ex:500
 #, elixir-autogen, elixir-format
 msgid "Remove %{repository} from this project?"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:461
-#: lib/hive_web/live/project_live/show.ex:472
-#: lib/hive_web/live/project_live/show.ex:473
+#: lib/hive_web/live/project_live/show.ex:557
+#: lib/hive_web/live/project_live/show.ex:568
+#: lib/hive_web/live/project_live/show.ex:569
 #, elixir-autogen, elixir-format
 msgid "Remove domain"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:397
-#: lib/hive_web/live/project_live/show.ex:410
-#: lib/hive_web/live/project_live/show.ex:411
+#: lib/hive_web/live/project_live/show.ex:493
+#: lib/hive_web/live/project_live/show.ex:506
+#: lib/hive_web/live/project_live/show.ex:507
 #, elixir-autogen, elixir-format
 msgid "Remove repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:369
+#: lib/hive_web/live/project_live/show.ex:465
 #, elixir-autogen, elixir-format
 msgid "Repositories"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:21
+#: lib/hive_web/live/project_live/show.ex:23
 #, elixir-autogen, elixir-format
 msgid "Repositories, domains, and drop sources tracked under the %{project} project."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:386
+#: lib/hive_web/live/project_live/show.ex:482
 #, elixir-autogen, elixir-format
 msgid "Repository"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1168
+#: lib/hive_web/live/project_live/show.ex:1264
 #, elixir-autogen, elixir-format
 msgid "Repository linked."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1201
+#: lib/hive_web/live/project_live/show.ex:1297
 #, elixir-autogen, elixir-format
 msgid "Repository not found."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1196
+#: lib/hive_web/live/project_live/show.ex:1292
 #, elixir-autogen, elixir-format
 msgid "Repository removed from project."
 msgstr ""
@@ -496,43 +496,43 @@ msgstr ""
 msgid "Reusable domains"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:360
+#: lib/hive_web/live/project_live/show.ex:398
 #, elixir-autogen, elixir-format
 msgid "Save project"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:579
+#: lib/hive_web/live/project_live/show.ex:675
 #, elixir-autogen, elixir-format
 msgid "Search repositories..."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:323
+#: lib/hive_web/live/project_live/show.ex:361
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:767
-#: lib/hive_web/live/project_live/show.ex:867
+#: lib/hive_web/live/project_live/show.ex:863
+#: lib/hive_web/live/project_live/show.ex:963
 #, elixir-autogen, elixir-format
 msgid "Source"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:154
+#: lib/hive_web/live/project_live/index.ex:155
 #, elixir-autogen, elixir-format
 msgid "Subscribe via Atom"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:161
+#: lib/hive_web/live/project_live/index.ex:162
 #, elixir-autogen, elixir-format
 msgid "Subscribe via RSS"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:103
+#: lib/hive_web/live/project_live/index.ex:104
 #, elixir-autogen, elixir-format
 msgid "The products, codebases, and services this Hive instance tracks. Each project owns its linked GitHub repositories and can link to the domains the team slices by."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:918
+#: lib/hive_web/live/project_live/show.ex:1014
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone."
 msgstr ""
@@ -542,49 +542,99 @@ msgstr ""
 msgid "Top-level grouping"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:134
-#: lib/hive_web/live/project_live/index.ex:294
-#: lib/hive_web/live/project_live/show.ex:347
+#: lib/hive_web/live/project_live/index.ex:135
+#: lib/hive_web/live/project_live/index.ex:295
+#: lib/hive_web/live/project_live/show.ex:385
 #, elixir-autogen, elixir-format
 msgid "Visibility"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:736
+#: lib/hive_web/live/project_live/show.ex:832
 #, elixir-autogen, elixir-format
 msgid "Webhook URL"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:999
+#: lib/hive_web/live/project_live/show.ex:1095
 #, elixir-autogen, elixir-format
 msgid "Webhook created. Copy the URL. It is shown only once."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1023
+#: lib/hive_web/live/project_live/show.ex:1119
 #, elixir-autogen, elixir-format
 msgid "Webhook deleted."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:722
+#: lib/hive_web/live/project_live/show.ex:818
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
 
-#: lib/hive_web/live/project_live/index.ex:289
+#: lib/hive_web/live/project_live/index.ex:290
 #, elixir-autogen, elixir-format
 msgid "What this project covers."
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1154
+#: lib/hive_web/live/project_live/show.ex:1250
 #, elixir-autogen, elixir-format
 msgid "last used %{date}"
 msgstr ""
 
-#: lib/hive_web/live/project_live/show.ex:1151
+#: lib/hive_web/live/project_live/show.ex:1247
 #, elixir-autogen, elixir-format
 msgid "never used"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:192
+#: lib/hive_web/live/home_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "The products, codebases, and repositories all of this work belongs to."
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:446
+#, elixir-autogen, elixir-format
+msgid "Copy Data Source Name"
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:316
+#, elixir-autogen, elixir-format
+msgid "Could not rotate the Data Source Name."
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:409
+#, elixir-autogen, elixir-format
+msgid "Error tracking"
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:454
+#, elixir-autogen, elixir-format
+msgid "Last used %{when}"
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:459
+#, elixir-autogen, elixir-format
+msgid "Never used"
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:324
+#, elixir-autogen, elixir-format
+msgid "Only administrators can rotate Data Source Names."
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:429
+#, elixir-autogen, elixir-format
+msgid "Point any Sentry-compatible client at this Data Source Name and its events will show up on the Errors dashboard scoped to this project."
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:416
+#, elixir-autogen, elixir-format
+msgid "Rotate"
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:304
+#, elixir-autogen, elixir-format
+msgid "Rotated. Update your Sentry-compatible client to the new Data Source Name."
+msgstr ""
+
+#: lib/hive_web/live/project_live/show.ex:419
+#, elixir-autogen, elixir-format
+msgid "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
 msgstr ""

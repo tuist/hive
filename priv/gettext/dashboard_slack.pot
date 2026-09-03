@@ -198,7 +198,7 @@ msgstr ""
 msgid "Set Slack credentials in the environment to enable workspace installs."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:314
+#: lib/hive_web/components/layouts.ex:322
 #: lib/hive_web/live/ops_live/slack.ex:22
 #: lib/hive_web/live/ops_live/slack.ex:106
 #, elixir-autogen, elixir-format

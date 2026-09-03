@@ -104,10 +104,10 @@ msgstr ""
 
 #: lib/hive_web/components/domain_components.ex:19
 #: lib/hive_web/components/domain_components.ex:24
-#: lib/hive_web/components/layouts.ex:175
+#: lib/hive_web/components/layouts.ex:176
 #: lib/hive_web/live/domain_live/index.ex:20
 #: lib/hive_web/live/domain_live/index.ex:28
-#: lib/hive_web/live/home_live.ex:201
+#: lib/hive_web/live/home_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Domains"
 msgstr ""
@@ -262,7 +262,7 @@ msgstr ""
 msgid "Specs, forage items, drops, and projects linked to %{domain}."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:203
+#: lib/hive_web/live/home_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "The lasting areas of the product that requests and releases are grouped under."
 msgstr ""
