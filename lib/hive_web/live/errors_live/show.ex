@@ -314,31 +314,40 @@ defmodule HiveWeb.ErrorsLive.Show do
         >
           <.card_section>
             <% req = request_data(@latest_payload) %>
-            <dl data-part="request">
+            <div data-part="request">
               <div :if={req["method"] || req["url"]} data-part="request-line">
-                <strong>{req["method"] || "GET"}</strong>
-                <span>{req["url"]}</span>
+                <.badge
+                  label={String.upcase(req["method"] || "GET")}
+                  color={http_method_color(req["method"])}
+                  style="light-fill"
+                  size="small"
+                />
+                <code>{req["url"]}</code>
               </div>
-              <div :if={req["query_string"]} data-part="request-field">
-                <dt>{dgettext("dashboard_errors", "Query string")}</dt>
-                <dd><code>{req["query_string"]}</code></dd>
+
+              <div :if={req["query_string"] || req["data"]} data-part="context-metadata-grid">
+                <div :if={req["query_string"]} data-part="context-metadata">
+                  <div data-part="title">{dgettext("dashboard_errors", "Query string")}</div>
+                  <span data-part="label"><code>{req["query_string"]}</code></span>
+                </div>
+                <div :if={req["data"]} data-part="context-metadata">
+                  <div data-part="title">{dgettext("dashboard_errors", "Body")}</div>
+                  <span data-part="label">
+                    <pre data-part="request-body">{format_context_value(req["data"])}</pre>
+                  </span>
+                </div>
               </div>
-              <div :if={is_map(req["headers"]) and map_size(req["headers"]) > 0} data-part="request-field">
-                <dt>{dgettext("dashboard_errors", "Headers")}</dt>
-                <dd>
-                  <dl data-part="kv-list">
-                    <div :for={{k, v} <- Enum.sort(req["headers"])} data-part="kv-row">
-                      <dt>{k}</dt>
-                      <dd>{v}</dd>
-                    </div>
-                  </dl>
-                </dd>
+
+              <div :if={is_map(req["headers"]) and map_size(req["headers"]) > 0} data-part="request-headers">
+                <div data-part="request-headers-title">{dgettext("dashboard_errors", "Headers")}</div>
+                <div data-part="context-metadata-grid" data-columns="2">
+                  <div :for={{k, v} <- Enum.sort(req["headers"])} data-part="context-metadata">
+                    <div data-part="title">{k}</div>
+                    <span data-part="label">{v}</span>
+                  </div>
+                </div>
               </div>
-              <div :if={req["data"]} data-part="request-field">
-                <dt>{dgettext("dashboard_errors", "Body")}</dt>
-                <dd><pre>{format_context_value(req["data"])}</pre></dd>
-              </div>
-            </dl>
+            </div>
           </.card_section>
         </.card>
 
@@ -826,6 +835,14 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp level_label(:info), do: dgettext("dashboard_errors", "Info")
   defp level_label(:debug), do: dgettext("dashboard_errors", "Debug")
   defp level_label(_), do: "-"
+
+  defp http_method_color("GET"), do: "information"
+  defp http_method_color("POST"), do: "success"
+  defp http_method_color("PUT"), do: "warning"
+  defp http_method_color("PATCH"), do: "warning"
+  defp http_method_color("DELETE"), do: "destructive"
+  defp http_method_color(method) when is_binary(method), do: http_method_color(String.upcase(method))
+  defp http_method_color(_), do: "neutral"
 
   defp level_color(:fatal), do: "destructive"
   defp level_color(:error), do: "destructive"
