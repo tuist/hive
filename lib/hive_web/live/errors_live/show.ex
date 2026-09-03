@@ -231,9 +231,15 @@ defmodule HiveWeb.ErrorsLive.Show do
                 data-in-app={to_string(frame["in_app"] == true)}
               >
                 <div data-part="frame-header">
-                  <span data-part="function">{frame["function"] || "?"}</span>
-                  <span data-part="module" :if={frame["module"]}>{frame["module"]}</span>
-                  <span :if={frame["filename"]} data-part="location">
+                  <span data-part="frame-indicator" title={
+                    if frame["in_app"] == true,
+                      do: dgettext("dashboard_errors", "In-app frame"),
+                      else: dgettext("dashboard_errors", "External frame")
+                  } />
+                  <span data-part="frame-mfa">
+                    <span :if={frame["module"]} data-part="frame-module">{frame["module"]}</span><span :if={frame["module"] && frame["function"]}>.</span><span data-part="frame-function">{frame["function"] || "?"}</span>
+                  </span>
+                  <span :if={frame["filename"]} data-part="frame-location">
                     {frame["filename"]}<span :if={frame["lineno"]}>:{frame["lineno"]}</span>
                   </span>
                 </div>
@@ -282,13 +288,18 @@ defmodule HiveWeb.ErrorsLive.Show do
           <.card_section>
             <div data-part="contexts-grid">
               <div :for={{name, data} <- contexts(@latest_payload)} data-part="context-card">
-                <div data-part="context-title">{format_context_name(name)}</div>
-                <dl>
-                  <div :for={{k, v} <- flatten_context(data)} data-part="context-row">
-                    <dt>{k}</dt>
-                    <dd>{format_context_value(v)}</dd>
+                <div data-part="context-header">
+                  <div data-part="context-icon" data-color={context_color(name)}>
+                    <.icon name={context_icon(name)} />
                   </div>
-                </dl>
+                  <span data-part="context-title">{format_context_name(name)}</span>
+                </div>
+                <div data-part="context-metadata-grid">
+                  <div :for={{k, v} <- flatten_context(data)} data-part="context-metadata">
+                    <div data-part="title">{k}</div>
+                    <span data-part="label">{format_context_value(v)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </.card_section>
@@ -335,17 +346,34 @@ defmodule HiveWeb.ErrorsLive.Show do
           icon="list_tree"
         >
           <.card_section>
-            <ol data-part="breadcrumbs-list">
-              <li :for={crumb <- event_breadcrumbs(@latest_payload)} data-part="crumb" data-level={crumb["level"] || "info"}>
-                <div data-part="crumb-header">
-                  <span data-part="crumb-time">{format_datetime(crumb["timestamp"])}</span>
-                  <span data-part="crumb-category">{crumb["category"] || crumb["type"] || "log"}</span>
-                  <span data-part="crumb-level">{crumb["level"] || "info"}</span>
+            <div data-part="timeline">
+              <div
+                :for={crumb <- event_breadcrumbs(@latest_payload)}
+                data-part="timeline-item"
+                data-level={crumb["level"] || "info"}
+              >
+                <div data-part="timeline-icon" data-color={crumb_color(crumb["level"])}>
+                  <.icon name={crumb_icon(crumb["category"] || crumb["type"])} />
                 </div>
-                <div :if={crumb["message"]} data-part="crumb-message">{crumb["message"]}</div>
-                <pre :if={is_map(crumb["data"]) and map_size(crumb["data"]) > 0} data-part="crumb-data"><code>{format_context_value(crumb["data"])}</code></pre>
-              </li>
-            </ol>
+                <div data-part="timeline-content">
+                  <div data-part="timeline-header">
+                    <.badge
+                      label={crumb["category"] || crumb["type"] || "log"}
+                      color={crumb_badge_color(crumb["level"])}
+                      style="light-fill"
+                      size="small"
+                    />
+                    <span :if={crumb["message"]} data-part="timeline-title">
+                      {crumb["message"]}
+                    </span>
+                  </div>
+                  <pre :if={is_map(crumb["data"]) and map_size(crumb["data"]) > 0} data-part="timeline-data"><code>{format_context_value(crumb["data"])}</code></pre>
+                </div>
+                <span data-part="timeline-time" title={format_datetime(crumb["timestamp"])}>
+                  {crumb_relative_time(crumb["timestamp"])}
+                </span>
+              </div>
+            </div>
           </.card_section>
         </.card>
 
@@ -591,7 +619,86 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp format_context_value(nil), do: "-"
   defp format_context_value(v) when is_binary(v), do: v
   defp format_context_value(v) when is_number(v) or is_boolean(v), do: to_string(v)
+
+  # A single-map value (like `user.geo`) reads much better inline than
+  # as a pretty-printed JSON block. Flatten one level and hand the
+  # rest to the JSON encoder.
+  defp format_context_value(map) when is_map(map) do
+    if Enum.all?(map, fn {_, v} -> is_binary(v) or is_number(v) or is_boolean(v) end) do
+      map
+      |> Enum.map(fn {k, v} -> "#{k}: #{v}" end)
+      |> Enum.join(", ")
+    else
+      Jason.encode!(map, pretty: true)
+    end
+  end
+
   defp format_context_value(v), do: Jason.encode!(v, pretty: true)
+
+  # Sentry Software Development Kits emit a small, stable set of
+  # context names. Give each one an icon and a colour so the Contexts
+  # card reads as scannable cards instead of a wall of key-value
+  # blocks.
+  defp context_icon("user"), do: "user"
+  defp context_icon("os"), do: "server"
+  defp context_icon("runtime"), do: "devices_code"
+  defp context_icon("device"), do: "device_desktop"
+  defp context_icon("browser"), do: "devices_browser"
+  defp context_icon("app"), do: "apps"
+  defp context_icon("culture"), do: "language"
+  defp context_icon("trace"), do: "link_icon"
+  defp context_icon("cloud_resource"), do: "server"
+  defp context_icon("state"), do: "database"
+  defp context_icon("response"), do: "arrow_left"
+  defp context_icon("replay"), do: "player_play"
+  defp context_icon(_), do: "info_circle"
+
+  defp context_color("user"), do: "information"
+  defp context_color("os"), do: "neutral"
+  defp context_color("runtime"), do: "focus"
+  defp context_color("device"), do: "neutral"
+  defp context_color("browser"), do: "information"
+  defp context_color("app"), do: "success"
+  defp context_color("trace"), do: "focus"
+  defp context_color(_), do: "neutral"
+
+  # Breadcrumb category → icon. Falls back to a generic log icon so
+  # any custom category renders.
+  defp crumb_icon("http"), do: "server"
+  defp crumb_icon("http.request"), do: "server"
+  defp crumb_icon("http.response"), do: "server"
+  defp crumb_icon("db.query"), do: "database"
+  defp crumb_icon("db"), do: "database"
+  defp crumb_icon("app.lifecycle"), do: "apps"
+  defp crumb_icon("navigation"), do: "link_icon"
+  defp crumb_icon("ui.click"), do: "apps"
+  defp crumb_icon("ui." <> _), do: "apps"
+  defp crumb_icon("console"), do: "devices_code"
+  defp crumb_icon("query"), do: "database"
+  defp crumb_icon(_), do: "info_circle"
+
+  defp crumb_color("error"), do: "destructive"
+  defp crumb_color("fatal"), do: "destructive"
+  defp crumb_color("warning"), do: "warning"
+  defp crumb_color("info"), do: "information"
+  defp crumb_color("debug"), do: "neutral"
+  defp crumb_color(_), do: "neutral"
+
+  defp crumb_badge_color("error"), do: "destructive"
+  defp crumb_badge_color("fatal"), do: "destructive"
+  defp crumb_badge_color("warning"), do: "warning"
+  defp crumb_badge_color("info"), do: "information"
+  defp crumb_badge_color(_), do: "neutral"
+
+  defp crumb_relative_time(nil), do: ""
+  defp crumb_relative_time(""), do: ""
+
+  defp crumb_relative_time(ts) do
+    case ts |> to_datetime() do
+      %DateTime{} = dt -> relative_time(dt)
+      _ -> to_string(ts)
+    end
+  end
 
   ## Request
 
