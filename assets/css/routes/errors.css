@@ -485,6 +485,17 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--noora-spacing-2);
+
+    &[data-columns="2"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: var(--noora-spacing-7);
+    }
+
+    @media (max-width: 800px) {
+      &[data-columns="2"] {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
   }
 
   & [data-part="context-metadata"] {
@@ -505,6 +516,12 @@
   & [data-part="context-metadata"] [data-part="label"] {
     color: var(--noora-surface-label-primary);
     overflow-wrap: anywhere;
+  }
+
+  & [data-part="context-metadata"] [data-part-inner="badge-row"] {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--noora-spacing-2);
   }
 
   & [data-part="kv-list"] {
@@ -584,7 +601,7 @@
   & [data-part="timeline-item"] {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--noora-spacing-4);
     padding: var(--noora-spacing-4);
     border-radius: var(--noora-radius-4);
@@ -595,6 +612,7 @@
   & [data-part="timeline-icon"] {
     display: flex;
     flex-shrink: 0;
+    align-self: center;
     align-items: center;
     justify-content: center;
     border-radius: var(--noora-radius-3);
@@ -673,15 +691,37 @@
     font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
   }
 
-  & [data-part="context"] [data-part="context-current"] {
-    display: block;
-    background: color-mix(in srgb, var(--noora-surface-status-destructive, currentColor) 12%, transparent);
-    color: var(--noora-surface-label-primary);
+  & [data-part="context"] {
+    margin-top: 0;
   }
 
-  & [data-part="context"] [data-part="context-line"] {
+  & [data-part="context"] pre.lumis {
+    margin: var(--noora-spacing-3) 0 0;
+    padding: var(--noora-spacing-3);
+    border-radius: var(--noora-radius-small);
+    overflow-x: auto;
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
+    line-height: 1.5;
+  }
+
+  & [data-part="context"] pre.lumis code {
     display: block;
+    background: transparent;
+  }
+
+  & [data-part="context"] pre.lumis .l-line {
+    padding: 0 var(--noora-spacing-2);
+    white-space: pre;
+  }
+
+  & [data-part="context"] pre.lumis .l-line::before {
+    content: attr(data-line);
+    display: inline-block;
+    width: 3.5em;
+    padding-right: var(--noora-spacing-3);
     color: var(--noora-surface-label-secondary);
+    text-align: right;
+    user-select: none;
   }
 
   & [data-part="frame"] [data-part="module"] {

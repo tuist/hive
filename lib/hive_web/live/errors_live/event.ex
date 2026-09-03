@@ -137,7 +137,9 @@ defmodule HiveWeb.ErrorsLive.Event do
                     {frame["filename"]}<span :if={frame["lineno"]}>:{frame["lineno"]}</span>
                   </span>
                 </div>
-                <pre :if={source_context(frame) != []} data-part="context"><code><span :for={line <- source_context(frame)} data-part={context_line_part(line, frame)}>{format_context_line(line)}</span></code></pre>
+                <div :if={highlighted_frame(frame, @payload)} data-part="context">
+                  {Phoenix.HTML.raw(highlighted_frame(frame, @payload))}
+                </div>
               </div>
             </div>
           </.card_section>
@@ -336,34 +338,9 @@ defmodule HiveWeb.ErrorsLive.Event do
 
   defp stack_frames(_), do: []
 
-  defp source_context(frame) do
-    pre = list(frame["pre_context"])
-    ctx = frame["context_line"]
-    post = list(frame["post_context"])
-
-    if ctx == nil and pre == [] and post == [] do
-      []
-    else
-      base_line = frame["lineno"] || 0
-      pre_count = length(pre)
-
-      pre_lines =
-        Enum.with_index(pre, fn line, i -> {base_line - pre_count + i, line, :pre} end)
-
-      current = if ctx, do: [{base_line, ctx, :current}], else: []
-
-      post_lines = Enum.with_index(post, fn line, i -> {base_line + i + 1, line, :post} end)
-
-      pre_lines ++ current ++ post_lines
-    end
-  end
-
-  defp context_line_part({_, _, :current}, _), do: "context-current"
-  defp context_line_part(_, _), do: "context-line"
-
-  defp format_context_line({line, source, _}) do
-    prefix = if line, do: String.pad_leading("#{line}", 4), else: "    "
-    "#{prefix}  #{source}\n"
+  defp highlighted_frame(frame, payload) do
+    platform = Map.get(payload, "platform")
+    Hive.Errors.CodeHighlight.highlight_frame(frame, platform)
   end
 
   defp tag_pairs(issue, payload) do
@@ -474,8 +451,6 @@ defmodule HiveWeb.ErrorsLive.Event do
   defp as_map(m) when is_map(m), do: m
   defp as_map(_), do: %{}
 
-  defp list(l) when is_list(l), do: l
-  defp list(_), do: []
 
   defp get(map, key, default) when is_map(map), do: Map.get(map, key, default) || default
   defp get(_, _, default), do: default

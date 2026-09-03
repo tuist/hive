@@ -243,7 +243,9 @@ defmodule HiveWeb.ErrorsLive.Show do
                     {frame["filename"]}<span :if={frame["lineno"]}>:{frame["lineno"]}</span>
                   </span>
                 </div>
-                <pre :if={source_context(frame) != []} data-part="context"><code><span :for={line <- source_context(frame)} data-part={context_line_part(line, frame)}>{format_context_line(line)}</span></code></pre>
+                <div :if={highlighted_frame(frame, @latest_payload)} data-part="context">
+                  {Phoenix.HTML.raw(highlighted_frame(frame, @latest_payload))}
+                </div>
               </div>
             </div>
           </.card_section>
@@ -271,12 +273,12 @@ defmodule HiveWeb.ErrorsLive.Show do
           icon="alert_hexagon"
         >
           <.card_section>
-            <dl data-part="tags">
-              <div :for={{key, value} <- tag_pairs(@issue, @latest_payload)} data-part="tag-pair">
-                <dt>{key}</dt>
-                <dd>{value}</dd>
+            <div data-part="context-metadata-grid" data-columns="2">
+              <div :for={{key, value} <- tag_pairs(@issue, @latest_payload)} data-part="context-metadata">
+                <div data-part="title">{key}</div>
+                <span data-part="label">{value}</span>
               </div>
-            </dl>
+            </div>
           </.card_section>
         </.card>
 
@@ -383,12 +385,12 @@ defmodule HiveWeb.ErrorsLive.Show do
           icon="database"
         >
           <.card_section>
-            <dl data-part="kv-list">
-              <div :for={{k, v} <- extra_pairs(@latest_payload)} data-part="kv-row">
-                <dt>{k}</dt>
-                <dd><pre>{format_context_value(v)}</pre></dd>
+            <div data-part="context-metadata-grid">
+              <div :for={{k, v} <- extra_pairs(@latest_payload)} data-part="context-metadata">
+                <div data-part="title">{k}</div>
+                <span data-part="label">{format_context_value(v)}</span>
               </div>
-            </dl>
+            </div>
           </.card_section>
         </.card>
 
@@ -398,12 +400,12 @@ defmodule HiveWeb.ErrorsLive.Show do
           icon="package"
         >
           <.card_section>
-            <dl data-part="kv-list">
-              <div :for={{name, version} <- module_pairs(@latest_payload)} data-part="kv-row">
-                <dt>{name}</dt>
-                <dd>{version}</dd>
+            <div data-part="context-metadata-grid" data-columns="2">
+              <div :for={{name, version} <- module_pairs(@latest_payload)} data-part="context-metadata">
+                <div data-part="title">{name}</div>
+                <span data-part="label">{version}</span>
               </div>
-            </dl>
+            </div>
           </.card_section>
         </.card>
 
@@ -414,28 +416,40 @@ defmodule HiveWeb.ErrorsLive.Show do
         >
           <.card_section>
             <% sdk = sdk_info(@latest_payload) %>
-            <dl data-part="kv-list">
-              <div :if={sdk["name"]} data-part="kv-row">
-                <dt>{dgettext("dashboard_errors", "Name")}</dt>
-                <dd>{sdk["name"]}</dd>
+            <div data-part="context-metadata-grid">
+              <div :if={sdk["name"]} data-part="context-metadata">
+                <div data-part="title">{dgettext("dashboard_errors", "Name")}</div>
+                <span data-part="label">{sdk["name"]}</span>
               </div>
-              <div :if={sdk["version"]} data-part="kv-row">
-                <dt>{dgettext("dashboard_errors", "Version")}</dt>
-                <dd>{sdk["version"]}</dd>
+              <div :if={sdk["version"]} data-part="context-metadata">
+                <div data-part="title">{dgettext("dashboard_errors", "Version")}</div>
+                <span data-part="label">{sdk["version"]}</span>
               </div>
-              <div :if={is_list(sdk["integrations"]) and sdk["integrations"] != []} data-part="kv-row">
-                <dt>{dgettext("dashboard_errors", "Integrations")}</dt>
-                <dd>{Enum.join(sdk["integrations"], ", ")}</dd>
+              <div :if={is_list(sdk["integrations"]) and sdk["integrations"] != []} data-part="context-metadata">
+                <div data-part="title">{dgettext("dashboard_errors", "Integrations")}</div>
+                <span data-part="label" data-part-inner="badge-row">
+                  <.badge
+                    :for={integration <- sdk["integrations"]}
+                    label={integration}
+                    color="focus"
+                    style="light-fill"
+                    size="small"
+                  />
+                </span>
               </div>
-              <div :if={is_list(sdk["packages"]) and sdk["packages"] != []} data-part="kv-row">
-                <dt>{dgettext("dashboard_errors", "Packages")}</dt>
-                <dd>
-                  <ul data-part="package-list">
-                    <li :for={pkg <- sdk["packages"]}>{pkg["name"]}@{pkg["version"]}</li>
-                  </ul>
-                </dd>
+              <div :if={is_list(sdk["packages"]) and sdk["packages"] != []} data-part="context-metadata">
+                <div data-part="title">{dgettext("dashboard_errors", "Packages")}</div>
+                <span data-part="label" data-part-inner="badge-row">
+                  <.badge
+                    :for={pkg <- sdk["packages"]}
+                    label={"#{pkg["name"]}@#{pkg["version"]}"}
+                    color="neutral"
+                    style="light-fill"
+                    size="small"
+                  />
+                </span>
               </div>
-            </dl>
+            </div>
           </.card_section>
         </.card>
 
@@ -519,33 +533,9 @@ defmodule HiveWeb.ErrorsLive.Show do
 
   # Returns [{line_number | nil, line_source}] with the context_line
   # first, pre_context above and post_context below.
-  defp source_context(frame) do
-    pre = list(frame["pre_context"])
-    ctx = frame["context_line"]
-    post = list(frame["post_context"])
-
-    if ctx == nil and pre == [] and post == [] do
-      []
-    else
-      base_line = frame["lineno"] || 0
-      pre_count = length(pre)
-
-      pre_with_line = Enum.with_index(pre, fn line, i -> {base_line - pre_count + i, line, :pre} end)
-      current = if ctx, do: [{base_line, ctx, :current}], else: []
-
-      post_with_line =
-        Enum.with_index(post, fn line, i -> {base_line + i + 1, line, :post} end)
-
-      pre_with_line ++ current ++ post_with_line
-    end
-  end
-
-  defp context_line_part({_, _, :current}, _), do: "context-current"
-  defp context_line_part(_, _), do: "context-line"
-
-  defp format_context_line({line, source, _}) do
-    prefix = if line, do: String.pad_leading("#{line}", 4), else: "    "
-    "#{prefix}  #{source}\n"
+  defp highlighted_frame(frame, payload) do
+    platform = Map.get(payload, "platform")
+    Hive.Errors.CodeHighlight.highlight_frame(frame, platform)
   end
 
   ## Tags
@@ -600,12 +590,23 @@ defmodule HiveWeb.ErrorsLive.Show do
     end
   end
 
+  # Acronyms Sentry Software Development Kits use as context keys.
+  # Kept explicit so "os" doesn't render as "Os" — a small polish that
+  # matters because these labels are the first thing a reader parses.
+  @context_acronyms MapSet.new(~w(os sdk gpu cpu url http api ssl tls ip id))
+
   defp format_context_name(name) do
     name
     |> to_string()
     |> String.replace("_", " ")
     |> String.split(" ")
-    |> Enum.map_join(" ", &String.capitalize/1)
+    |> Enum.map_join(" ", fn word ->
+      if MapSet.member?(@context_acronyms, String.downcase(word)) do
+        String.upcase(word)
+      else
+        String.capitalize(word)
+      end
+    end)
   end
 
   defp flatten_context(map) when is_map(map) do
@@ -749,8 +750,6 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp as_map(m) when is_map(m), do: m
   defp as_map(_), do: %{}
 
-  defp list(l) when is_list(l), do: l
-  defp list(_), do: []
 
   defp get(map, key, default) when is_map(map), do: Map.get(map, key, default) || default
   defp get(_, _, default), do: default
