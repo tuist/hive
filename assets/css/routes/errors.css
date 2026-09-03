@@ -34,6 +34,56 @@
     justify-content: space-between;
     gap: var(--noora-spacing-4);
     margin-bottom: var(--noora-spacing-5);
+    flex-wrap: wrap;
+  }
+
+  & [data-part="left-controls"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+    flex-wrap: wrap;
+  }
+
+  & [data-part="issue-cell"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+    min-width: 0;
+  }
+
+  & [data-part="issue-title"] {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 640px;
+  }
+
+  & [data-part="issue-meta"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-2);
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    flex-wrap: wrap;
+  }
+
+  & [data-part="culprit"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 380px;
+  }
+
+  & [data-part="trend"] {
+    width: 140px;
+    height: 44px;
+  }
+
+  & [data-part="trend"] > * {
+    width: 100%;
+    height: 100%;
   }
 
   & [data-part="search"] {

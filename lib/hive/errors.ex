@@ -221,6 +221,14 @@ defmodule Hive.Errors do
     page = opts |> Keyword.get(:page, 1) |> max(1)
     offset = (page - 1) * page_size
 
+    matching_ids =
+      issue_ids_matching_events(
+        project_id: opts[:project_id],
+        environment: opts[:environment],
+        from: opts[:from],
+        to: opts[:to]
+      )
+
     base =
       Issue
       |> filter_project(opts[:project_id])
@@ -228,6 +236,7 @@ defmodule Hive.Errors do
       |> filter_search(opts[:search])
       |> filter_from(opts[:from])
       |> filter_to(opts[:to])
+      |> filter_matching_ids(matching_ids)
 
     total = base |> exclude(:preload) |> Repo.aggregate(:count, :id)
 
@@ -288,6 +297,12 @@ defmodule Hive.Errors do
   defp filter_to(query, nil), do: query
   defp filter_to(query, %DateTime{} = to), do: where(query, [issue], issue.last_seen <= ^to)
 
+  defp filter_matching_ids(query, :all), do: query
+  defp filter_matching_ids(query, []), do: where(query, [issue], false)
+
+  defp filter_matching_ids(query, ids) when is_list(ids),
+    do: where(query, [issue], issue.id in ^ids)
+
   def fetch_issue(id) do
     case Repo.get(Issue, id) do
       nil -> {:error, :not_found}
@@ -341,6 +356,267 @@ defmodule Hive.Errors do
     |> Repo.update_all(set: [last_used_at: now])
 
     :ok
+  end
+
+  @doc """
+  Returns the distinct environments seen for events matching the
+  filters. Used by the dashboard's environment filter dropdown.
+  """
+  def distinct_environments(opts \\ []) do
+    if enabled?() do
+      {clauses, params} = event_window_clauses(opts)
+
+      where_sql =
+        case clauses do
+          [] -> ""
+          list -> " WHERE " <> Enum.join(list, " AND ")
+        end
+
+      query = """
+      SELECT DISTINCT environment
+      FROM errors_events
+      #{where_sql}
+      ORDER BY environment
+      """
+
+      case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+        {:ok, %{rows: rows}} -> Enum.map(rows, fn [env] -> to_string(env) end)
+        _ -> []
+      end
+    else
+      []
+    end
+  end
+
+  @doc """
+  Returns the set of issue ids that had at least one event matching
+  the given filters. Used to intersect Postgres issue queries with
+  event-scoped filters like environment and time window.
+
+  Returns `:all` when ClickHouse is disabled or no filters restrict
+  the events, so callers can skip the intersection entirely.
+  """
+  def issue_ids_matching_events(opts \\ []) do
+    project_id = Keyword.get(opts, :project_id)
+    environment = Keyword.get(opts, :environment)
+    from = Keyword.get(opts, :from)
+    to = Keyword.get(opts, :to)
+
+    cond do
+      not enabled?() ->
+        :all
+
+      is_nil(environment) and is_nil(from) and is_nil(to) ->
+        :all
+
+      true ->
+        {clauses, params} = event_window_clauses(opts)
+
+        where_sql =
+          case clauses do
+            [] -> ""
+            list -> " WHERE " <> Enum.join(list, " AND ")
+          end
+
+        query = """
+        SELECT DISTINCT issue_id
+        FROM errors_events
+        #{where_sql}
+        """
+
+        params =
+          case project_id do
+            nil -> params
+            _ -> params
+          end
+
+        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+          {:ok, %{rows: rows}} -> Enum.map(rows, fn [id] -> to_string(id) end)
+          _ -> []
+        end
+    end
+  end
+
+  @doc """
+  Returns per-hour event counts for many issues in a single query.
+  Result: `%{issue_id => [count_per_bucket]}` ordered oldest → newest.
+  Used to render the dashboard's Trend sparkline column without a
+  ClickHouse round-trip per row.
+  """
+  def event_trends(issue_ids, %DateTime{} = from, %DateTime{} = to) when is_list(issue_ids) do
+    cond do
+      not enabled?() -> %{}
+      issue_ids == [] -> %{}
+      true -> do_event_trends(issue_ids, from, to)
+    end
+  end
+
+  defp do_event_trends(issue_ids, from, to) do
+    bucket_unit = bucket_unit_for(from, to)
+
+    query = """
+    SELECT
+      issue_id,
+      #{bucket_expr(bucket_unit)} AS bucket,
+      count() AS events
+    FROM errors_events
+    WHERE issue_id IN {ids:Array(String)}
+      AND timestamp >= {from:DateTime64(6)}
+      AND timestamp <= {to:DateTime64(6)}
+    GROUP BY issue_id, bucket
+    ORDER BY issue_id, bucket
+    """
+
+    params = %{"ids" => issue_ids, "from" => from, "to" => to}
+
+    case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+      {:ok, %{rows: rows}} ->
+        buckets = time_buckets(from, to, bucket_unit)
+
+        by_issue =
+          Enum.group_by(rows, fn [issue_id, _bucket, _count] -> to_string(issue_id) end)
+
+        Map.new(issue_ids, fn issue_id ->
+          points = Map.get(by_issue, issue_id, [])
+          counts_map = Map.new(points, fn [_, bucket, count] -> {bucket_key(bucket), count} end)
+          series = Enum.map(buckets, fn bucket -> Map.get(counts_map, bucket_key(bucket), 0) end)
+          {issue_id, series}
+        end)
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp bucket_unit_for(from, to) do
+    hours = DateTime.diff(to, from, :second) / 3600
+
+    cond do
+      hours <= 2 -> :minute
+      hours <= 24 * 3 -> :hour
+      hours <= 24 * 30 -> :day
+      true -> :day
+    end
+  end
+
+  defp bucket_expr(:minute), do: "toStartOfInterval(timestamp, INTERVAL 5 MINUTE)"
+  defp bucket_expr(:hour), do: "toStartOfHour(timestamp)"
+  defp bucket_expr(:day), do: "toStartOfDay(timestamp)"
+
+  defp time_buckets(from, to, :minute) do
+    stream_buckets(from, to, 300, :second)
+  end
+
+  defp time_buckets(from, to, :hour) do
+    stream_buckets(from, to, 3600, :second)
+  end
+
+  defp time_buckets(from, to, :day) do
+    stream_buckets(from, to, 86_400, :second)
+  end
+
+  defp stream_buckets(from, to, seconds, unit) do
+    start = DateTime.add(from, 0, unit) |> DateTime.truncate(:second)
+    stop = to |> DateTime.truncate(:second)
+
+    Stream.iterate(start, &DateTime.add(&1, seconds, :second))
+    |> Enum.take_while(&(DateTime.compare(&1, stop) != :gt))
+  end
+
+  defp bucket_key(%DateTime{} = dt), do: DateTime.to_unix(dt)
+
+  defp bucket_key(%NaiveDateTime{} = dt),
+    do: DateTime.from_naive!(dt, "Etc/UTC") |> DateTime.to_unix()
+
+  defp bucket_key(int) when is_integer(int), do: int
+
+  defp bucket_key(bin) when is_binary(bin) do
+    case DateTime.from_iso8601(bin) do
+      {:ok, dt, _} -> DateTime.to_unix(dt)
+      _ -> 0
+    end
+  end
+
+  @doc """
+  Returns per-issue event counts within a time window.
+  Result: `%{issue_id => count}`.
+  """
+  def event_counts_in_window(issue_ids, %DateTime{} = from, %DateTime{} = to)
+      when is_list(issue_ids) do
+    cond do
+      not enabled?() ->
+        %{}
+
+      issue_ids == [] ->
+        %{}
+
+      true ->
+        query = """
+        SELECT issue_id, count() AS events
+        FROM errors_events
+        WHERE issue_id IN {ids:Array(String)}
+          AND timestamp >= {from:DateTime64(6)}
+          AND timestamp <= {to:DateTime64(6)}
+        GROUP BY issue_id
+        """
+
+        params = %{"ids" => issue_ids, "from" => from, "to" => to}
+
+        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+          {:ok, %{rows: rows}} ->
+            Map.new(rows, fn [id, count] -> {to_string(id), count} end)
+
+          _ ->
+            %{}
+        end
+    end
+  end
+
+  defp event_window_clauses(opts) do
+    project_id = Keyword.get(opts, :project_id)
+    environment = Keyword.get(opts, :environment)
+    from = Keyword.get(opts, :from)
+    to = Keyword.get(opts, :to)
+
+    {clauses, params} = {[], %{}}
+
+    {clauses, params} =
+      case project_id do
+        nil ->
+          {clauses, params}
+
+        pid ->
+          {clauses ++ ["project_id = {project_id:String}"], Map.put(params, "project_id", pid)}
+      end
+
+    {clauses, params} =
+      case environment do
+        nil ->
+          {clauses, params}
+
+        "" ->
+          {clauses, params}
+
+        env ->
+          {clauses ++ ["environment = {environment:String}"], Map.put(params, "environment", env)}
+      end
+
+    {clauses, params} =
+      case from do
+        nil ->
+          {clauses, params}
+
+        %DateTime{} ->
+          {clauses ++ ["timestamp >= {from:DateTime64(6)}"], Map.put(params, "from", from)}
+      end
+
+    {clauses, params} =
+      case to do
+        nil -> {clauses, params}
+        %DateTime{} -> {clauses ++ ["timestamp <= {to:DateTime64(6)}"], Map.put(params, "to", to)}
+      end
+
+    {clauses, params}
   end
 
   @doc """

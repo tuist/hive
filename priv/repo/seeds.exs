@@ -2152,7 +2152,11 @@ if Hive.Errors.enabled?() do
     }
   ]
 
-  build_event = fn project, fixture, offset_minutes ->
+  # Rotate through a couple of environments so the Environment filter has
+  # a couple of options to demonstrate and each issue actually spans them.
+  environments_pool = ["production", "staging", "development"]
+
+  build_event = fn _project, fixture, offset_minutes, environment ->
     now = DateTime.utc_now()
     timestamp = DateTime.add(now, -offset_minutes * 60, :second)
 
@@ -2186,7 +2190,7 @@ if Hive.Errors.enabled?() do
       "timestamp" => DateTime.to_iso8601(timestamp),
       "platform" => "elixir",
       "level" => fixture.level,
-      "environment" => fixture.environment,
+      "environment" => environment,
       "release" => "1.2.3",
       "server_name" => "web-#{rem(offset_minutes, 3) + 1}.example.com",
       "transaction" => "MyAppWeb.WidgetController#show",
@@ -2202,7 +2206,7 @@ if Hive.Errors.enabled?() do
       },
       "sdk" => %{"name" => "sentry.python", "version" => "1.44.1"},
       "tags" => %{
-        "environment" => fixture.environment,
+        "environment" => environment,
         "server" => "web-#{rem(offset_minutes, 3) + 1}",
         "runtime" => "beam"
       },
@@ -2219,12 +2223,19 @@ if Hive.Errors.enabled?() do
 
   Enum.each(Projects.list_projects(), fn project ->
     Enum.each(error_fixtures, fn fixture ->
-      # Space events across the last few hours so the detail view has a
-      # visible history.
+      # Spread events across the last 30 days so the trend column has
+      # something to draw and the date picker's presets each land on
+      # meaningfully different totals. Minutes-between-events is scaled
+      # to the requested occurrences: bigger issues cluster more
+      # densely, smaller ones look intermittent.
+      window_minutes = 30 * 24 * 60
+      spacing = div(window_minutes, fixture.occurrences)
+
       1..fixture.occurrences
       |> Enum.each(fn i ->
-        offset_minutes = i * 3
-        payload = build_event.(project, fixture, offset_minutes)
+        offset_minutes = i * spacing
+        environment = Enum.at(environments_pool, rem(i, length(environments_pool)))
+        payload = build_event.(project, fixture, offset_minutes, environment)
         event = ErrorsSentryEvent.parse(payload)
         ErrorsSeeds.record_event(project, event)
       end)

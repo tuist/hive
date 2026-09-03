@@ -4,12 +4,15 @@ defmodule HiveWeb.ErrorsLive.Index do
   use HiveWeb, :live_view
   use Noora
 
+  import Noora.DatePicker
   import Noora.Filter
 
+  alias Phoenix.LiveView.JS
   alias Hive.Errors
   alias Hive.Errors.Issue
   alias Hive.Errors.Policy
   alias Hive.Projects
+  alias HiveWeb.Helpers.DatePicker
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
   alias HiveWeb.Utilities.Query
@@ -48,6 +51,8 @@ defmodule HiveWeb.ErrorsLive.Index do
          dgettext("dashboard_errors", "Errors · %{product}", product: socket.assigns.product_name)
        )
        |> assign(:available_filters, [])
+       |> assign(:trend_series, %{})
+       |> assign(:window_counts, %{})
        |> assign(OpenGraph.assigns(open_graph()))}
     else
       {:ok, redirect_to_home(socket)}
@@ -55,14 +60,22 @@ defmodule HiveWeb.ErrorsLive.Index do
   end
 
   def handle_params(params, uri, socket) do
-    available_filters = define_filters()
-    query_params = Query.query_params(uri)
+    %{preset: preset, period: {from, to}} = DatePicker.date_picker_params(params, "errors")
 
+    query_params = Query.query_params(uri)
     page = Query.parse_page(params["page"])
     query = params["q"] || ""
+
+    environments = Errors.distinct_environments(from: from, to: to)
+    available_filters = define_filters(environments)
     active_filters = Filter.Operations.decode_filters_from_query(params, available_filters)
 
-    {issues, meta} = Errors.paginate_issues(list_opts(query, active_filters, page))
+    list_opts = list_opts(query, active_filters, page, from, to)
+    {issues, meta} = Errors.paginate_issues(list_opts)
+
+    issue_ids = Enum.map(issues, & &1.id)
+    trend_series = Errors.event_trends(issue_ids, from, to)
+    window_counts = Errors.event_counts_in_window(issue_ids, from, to)
 
     socket =
       socket
@@ -73,16 +86,22 @@ defmodule HiveWeb.ErrorsLive.Index do
       |> assign(:active_filters, active_filters)
       |> assign(:query, query)
       |> assign(:search_form, to_form(%{"query" => query}, as: :search))
+      |> assign(:errors_preset, preset)
+      |> assign(:errors_period, {from, to})
+      |> assign(:trend_series, trend_series)
+      |> assign(:window_counts, window_counts)
 
     {:noreply, socket}
   end
 
   def handle_event("search", %{"search" => %{"query" => query}}, socket) do
-    {:noreply,
-     push_patch(socket,
-       to: ~p"/errors?#{query_params(query, socket.assigns.active_filters)}",
-       replace: true
-     )}
+    updated =
+      socket
+      |> current_query_params()
+      |> Query.put_present("q", Query.present_string(query))
+      |> Map.delete("page")
+
+    {:noreply, push_patch(socket, to: ~p"/errors?#{updated}", replace: true)}
   end
 
   def handle_event("add_filter", %{"value" => filter_id}, socket) do
@@ -111,6 +130,31 @@ defmodule HiveWeb.ErrorsLive.Index do
      |> push_patch(to: ~p"/errors?#{updated_params}")
      |> push_event("close-dropdown", %{id: "all", all: true})
      |> push_event("close-popover", %{id: "all", all: true})}
+  end
+
+  def handle_event(
+        "errors_period_changed",
+        %{"value" => %{"start" => start_date, "end" => end_date}, "preset" => preset},
+        socket
+      ) do
+    updated =
+      if preset == "custom" do
+        socket
+        |> current_query_params()
+        |> Map.delete("page")
+        |> Map.put("errors-date-range", "custom")
+        |> Map.put("errors-start-date", start_date)
+        |> Map.put("errors-end-date", end_date)
+      else
+        socket
+        |> current_query_params()
+        |> Map.delete("page")
+        |> Map.put("errors-date-range", preset)
+        |> Map.delete("errors-start-date")
+        |> Map.delete("errors-end-date")
+      end
+
+    {:noreply, push_patch(socket, to: ~p"/errors?#{updated}")}
   end
 
   def render(assigns) do
@@ -146,13 +190,45 @@ defmodule HiveWeb.ErrorsLive.Index do
         <.card title={dgettext("dashboard_errors", "Issues")} icon="alert_circle">
           <.card_section>
             <div data-part="table-toolbar">
-              <.filter_dropdown
-                id="errors-filter"
-                label={dgettext("dashboard_errors", "Filter")}
-                available_filters={@available_filters}
-                active_filters={@active_filters}
-                on_select="add_filter"
-              />
+              <div data-part="left-controls">
+                <.filter_dropdown
+                  id="errors-filter"
+                  label={dgettext("dashboard_errors", "Filter")}
+                  available_filters={@available_filters}
+                  active_filters={@active_filters}
+                  on_select="add_filter"
+                />
+
+                <.date_picker
+                  id="errors-date-range-picker"
+                  name="errors-date-range"
+                  presets={date_presets()}
+                  selected_preset={@errors_preset}
+                  period={@errors_period}
+                  on_period_change="errors_period_changed"
+                  max={Date.utc_today()}
+                >
+                  <:actions>
+                    <.button
+                      label={dgettext("dashboard_errors", "Cancel")}
+                      variant="secondary"
+                      phx-click={
+                        JS.dispatch("phx:date-picker-cancel",
+                          detail: %{id: "errors-date-range-picker"}
+                        )
+                      }
+                    />
+                    <.button
+                      label={dgettext("dashboard_errors", "Apply")}
+                      phx-click={
+                        JS.dispatch("phx:date-picker-apply",
+                          detail: %{id: "errors-date-range-picker"}
+                        )
+                      }
+                    />
+                  </:actions>
+                </.date_picker>
+              </div>
 
               <div data-part="search">
                 <.form
@@ -179,36 +255,60 @@ defmodule HiveWeb.ErrorsLive.Index do
             <.table id="errors-table" rows={@issues}>
               <:col :let={issue} label={dgettext("dashboard_errors", "Issue")}>
                 <.link navigate={~p"/errors/#{issue.id}"} data-part="issue-link">
-                  <.text_and_description_cell
-                    label={issue.title}
-                    description={issue.culprit || dgettext("dashboard_errors", "No location")}
-                  />
+                  <div data-part="issue-cell">
+                    <span data-part="issue-title">{issue.title}</span>
+                    <span data-part="issue-meta">
+                      <.badge
+                        label={level_label(issue.level)}
+                        color={level_color(issue.level)}
+                        style="light-fill"
+                        size="small"
+                      />
+                      <.badge
+                        label={status_label(issue.status)}
+                        color={status_color(issue.status)}
+                        style="light-fill"
+                        size="small"
+                      />
+                      <span data-part="culprit">
+                        {issue.culprit || dgettext("dashboard_errors", "No location")}
+                      </span>
+                      <span data-part="project">· {project_name(issue)}</span>
+                    </span>
+                  </div>
                 </.link>
-              </:col>
-              <:col :let={issue} label={dgettext("dashboard_errors", "Project")}>
-                <.text_cell label={project_name(issue)} />
-              </:col>
-              <:col :let={issue} label={dgettext("dashboard_errors", "Level")}>
-                <.badge_cell
-                  label={level_label(issue.level)}
-                  color={level_color(issue.level)}
-                  style="light-fill"
-                />
-              </:col>
-              <:col :let={issue} label={dgettext("dashboard_errors", "Status")}>
-                <.badge_cell
-                  label={status_label(issue.status)}
-                  color={status_color(issue.status)}
-                  style="light-fill"
-                />
-              </:col>
-              <:col :let={issue} label={dgettext("dashboard_errors", "Events")}>
-                <.text_cell label={Integer.to_string(issue.event_count)} />
               </:col>
               <:col :let={issue} label={dgettext("dashboard_errors", "Last seen")}>
                 <.text_cell
-                  label={format_datetime(issue.last_seen)}
-                  sublabel={format_date(issue.last_seen)}
+                  label={relative_time(issue.last_seen)}
+                  sublabel={format_datetime(issue.last_seen)}
+                />
+              </:col>
+              <:col :let={issue} label={dgettext("dashboard_errors", "Age")}>
+                <.text_cell
+                  label={relative_time(issue.first_seen)}
+                  sublabel={format_datetime(issue.first_seen)}
+                />
+              </:col>
+              <:col :let={issue} label={dgettext("dashboard_errors", "Trend")}>
+                <div data-part="trend">
+                  <.chart
+                    id={"trend-#{issue.id}"}
+                    type="bar"
+                    series={Map.get(@trend_series, issue.id, [])}
+                    show_legend={false}
+                    extra_options={sparkline_options()}
+                  />
+                </div>
+              </:col>
+              <:col :let={issue} label={dgettext("dashboard_errors", "Events")}>
+                <.text_cell
+                  label={format_integer(events_in_window(issue, @window_counts))}
+                  sublabel={
+                    dgettext("dashboard_errors", "%{total} total",
+                      total: format_integer(issue.event_count)
+                    )
+                  }
                 />
               </:col>
               <:empty_state>
@@ -250,6 +350,45 @@ defmodule HiveWeb.ErrorsLive.Index do
     """
   end
 
+  defp sparkline_options do
+    %{
+      grid: %{left: 0, right: 0, top: 4, bottom: 4, containLabel: false},
+      xAxis: %{show: false, type: "category"},
+      yAxis: %{show: false},
+      tooltip: %{show: false},
+      legend: %{show: false}
+    }
+  end
+
+  defp date_presets do
+    [
+      %{
+        id: "last-1-hour",
+        label: dgettext("dashboard_errors", "Last 1 hour"),
+        period: {1, :hour}
+      },
+      %{
+        id: "last-24-hours",
+        label: dgettext("dashboard_errors", "Last 24 hours"),
+        period: {24, :hour}
+      },
+      %{id: "last-7-days", label: dgettext("dashboard_errors", "Last 7 days"), period: {7, :day}},
+      %{
+        id: "last-30-days",
+        label: dgettext("dashboard_errors", "Last 30 days"),
+        period: {30, :day}
+      },
+      %{
+        id: "last-12-months",
+        label: dgettext("dashboard_errors", "Last 12 months"),
+        period: {12, :month}
+      },
+      %{id: "custom", label: dgettext("dashboard_errors", "Custom")}
+    ]
+  end
+
+  defp events_in_window(issue, window_counts), do: Map.get(window_counts, issue.id, 0)
+
   defp empty_subtitle(%{query: q, active_filters: filters})
        when q != "" or filters != [],
        do: dgettext("dashboard_errors", "Adjust your search or filters to see more issues.")
@@ -263,10 +402,7 @@ defmodule HiveWeb.ErrorsLive.Index do
 
   defp redirect_to_home(socket) do
     socket
-    |> put_flash(
-      :error,
-      dgettext("dashboard_errors", "You do not have access to errors.")
-    )
+    |> put_flash(:error, dgettext("dashboard_errors", "You do not have access to errors."))
     |> push_navigate(to: ~p"/")
   end
 
@@ -274,16 +410,11 @@ defmodule HiveWeb.ErrorsLive.Index do
     "?" <> Query.put(uri.query, "page", Integer.to_string(page))
   end
 
-  defp query_params(query, active_filters) do
-    active_filters
-    |> Filter.Operations.encode_filters_to_query()
-    |> Query.put_present("q", Query.present_string(query))
-  end
-
-  defp list_opts(query, active_filters, page) do
-    [page: page, page_size: @page_size, search: Query.present_string(query)]
+  defp list_opts(query, active_filters, page, from, to) do
+    [page: page, page_size: @page_size, search: Query.present_string(query), from: from, to: to]
     |> put_status_filter(active_filters)
     |> put_project_filter(active_filters)
+    |> put_env_filter(active_filters)
   end
 
   defp put_status_filter(opts, active_filters) do
@@ -306,11 +437,23 @@ defmodule HiveWeb.ErrorsLive.Index do
     end
   end
 
-  defp current_query_params(socket) do
-    socket.assigns.uri.query
+  defp put_env_filter(opts, active_filters) do
+    case Enum.find(active_filters, &(&1.id == "environment")) do
+      %{operator: :==, value: value} when is_binary(value) and value != "" ->
+        Keyword.put(opts, :environment, value)
+
+      _ ->
+        opts
+    end
+  end
+
+  defp current_query_params(%{assigns: %{uri: uri}}) do
+    uri.query
     |> Kernel.||("")
     |> URI.decode_query()
   end
+
+  defp current_query_params(_), do: %{}
 
   defp uri_from_query_params(params) do
     case URI.encode_query(params) do
@@ -319,7 +462,7 @@ defmodule HiveWeb.ErrorsLive.Index do
     end
   end
 
-  defp define_filters do
+  defp define_filters(environments) do
     status_options = Issue.statuses() |> Enum.map(&Atom.to_string/1)
     projects = Projects.list_projects()
 
@@ -343,6 +486,16 @@ defmodule HiveWeb.ErrorsLive.Index do
         operator: :==,
         searchable: true,
         value: nil
+      },
+      %Filter.Filter{
+        id: "environment",
+        display_name: dgettext("dashboard_errors", "Environment"),
+        type: :option,
+        options: environments,
+        options_display_names: Map.new(environments, &{&1, &1}),
+        operator: :==,
+        searchable: true,
+        value: nil
       }
     ]
     |> Enum.reject(&Enum.empty?(&1.options))
@@ -351,11 +504,34 @@ defmodule HiveWeb.ErrorsLive.Index do
   defp project_name(%Issue{project: %{name: name}}), do: name
   defp project_name(_), do: "-"
 
-  defp format_datetime(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%H:%M:%S UTC")
-  defp format_datetime(_datetime), do: "-"
+  defp format_datetime(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M UTC")
+  defp format_datetime(_), do: "-"
 
-  defp format_date(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%b %d, %Y")
-  defp format_date(_datetime), do: "-"
+  defp format_integer(n) when is_integer(n) do
+    n
+    |> Integer.to_string()
+    |> String.reverse()
+    |> String.replace(~r/(\d{3})(?=\d)/, "\\1,")
+    |> String.reverse()
+  end
+
+  defp format_integer(_), do: "0"
+
+  defp relative_time(%DateTime{} = dt) do
+    diff = DateTime.diff(DateTime.utc_now(), dt, :second)
+
+    cond do
+      diff < 5 -> dgettext("dashboard_errors", "just now")
+      diff < 60 -> dgettext("dashboard_errors", "%{n}s ago", n: diff)
+      diff < 3600 -> dgettext("dashboard_errors", "%{n}m ago", n: div(diff, 60))
+      diff < 86_400 -> dgettext("dashboard_errors", "%{n}h ago", n: div(diff, 3600))
+      diff < 30 * 86_400 -> dgettext("dashboard_errors", "%{n}d ago", n: div(diff, 86_400))
+      diff < 365 * 86_400 -> dgettext("dashboard_errors", "%{n}mo ago", n: div(diff, 30 * 86_400))
+      true -> dgettext("dashboard_errors", "%{n}y ago", n: div(diff, 365 * 86_400))
+    end
+  end
+
+  defp relative_time(_), do: "-"
 
   defp status_label(:unresolved), do: dgettext("dashboard_errors", "Unresolved")
   defp status_label(:resolved), do: dgettext("dashboard_errors", "Resolved")
