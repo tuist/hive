@@ -1,0 +1,29 @@
+/* Shared style for buttons that pair with the Clipboard hook. Toggles
+   the copy → check icon based on the `data-copied` attribute the hook
+   sets on click. */
+
+[data-part="copy-button"] {
+  display: inline-grid;
+
+  & > [data-part="copy-icon"],
+  & > [data-part="copy-check-icon"] {
+    grid-row: 1;
+    grid-column: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  & > [data-part="copy-check-icon"] {
+    visibility: hidden;
+    color: var(--noora-surface-label-success, var(--noora-surface-label-primary));
+  }
+
+  &[data-copied] > [data-part="copy-icon"] {
+    visibility: hidden;
+  }
+
+  &[data-copied] > [data-part="copy-check-icon"] {
+    visibility: visible;
+  }
+}

@@ -7,6 +7,7 @@
 @import "./components/feeds_dropdown.css";
 @import "./components/markdown.css";
 @import "./components/platform_icon.css";
+@import "./components/copy_button.css";
 @import "./routes/login.css";
 @import "./routes/oauth_consent.css";
 @import "./routes/overview.css";

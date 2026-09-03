@@ -409,6 +409,21 @@ defmodule HiveWeb.ProjectLive.Show do
           title={dgettext("dashboard_projects", "Error tracking")}
           icon="alert_hexagon"
         >
+          <:actions>
+            <.button
+              variant="secondary"
+              size="medium"
+              label={dgettext("dashboard_projects", "Rotate")}
+              phx-click="rotate_error_key"
+              data-confirm={
+                dgettext(
+                  "dashboard_projects",
+                  "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
+                )
+              }
+            />
+          </:actions>
+
           <.card_section data-part="error-tracking-card">
             <p data-part="error-tracking-intro">
               {dgettext(
@@ -435,27 +450,13 @@ defmodule HiveWeb.ProjectLive.Show do
                   <span data-part="copy-check-icon"><.icon name="copy_check" /></span>
                 </.button>
               </div>
-              <div data-part="dsn-meta">
-                <span :if={@project_key.last_used_at}>
-                  {dgettext("dashboard_projects", "Last used %{when}",
-                    when: format_short_datetime(@project_key.last_used_at)
-                  )}
-                </span>
-                <span :if={!@project_key.last_used_at}>
-                  {dgettext("dashboard_projects", "Never used")}
-                </span>
-                <.button
-                  variant="secondary"
-                  size="small"
-                  label={dgettext("dashboard_projects", "Rotate")}
-                  phx-click="rotate_error_key"
-                  data-confirm={
-                    dgettext(
-                      "dashboard_projects",
-                      "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
-                    )
-                  }
-                />
+              <div :if={@project_key.last_used_at} data-part="dsn-meta">
+                {dgettext("dashboard_projects", "Last used %{when}",
+                  when: format_short_datetime(@project_key.last_used_at)
+                )}
+              </div>
+              <div :if={!@project_key.last_used_at} data-part="dsn-meta">
+                {dgettext("dashboard_projects", "Never used")}
               </div>
             </div>
           </.card_section>
