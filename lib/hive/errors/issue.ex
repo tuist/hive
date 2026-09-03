@@ -28,6 +28,7 @@ defmodule Hive.Errors.Issue do
     field :status, Ecto.Enum, values: @statuses, default: :unresolved
     field :first_seen, :utc_datetime_usec
     field :last_seen, :utc_datetime_usec
+    field :resolved_at, :utc_datetime_usec
     field :event_count, :integer, default: 0
 
     belongs_to :project, Project
@@ -51,6 +52,7 @@ defmodule Hive.Errors.Issue do
       :status,
       :first_seen,
       :last_seen,
+      :resolved_at,
       :event_count,
       :assignee_id
     ])
@@ -63,6 +65,14 @@ defmodule Hive.Errors.Issue do
   end
 
   def status_changeset(issue, status) when status in @statuses do
-    change(issue, status: status)
+    now = DateTime.utc_now()
+
+    resolved_at =
+      case status do
+        :resolved -> now
+        _ -> nil
+      end
+
+    change(issue, status: status, resolved_at: resolved_at)
   end
 end

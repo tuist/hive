@@ -118,6 +118,13 @@
     padding-top: var(--noora-spacing-7);
   }
 
+  & [data-part="row-actions"] {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 var(--noora-spacing-5) 0 0;
+  }
+
   & [data-part="issue-link"] {
     display: block;
     padding: var(--noora-spacing-5) var(--noora-spacing-7);

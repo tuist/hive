@@ -60,6 +60,46 @@ defmodule Hive.ErrorsTest do
       assert {:error, :not_configured} =
                Errors.record_event(project, SentryEvent.parse(%{"message" => "hi"}))
     end
+
+    test "auto-reopens a resolved issue when a newer event lands", %{project: project} do
+      payload = %{"message" => "boom"}
+      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(payload))
+      {:ok, resolved} = Errors.update_issue_status(issue, :resolved)
+      assert resolved.status == :resolved
+      assert resolved.resolved_at
+
+      # An event whose timestamp is strictly after the resolution counts
+      # as a regression.
+      newer = Map.put(payload, "timestamp", DateTime.to_iso8601(DateTime.utc_now()))
+      {:ok, reopened} = Errors.record_event(project, SentryEvent.parse(newer))
+      assert reopened.status == :unresolved
+      assert reopened.resolved_at == nil
+    end
+
+    test "keeps a resolved issue resolved when a backfilled older event lands",
+         %{project: project} do
+      payload = %{"message" => "old-timer"}
+      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(payload))
+      {:ok, resolved} = Errors.update_issue_status(issue, :resolved)
+
+      # An event whose timestamp is BEFORE `resolved_at` is a delayed /
+      # backfilled report and should not regress the resolution.
+      older_timestamp = DateTime.add(resolved.resolved_at, -1, :hour) |> DateTime.to_iso8601()
+      older = Map.put(payload, "timestamp", older_timestamp)
+      {:ok, still_resolved} = Errors.record_event(project, SentryEvent.parse(older))
+      assert still_resolved.status == :resolved
+      assert still_resolved.resolved_at != nil
+    end
+
+    test "ignored issues stay ignored on new events", %{project: project} do
+      payload = %{"message" => "quiet please"}
+      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(payload))
+      {:ok, _} = Errors.update_issue_status(issue, :ignored)
+
+      newer = Map.put(payload, "timestamp", DateTime.to_iso8601(DateTime.utc_now()))
+      {:ok, updated} = Errors.record_event(project, SentryEvent.parse(newer))
+      assert updated.status == :ignored
+    end
   end
 
   describe "list_issues/1" do

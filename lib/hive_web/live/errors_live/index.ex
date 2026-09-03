@@ -136,6 +136,12 @@ defmodule HiveWeb.ErrorsLive.Index do
      |> push_event("close-popover", %{id: "all", all: true})}
   end
 
+  def handle_event("resolve_issue", %{"id" => id}, socket),
+    do: transition_status(socket, id, :resolved)
+
+  def handle_event("unresolve_issue", %{"id" => id}, socket),
+    do: transition_status(socket, id, :unresolved)
+
   def handle_event(
         "errors_period_changed",
         %{"value" => %{"start" => start_date, "end" => end_date}, "preset" => preset},
@@ -320,6 +326,32 @@ defmodule HiveWeb.ErrorsLive.Index do
                   {format_integer(events_in_window(issue, @window_counts))}
                 </span>
               </:col>
+              <:col :let={issue} label="">
+                <div data-part="row-actions">
+                  <.button
+                    :if={issue.status == :unresolved}
+                    variant="secondary"
+                    size="small"
+                    label={dgettext("dashboard_errors", "Resolve")}
+                    title={dgettext("dashboard_errors", "Mark as resolved")}
+                    phx-click="resolve_issue"
+                    phx-value-id={issue.id}
+                  >
+                    <:icon_left><.check /></:icon_left>
+                  </.button>
+                  <.button
+                    :if={issue.status == :resolved}
+                    variant="secondary"
+                    size="small"
+                    label={dgettext("dashboard_errors", "Reopen")}
+                    title={dgettext("dashboard_errors", "Mark as unresolved")}
+                    phx-click="unresolve_issue"
+                    phx-value-id={issue.id}
+                  >
+                    <:icon_left><.history /></:icon_left>
+                  </.button>
+                </div>
+              </:col>
               <:empty_state>
                 <.table_empty_state
                   icon="alert_circle"
@@ -367,6 +399,48 @@ defmodule HiveWeb.ErrorsLive.Index do
       tooltip: %{show: false},
       legend: %{show: false}
     }
+  end
+
+  defp transition_status(socket, id, status) do
+    action =
+      case status do
+        :resolved -> :error_issue_resolve
+        :unresolved -> :error_issue_resolve
+        :ignored -> :error_issue_ignore
+      end
+
+    cond do
+      not Policy.authorize?(action, socket.assigns[:current_user], nil) ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_errors", "You do not have permission to change this issue.")
+         )}
+
+      true ->
+        with {:ok, issue} <- Errors.fetch_issue(id),
+             {:ok, _updated} <- Errors.update_issue_status(issue, status) do
+          {:noreply, push_patch(socket, to: patch_url(socket), replace: true)}
+        else
+          _ ->
+            {:noreply,
+             put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_errors", "Could not update the issue.")
+             )}
+        end
+    end
+  end
+
+  defp patch_url(socket) do
+    params = current_query_params(socket)
+
+    case URI.encode_query(params) do
+      "" -> ~p"/errors"
+      qs -> ~p"/errors?#{qs}"
+    end
   end
 
   defp date_presets do

@@ -74,6 +74,17 @@ defmodule Hive.Errors do
 
     changeset = Issue.changeset(%Issue{}, attrs)
 
+    # Regression logic — mirrors Sentry:
+    #
+    #   * ignored issues stay ignored (the whole point of ignore is to
+    #     suppress notifications for future events).
+    #   * resolved issues auto-reopen when a new event whose timestamp
+    #     is strictly after `resolved_at` lands; a delayed / backfilled
+    #     event with an older timestamp does not count as a regression.
+    #   * unresolved issues stay unresolved.
+    #
+    # When the status transitions back to unresolved we also clear
+    # `resolved_at` so a subsequent resolve gets a fresh timestamp.
     on_conflict_query =
       from(existing in Issue,
         update: [
@@ -85,7 +96,38 @@ defmodule Hive.Errors do
             culprit: ^culprit,
             level: ^String.to_atom(event.level),
             platform: ^event.platform,
-            status: :unresolved,
+            status:
+              fragment(
+                """
+                CASE
+                  WHEN ? = 'ignored' THEN ?
+                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN ?
+                  ELSE ?
+                END
+                """,
+                existing.status,
+                "ignored",
+                existing.status,
+                existing.resolved_at,
+                ^now,
+                existing.resolved_at,
+                "unresolved",
+                existing.status
+              ),
+            resolved_at:
+              fragment(
+                """
+                CASE
+                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN NULL
+                  ELSE ?
+                END
+                """,
+                existing.status,
+                existing.resolved_at,
+                ^now,
+                existing.resolved_at,
+                existing.resolved_at
+              ),
             updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
           ]
         ]
