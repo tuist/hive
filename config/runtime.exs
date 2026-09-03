@@ -58,6 +58,41 @@ parse_boolean = fn value ->
   |> then(&(&1 in ~w(true 1)))
 end
 
+clickhouse_enabled? =
+  parse_boolean.(
+    System.get_env("HIVE_CLICKHOUSE_ENABLED", if(config_env() == :dev, do: "true", else: "false"))
+  )
+
+if clickhouse_enabled? do
+  clickhouse_database =
+    System.get_env("HIVE_CLICKHOUSE_DATABASE") ||
+      case config_env() do
+        :dev ->
+          DevInstance.database_name("hive_dev")
+
+        :test ->
+          DevInstance.database_name("hive_test", partition: System.get_env("MIX_TEST_PARTITION"))
+
+        _env ->
+          "hive"
+      end
+
+  clickhouse_config = [
+    hostname: System.get_env("HIVE_CLICKHOUSE_HOST", "127.0.0.1"),
+    port: System.get_env("HIVE_CLICKHOUSE_PORT", "8123") |> String.to_integer(),
+    database: clickhouse_database,
+    username: System.get_env("HIVE_CLICKHOUSE_USERNAME", "default"),
+    password: System.get_env("HIVE_CLICKHOUSE_PASSWORD") || System.get_env("SECRET_KEY_BASE"),
+    pool_size: System.get_env("HIVE_CLICKHOUSE_POOL_SIZE", "5") |> String.to_integer(),
+    settings: [session_timezone: "UTC"]
+  ]
+
+  config :hive, Hive.IngestRepo, clickhouse_config
+  config :hive, Hive.ClickHouseRepo, Keyword.put(clickhouse_config, :read_only, true)
+  config :hive, :ecto_repos, [Hive.Repo, Hive.IngestRepo]
+  config :hive, :clickhouse_enabled, true
+end
+
 object_storage_provider =
   "HIVE_OBJECT_STORAGE_PROVIDER"
   |> System.get_env("none")
