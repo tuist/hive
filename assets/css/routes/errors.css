@@ -50,6 +50,13 @@
     min-width: 0;
   }
 
+  & [data-part="issue-title-row"] {
+    display: flex;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+    min-width: 0;
+  }
+
   & [data-part="issue-title"] {
     color: var(--noora-surface-label-primary);
     font: var(--noora-font-weight-medium) var(--noora-font-body-medium);

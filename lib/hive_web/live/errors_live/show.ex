@@ -4,6 +4,8 @@ defmodule HiveWeb.ErrorsLive.Show do
   use HiveWeb, :live_view
   use Noora
 
+  import HiveWeb.PlatformIcon
+
   alias Hive.Errors
   alias Hive.Errors.Issue
   alias Hive.Errors.Policy
@@ -176,7 +178,9 @@ defmodule HiveWeb.ErrorsLive.Show do
                 </div>
                 <div>
                   <dt>{dgettext("dashboard_errors", "Platform")}</dt>
-                  <dd>{platform_label(@issue.platform)}</dd>
+                  <dd>
+                    <.platform_icon platform={@issue.platform} label={true} />
+                  </dd>
                 </div>
                 <div>
                   <dt>{dgettext("dashboard_errors", "First seen")}</dt>
@@ -671,33 +675,6 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp level_label(:info), do: dgettext("dashboard_errors", "Info")
   defp level_label(:debug), do: dgettext("dashboard_errors", "Debug")
   defp level_label(_), do: "-"
-
-  # Sentry Software Development Kits transmit a small set of `platform`
-  # identifiers on every event. Map them to friendly labels so the UI
-  # doesn't read like debug output. Unknown platforms fall through as
-  # a capitalized version of the identifier.
-  defp platform_label(nil), do: "-"
-  defp platform_label(""), do: "-"
-  defp platform_label("elixir"), do: "Elixir"
-  defp platform_label("javascript"), do: "JavaScript"
-  defp platform_label("node"), do: "Node.js"
-  defp platform_label("python"), do: "Python"
-  defp platform_label("ruby"), do: "Ruby"
-  defp platform_label("java"), do: "Java"
-  defp platform_label("csharp"), do: "C#"
-  defp platform_label("go"), do: "Go"
-  defp platform_label("php"), do: "PHP"
-  defp platform_label("perl"), do: "Perl"
-  defp platform_label("rust"), do: "Rust"
-  defp platform_label("swift"), do: "Swift"
-  defp platform_label("cocoa"), do: "Cocoa"
-  defp platform_label("objc"), do: "Objective-C"
-  defp platform_label("kotlin"), do: "Kotlin"
-  defp platform_label("dart"), do: "Dart"
-  defp platform_label("native"), do: "Native"
-  defp platform_label("other"), do: "Other"
-  defp platform_label(other) when is_binary(other), do: String.capitalize(other)
-  defp platform_label(other), do: to_string(other)
 
   defp level_color(:fatal), do: "destructive"
   defp level_color(:error), do: "destructive"

@@ -4,6 +4,7 @@ defmodule HiveWeb.ErrorsLive.Index do
   use HiveWeb, :live_view
   use Noora
 
+  import HiveWeb.PlatformIcon
   import Noora.DatePicker
   import Noora.Filter
 
@@ -266,7 +267,12 @@ defmodule HiveWeb.ErrorsLive.Index do
               <:col :let={issue} label={dgettext("dashboard_errors", "Issue")}>
                 <.link navigate={~p"/errors/#{issue.id}"} data-part="issue-link">
                   <div data-part="issue-cell">
-                    <span data-part="issue-title">{issue.title}</span>
+                    <div data-part="issue-title-row">
+                      <.platform_icon platform={to_string(issue.platform)} size="small" />
+                      <span data-part="issue-title" title={issue.title}>
+                        {truncate_title(issue.title)}
+                      </span>
+                    </div>
                     <span data-part="issue-meta">
                       <.badge
                         label={level_label(issue.level)}
@@ -586,6 +592,20 @@ defmodule HiveWeb.ErrorsLive.Index do
 
   defp project_name(%Issue{project: %{name: name}}), do: name
   defp project_name(_), do: "-"
+
+  # Long titles blow the list into horizontal scroll (real crashes
+  # often include the full formatted exception). Trim to a reasonable
+  # first-line width for the list; the full title stays available on
+  # the title attribute (hover) and on the detail page.
+  defp truncate_title(nil), do: ""
+
+  defp truncate_title(title) when is_binary(title) do
+    if String.length(title) > 120 do
+      String.slice(title, 0, 120) <> "…"
+    else
+      title
+    end
+  end
 
   defp format_datetime(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M UTC")
   defp format_datetime(_), do: "-"
