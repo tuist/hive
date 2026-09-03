@@ -79,15 +79,20 @@
     display: block;
     width: 140px;
     height: 40px;
+    padding: 0 var(--noora-spacing-7) 0 0;
   }
 
   & [data-part="relative"] {
+    display: inline-block;
+    padding: 0 var(--noora-spacing-7);
     color: var(--noora-surface-label-primary);
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
     white-space: nowrap;
   }
 
   & [data-part="events"] {
+    display: inline-block;
+    padding: 0 var(--noora-spacing-7);
     color: var(--noora-surface-label-primary);
     font: var(--noora-font-weight-medium) var(--noora-font-body-medium);
   }
@@ -115,10 +120,11 @@
 
   & [data-part="issue-link"] {
     display: block;
+    padding: var(--noora-spacing-5) var(--noora-spacing-7);
     color: inherit;
     text-decoration: none;
 
-    &:hover {
+    &:hover [data-part="issue-title"] {
       text-decoration: underline;
       text-underline-offset: 2px;
     }
