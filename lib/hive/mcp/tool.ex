@@ -135,7 +135,7 @@ defmodule Hive.MCP.Tool do
   # Schema drift is a bug in the tool's declared output schema, not in the caller's
   # request. Raise where a test or a developer sees it immediately, but never turn a
   # successful query into a 500 for a client that could have used the response.
-  # Logged at :error so the Sentry handler, which only captures :error, reports it.
+  # Logged at :error so the errors handler, which only captures :error, reports it.
   defp validate_structured_content(module, structured_content) do
     case ExJsonSchema.Validator.validate(module.resolved_output_schema(), structured_content) do
       :ok ->

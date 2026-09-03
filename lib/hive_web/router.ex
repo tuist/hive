@@ -61,6 +61,10 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.InferenceAuthentication
   end
 
+  pipeline :errors_ingest do
+    plug :put_secure_browser_headers
+  end
+
   scope "/webhooks", HiveWeb do
     pipe_through :json_api
 
@@ -87,6 +91,12 @@ defmodule HiveWeb.Router do
 
     get "/flights", FlightController, :index
     get "/flights/:id", FlightController, :show
+  end
+
+  scope "/api", HiveWeb.ErrorsAPI do
+    pipe_through :errors_ingest
+
+    post "/:project_id/envelope/", EnvelopeController, :create
   end
 
   scope "/api" do
@@ -242,6 +252,14 @@ defmodule HiveWeb.Router do
         root_layout: {HiveWeb.Layouts, :root} do
         live "/projects", ProjectLive.Index
         live "/projects/:id", ProjectLive.Show
+      end
+
+      live_session :errors,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/errors", ErrorsLive.Index
+        live "/errors/:id", ErrorsLive.Show
+        live "/errors/:id/events/:event_id", ErrorsLive.Event
       end
 
       live_session :account,

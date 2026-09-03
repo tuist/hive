@@ -140,7 +140,8 @@ defmodule HiveWeb.PostmortemLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.dashboard flash={@flash} product_name={@product_name} user_name={@user_name} user_email={@user_email} avatar_color={@avatar_color} auth_enabled?={@auth_enabled?} signed_in?={@signed_in?} admin?={@admin?} csrf_token={@csrf_token} current_path={@current_path} forage_sources={@forage_sources} specs_have_new_activity?={@specs_have_new_activity?}>
+    <Layouts.dashboard flash={@flash} product_name={@product_name} user_name={@user_name} user_email={@user_email} avatar_color={@avatar_color} auth_enabled?={@auth_enabled?} signed_in?={@signed_in?} admin?={@admin?}
+      member?={@member?} csrf_token={@csrf_token} current_path={@current_path} forage_sources={@forage_sources} specs_have_new_activity?={@specs_have_new_activity?}>
       <section id="postmortems">
         <div data-part="header">
           <div data-part="title-group">

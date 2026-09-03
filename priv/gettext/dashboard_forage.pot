@@ -26,7 +26,7 @@ msgstr ""
 msgid "%{count} contributors"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:245
+#: lib/hive_web/live/forage_live/github_issues.ex:246
 #: lib/hive_web/live/forage_live/index.ex:31
 #, elixir-autogen, elixir-format
 msgid "%{count} domains"
@@ -47,7 +47,7 @@ msgstr ""
 msgid "%{count} open signals"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:242
+#: lib/hive_web/live/forage_live/github_issues.ex:243
 #, elixir-autogen, elixir-format
 msgid "%{count} repositories"
 msgstr ""
@@ -84,12 +84,12 @@ msgstr ""
 msgid "1 comment"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:244
+#: lib/hive_web/live/forage_live/github_issues.ex:245
 #, elixir-autogen, elixir-format
 msgid "1 domain"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:239
+#: lib/hive_web/live/forage_live/github_issues.ex:240
 #, elixir-autogen, elixir-format
 msgid "1 repository"
 msgstr ""
@@ -150,7 +150,7 @@ msgstr ""
 
 #: lib/hive/forage.ex:158
 #: lib/hive_web/components/forage_components.ex:1512
-#: lib/hive_web/live/forage_live/github_issues.ex:234
+#: lib/hive_web/live/forage_live/github_issues.ex:235
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr ""
@@ -204,7 +204,7 @@ msgstr ""
 msgid "Contributor signal"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/placeholder.ex:83
+#: lib/hive_web/live/forage_live/placeholder.ex:84
 #, elixir-autogen, elixir-format
 msgid "Contributor submissions"
 msgstr ""
@@ -242,7 +242,7 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:173
+#: lib/hive_web/live/forage_live/github_issues.ex:174
 #: lib/hive_web/live/forage_live/index.ex:662
 #, elixir-autogen, elixir-format
 msgid "Domain"
@@ -324,8 +324,8 @@ msgid "Firing"
 msgstr ""
 
 #: lib/hive_web/components/forage_components.ex:40
-#: lib/hive_web/components/layouts.ex:181
-#: lib/hive_web/components/layouts.ex:326
+#: lib/hive_web/components/layouts.ex:182
+#: lib/hive_web/components/layouts.ex:334
 #: lib/hive_web/live/forage_live/feature_requests.ex:18
 #: lib/hive_web/live/forage_live/github_issues.ex:21
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:18
@@ -338,7 +338,7 @@ msgstr ""
 #: lib/hive_web/live/forage_live/index.ex:120
 #: lib/hive_web/live/forage_live/new_feature_request.ex:20
 #: lib/hive_web/live/forage_live/placeholder.ex:19
-#: lib/hive_web/live/home_live.ex:145
+#: lib/hive_web/live/home_live.ex:146
 #: lib/hive_web/live/ops_live/forage.ex:26
 #: lib/hive_web/live/ops_live/forage.ex:106
 #, elixir-autogen, elixir-format
@@ -373,7 +373,7 @@ msgid "Forage items"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:22
-#: lib/hive_web/live/forage_live/placeholder.ex:86
+#: lib/hive_web/live/forage_live/placeholder.ex:87
 #, elixir-autogen, elixir-format
 msgid "Forage source"
 msgstr ""
@@ -593,7 +593,7 @@ msgstr ""
 #: lib/hive_web/components/forage_components.ex:1006
 #: lib/hive_web/components/forage_components.ex:1478
 #: lib/hive_web/components/forage_components.ex:1510
-#: lib/hive_web/live/forage_live/github_issues.ex:233
+#: lib/hive_web/live/forage_live/github_issues.ex:234
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
@@ -649,7 +649,7 @@ msgid "Operational signals visible only to organization members."
 msgstr ""
 
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:20
-#: lib/hive_web/live/forage_live/placeholder.ex:90
+#: lib/hive_web/live/forage_live/placeholder.ex:91
 #, elixir-autogen, elixir-format
 msgid "Organization visible"
 msgstr ""
@@ -703,13 +703,13 @@ msgstr ""
 msgid "Public items"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/placeholder.ex:91
+#: lib/hive_web/live/forage_live/placeholder.ex:92
 #, elixir-autogen, elixir-format
 msgid "Public source"
 msgstr ""
 
 #: lib/hive_web/live/forage_live/grafana_alerts.ex:21
-#: lib/hive_web/live/forage_live/placeholder.ex:84
+#: lib/hive_web/live/forage_live/placeholder.ex:85
 #, elixir-autogen, elixir-format
 msgid "Read-only signals"
 msgstr ""
@@ -719,7 +719,7 @@ msgstr ""
 msgid "Repositories"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:183
+#: lib/hive_web/live/forage_live/github_issues.ex:184
 #: lib/hive_web/live/forage_live/index.ex:667
 #, elixir-autogen, elixir-format
 msgid "Repository"
@@ -779,7 +779,7 @@ msgstr ""
 msgid "Source"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:163
+#: lib/hive_web/live/forage_live/github_issues.ex:164
 #, elixir-autogen, elixir-format
 msgid "State"
 msgstr ""
@@ -860,13 +860,13 @@ msgstr ""
 msgid "and matching issues will appear here once they have been synced."
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:237
+#: lib/hive_web/live/forage_live/github_issues.ex:238
 #, elixir-autogen, elixir-format
 msgid "closed issues"
 msgstr ""
 
-#: lib/hive_web/live/forage_live/github_issues.ex:230
-#: lib/hive_web/live/forage_live/github_issues.ex:236
+#: lib/hive_web/live/forage_live/github_issues.ex:231
+#: lib/hive_web/live/forage_live/github_issues.ex:237
 #, elixir-autogen, elixir-format
 msgid "open issues"
 msgstr ""
@@ -1278,12 +1278,12 @@ msgstr ""
 msgid "You are no longer following this item."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:73
+#: lib/hive_web/live/home_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "Browse the requests"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:147
+#: lib/hive_web/live/home_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "See what people have asked for, the bugs they hit, and the alerts being watched."
 msgstr ""

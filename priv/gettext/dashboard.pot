@@ -56,17 +56,17 @@ msgstr ""
 msgid "This URL points to a local or private network host, which Hive will not fetch."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:115
+#: lib/hive_web/live/home_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Deliver"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:93
+#: lib/hive_web/live/home_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "Gather"
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:163
+#: lib/hive_web/components/layouts.ex:164
 #: lib/hive_web/live/home_live.ex:17
 #, elixir-autogen, elixir-format
 msgid "Overview"
@@ -77,32 +77,32 @@ msgstr ""
 msgid "Overview · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:104
+#: lib/hive_web/live/home_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Shape"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:181
+#: lib/hive_web/live/home_live.ex:182
 #, elixir-autogen, elixir-format
 msgid "Shared context"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:129
+#: lib/hive_web/live/home_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "The product loop"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:118
+#: lib/hive_web/live/home_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "Every release stays linked to the requests and plans it came from."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:94
+#: lib/hive_web/live/home_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Every signal lands here"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:96
+#: lib/hive_web/live/home_live.ex:97
 #, elixir-autogen, elixir-format
 msgid "Feature requests, bug reports, feedback, and alerts from the people using the product."
 msgstr ""
@@ -112,17 +112,17 @@ msgstr ""
 msgid "Follow how the product gets built, from the requests people send in to the work that ships."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:130
+#: lib/hive_web/live/home_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Follow the work end to end"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:89
+#: lib/hive_web/live/home_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "How work moves from request to release"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:105
+#: lib/hive_web/live/home_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Plans written in public"
 msgstr ""
@@ -132,32 +132,32 @@ msgstr ""
 msgid "Product development in the open"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:64
+#: lib/hive_web/live/home_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Product development in the open."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:116
+#: lib/hive_web/live/home_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "Shipped work, in context"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:133
+#: lib/hive_web/live/home_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "Start wherever you are curious: what people asked for, what is being planned, or what already shipped."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:262
+#: lib/hive_web/live/home_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "Take a look"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:107
+#: lib/hive_web/live/home_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "The strongest signals turn into proposals anyone can read before they are built."
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:66
+#: lib/hive_web/live/home_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "This is where the product gets built in the open: the requests people send in, the plans written from them, and the work that ships. Read any of it without an account."
 msgstr ""
@@ -177,7 +177,7 @@ msgstr ""
 msgid "What we plan to build"
 msgstr ""
 
-#: lib/hive_web/live/home_live.ex:182
+#: lib/hive_web/live/home_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Where the work lives"
 msgstr ""

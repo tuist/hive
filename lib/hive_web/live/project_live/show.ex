@@ -5,6 +5,8 @@ defmodule HiveWeb.ProjectLive.Show do
   use Noora
 
   alias Hive.Auth
+  alias Hive.Errors
+  alias Hive.Errors.ProjectKey
   alias Hive.GitHub.Repositories, as: RepositoryOption
   alias Hive.Projects
   alias Hive.Projects.Webhook
@@ -72,6 +74,8 @@ defmodule HiveWeb.ProjectLive.Show do
          |> assign_webhook_resources(project, editable?)
          |> assign_project_form(Projects.change_project(project))
          |> assign(:delete_project_form, delete_project_form())
+         |> assign(:errors_enabled?, Errors.enabled?())
+         |> assign(:project_key, Errors.primary_project_key(project))
          |> assign(OpenGraph.assigns(open_graph(project)))}
 
       {:error, :not_found} ->
@@ -289,6 +293,39 @@ defmodule HiveWeb.ProjectLive.Show do
     end
   end
 
+  def handle_event("rotate_error_key", _params, socket) do
+    if socket.assigns[:admin?] do
+      case Errors.rotate_project_key(socket.assigns.project) do
+        {:ok, key} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :info,
+             dgettext(
+               "dashboard_projects",
+               "Rotated. Update your Sentry-compatible client to the new Data Source Name."
+             )
+           )
+           |> assign(:project_key, key)}
+
+        {:error, _} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             dgettext("dashboard_projects", "Could not rotate the Data Source Name.")
+           )}
+      end
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_projects", "Only administrators can rotate Data Source Names.")
+       )}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -301,6 +338,7 @@ defmodule HiveWeb.ProjectLive.Show do
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
       admin?={@admin?}
+      member?={@member?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
@@ -363,6 +401,64 @@ defmodule HiveWeb.ProjectLive.Show do
                 />
               </div>
             </.form>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={@errors_enabled? and @admin? and @project_key}
+          title={dgettext("dashboard_projects", "Error tracking")}
+          icon="alert_hexagon"
+        >
+          <:actions>
+            <.button
+              variant="secondary"
+              size="medium"
+              label={dgettext("dashboard_projects", "Rotate")}
+              phx-click="rotate_error_key"
+              data-confirm={
+                dgettext(
+                  "dashboard_projects",
+                  "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
+                )
+              }
+            />
+          </:actions>
+
+          <.card_section data-part="error-tracking-card">
+            <p data-part="error-tracking-intro">
+              {dgettext(
+                "dashboard_projects",
+                "Point any Sentry-compatible client at this Data Source Name and its events will show up on the Errors dashboard scoped to this project."
+              )}
+            </p>
+
+            <div data-part="dsn-row">
+              <div data-part="dsn-value">
+                <code>{ProjectKey.dsn(@project_key, Endpoint.url())}</code>
+                <.button
+                  id={"copy-dsn-#{@project_key.id}"}
+                  variant="secondary"
+                  size="small"
+                  icon_only
+                  type="button"
+                  phx-hook="Clipboard"
+                  data-clipboard-value={ProjectKey.dsn(@project_key, Endpoint.url())}
+                  aria-label={dgettext("dashboard_projects", "Copy Data Source Name")}
+                  data-part="copy-button"
+                >
+                  <span data-part="copy-icon"><.icon name="copy" /></span>
+                  <span data-part="copy-check-icon"><.icon name="copy_check" /></span>
+                </.button>
+              </div>
+              <div :if={@project_key.last_used_at} data-part="dsn-meta">
+                {dgettext("dashboard_projects", "Last used %{when}",
+                  when: format_short_datetime(@project_key.last_used_at)
+                )}
+              </div>
+              <div :if={!@project_key.last_used_at} data-part="dsn-meta">
+                {dgettext("dashboard_projects", "Never used")}
+              </div>
+            </div>
           </.card_section>
         </.card>
 

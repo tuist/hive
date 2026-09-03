@@ -157,8 +157,6 @@ externalSecrets:
   #       remoteRef: "google-oauth/username"
   #     HIVE_GOOGLE_CLIENT_SECRET:
   #       remoteRef: "google-oauth/credential"
-  #     SENTRY_DSN:
-  #       remoteRef: "hive-sentry/dsn"
   items: {}
   pullSecret:
     enabled: false

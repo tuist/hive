@@ -2094,3 +2094,254 @@ Enum.each(audit_seed_entries, fn entry ->
     metadata: metadata
   })
 end)
+
+# Errors: seed sample issues and events so the /errors dashboard has content
+# to explore in development. Only runs when ClickHouse is enabled because
+# the event stream lives there; otherwise the LiveView shows an empty state.
+if Hive.Errors.enabled?() do
+  alias Hive.Errors, as: ErrorsSeeds
+  alias Hive.Errors.SentryEvent, as: ErrorsSentryEvent
+
+  # Make sure Hive itself has a self-project + default DSN so self-monitoring
+  # has somewhere to write when it fires later.
+  Hive.Errors.SelfMonitor.install()
+
+  Enum.each(Projects.list_projects(), fn project ->
+    # One DSN per project so operators can point a real SDK at it locally.
+    case ErrorsSeeds.list_project_keys(project.id) do
+      [] -> ErrorsSeeds.create_project_key(project.id, %{"name" => "development"})
+      _ -> :ok
+    end
+  end)
+
+  # Fixtures: a couple of realistic-looking errors per project so both the
+  # list view and the detail view have interesting content to render.
+  error_fixtures = [
+    %{
+      title_suffix: "widget serialization",
+      module: "MyApp.Widgets",
+      function: "serialize/1",
+      filename: "lib/my_app/widgets.ex",
+      exception_type: "Protocol.UndefinedError",
+      exception_value: "protocol Enumerable not implemented for %MyApp.Widget{...}",
+      environment: "production",
+      level: "error",
+      occurrences: 42
+    },
+    %{
+      title_suffix: "database timeout",
+      module: "MyApp.Repo",
+      function: "one/1",
+      filename: "lib/my_app/repo.ex",
+      exception_type: "DBConnection.ConnectionError",
+      exception_value: "connection not available and request was dropped from queue",
+      environment: "production",
+      level: "error",
+      occurrences: 7
+    },
+    %{
+      title_suffix: "auth token expired",
+      module: "MyAppWeb.AuthPlug",
+      function: "call/2",
+      filename: "lib/my_app_web/auth_plug.ex",
+      exception_type: "MyApp.Auth.TokenExpired",
+      exception_value: "session expired after 30 minutes",
+      environment: "staging",
+      level: "warning",
+      occurrences: 3
+    }
+  ]
+
+  # Rotate through a couple of environments so the Environment filter has
+  # a couple of options to demonstrate and each issue actually spans them.
+  environments_pool = ["production", "staging", "development"]
+
+  build_event = fn _project, fixture, offset_minutes, environment ->
+    now = DateTime.utc_now()
+    timestamp = DateTime.add(now, -offset_minutes * 60, :second)
+
+    frames = [
+      %{
+        "function" => "handle_request/2",
+        "module" => "Phoenix.Router",
+        "filename" => "deps/phoenix/lib/phoenix/router.ex",
+        "lineno" => 350,
+        "in_app" => false
+      },
+      %{
+        "function" => "call/2",
+        "module" => "MyAppWeb.Endpoint",
+        "filename" => "lib/my_app_web/endpoint.ex",
+        "lineno" => 64,
+        "in_app" => true
+      },
+      %{
+        "function" => fixture.function,
+        "module" => fixture.module,
+        "filename" => fixture.filename,
+        "lineno" => 42,
+        "pre_context" => [
+          "  # Attempt to serialize the incoming payload.",
+          "  # Fails when the caller sent a struct without the protocol.",
+          "  def #{fixture.function |> String.split("/") |> hd()}(input) do",
+          "    input"
+        ],
+        "context_line" => "    |> Jason.encode!(input)",
+        "post_context" => [
+          "    |> maybe_broadcast()",
+          "  end",
+          "",
+          "  defp maybe_broadcast(payload), do: :ok"
+        ],
+        "in_app" => true
+      }
+    ]
+
+    request_id = "req-" <> (:crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower))
+
+    breadcrumbs = [
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -8, :second)),
+        "category" => "http",
+        "level" => "info",
+        "message" => "GET /widgets/#{rem(offset_minutes, 500)} 200",
+        "data" => %{"status_code" => 200, "duration_ms" => 42}
+      },
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -4, :second)),
+        "category" => "db.query",
+        "level" => "debug",
+        "message" => "SELECT id, name FROM widgets WHERE id = $1",
+        "data" => %{"duration_ms" => 3.2, "row_count" => 1}
+      },
+      %{
+        "timestamp" => DateTime.to_iso8601(DateTime.add(timestamp, -1, :second)),
+        "category" => "app.lifecycle",
+        "level" => "warning",
+        "message" => "Circuit breaker half-open"
+      }
+    ]
+
+    %{
+      "event_id" => 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+      "timestamp" => DateTime.to_iso8601(timestamp),
+      "platform" => "elixir",
+      "level" => fixture.level,
+      "environment" => environment,
+      "release" => "1.2.3",
+      "dist" => "canary",
+      "server_name" => "web-#{rem(offset_minutes, 3) + 1}.example.com",
+      "transaction" => "MyAppWeb.WidgetController#show",
+      "logger" => "elixir",
+      "exception" => %{
+        "values" => [
+          %{
+            "type" => fixture.exception_type,
+            "value" => fixture.exception_value,
+            "mechanism" => %{"type" => "generic", "handled" => false},
+            "stacktrace" => %{"frames" => frames}
+          }
+        ]
+      },
+      "sdk" => %{
+        "name" => "sentry.elixir",
+        "version" => "10.0.0",
+        "integrations" => ["oban", "phoenix", "plug", "logger"],
+        "packages" => [
+          %{"name" => "hex:sentry", "version" => "10.0.0"}
+        ]
+      },
+      "tags" => %{
+        "environment" => environment,
+        "server" => "web-#{rem(offset_minutes, 3) + 1}",
+        "runtime" => "beam",
+        "request_id" => request_id,
+        "handled" => "no",
+        "mechanism" => "generic"
+      },
+      "user" => %{
+        "id" => "user-#{rem(offset_minutes, 25) + 1}",
+        "email" => "user#{rem(offset_minutes, 25) + 1}@example.com",
+        "ip_address" => "127.0.0.#{rem(offset_minutes, 200) + 1}",
+        "geo" => %{"city" => "Falkenstein", "country_code" => "DE", "region" => "Saxony"}
+      },
+      "contexts" => %{
+        "os" => %{"name" => "linux", "version" => "6.8.0", "kernel_version" => "6.8.0-40-generic"},
+        "runtime" => %{
+          "name" => "elixir",
+          "version" => "1.20.2 (compiled with Erlang/OTP 29)"
+        },
+        "browser" => %{"name" => "Chrome", "version" => "127.0.0"},
+        "device" => %{"family" => "Mac", "model" => "MacBookPro18,1", "arch" => "arm64"},
+        "app" => %{"app_name" => "MyApp", "app_version" => "1.2.3", "app_build" => "2026090301"},
+        "trace" => %{
+          "trace_id" => 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+          "span_id" => 8 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+          "op" => "http.server",
+          "status" => "internal_error"
+        },
+        "culture" => %{"locale" => "en-US", "timezone" => "Europe/Berlin"}
+      },
+      "modules" => %{
+        "phoenix" => "1.8.9",
+        "phoenix_live_view" => "1.0.0",
+        "ecto" => "3.13.6",
+        "ecto_sql" => "3.13.5",
+        "postgrex" => "0.20.0",
+        "plug" => "1.16.0"
+      },
+      "extra" => %{
+        "widget_id" => rem(offset_minutes, 500),
+        "attempt" => 1,
+        "shard" => "shard-#{rem(offset_minutes, 8)}"
+      },
+      "breadcrumbs" => %{"values" => breadcrumbs},
+      "request" => %{
+        "url" => "https://example.com/widgets/#{rem(offset_minutes, 500)}",
+        "method" => "GET",
+        "query_string" => "expand=meta&fields=name,description",
+        "headers" => %{
+          "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15",
+          "Accept" => "application/json",
+          "X-Request-Id" => request_id,
+          "Authorization" => "[filtered]"
+        }
+      }
+    }
+  end
+
+  Enum.each(Projects.list_projects(), fn project ->
+    Enum.each(error_fixtures, fn fixture ->
+      # Two overlapping streams so the trend sparkline shows real
+      # variation and each date-picker preset lands on a different
+      # total:
+      #
+      #   * A background stream evenly spaced across the last 30 days
+      #     — populates the 12M/30D views.
+      #   * A recent burst densely clustered in the last few hours —
+      #     populates the 1H/24H views and gives the sparkline shape.
+      background_count = fixture.occurrences
+      background_window_minutes = 30 * 24 * 60
+      background_spacing = div(background_window_minutes, background_count)
+
+      for i <- 1..background_count do
+        offset_minutes = i * background_spacing
+        environment = Enum.at(environments_pool, rem(i, length(environments_pool)))
+        payload = build_event.(project, fixture, offset_minutes, environment)
+        ErrorsSeeds.record_event(project, ErrorsSentryEvent.parse(payload))
+      end
+
+      recent_count = max(6, div(fixture.occurrences, 2))
+      recent_spacing_minutes = max(1, div(6 * 60, recent_count))
+
+      for i <- 1..recent_count do
+        offset_minutes = i * recent_spacing_minutes
+        environment = Enum.at(environments_pool, rem(i, length(environments_pool)))
+        payload = build_event.(project, fixture, offset_minutes, environment)
+        ErrorsSeeds.record_event(project, ErrorsSentryEvent.parse(payload))
+      end
+    end)
+  end)
+
+  IO.puts("Seeded error issues + events for #{length(Projects.list_projects())} projects.")
+end

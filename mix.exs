@@ -74,7 +74,6 @@ defmodule Hive.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:saxy, "~> 1.5"},
-      {:sentry, "~> 13.0"},
       {:swoosh, "~> 1.18"},
       {:gen_smtp, "~> 1.2"},
       {:hackney, "~> 4.5", override: true},

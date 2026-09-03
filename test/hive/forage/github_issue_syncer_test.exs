@@ -118,11 +118,6 @@ defmodule Hive.Forage.GitHubIssueSyncerTest do
              })
   end
 
-  test "sentry_check_in_configuration/1 gives the lightweight scheduler a small grace window" do
-    assert [monitor_config: [checkin_margin: 5, max_runtime: 5]] =
-             GitHubIssueSyncer.sentry_check_in_configuration(%Oban.Job{})
-  end
-
   test "upserts new issues and deletes issues that disappeared upstream" do
     domain = setup_domain!()
     repository = github_repository_for_domain!(domain)

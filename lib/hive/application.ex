@@ -9,7 +9,6 @@ defmodule Hive.Application do
 
   @impl true
   def start(_type, _args) do
-    attach_sentry_logger()
     Hive.Oban.Telemetry.attach()
     ensure_mcp_session_store_started()
 
@@ -25,8 +24,9 @@ defmodule Hive.Application do
       |> add_endpoint()
       |> maybe_add_open_graph_browser_pool()
 
-    opts = [strategy: :one_for_one, name: Hive.Supervisor]
-    Supervisor.start_link(children, opts)
+    result = Supervisor.start_link(children, strategy: :one_for_one, name: Hive.Supervisor)
+    install_self_monitor()
+    result
   end
 
   @impl true
@@ -65,11 +65,7 @@ defmodule Hive.Application do
     HiveWeb.Plugs.OAuthRegistrationRateLimit.init_table()
   end
 
-  defp attach_sentry_logger do
-    if Application.get_env(:sentry, :dsn) do
-      :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
-        config: %{metadata: [:file, :line]}
-      })
-    end
+  defp install_self_monitor do
+    Task.start(fn -> Hive.Errors.SelfMonitor.install() end)
   end
 end

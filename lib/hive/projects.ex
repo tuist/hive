@@ -70,9 +70,17 @@ defmodule Hive.Projects do
   end
 
   def create_project(attrs) do
-    %Project{}
-    |> Project.changeset(attrs)
-    |> Repo.insert()
+    with {:ok, project} <-
+           %Project{}
+           |> Project.changeset(attrs)
+           |> Repo.insert() do
+      # Mint a default Data Source Name so any Sentry-compatible
+      # Software Development Kit can start reporting to the project
+      # without an extra manual step. No-op when error tracking is
+      # disabled on this instance.
+      _ = Hive.Errors.ensure_default_key(project)
+      {:ok, project}
+    end
   end
 
   def create_repository_for_project(%Project{id: project_id}, attrs) do

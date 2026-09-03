@@ -131,8 +131,6 @@ externalSecrets:
       remoteRef: "hive-object-storage/credential"
     HIVE_LLM_API_KEY:
       remoteRef: "hive-llm-api-key/credential"
-    SENTRY_DSN:
-      remoteRef: "hive-sentry/dsn"
   pullSecret:
     enabled: true
     item: "hive-ghcr-pull"

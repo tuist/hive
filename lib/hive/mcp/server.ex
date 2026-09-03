@@ -58,7 +58,16 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.ListDrops,
       Hive.MCP.Components.Tools.GetDrop,
       Hive.MCP.Components.Tools.ListDropDigests,
-      Hive.MCP.Components.Tools.GetDropDigest
+      Hive.MCP.Components.Tools.GetDropDigest,
+      Hive.MCP.Components.Tools.ListErrorIssues,
+      Hive.MCP.Components.Tools.GetErrorIssue,
+      Hive.MCP.Components.Tools.ListErrorEvents,
+      Hive.MCP.Components.Tools.GetErrorEvent,
+      Hive.MCP.Components.Tools.ResolveErrorIssue,
+      Hive.MCP.Components.Tools.UnresolveErrorIssue,
+      Hive.MCP.Components.Tools.IgnoreErrorIssue,
+      Hive.MCP.Components.Tools.GetProjectErrorDsn,
+      Hive.MCP.Components.Tools.RotateProjectErrorDsn
     ],
     prompts: [
       Hive.MCP.Components.Prompts.WriteSpec

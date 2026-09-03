@@ -479,34 +479,12 @@ Defaults to `5`.
 
 ## Observability
 
-### SENTRY_DSN {#sentry_dsn}
-
-Sentry Data Source Name
-([DSN](https://docs.sentry.io/product/sentry-basics/dsn-explainer/)) for
-error reporting. When unset, Sentry reporting is disabled.
-
-### SENTRY_ENVIRONMENT {#sentry_environment}
-
-Deployment environment tag for Sentry events.
-
-### SENTRY_RELEASE {#sentry_release}
-
-Release tag for Sentry events.
-
-### SENTRY_OBAN_CAPTURE_ERRORS {#sentry_oban_capture_errors}
-
-Set to `true` or `1` to report background tasks that exhaust their
-attempts. Defaults to `true`.
-
-### SENTRY_OBAN_REPORT_RETRIES {#sentry_oban_report_retries}
-
-Set to `true` or `1` to report retryable background-task failures before
-their final attempt. Defaults to `false`.
-
-### SENTRY_OBAN_CRON_MONITORING {#sentry_oban_cron_monitoring}
-
-Set to `true` or `1` to send Sentry check-ins for scheduled tasks.
-Defaults to `true`.
+Hive captures its own unhandled errors through the built-in error
+tracking system when ClickHouse is available. Crashes are recorded as
+Sentry-format events against a private, auto-provisioned "Hive"
+project so the same dashboard and Model Context Protocol tools that
+surface application errors also surface Hive's own. No environment
+variables are required.
 
 ## Vector database
 

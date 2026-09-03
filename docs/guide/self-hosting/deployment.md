@@ -97,12 +97,17 @@ ClickHouse disabled does not affect features that only use PostgreSQL.
 
 ## Error reporting
 
-Set [`SENTRY_DSN`](/reference/configuration#sentry_dsn) to send unhandled
-request errors and exhausted background-task failures to Sentry. Optional
-settings control the environment name, release label, retry reporting,
-and scheduled-task monitoring.
+Hive tracks errors natively when ClickHouse is enabled. Application
+crashes from the running Hive instance are recorded against a
+private, auto-provisioned "Hive" project, and every dashboard, feed,
+and Model Context Protocol tool that surfaces application errors also
+surfaces Hive's own. Any Sentry-compatible Software Development Kit
+can point at
+`POST /api/&lt;project_id&gt;/envelope/` on the deployed host and its
+project key to record its own errors alongside them.
 
-Leaving Sentry unset does not affect normal Hive behavior.
+Leaving ClickHouse disabled disables error tracking; nothing else is
+affected.
 
 ## Production checklist
 

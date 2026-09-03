@@ -42,6 +42,7 @@ defmodule HiveWeb.DashboardLive.Hooks do
     |> assign(:avatar_color, if(user, do: "purple", else: "gray"))
     |> assign(:auth_enabled?, Auth.private?())
     |> assign(:signed_in?, not is_nil(user))
+    |> assign(:member?, Auth.member?(user))
     |> assign(:admin?, Auth.admin?(user))
     |> assign(:csrf_token, Plug.CSRFProtection.get_csrf_token())
     |> assign(:forage_sources, Forage.visible_sources(user))

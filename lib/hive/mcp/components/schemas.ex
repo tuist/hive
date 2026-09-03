@@ -363,6 +363,76 @@ defmodule Hive.MCP.Components.Schemas do
     }
   end
 
+  def error_issue do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "project_id" => %{"type" => "string"},
+        "project_name" => %{"type" => ["string", "null"]},
+        "fingerprint" => %{"type" => "string"},
+        "title" => %{"type" => "string"},
+        "culprit" => %{"type" => ["string", "null"]},
+        "level" => %{"type" => "string"},
+        "platform" => %{"type" => ["string", "null"]},
+        "status" => %{"type" => "string"},
+        "event_count" => %{"type" => "integer"},
+        "first_seen" => %{"type" => ["string", "null"]},
+        "last_seen" => %{"type" => ["string", "null"]},
+        "assignee_id" => %{"type" => ["string", "null"]}
+      },
+      "required" => [
+        "id",
+        "project_id",
+        "fingerprint",
+        "title",
+        "level",
+        "status",
+        "event_count",
+        "first_seen",
+        "last_seen"
+      ],
+      "additionalProperties" => false
+    }
+  end
+
+  def error_event do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "event_id" => %{"type" => "string"},
+        "timestamp" => %{"type" => ["string", "null"]},
+        "level" => %{"type" => "string"},
+        "environment" => %{"type" => "string"},
+        "release" => %{"type" => "string"},
+        "exception_type" => %{"type" => "string"},
+        "exception_value" => %{"type" => "string"},
+        "top_frame_function" => %{"type" => "string"},
+        "top_frame_filename" => %{"type" => "string"},
+        "payload" => %{"type" => "object"}
+      },
+      "required" => ["event_id", "timestamp", "level", "environment", "release"],
+      "additionalProperties" => false
+    }
+  end
+
+  def error_project_key do
+    %{
+      "type" => "object",
+      "properties" => %{
+        "id" => %{"type" => "string"},
+        "project_id" => %{"type" => "string"},
+        "public_key" => %{"type" => "string"},
+        "name" => %{"type" => "string"},
+        "dsn" => %{"type" => "string"},
+        "last_used_at" => %{"type" => ["string", "null"]},
+        "inserted_at" => %{"type" => ["string", "null"]}
+      },
+      "required" => ["id", "project_id", "public_key", "name", "dsn"],
+      "additionalProperties" => false
+    }
+  end
+
   def audit_activity do
     %{
       "type" => "object",

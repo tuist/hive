@@ -516,6 +516,7 @@ defmodule HiveWeb.SpecLive.Show do
       auth_enabled?={@auth_enabled?}
       signed_in?={@signed_in?}
       admin?={@admin?}
+      member?={@member?}
       csrf_token={@csrf_token}
       current_path={@current_path}
       forage_sources={@forage_sources}
