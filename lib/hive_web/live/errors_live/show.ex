@@ -200,8 +200,8 @@ defmodule HiveWeb.ErrorsLive.Show do
         </div>
 
         <.card
-          :if={@latest_event}
-          title={dgettext("dashboard_errors", "Latest event")}
+          :if={@latest_event && stack_frames(@latest_payload) != []}
+          title={dgettext("dashboard_errors", "Stack trace")}
           icon="alert_triangle"
         >
           <.card_section>
@@ -210,9 +210,6 @@ defmodule HiveWeb.ErrorsLive.Show do
                 <strong :if={present?(@latest_event.exception_type)}>{@latest_event.exception_type}</strong>
                 <span :if={present?(@latest_event.exception_type) and present?(@latest_event.exception_value)}>:</span>
                 <span :if={present?(@latest_event.exception_value)}>{@latest_event.exception_value}</span>
-                <span :if={!present?(@latest_event.exception_type) and !present?(@latest_event.exception_value)}>
-                  {latest_message(@latest_payload) || dgettext("dashboard_errors", "No exception recorded")}
-                </span>
               </div>
               <div data-part="event-meta">
                 <span>{format_datetime(@latest_event.timestamp)}</span>
@@ -243,6 +240,22 @@ defmodule HiveWeb.ErrorsLive.Show do
                 <pre :if={source_context(frame) != []} data-part="context"><code><span :for={line <- source_context(frame)} data-part={context_line_part(line, frame)}>{format_context_line(line)}</span></code></pre>
               </div>
             </div>
+          </.card_section>
+        </.card>
+
+        <.card
+          :if={@latest_event && stack_frames(@latest_payload) == [] && latest_message(@latest_payload)}
+          title={dgettext("dashboard_errors", "Message")}
+          icon="info_circle"
+        >
+          <.card_section>
+            <pre data-part="message-body">{latest_message(@latest_payload)}</pre>
+            <p data-part="message-note">
+              {dgettext(
+                "dashboard_errors",
+                "This event has no stack trace. The captured log did not carry crash metadata; if you're reporting it from a Sentry-compatible client, include an exception in the event payload to enable full stack-trace rendering."
+              )}
+            </p>
           </.card_section>
         </.card>
 

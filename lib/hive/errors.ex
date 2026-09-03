@@ -383,6 +383,33 @@ defmodule Hive.Errors do
     end
   end
 
+  @doc """
+  Provisions a default Data Source Name for the project if one does not
+  already exist and error tracking is available. Safe to call from
+  contexts that don't know or care whether ClickHouse is enabled —
+  returns `:ok` in every branch so callers can chain without a case.
+  """
+  def ensure_default_key(%Project{id: id}) do
+    if enabled?() do
+      case list_project_keys(id) do
+        [] ->
+          case create_project_key(id, %{"name" => "default"}) do
+            {:ok, _key} -> :ok
+            {:error, _} -> :ok
+          end
+
+        _keys ->
+          :ok
+      end
+    else
+      :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  def ensure_default_key(_), do: :ok
+
   def create_project_key(project_id, attrs \\ %{}) do
     attrs =
       attrs

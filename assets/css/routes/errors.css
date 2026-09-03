@@ -251,6 +251,25 @@
     overflow-wrap: anywhere;
   }
 
+  & [data-part="message-body"] {
+    padding: var(--noora-spacing-4);
+    background: var(--noora-surface-tertiary);
+    border-radius: var(--noora-radius-small);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  & [data-part="message-note"] {
+    margin-top: var(--noora-spacing-3);
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
   & [data-part="event-meta"] {
     font: var(--noora-font-weight-regular) var(--noora-font-body-small);
     color: var(--noora-surface-label-secondary);
