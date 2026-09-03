@@ -75,8 +75,7 @@ defmodule HiveWeb.ProjectLive.Show do
          |> assign_project_form(Projects.change_project(project))
          |> assign(:delete_project_form, delete_project_form())
          |> assign(:errors_enabled?, Errors.enabled?())
-         |> assign(:project_keys, Errors.list_project_keys(project.id))
-         |> assign(:new_key_form, to_form(%{"name" => ""}, as: :key))
+         |> assign(:project_key, Errors.primary_project_key(project))
          |> assign(OpenGraph.assigns(open_graph(project)))}
 
       {:error, :not_found} ->
@@ -294,28 +293,27 @@ defmodule HiveWeb.ProjectLive.Show do
     end
   end
 
-  def handle_event("create_error_key", %{"key" => %{"name" => name}}, socket) do
+  def handle_event("rotate_error_key", _params, socket) do
     if socket.assigns[:admin?] do
-      case Errors.create_project_key(socket.assigns.project.id, %{"name" => present_key_name(name)}) do
-        {:ok, _key} ->
+      case Errors.rotate_project_key(socket.assigns.project) do
+        {:ok, key} ->
           {:noreply,
            socket
            |> put_flash(
              :info,
              dgettext(
                "dashboard_projects",
-               "Data Source Name minted. Point your Sentry-compatible client at it to start reporting."
+               "Rotated. Update your Sentry-compatible client to the new Data Source Name."
              )
            )
-           |> assign(:project_keys, Errors.list_project_keys(socket.assigns.project.id))
-           |> assign(:new_key_form, to_form(%{"name" => ""}, as: :key))}
+           |> assign(:project_key, key)}
 
-        {:error, _changeset} ->
+        {:error, _} ->
           {:noreply,
            put_flash(
              socket,
              :error,
-             dgettext("dashboard_projects", "Could not mint the key.")
+             dgettext("dashboard_projects", "Could not rotate the Data Source Name.")
            )}
       end
     else
@@ -323,7 +321,7 @@ defmodule HiveWeb.ProjectLive.Show do
        put_flash(
          socket,
          :error,
-         dgettext("dashboard_projects", "Only administrators can mint Data Source Names.")
+         dgettext("dashboard_projects", "Only administrators can rotate Data Source Names.")
        )}
     end
   end
@@ -407,7 +405,7 @@ defmodule HiveWeb.ProjectLive.Show do
         </.card>
 
         <.card
-          :if={@errors_enabled? and @admin?}
+          :if={@errors_enabled? and @admin? and @project_key}
           title={dgettext("dashboard_projects", "Error tracking")}
           icon="alert_hexagon"
         >
@@ -415,32 +413,21 @@ defmodule HiveWeb.ProjectLive.Show do
             <p data-part="error-tracking-intro">
               {dgettext(
                 "dashboard_projects",
-                "Point any Sentry-compatible client at one of these Data Source Names and its events will show up on the Errors dashboard scoped to this project."
+                "Point any Sentry-compatible client at this Data Source Name and its events will show up on the Errors dashboard scoped to this project."
               )}
             </p>
 
-            <div :for={key <- @project_keys} data-part="dsn-row">
-              <div data-part="dsn-meta">
-                <span data-part="dsn-name">{key.name}</span>
-                <span :if={key.last_used_at} data-part="dsn-last-used">
-                  {dgettext("dashboard_projects", "Last used %{when}",
-                    when: format_short_datetime(key.last_used_at)
-                  )}
-                </span>
-                <span :if={!key.last_used_at} data-part="dsn-last-used">
-                  {dgettext("dashboard_projects", "Never used")}
-                </span>
-              </div>
+            <div data-part="dsn-row">
               <div data-part="dsn-value">
-                <code>{ProjectKey.dsn(key, Endpoint.url())}</code>
+                <code>{ProjectKey.dsn(@project_key, Endpoint.url())}</code>
                 <.button
-                  id={"copy-dsn-#{key.id}"}
+                  id={"copy-dsn-#{@project_key.id}"}
                   variant="secondary"
                   size="small"
                   icon_only
                   type="button"
                   phx-hook="Clipboard"
-                  data-clipboard-value={ProjectKey.dsn(key, Endpoint.url())}
+                  data-clipboard-value={ProjectKey.dsn(@project_key, Endpoint.url())}
                   aria-label={dgettext("dashboard_projects", "Copy Data Source Name")}
                   data-part="copy-button"
                 >
@@ -448,26 +435,29 @@ defmodule HiveWeb.ProjectLive.Show do
                   <span data-part="copy-check-icon"><.icon name="copy_check" /></span>
                 </.button>
               </div>
+              <div data-part="dsn-meta">
+                <span :if={@project_key.last_used_at}>
+                  {dgettext("dashboard_projects", "Last used %{when}",
+                    when: format_short_datetime(@project_key.last_used_at)
+                  )}
+                </span>
+                <span :if={!@project_key.last_used_at}>
+                  {dgettext("dashboard_projects", "Never used")}
+                </span>
+                <.button
+                  variant="secondary"
+                  size="small"
+                  label={dgettext("dashboard_projects", "Rotate")}
+                  phx-click="rotate_error_key"
+                  data-confirm={
+                    dgettext(
+                      "dashboard_projects",
+                      "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
+                    )
+                  }
+                />
+              </div>
             </div>
-
-            <.form
-              for={@new_key_form}
-              id="new-error-key-form"
-              phx-submit="create_error_key"
-              data-part="new-dsn-form"
-            >
-              <.text_input
-                id="new-error-key-name"
-                field={@new_key_form[:name]}
-                placeholder={dgettext("dashboard_projects", "Key label, e.g. \"production\"")}
-              />
-              <.button
-                type="submit"
-                label={dgettext("dashboard_projects", "Mint key")}
-                variant="secondary"
-                size="medium"
-              />
-            </.form>
           </.card_section>
         </.card>
 
@@ -1091,15 +1081,6 @@ defmodule HiveWeb.ProjectLive.Show do
     </.card_section>
     """
   end
-
-  defp present_key_name(name) when is_binary(name) do
-    case String.trim(name) do
-      "" -> "default"
-      trimmed -> trimmed
-    end
-  end
-
-  defp present_key_name(_), do: "default"
 
   defp do_create_webhook(socket, params) do
     case Webhooks.create(socket.assigns.project, params) do

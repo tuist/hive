@@ -64,8 +64,7 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.ListErrorEvents,
       Hive.MCP.Components.Tools.ResolveErrorIssue,
       Hive.MCP.Components.Tools.UnresolveErrorIssue,
-      Hive.MCP.Components.Tools.IgnoreErrorIssue,
-      Hive.MCP.Components.Tools.CreateProjectErrorKey
+      Hive.MCP.Components.Tools.IgnoreErrorIssue
     ],
     prompts: [
       Hive.MCP.Components.Prompts.WriteSpec

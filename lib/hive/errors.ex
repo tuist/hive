@@ -410,6 +410,46 @@ defmodule Hive.Errors do
 
   def ensure_default_key(_), do: :ok
 
+  @doc """
+  Returns the single Data Source Name for a project — the oldest
+  active key. Every project has exactly one at a time; this is how
+  the dashboard renders it. Provisions one lazily when missing so
+  older projects created before auto-provisioning also render.
+  """
+  def primary_project_key(%Project{id: id} = project) do
+    case list_project_keys(id) do
+      [key | _] ->
+        key
+
+      [] ->
+        ensure_default_key(project)
+
+        case list_project_keys(id) do
+          [key | _] -> key
+          [] -> nil
+        end
+    end
+  end
+
+  def primary_project_key(_), do: nil
+
+  @doc """
+  Deletes every existing key for the project and mints a fresh one.
+  Called when an operator suspects a Data Source Name has leaked.
+  """
+  def rotate_project_key(%Project{id: id}) do
+    Repo.transaction(fn ->
+      {_deleted, _} = Repo.delete_all(from(k in ProjectKey, where: k.project_id == ^id))
+
+      case create_project_key(id, %{"name" => "default"}) do
+        {:ok, key} -> key
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  def rotate_project_key(_), do: {:error, :invalid_project}
+
   def create_project_key(project_id, attrs \\ %{}) do
     attrs =
       attrs

@@ -14,7 +14,6 @@ defmodule Hive.MCP.ServerTest do
              "create_postmortem",
              "create_postmortem_action_item",
              "create_project",
-             "create_project_error_key",
              "create_project_webhook",
              "create_spec",
              "delete_domain",
