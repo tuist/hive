@@ -85,10 +85,92 @@ defmodule Hive.Domains.EvolutionTest do
     assert project.name == "Tuist"
 
     assert_receive {:evolution_input, input}
-    assert Enum.any?(input.current_projects, &(&1.id == project.id))
+    refute Map.has_key?(input, :current_projects)
     assert Enum.any?(input.current_domains, &(&1.name == "Tuist"))
     assert Enum.any?(input.work_items, &(&1.kind == "feature_request"))
     assert Enum.any?(input.work_items, &(&1.kind == "spec"))
+  end
+
+  test "evolution operation schema no longer declares current_projects" do
+    schema =
+      EvolutionAgent.__operations__()
+      |> Map.fetch!(:evolve_domains)
+      |> Map.fetch!(:input_schema)
+
+    refute Map.has_key?(schema.properties, :current_projects)
+    refute "current_projects" in schema.required
+  end
+
+  test "evolve_from_work_items/1 truncates work-item bodies and domain descriptions" do
+    test_pid = self()
+    user = user()
+
+    long_description = String.duplicate("d", 400)
+    long_body = String.duplicate("w", 2_000)
+
+    {:ok, project} = Projects.create_project(%{name: "Long", visibility: "public"})
+
+    {:ok, _domain} =
+      Domains.create_domain(%{
+        name: "Long domain",
+        description: long_description,
+        project_id: project.id
+      })
+
+    {:ok, _feature_request} =
+      Forage.create_feature_request(
+        %{"title" => "Long title", "description" => long_body},
+        user
+      )
+
+    runner = fn input ->
+      send(test_pid, {:evolution_input, input})
+      {:ok, %{changes: []}}
+    end
+
+    assert {:ok, _} = Domains.evolve_from_work_items(runner: runner)
+    assert_receive {:evolution_input, input}
+
+    long_item = Enum.find(input.work_items, &(&1.title == "Long title"))
+    assert long_item
+    assert String.length(long_item.body) == 603
+    assert String.ends_with?(long_item.body, "...")
+
+    long_domain = Enum.find(input.current_domains, &(&1.name == "Long domain"))
+    assert long_domain
+    assert String.length(long_domain.description) == 203
+    assert String.ends_with?(long_domain.description, "...")
+  end
+
+  test "evolve_from_work_items/1 truncates a multibyte body without corrupting characters" do
+    test_pid = self()
+    user = user()
+    multibyte = String.duplicate("🎉", 700)
+
+    {:ok, _feature_request} =
+      Forage.create_feature_request(
+        %{"title" => "party", "description" => multibyte},
+        user
+      )
+
+    runner = fn input ->
+      send(test_pid, {:evolution_input, input})
+      {:ok, %{changes: []}}
+    end
+
+    assert {:ok, _} = Domains.evolve_from_work_items(runner: runner)
+    assert_receive {:evolution_input, input}
+
+    item = Enum.find(input.work_items, &(&1.title == "party"))
+    body = item.body
+
+    assert String.valid?(body)
+    assert String.length(body) == 603
+
+    assert body
+           |> String.replace_suffix("...", "")
+           |> String.graphemes()
+           |> Enum.all?(&(&1 == "🎉"))
   end
 
   test "evolve_from_work_items/1 persists no-op inputs and only reevaluates changed evidence" do

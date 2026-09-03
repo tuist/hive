@@ -75,4 +75,64 @@ defmodule Hive.Drops.DomainClassificationTest do
     drop = Repo.get!(Drop, drop.id)
     assert is_nil(drop.classified_at)
   end
+
+  test "trims drop body and candidate-domain descriptions in the runner input" do
+    test_pid = self()
+
+    domain = create_domain!("Alpha-#{System.unique_integer([:positive])}")
+    long_description = String.duplicate("a", 400)
+    {:ok, _} = Domains.update_domain(domain, %{description: long_description})
+
+    long_body = String.duplicate("b", 2_000)
+    drop = insert_rss_drop!(%{body: long_body})
+
+    runner = fn input ->
+      send(test_pid, {:input, input})
+      {:ok, %{domain_ids: []}}
+    end
+
+    assert {:ok, []} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert_receive {:input, input}
+
+    [candidate] = input.candidate_domains
+    assert String.length(candidate.description) == 203
+    assert String.ends_with?(candidate.description, "...")
+
+    assert String.length(input.drop.body) == 503
+    assert String.ends_with?(input.drop.body, "...")
+  end
+
+  test "trims a multibyte drop body without corrupting the last character" do
+    test_pid = self()
+
+    _domain = create_domain!("Beta-#{System.unique_integer([:positive])}")
+    multibyte = String.duplicate("🎉", 600)
+    drop = insert_rss_drop!(%{body: multibyte})
+
+    runner = fn input ->
+      send(test_pid, {:input, input})
+      {:ok, %{domain_ids: []}}
+    end
+
+    assert {:ok, []} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert_receive {:input, input}
+    body = input.drop.body
+    assert String.valid?(body)
+    assert String.length(body) == 503
+
+    assert body
+           |> String.replace_suffix("...", "")
+           |> String.graphemes()
+           |> Enum.all?(&(&1 == "🎉"))
+  end
 end
