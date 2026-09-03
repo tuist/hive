@@ -18,7 +18,8 @@ defmodule Hive.Domains.Evolution do
   alias Hive.Specs.Spec
 
   @default_limit 40
-  @max_body_length 1_200
+  @max_body_length 600
+  @max_domain_description_length 200
 
   @business_context """
   Tuist builds infrastructure for productive software development, including
@@ -67,7 +68,6 @@ defmodule Hive.Domains.Evolution do
 
     %{
       business_context: @business_context,
-      current_projects: current_projects(),
       current_domains: current_domains(),
       work_items: work_items(limit)
     }
@@ -139,18 +139,11 @@ defmodule Hive.Domains.Evolution do
       %{
         id: domain.id,
         name: domain.name,
-        description: domain.description || "",
+        description: truncate(domain.description || "", @max_domain_description_length),
         visibility: Atom.to_string(domain.visibility),
         projects: project_refs(domain.projects)
       }
     end)
-  end
-
-  defp current_projects do
-    Project
-    |> order_by([project], asc: project.name)
-    |> Repo.all()
-    |> project_refs()
   end
 
   defp work_items(limit) do
@@ -477,13 +470,15 @@ defmodule Hive.Domains.Evolution do
 
   defp normalize_project_ids(_project_ids), do: []
 
-  defp truncate(value) when is_binary(value) do
-    if String.length(value) > @max_body_length,
-      do: String.slice(value, 0, @max_body_length) <> "...",
+  defp truncate(value), do: truncate(value, @max_body_length)
+
+  defp truncate(value, limit) when is_binary(value) and is_integer(limit) do
+    if String.length(value) > limit,
+      do: String.slice(value, 0, limit) <> "...",
       else: value
   end
 
-  defp truncate(_value), do: ""
+  defp truncate(_value, _limit), do: ""
 
   defp iso8601(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
   defp iso8601(_datetime), do: ""

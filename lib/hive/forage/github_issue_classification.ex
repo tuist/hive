@@ -32,7 +32,8 @@ defmodule Hive.Forage.GitHubIssueClassification do
   distribution.
   """
 
-  @max_body_length 1_200
+  @max_body_length 500
+  @max_domain_description_length 200
 
   @doc """
   Classifies the issue with `issue_id` and writes the resulting domain
@@ -192,14 +193,14 @@ defmodule Hive.Forage.GitHubIssueClassification do
           %{
             id: domain.id,
             name: domain.name,
-            description: domain.description || ""
+            description: truncate(domain.description || "", @max_domain_description_length)
           }
         end),
       issue: %{
         repository: "#{repository.owner}/#{repository.name}",
         number: issue.number,
         title: issue.title,
-        body: truncate(issue.body)
+        body: truncate(issue.body, @max_body_length)
       }
     }
   end
@@ -222,11 +223,11 @@ defmodule Hive.Forage.GitHubIssueClassification do
     fun.()
   end
 
-  defp truncate(value) when is_binary(value) do
-    if String.length(value) > @max_body_length,
-      do: String.slice(value, 0, @max_body_length) <> "...",
+  defp truncate(value, limit) when is_binary(value) and is_integer(limit) do
+    if String.length(value) > limit,
+      do: String.slice(value, 0, limit) <> "...",
       else: value
   end
 
-  defp truncate(_value), do: ""
+  defp truncate(_value, _limit), do: ""
 end

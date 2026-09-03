@@ -11,17 +11,6 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     type: "object",
     properties: %{
       business_context: %{type: "string"},
-      current_projects: %{
-        type: "array",
-        items: %{
-          type: "object",
-          properties: %{
-            id: %{type: "string"},
-            name: %{type: "string"}
-          },
-          required: ["id", "name"]
-        }
-      },
       current_domains: %{
         type: "array",
         items: %{
@@ -75,7 +64,7 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
         }
       }
     },
-    required: ["business_context", "current_projects", "current_domains", "work_items"]
+    required: ["business_context", "current_domains", "work_items"]
   }
 
   @create_change_schema %{
@@ -141,7 +130,7 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     - Do not create vague buckets such as Platform, Product, Infrastructure, or Operations.
     - Update an existing domain when the signal refines a domain that already exists.
     - Create a new domain only when several signals point to a durable domain that does not fit an existing domain.
-    - For create actions, include project_ids from the supporting work items.
+    - For create actions, include project_ids only from the supporting work items' projects.
     - When a created domain applies to more than one project, include every matching project identifier.
     - Keep domain names short, concrete, and recognizable to Tuist contributors.
     - Keep descriptions operator-facing. Describe the domain, not the reason for this run.
@@ -164,7 +153,7 @@ defmodule Hive.Domains.Agents.EvolutionAgent do
     Propose only the domain creations or updates that make the taxonomy better.
     Use action "update" with domain_id when refining an existing domain.
     Use action "create" only for a durable Tuist business domain that is neither too specific nor too generic.
-    For create actions, include project_ids using only identifiers present in current_projects.
+    For create actions, include project_ids only from the projects that appear on the supporting work items.
     """
   )
 end

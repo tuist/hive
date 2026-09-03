@@ -26,7 +26,8 @@ defmodule Hive.Drops.DomainClassification do
   something users of that domain care about.
   """
 
-  @max_body_length 1_200
+  @max_body_length 500
+  @max_domain_description_length 200
 
   @doc """
   Classifies the drop with `drop_id` and writes the resulting domain
@@ -148,7 +149,7 @@ defmodule Hive.Drops.DomainClassification do
           %{
             id: domain.id,
             name: domain.name,
-            description: domain.description || ""
+            description: truncate(domain.description || "", @max_domain_description_length)
           }
         end),
       drop: %{
@@ -156,7 +157,7 @@ defmodule Hive.Drops.DomainClassification do
         repository: repository_label,
         version: drop.version || "",
         title: drop.title || "",
-        body: truncate(drop.body)
+        body: truncate(drop.body, @max_body_length)
       }
     }
   end
@@ -179,10 +180,13 @@ defmodule Hive.Drops.DomainClassification do
     fun.()
   end
 
-  defp truncate(nil), do: ""
+  defp truncate(nil, _limit), do: ""
 
-  defp truncate(value) when is_binary(value) and byte_size(value) > @max_body_length,
-    do: binary_part(value, 0, @max_body_length)
+  defp truncate(value, limit) when is_binary(value) and is_integer(limit) do
+    if String.length(value) > limit,
+      do: String.slice(value, 0, limit) <> "...",
+      else: value
+  end
 
-  defp truncate(value), do: value
+  defp truncate(_value, _limit), do: ""
 end

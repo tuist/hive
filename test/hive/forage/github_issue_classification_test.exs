@@ -174,6 +174,91 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     assert [] = Repo.all(GitHubIssueDomain)
   end
 
+  test "trims issue body and candidate-domain descriptions in the runner input" do
+    test_pid = self()
+
+    domain = create_domain_with_new_repo!("alpha")
+    repo = github_repository_for_domain!(domain)
+
+    long_description = String.duplicate("a", 400)
+    long_body = String.duplicate("b", 2_000)
+
+    {:ok, _updated_domain} = Domains.update_domain(domain, %{description: long_description})
+
+    issue =
+      Repo.insert!(
+        GitHubIssue.changeset(%GitHubIssue{}, %{
+          github_repository_id: repo.id,
+          number: 1,
+          title: "Big issue",
+          body: long_body,
+          state: :open
+        })
+      )
+
+    runner = fn input ->
+      send(test_pid, {:input, input})
+      {:ok, %{domain_ids: []}}
+    end
+
+    assert {:ok, []} =
+             GitHubIssueClassification.classify(issue.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert_receive {:input, input}
+
+    [candidate] = input.candidate_domains
+    assert String.length(candidate.description) == 203
+    assert String.ends_with?(candidate.description, "...")
+
+    assert String.length(input.issue.body) == 503
+    assert String.ends_with?(input.issue.body, "...")
+  end
+
+  test "trims a multibyte body without corrupting the last character" do
+    test_pid = self()
+
+    domain = create_domain_with_new_repo!("mb")
+    repo = github_repository_for_domain!(domain)
+
+    multibyte = String.duplicate("🎉", 600)
+
+    issue =
+      Repo.insert!(
+        GitHubIssue.changeset(%GitHubIssue{}, %{
+          github_repository_id: repo.id,
+          number: 42,
+          title: "party",
+          body: multibyte,
+          state: :open
+        })
+      )
+
+    runner = fn input ->
+      send(test_pid, {:input, input})
+      {:ok, %{domain_ids: []}}
+    end
+
+    assert {:ok, []} =
+             GitHubIssueClassification.classify(issue.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert_receive {:input, input}
+    body = input.issue.body
+
+    assert String.valid?(body)
+    assert String.length(body) == 503
+
+    assert body
+           |> String.replace_suffix("...", "")
+           |> String.graphemes()
+           |> Enum.all?(&(&1 == "🎉"))
+  end
+
   test "keeps terminal failures for unchanged content and retries changed content" do
     stub(Hive.Agents, :enabled?, fn -> false end)
 
