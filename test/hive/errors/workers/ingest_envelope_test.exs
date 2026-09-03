@@ -11,7 +11,7 @@ defmodule Hive.Errors.Workers.IngestEnvelopeTest do
 
   setup do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows -> {length(rows), nil} end)
+    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
     {:ok, project: project}

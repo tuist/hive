@@ -136,6 +136,7 @@ defmodule HiveWeb.Layouts do
   attr :avatar_color, :string, required: true
   attr :auth_enabled?, :boolean, required: true
   attr :signed_in?, :boolean, default: false
+  attr :member?, :boolean, default: false
   attr :admin?, :boolean, default: false
   attr :csrf_token, :string, required: true
   attr :current_path, :string, default: "/"
@@ -201,6 +202,13 @@ defmodule HiveWeb.Layouts do
             icon="alert_triangle"
             href={~p"/postmortems"}
             selected={String.starts_with?(@current_path, ~p"/postmortems")}
+          />
+          <.sidebar_item
+            :if={@member?}
+            label={dgettext("dashboard_errors", "Errors")}
+            icon="alert_circle"
+            href={~p"/errors"}
+            selected={String.starts_with?(@current_path, ~p"/errors")}
           />
           <% drops_selected? = String.starts_with?(@current_path, ~p"/drops") %>
           <details data-part="drops" open={drops_selected?}>

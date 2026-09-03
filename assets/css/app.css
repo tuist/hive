@@ -18,6 +18,7 @@
 @import "./routes/account.css";
 @import "./routes/ops.css";
 @import "./routes/audit.css";
+@import "./routes/errors.css";
 @import "./routes/drops.css";
 
 :root {

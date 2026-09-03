@@ -11,7 +11,7 @@ defmodule Hive.ErrorsTest do
   setup :verify_on_exit!
 
   setup do
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows -> {length(rows), nil} end)
+    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
 
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
 

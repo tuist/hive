@@ -10,7 +10,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
 
   setup %{conn: conn} do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows -> {length(rows), nil} end)
+    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
     {:ok, key} = Errors.create_project_key(project.id)

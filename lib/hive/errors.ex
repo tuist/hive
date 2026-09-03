@@ -127,11 +127,46 @@ defmodule Hive.Errors do
       payload: Jason.encode!(event.payload)
     }
 
-    case IngestRepo.insert_all("errors_events", [row]) do
+    case IngestRepo.insert_all("errors_events", [row], types: event_column_types()) do
       {_count, _} -> :ok
     end
   rescue
     error -> {:error, error}
+  end
+
+  # ClickHouse column types for `errors_events`, required by ecto_ch when
+  # inserting into a raw table name.
+  defp event_column_types do
+    %{
+      event_id: "UUID",
+      project_id: "String",
+      issue_id: "String",
+      fingerprint: "FixedString(64)",
+      timestamp: "DateTime64(6, 'UTC')",
+      received_at: "DateTime64(6, 'UTC')",
+      platform: "LowCardinality(String)",
+      level: "LowCardinality(String)",
+      environment: "LowCardinality(String)",
+      release: "String",
+      dist: "String",
+      server_name: "String",
+      transaction: "String",
+      logger: "LowCardinality(String)",
+      exception_type: "String",
+      exception_value: "String",
+      top_frame_function: "String",
+      top_frame_module: "String",
+      top_frame_filename: "String",
+      user_id: "String",
+      user_email: "String",
+      user_ip: "String",
+      request_url: "String",
+      request_method: "LowCardinality(String)",
+      sdk_name: "LowCardinality(String)",
+      sdk_version: "LowCardinality(String)",
+      tags: "Map(LowCardinality(String), String)",
+      payload: "String"
+    }
   end
 
   defp frame_field(nil, _), do: ""
@@ -171,7 +206,62 @@ defmodule Hive.Errors do
     |> filter_to(opts[:to])
     |> order_by([issue], desc: issue.last_seen, desc: issue.id)
     |> limit(^limit)
+    |> preload(:project)
     |> Repo.all()
+  end
+
+  @doc """
+  Paginated variant of `list_issues/1`. Accepts the same filters plus
+  `:page` (1-indexed) and `:page_size` (default 25) and returns
+  `{issues, meta}` where meta includes `current_page`, `total_pages`,
+  and `total_count`. Suitable for LiveView dashboards.
+  """
+  def paginate_issues(opts \\ []) do
+    page_size = opts |> Keyword.get(:page_size, 25) |> max(1)
+    page = opts |> Keyword.get(:page, 1) |> max(1)
+    offset = (page - 1) * page_size
+
+    base =
+      Issue
+      |> filter_project(opts[:project_id])
+      |> filter_status(opts[:status])
+      |> filter_search(opts[:search])
+      |> filter_from(opts[:from])
+      |> filter_to(opts[:to])
+
+    total = base |> exclude(:preload) |> Repo.aggregate(:count, :id)
+
+    issues =
+      base
+      |> order_by([issue], desc: issue.last_seen, desc: issue.id)
+      |> limit(^page_size)
+      |> offset(^offset)
+      |> preload(:project)
+      |> Repo.all()
+
+    meta = %{
+      current_page: page,
+      page_size: page_size,
+      total_count: total,
+      total_pages: max(1, div(total + page_size - 1, page_size)),
+      has_previous_page?: page > 1,
+      has_next_page?: page * page_size < total
+    }
+
+    {issues, meta}
+  end
+
+  @doc """
+  Returns per-project unresolved issue counts as a
+  `%{project_id => count}` map.
+  """
+  def unresolved_counts_by_project do
+    Issue
+    |> where([issue], issue.status == :unresolved)
+    |> group_by([issue], issue.project_id)
+    |> select([issue], {issue.project_id, count(issue.id)})
+    |> Repo.all()
+    |> Map.new()
   end
 
   defp filter_project(query, nil), do: query
@@ -251,6 +341,45 @@ defmodule Hive.Errors do
     |> Repo.update_all(set: [last_used_at: now])
 
     :ok
+  end
+
+  @doc """
+  Serializes an issue for Model Context Protocol responses.
+  """
+  def serialize_issue(%Issue{} = issue) do
+    project = issue.project
+
+    %{
+      id: issue.id,
+      project_id: issue.project_id,
+      project_name: project && project.name,
+      fingerprint: issue.fingerprint,
+      title: issue.title,
+      culprit: issue.culprit,
+      level: to_string(issue.level),
+      platform: issue.platform,
+      status: to_string(issue.status),
+      event_count: issue.event_count,
+      first_seen: issue.first_seen && DateTime.to_iso8601(issue.first_seen),
+      last_seen: issue.last_seen && DateTime.to_iso8601(issue.last_seen),
+      assignee_id: issue.assignee_id
+    }
+  end
+
+  @doc """
+  Serializes a project key. `endpoint_url` is the Hive host used to
+  render the Data Source Name.
+  """
+  def serialize_project_key(%ProjectKey{} = key, endpoint_url) do
+    %{
+      id: key.id,
+      project_id: key.project_id,
+      public_key: key.public_key,
+      name: key.name,
+      dsn: ProjectKey.dsn(key, endpoint_url),
+      last_used_at: key.last_used_at && DateTime.to_iso8601(key.last_used_at),
+      inserted_at: key.inserted_at && DateTime.to_iso8601(key.inserted_at)
+    }
   end
 
   ## Event queries (ClickHouse)

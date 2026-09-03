@@ -254,6 +254,13 @@ defmodule HiveWeb.Router do
         live "/projects/:id", ProjectLive.Show
       end
 
+      live_session :errors,
+        on_mount: HiveWeb.DashboardLive.Hooks,
+        root_layout: {HiveWeb.Layouts, :root} do
+        live "/errors", ErrorsLive.Index
+        live "/errors/:id", ErrorsLive.Show
+      end
+
       live_session :account,
         on_mount: HiveWeb.DashboardLive.Hooks,
         root_layout: {HiveWeb.Layouts, :root} do

@@ -2094,3 +2094,142 @@ Enum.each(audit_seed_entries, fn entry ->
     metadata: metadata
   })
 end)
+
+# Errors: seed sample issues and events so the /errors dashboard has content
+# to explore in development. Only runs when ClickHouse is enabled because
+# the event stream lives there; otherwise the LiveView shows an empty state.
+if Hive.Errors.enabled?() do
+  alias Hive.Errors, as: ErrorsSeeds
+  alias Hive.Errors.SentryEvent, as: ErrorsSentryEvent
+
+  # Make sure Hive itself has a self-project + default DSN so self-monitoring
+  # has somewhere to write when it fires later.
+  Hive.Errors.SelfMonitor.install()
+
+  Enum.each(Projects.list_projects(), fn project ->
+    # One DSN per project so operators can point a real SDK at it locally.
+    case ErrorsSeeds.list_project_keys(project.id) do
+      [] -> ErrorsSeeds.create_project_key(project.id, %{"name" => "development"})
+      _ -> :ok
+    end
+  end)
+
+  # Fixtures: a couple of realistic-looking errors per project so both the
+  # list view and the detail view have interesting content to render.
+  error_fixtures = [
+    %{
+      title_suffix: "widget serialization",
+      module: "MyApp.Widgets",
+      function: "serialize/1",
+      filename: "lib/my_app/widgets.ex",
+      exception_type: "Protocol.UndefinedError",
+      exception_value: "protocol Enumerable not implemented for %MyApp.Widget{...}",
+      environment: "production",
+      level: "error",
+      occurrences: 42
+    },
+    %{
+      title_suffix: "database timeout",
+      module: "MyApp.Repo",
+      function: "one/1",
+      filename: "lib/my_app/repo.ex",
+      exception_type: "DBConnection.ConnectionError",
+      exception_value: "connection not available and request was dropped from queue",
+      environment: "production",
+      level: "error",
+      occurrences: 7
+    },
+    %{
+      title_suffix: "auth token expired",
+      module: "MyAppWeb.AuthPlug",
+      function: "call/2",
+      filename: "lib/my_app_web/auth_plug.ex",
+      exception_type: "MyApp.Auth.TokenExpired",
+      exception_value: "session expired after 30 minutes",
+      environment: "staging",
+      level: "warning",
+      occurrences: 3
+    }
+  ]
+
+  build_event = fn project, fixture, offset_minutes ->
+    now = DateTime.utc_now()
+    timestamp = DateTime.add(now, -offset_minutes * 60, :second)
+
+    frames = [
+      %{
+        "function" => "handle_request/2",
+        "module" => "Phoenix.Router",
+        "filename" => "deps/phoenix/lib/phoenix/router.ex",
+        "lineno" => 350,
+        "in_app" => false
+      },
+      %{
+        "function" => "call/2",
+        "module" => "MyAppWeb.Endpoint",
+        "filename" => "lib/my_app_web/endpoint.ex",
+        "lineno" => 64,
+        "in_app" => true
+      },
+      %{
+        "function" => fixture.function,
+        "module" => fixture.module,
+        "filename" => fixture.filename,
+        "lineno" => 42,
+        "context_line" => "    #{fixture.function |> String.split("/") |> hd()}(input)",
+        "in_app" => true
+      }
+    ]
+
+    %{
+      "event_id" => 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower),
+      "timestamp" => DateTime.to_iso8601(timestamp),
+      "platform" => "elixir",
+      "level" => fixture.level,
+      "environment" => fixture.environment,
+      "release" => "1.2.3",
+      "server_name" => "web-#{rem(offset_minutes, 3) + 1}.example.com",
+      "transaction" => "MyAppWeb.WidgetController#show",
+      "logger" => "elixir",
+      "exception" => %{
+        "values" => [
+          %{
+            "type" => fixture.exception_type,
+            "value" => fixture.exception_value,
+            "stacktrace" => %{"frames" => frames}
+          }
+        ]
+      },
+      "sdk" => %{"name" => "sentry.python", "version" => "1.44.1"},
+      "tags" => %{
+        "environment" => fixture.environment,
+        "server" => "web-#{rem(offset_minutes, 3) + 1}",
+        "runtime" => "beam"
+      },
+      "user" => %{
+        "id" => "user-#{rem(offset_minutes, 25) + 1}",
+        "email" => "user#{rem(offset_minutes, 25) + 1}@example.com"
+      },
+      "request" => %{
+        "url" => "https://example.com/widgets/#{rem(offset_minutes, 500)}",
+        "method" => "GET"
+      }
+    }
+  end
+
+  Enum.each(Projects.list_projects(), fn project ->
+    Enum.each(error_fixtures, fn fixture ->
+      # Space events across the last few hours so the detail view has a
+      # visible history.
+      1..fixture.occurrences
+      |> Enum.each(fn i ->
+        offset_minutes = i * 3
+        payload = build_event.(project, fixture, offset_minutes)
+        event = ErrorsSentryEvent.parse(payload)
+        ErrorsSeeds.record_event(project, event)
+      end)
+    end)
+  end)
+
+  IO.puts("Seeded error issues + events for #{length(Projects.list_projects())} projects.")
+end
