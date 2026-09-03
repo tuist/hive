@@ -57,6 +57,7 @@ defmodule Hive.MCP.Components.Tools.GetErrorEventTest do
     user = mcp_user("member@example.com", :member)
 
     response = GetErrorEvent.call(mcp_conn(user), %{"issue_id" => "abc", "event_id" => "xyz"})
+
     assert %{"event" => %{"exception_type" => "Boom", "payload" => %{"platform" => "elixir"}}} =
              response_json(response)
   end

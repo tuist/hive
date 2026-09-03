@@ -21,6 +21,7 @@ defmodule Hive.MCP.Components.Tools.RotateProjectErrorDsnTest do
     {:ok, before_key} = Errors.create_project_key(project.id)
 
     response = RotateProjectErrorDsn.call(mcp_conn(admin), %{"project_id" => project.id})
+
     assert %{"key" => %{"dsn" => "http" <> _, "public_key" => public_key}} =
              response_json(response)
 

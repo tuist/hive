@@ -565,7 +565,9 @@ defmodule HiveWeb.ErrorsLive.Show do
 
   ## Stack trace
 
-  defp stack_frames(%{"exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}})
+  defp stack_frames(%{
+         "exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}
+       })
        when is_list(frames) do
     frames
     |> Enum.reverse()
@@ -669,9 +671,7 @@ defmodule HiveWeb.ErrorsLive.Show do
   # rest to the JSON encoder.
   defp format_context_value(map) when is_map(map) do
     if Enum.all?(map, fn {_, v} -> is_binary(v) or is_number(v) or is_boolean(v) end) do
-      map
-      |> Enum.map(fn {k, v} -> "#{k}: #{v}" end)
-      |> Enum.join(", ")
+      Enum.map_join(map, ", ", fn {k, v} -> "#{k}: #{v}" end)
     else
       Jason.encode!(map, pretty: true)
     end
@@ -793,7 +793,6 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp as_map(m) when is_map(m), do: m
   defp as_map(_), do: %{}
 
-
   defp get(map, key, default) when is_map(map), do: Map.get(map, key, default) || default
   defp get(_, _, default), do: default
 
@@ -902,7 +901,10 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp http_method_color("PUT"), do: "warning"
   defp http_method_color("PATCH"), do: "warning"
   defp http_method_color("DELETE"), do: "destructive"
-  defp http_method_color(method) when is_binary(method), do: http_method_color(String.upcase(method))
+
+  defp http_method_color(method) when is_binary(method),
+    do: http_method_color(String.upcase(method))
+
   defp http_method_color(_), do: "neutral"
 
   defp level_color(:fatal), do: "destructive"

@@ -11,9 +11,16 @@ defmodule HiveWeb.PlatformIcon do
 
   use Phoenix.Component
 
-  attr :platform, :string, default: nil, doc: "SDK platform identifier such as 'elixir' or 'javascript'."
+  attr :platform, :string,
+    default: nil,
+    doc: "SDK platform identifier such as 'elixir' or 'javascript'."
+
   attr :size, :string, default: "medium", values: ~w(small medium)
-  attr :label, :boolean, default: false, doc: "Whether to render the friendly language name next to the badge."
+
+  attr :label, :boolean,
+    default: false,
+    doc: "Whether to render the friendly language name next to the badge."
+
   attr :rest, :global
 
   def platform_icon(assigns) do
