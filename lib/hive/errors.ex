@@ -379,7 +379,7 @@ defmodule Hive.Errors do
       ORDER BY environment
       """
 
-      case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+      case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
         {:ok, %{rows: rows}} -> Enum.map(rows, fn [env] -> to_string(env) end)
         _ -> []
       end
@@ -430,7 +430,7 @@ defmodule Hive.Errors do
             _ -> params
           end
 
-        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
           {:ok, %{rows: rows}} -> Enum.map(rows, fn [id] -> to_string(id) end)
           _ -> []
         end
@@ -469,7 +469,7 @@ defmodule Hive.Errors do
 
     params = %{"ids" => issue_ids, "from" => from, "to" => to}
 
-    case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+    case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
       {:ok, %{rows: rows}} ->
         buckets = time_buckets(from, to, bucket_unit)
 
@@ -562,7 +562,7 @@ defmodule Hive.Errors do
 
         params = %{"ids" => issue_ids, "from" => from, "to" => to}
 
-        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params]) do
+        case Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params) do
           {:ok, %{rows: rows}} ->
             Map.new(rows, fn [id, count] -> {to_string(id), count} end)
 
@@ -682,7 +682,7 @@ defmodule Hive.Errors do
       params = %{"issue_id" => issue_id, "from" => from, "to" => to}
 
       {:ok, %{rows: rows}} =
-        Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params])
+        Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params)
 
       Enum.map(rows, fn [bucket, events] -> %{bucket: bucket, events: events} end)
     else
@@ -726,7 +726,7 @@ defmodule Hive.Errors do
       LIMIT {limit:UInt32}
       """
 
-      {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, [params])
+      {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Hive.ClickHouseRepo, query, params)
 
       Enum.map(rows, fn [event_id, ts, level, env, release, ex_type, ex_value, fn_, file, payload] ->
         %{
