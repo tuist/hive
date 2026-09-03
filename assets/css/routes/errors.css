@@ -33,7 +33,6 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--noora-spacing-4);
-    margin-bottom: var(--noora-spacing-5);
     flex-wrap: wrap;
   }
 

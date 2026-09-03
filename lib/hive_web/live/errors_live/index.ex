@@ -95,11 +95,15 @@ defmodule HiveWeb.ErrorsLive.Index do
   end
 
   def handle_event("search", %{"search" => %{"query" => query}}, socket) do
+    trimmed = Query.present_string(query)
+
     updated =
       socket
       |> current_query_params()
-      |> Query.put_present("q", Query.present_string(query))
       |> Map.delete("page")
+      |> then(fn params ->
+        if trimmed, do: Map.put(params, "q", trimmed), else: Map.delete(params, "q")
+      end)
 
     {:noreply, push_patch(socket, to: ~p"/errors?#{updated}", replace: true)}
   end
