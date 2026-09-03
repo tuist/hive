@@ -61,6 +61,10 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.InferenceAuthentication
   end
 
+  pipeline :errors_ingest do
+    plug :put_secure_browser_headers
+  end
+
   scope "/webhooks", HiveWeb do
     pipe_through :json_api
 
@@ -87,6 +91,12 @@ defmodule HiveWeb.Router do
 
     get "/flights", FlightController, :index
     get "/flights/:id", FlightController, :show
+  end
+
+  scope "/api", HiveWeb.ErrorsAPI do
+    pipe_through :errors_ingest
+
+    post "/:project_id/envelope/", EnvelopeController, :create
   end
 
   scope "/api" do

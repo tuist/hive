@@ -14,8 +14,6 @@ defmodule Hive.Forage.GitHubIssueSyncer do
     max_attempts: 1,
     unique: [fields: [:worker, :queue, :args], period: :infinity, states: :incomplete]
 
-  @behaviour Sentry.Integrations.Oban.Cron
-
   require Logger
 
   alias Hive.Forage
@@ -31,11 +29,6 @@ defmodule Hive.Forage.GitHubIssueSyncer do
 
   def perform(%Oban.Job{}) do
     enqueue_all_repositories()
-  end
-
-  @impl Sentry.Integrations.Oban.Cron
-  def sentry_check_in_configuration(%Oban.Job{}) do
-    [monitor_config: [checkin_margin: 5, max_runtime: 5]]
   end
 
   def enqueue_repository(%GitHubRepository{id: repository_id}) do
