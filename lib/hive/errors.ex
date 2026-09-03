@@ -46,8 +46,17 @@ defmodule Hive.Errors do
     if enabled?() do
       fingerprint = Fingerprint.compute(event)
 
-      with {:ok, issue} <- upsert_issue(project, event, fingerprint),
-           :ok <- insert_event(project, issue, event, fingerprint) do
+      # Idempotency ordering: reserve or fetch the issue row first
+      # (upsert without incrementing the count), then insert the
+      # event into ClickHouse, then only increment the Postgres
+      # counters. If the ClickHouse insert fails, the worker retry
+      # re-runs the same steps against the same row — and because
+      # the count bump only happens on the successful CH path, a
+      # transient CH failure never doubles the `event_count` for
+      # the issue.
+      with {:ok, issue} <- ensure_issue(project, event, fingerprint),
+           :ok <- insert_event(project, issue, event, fingerprint),
+           {:ok, issue} <- bump_issue_counters(issue, event) do
         {:ok, issue}
       end
     else
@@ -55,7 +64,11 @@ defmodule Hive.Errors do
     end
   end
 
-  defp upsert_issue(project, event, fingerprint) do
+  # Create the issue if it doesn't exist yet, or fetch the existing
+  # row without touching `event_count` or the seen-at timestamps —
+  # those updates live in `bump_issue_counters/2` and only run when
+  # the ClickHouse insert has succeeded.
+  defp ensure_issue(project, event, fingerprint) do
     now = event.timestamp || DateTime.utc_now()
     title = SentryEvent.title(event) |> truncate(500)
     culprit = SentryEvent.culprit(event) |> truncate(500)
@@ -69,33 +82,61 @@ defmodule Hive.Errors do
       platform: event.platform,
       first_seen: now,
       last_seen: now,
-      event_count: 1
+      event_count: 0
     }
 
     changeset = Issue.changeset(%Issue{}, attrs)
 
-    # Regression logic — mirrors Sentry:
-    #
-    #   * ignored issues stay ignored (the whole point of ignore is to
-    #     suppress notifications for future events).
-    #   * resolved issues auto-reopen when a new event whose timestamp
-    #     is strictly after `resolved_at` lands; a delayed / backfilled
-    #     event with an older timestamp does not count as a regression.
-    #   * unresolved issues stay unresolved.
-    #
-    # When the status transitions back to unresolved we also clear
-    # `resolved_at` so a subsequent resolve gets a fresh timestamp.
+    # Only refresh mutable metadata — leave counters alone so a worker
+    # retry that lands here after a successful `insert_event/4` does
+    # not repeat the count bump.
     on_conflict_query =
       from(existing in Issue,
+        update: [
+          set: [
+            title: ^title,
+            culprit: ^culprit,
+            level: ^String.to_atom(event.level),
+            platform: ^event.platform,
+            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
+          ]
+        ]
+      )
+
+    case Repo.insert(changeset,
+           on_conflict: on_conflict_query,
+           conflict_target: [:project_id, :fingerprint],
+           returning: true
+         ) do
+      {:ok, issue} -> {:ok, issue}
+      {:error, _} = err -> err
+    end
+  end
+
+  # Runs only after `insert_event/4` has appended the row to
+  # ClickHouse, so `event_count` and the seen-at bounds can be moved
+  # forward without risk of double-counting on retry. This also carries
+  # the regression logic Sentry documents:
+  #
+  #   * ignored issues stay ignored
+  #   * resolved issues auto-reopen when the new event is strictly
+  #     newer than `resolved_at`; a backfilled older event does not
+  #     regress the resolution
+  #   * unresolved stays unresolved
+  #
+  # When the reopen fires the same CASE clears `resolved_at` so a
+  # subsequent Resolve gets a fresh timestamp.
+  defp bump_issue_counters(%Issue{id: id}, event) do
+    now = event.timestamp || DateTime.utc_now()
+
+    update_query =
+      from(existing in Issue,
+        where: existing.id == ^id,
         update: [
           inc: [event_count: 1],
           set: [
             last_seen: fragment("GREATEST(?, ?)", existing.last_seen, ^now),
             first_seen: fragment("LEAST(?, ?)", existing.first_seen, ^now),
-            title: ^title,
-            culprit: ^culprit,
-            level: ^String.to_atom(event.level),
-            platform: ^event.platform,
             status:
               fragment(
                 """
@@ -130,16 +171,14 @@ defmodule Hive.Errors do
               ),
             updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
           ]
-        ]
+        ],
+        select: existing
       )
 
-    case Repo.insert(changeset,
-           on_conflict: on_conflict_query,
-           conflict_target: [:project_id, :fingerprint],
-           returning: true
-         ) do
-      {:ok, issue} -> {:ok, issue}
-      {:error, _} = err -> err
+    case Repo.update_all(update_query, []) do
+      {1, [issue]} -> {:ok, issue}
+      {0, _} -> {:error, :issue_not_found}
+      other -> {:error, other}
     end
   end
 

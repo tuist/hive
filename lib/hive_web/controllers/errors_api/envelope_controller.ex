@@ -83,25 +83,59 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
   defp decode_body(body, nil), do: {:ok, body}
   defp decode_body(body, ""), do: {:ok, body}
   defp decode_body(body, "identity"), do: {:ok, body}
-
-  defp decode_body(body, "gzip") do
-    {:ok, :zlib.gunzip(body)}
-  rescue
-    _ -> {:error, :invalid_encoding}
-  end
-
-  defp decode_body(body, "deflate") do
-    z = :zlib.open()
-    :zlib.inflateInit(z)
-    result = :zlib.inflate(z, body)
-    :zlib.inflateEnd(z)
-    :zlib.close(z)
-    {:ok, IO.iodata_to_binary(result)}
-  rescue
-    _ -> {:error, :invalid_encoding}
-  end
-
+  defp decode_body(body, "gzip"), do: bounded_inflate(body, 31)
+  defp decode_body(body, "deflate"), do: bounded_inflate(body, 15)
   defp decode_body(_body, _other), do: {:error, :unsupported_encoding}
+
+  # Guard against decompression bombs: a Software Development Kit key
+  # holder could submit a small gzip body that expands to gigabytes.
+  # Feed the inflate stream in chunks and stop as soon as the decoded
+  # size crosses `@max_body_bytes`; anything larger is rejected with
+  # 413 upstream, matching the raw-body cap.
+  defp bounded_inflate(body, window_bits) do
+    z = :zlib.open()
+
+    try do
+      :zlib.inflateInit(z, window_bits)
+      inflate_stream(z, body, [], 0)
+    rescue
+      _ -> {:error, :invalid_encoding}
+    after
+      _ = safe_inflate_end(z)
+      :zlib.close(z)
+    end
+  end
+
+  @inflate_chunk 65_536
+
+  defp inflate_stream(_z, _rest, _acc, size) when size > @max_body_bytes,
+    do: {:error, :body_too_large}
+
+  defp inflate_stream(_z, <<>>, acc, _size) do
+    {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary()}
+  end
+
+  defp inflate_stream(z, rest, acc, size) do
+    {chunk, tail} = take_chunk(rest)
+    output = :zlib.inflate(z, chunk)
+    output_bytes = IO.iodata_length(output)
+    inflate_stream(z, tail, [output | acc], size + output_bytes)
+  end
+
+  defp take_chunk(binary) when byte_size(binary) <= @inflate_chunk do
+    {binary, <<>>}
+  end
+
+  defp take_chunk(binary) do
+    <<head::binary-size(@inflate_chunk), tail::binary>> = binary
+    {head, tail}
+  end
+
+  defp safe_inflate_end(z) do
+    :zlib.inflateEnd(z)
+  rescue
+    _ -> :ok
+  end
 
   defp resolve_public_key(conn, body) do
     case Auth.extract(conn) do

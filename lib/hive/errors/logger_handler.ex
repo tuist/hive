@@ -102,7 +102,7 @@ defmodule Hive.Errors.LoggerHandler do
       "level" => normalize_level(level),
       "logger" => logger_name(meta),
       "server_name" => to_string(:net_adm.localhost()),
-      "environment" => to_string(Application.get_env(:hive, :env, Mix.env())),
+      "environment" => to_string(Application.get_env(:hive, :env, "production")),
       "release" => to_string(Application.spec(:hive, :vsn)),
       "message" => %{"formatted" => message},
       "sdk" => %{"name" => "hive.self", "version" => "1.0.0"},

@@ -38,6 +38,9 @@ Changing the configured domains later does not change existing roles.
 | Manage Forage intake | no | no | no | yes |
 | Manage Slack and model gateway settings | no | no | no | yes |
 | View the audit trail | no | no | no | yes |
+| View captured errors and update their status | no | no | yes | yes |
+| See a project's Sentry-compatible Data Source Name | no | no | yes | yes |
+| Rotate a project's Sentry-compatible Data Source Name | no | no | no | yes |
 
 Anonymous access also depends on
 [`HIVE_VISIBILITY`](/reference/configuration#hive_visibility). A private
