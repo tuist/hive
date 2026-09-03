@@ -241,7 +241,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={tag_pairs(@issue, @latest_payload) != []}
           title={dgettext("dashboard_errors", "Tags")}
-          icon="tag"
+          icon="alert_hexagon"
         >
           <.card_section>
             <dl data-part="tags">
@@ -256,7 +256,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={contexts(@latest_payload) != []}
           title={dgettext("dashboard_errors", "Contexts")}
-          icon="stack"
+          icon="stack_2"
         >
           <.card_section>
             <div data-part="contexts-grid">
@@ -311,7 +311,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={event_breadcrumbs(@latest_payload) != []}
           title={dgettext("dashboard_errors", "Breadcrumbs")}
-          icon="list"
+          icon="list_tree"
         >
           <.card_section>
             <ol data-part="breadcrumbs-list">
@@ -361,7 +361,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={sdk_info(@latest_payload)}
           title={dgettext("dashboard_errors", "SDK")}
-          icon="code"
+          icon="devices_code"
         >
           <.card_section>
             <% sdk = sdk_info(@latest_payload) %>
@@ -393,7 +393,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={@events != []}
           title={dgettext("dashboard_errors", "Recent events")}
-          icon="list"
+          icon="list_tree"
         >
           <.card_section>
             <.table id="error-events-table" rows={@events}>
@@ -421,7 +421,7 @@ defmodule HiveWeb.ErrorsLive.Show do
               </:col>
               <:empty_state>
                 <.table_empty_state
-                  icon="list"
+                  icon="list_tree"
                   title={dgettext("dashboard_errors", "No recent events")}
                   subtitle={dgettext("dashboard_errors", "Events for this issue will appear here.")}
                 />
@@ -433,7 +433,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         <.card
           :if={@events == [] and Errors.enabled?()}
           title={dgettext("dashboard_errors", "No recent events")}
-          icon="list"
+          icon="list_tree"
         >
           <.card_section>
             <p>
