@@ -45,12 +45,19 @@ defmodule HiveWeb.ErrorsLive.Show do
       latest = List.first(events) || %{}
       payload = latest[:payload] || %{}
 
+      occurrences_from = occurrences_from(issue)
+      occurrences_to = DateTime.utc_now()
+      occurrences = Errors.issue_occurrences(issue.id, occurrences_from, occurrences_to)
+
       {:ok,
        socket
        |> assign(:issue, issue)
        |> assign(:events, events)
        |> assign(:latest_event, List.first(events))
        |> assign(:latest_payload, payload)
+       |> assign(:occurrences, occurrences)
+       |> assign(:occurrences_from, occurrences_from)
+       |> assign(:occurrences_to, occurrences_to)
        |> assign(
          :page_title,
          dgettext("dashboard_errors", "%{title} · %{product}",
@@ -198,6 +205,33 @@ defmodule HiveWeb.ErrorsLive.Show do
             </.card_section>
           </.card>
         </div>
+
+        <.card
+          :if={@occurrences != []}
+          title={dgettext("dashboard_errors", "Occurrences")}
+          icon="chart_arcs"
+        >
+          <.card_section>
+            <div data-part="occurrences-chart">
+              <.chart
+                id={"occurrences-#{@issue.id}"}
+                type="bar"
+                series={Enum.map(@occurrences, fn {_bucket, count} -> count end)}
+                labels={Enum.map(@occurrences, fn {bucket, _} -> format_bucket_label(bucket) end)}
+                show_legend={false}
+                extra_options={occurrences_chart_options()}
+              />
+            </div>
+            <p data-part="occurrences-hint">
+              {dgettext(
+                "dashboard_errors",
+                "Events per bucket from %{from} to %{to}. Buckets scale automatically to the window.",
+                from: format_datetime(@occurrences_from),
+                to: format_datetime(@occurrences_to)
+              )}
+            </p>
+          </.card_section>
+        </.card>
 
         <.card
           :if={@latest_event && stack_frames(@latest_payload) != []}
@@ -835,6 +869,33 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp level_label(:info), do: dgettext("dashboard_errors", "Info")
   defp level_label(:debug), do: dgettext("dashboard_errors", "Debug")
   defp level_label(_), do: "-"
+
+  # Pick the window for the occurrences chart. Prefer the interval
+  # between first_seen and now (bounded to 30 days) so short-lived
+  # issues aren't dwarfed by empty older buckets.
+  defp occurrences_from(%{first_seen: %DateTime{} = first}) do
+    thirty_days_ago = DateTime.add(DateTime.utc_now(), -30, :day)
+    if DateTime.compare(first, thirty_days_ago) == :lt, do: thirty_days_ago, else: first
+  end
+
+  defp occurrences_from(_), do: DateTime.add(DateTime.utc_now(), -30, :day)
+
+  defp format_bucket_label(%DateTime{} = dt), do: Calendar.strftime(dt, "%m-%d %H:%M")
+  defp format_bucket_label(other), do: to_string(other)
+
+  defp occurrences_chart_options do
+    %{
+      grid: %{left: 30, right: 10, top: 10, bottom: 30, containLabel: true},
+      xAxis: %{
+        show: true,
+        type: "category",
+        axisLabel: %{formatter: "fn:firstAndLastDate", color: "#8B8D97", fontSize: 10}
+      },
+      yAxis: %{show: true, splitLine: %{lineStyle: %{opacity: 0.15}}},
+      tooltip: %{show: true, trigger: "axis"},
+      legend: %{show: false}
+    }
+  end
 
   defp http_method_color("GET"), do: "information"
   defp http_method_color("POST"), do: "success"

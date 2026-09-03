@@ -560,6 +560,22 @@
     font: var(--noora-font-weight-regular) var(--noora-font-code-small, monospace);
   }
 
+  & [data-part="occurrences-chart"] {
+    width: 100%;
+    height: 220px;
+  }
+
+  & [data-part="occurrences-chart"] > .noora-chart {
+    width: 100%;
+    height: 100%;
+  }
+
+  & [data-part="occurrences-hint"] {
+    margin-top: var(--noora-spacing-3);
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+  }
+
   & [data-part="request"] {
     display: flex;
     flex-direction: column;

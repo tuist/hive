@@ -553,6 +553,22 @@ defmodule Hive.Errors do
   end
 
   @doc """
+  Returns `[{bucket_datetime, count}]` for a single issue, with every
+  bucket in the window emitted (zero-filled) so downstream charts have
+  a contiguous x-axis.
+  """
+  def issue_occurrences(issue_id, %DateTime{} = from, %DateTime{} = to) do
+    if enabled?() do
+      bucket_unit = bucket_unit_for(from, to)
+      series = do_event_trends([issue_id], from, to) |> Map.get(issue_id, [])
+      buckets = time_buckets(from, to, bucket_unit)
+      Enum.zip(buckets, series)
+    else
+      []
+    end
+  end
+
+  @doc """
   Returns per-hour event counts for many issues in a single query.
   Result: `%{issue_id => [count_per_bucket]}` ordered oldest → newest.
   Used to render the dashboard's Trend sparkline column without a
