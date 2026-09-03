@@ -156,6 +156,8 @@ postgres:
 
 clickhouse:
   enabled: true
+  nodeSelector:
+    node.cluster.x-k8s.io/pool: general
   persistence:
     size: 50Gi
     storageClass: hcloud-volumes
