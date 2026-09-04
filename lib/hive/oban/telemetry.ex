@@ -57,21 +57,32 @@ defmodule Hive.Oban.Telemetry do
         %{job: %Oban.Job{} = job} = metadata,
         _config
       ) do
-    Logger.error(%{
-      event: "background_job_failed",
-      job_id: job.id,
-      worker: job.worker,
-      queue: job.queue,
-      attempt: job.attempt,
-      max_attempts: job.max_attempts,
-      state: metadata.state,
-      error_kind: metadata.kind,
-      error_type: error_type(metadata.reason),
-      error_message: error_message(metadata.reason),
-      duration_ms: to_milliseconds(measurements.duration),
-      queue_time_ms: to_milliseconds(measurements.queue_time)
-    })
+    Logger.error(
+      %{
+        event: "background_job_failed",
+        job_id: job.id,
+        worker: job.worker,
+        queue: job.queue,
+        attempt: job.attempt,
+        max_attempts: job.max_attempts,
+        state: metadata.state,
+        error_kind: metadata.kind,
+        error_type: error_type(metadata.reason),
+        error_message: error_message(metadata.reason),
+        duration_ms: to_milliseconds(measurements.duration),
+        queue_time_ms: to_milliseconds(measurements.queue_time)
+      },
+      crash_metadata(metadata)
+    )
   end
+
+  defp crash_metadata(%{reason: reason, stacktrace: [_ | _] = stacktrace}) do
+    [crash_reason: {reason, stacktrace}]
+  end
+
+  # Oban has no application frames for a worker that returns an error tuple.
+  # Leaving crash metadata unset keeps those reports on the explicit fallback path.
+  defp crash_metadata(_metadata), do: []
 
   defp job_tags(%{job: %Oban.Job{} = job} = metadata) do
     %{

@@ -5,6 +5,10 @@ defmodule Hive.Oban.TelemetryTest do
 
   alias Hive.Oban.Telemetry
 
+  defmodule MetadataFormatter do
+    def format(%{meta: metadata}, _config), do: inspect(metadata)
+  end
+
   test "defines duration, queue time, and count metrics for job outcomes" do
     metrics = Telemetry.metrics()
 
@@ -85,6 +89,63 @@ defmodule Hive.Oban.TelemetryTest do
     assert log =~ "error_type: \"Oban.PerformError\""
     assert log =~ "error_message:"
     assert log =~ ":domain_evolution_failed"
+  end
+
+  test "preserves an exception stack trace as logger crash metadata" do
+    job = %Oban.Job{id: 1, worker: "Hive.Worker", queue: "default", attempt: 1, max_attempts: 3}
+
+    stacktrace = [
+      {Hive.Worker, :perform, 1, [file: ~c"lib/hive/worker.ex", line: 42]}
+    ]
+
+    log =
+      capture_log(
+        [formatter: {MetadataFormatter, %{}}],
+        fn ->
+          Telemetry.handle_event(
+            [:oban, :job, :exception],
+            %{duration: 0, queue_time: 0},
+            %{
+              job: job,
+              state: :failure,
+              kind: :error,
+              reason: %RuntimeError{message: "boom"},
+              stacktrace: stacktrace
+            },
+            nil
+          )
+        end
+      )
+
+    assert log =~ "crash_reason:"
+    assert log =~ "{Hive.Worker, :perform, 1"
+    assert log =~ "lib/hive/worker.ex"
+    assert log =~ "line: 42"
+  end
+
+  test "does not invent crash metadata for a manual error return" do
+    job = %Oban.Job{id: 1, worker: "Hive.Worker", queue: "default", attempt: 1, max_attempts: 3}
+
+    log =
+      capture_log(
+        [formatter: {MetadataFormatter, %{}}],
+        fn ->
+          Telemetry.handle_event(
+            [:oban, :job, :exception],
+            %{duration: 0, queue_time: 0},
+            %{
+              job: job,
+              state: :failure,
+              kind: :error,
+              reason: %Oban.PerformError{message: "Hive.Worker failed", reason: :failed},
+              stacktrace: []
+            },
+            nil
+          )
+        end
+      )
+
+    refute log =~ "crash_reason:"
   end
 
   test "truncates absurdly long reason messages" do

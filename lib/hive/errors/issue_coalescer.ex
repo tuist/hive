@@ -114,10 +114,11 @@ defmodule Hive.Errors.IssueCoalescer do
     do_flush(accumulator)
   end
 
-  # An accumulator entry holds everything the upsert row needs. The
-  # most-recently-observed values win for the mutable metadata
-  # (title/culprit/level/platform); count is additive; first/last-seen
-  # are min/max of every event's timestamp.
+  # An accumulator entry holds everything the upsert row needs plus
+  # the last-observed environment (used by `Hive.Alerts` rule
+  # matching). The most-recently-observed values win for the mutable
+  # metadata (title/culprit/level/platform/environment); count is
+  # additive; first/last-seen are min/max of every event's timestamp.
   defp merge_observation(nil, project, fingerprint, event) do
     ts = event_timestamp(event)
 
@@ -131,7 +132,8 @@ defmodule Hive.Errors.IssueCoalescer do
       platform: event.platform,
       first_seen: ts,
       last_seen: ts,
-      count: 1
+      count: 1,
+      environment: event.environment
     }
   end
 
@@ -146,7 +148,8 @@ defmodule Hive.Errors.IssueCoalescer do
         platform: event.platform,
         first_seen: min_dt(entry.first_seen, ts),
         last_seen: max_dt(entry.last_seen, ts),
-        count: entry.count + 1
+        count: entry.count + 1,
+        environment: event.environment || entry.environment
     }
   end
 
@@ -174,42 +177,32 @@ defmodule Hive.Errors.IssueCoalescer do
 
   defp do_flush(accumulator) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
+    entries = Map.values(accumulator)
+    ids = Enum.map(entries, & &1.id)
 
-    rows =
-      accumulator
-      |> Map.values()
-      |> Enum.map(fn entry ->
-        %{
-          id: entry.id,
-          project_id: entry.project_id,
-          fingerprint: entry.fingerprint,
-          title: entry.title,
-          culprit: entry.culprit,
-          level: entry.level,
-          platform: entry.platform,
-          status: :unresolved,
-          first_seen: entry.first_seen,
-          last_seen: entry.last_seen,
-          event_count: entry.count,
-          resolved_at: nil,
-          inserted_at: now,
-          updated_at: now
-        }
-      end)
+    # Snapshot the pre-flush state so `Hive.Alerts.evaluate_error_issue/3`
+    # can tell a regression (resolved → unresolved) apart from a plain
+    # repeat. New fingerprints show up here as empty structs so the
+    # alert evaluator still gets a `before` argument.
+    before_by_id = snapshot_before(ids)
+
+    rows = Enum.map(entries, &row_for_upsert(&1, now))
 
     try do
-      {inserted, _} =
+      {_inserted, after_issues} =
         Repo.insert_all(
           Issue,
           rows,
           on_conflict: on_conflict_query(),
-          conflict_target: [:project_id, :fingerprint]
+          conflict_target: [:project_id, :fingerprint],
+          returning: true
         )
 
-      inserted
+      evaluate_alerts_for(after_issues, entries, before_by_id)
+      length(after_issues)
     rescue
       error ->
-        total_events = accumulator |> Map.values() |> Enum.map(& &1.count) |> Enum.sum()
+        total_events = Enum.reduce(entries, 0, &(&2 + &1.count))
 
         Logger.error(
           "issue_coalescer: flush failed for #{map_size(accumulator)} fingerprint(s) " <>
@@ -223,6 +216,54 @@ defmodule Hive.Errors.IssueCoalescer do
 
         0
     end
+  end
+
+  defp snapshot_before(ids) do
+    Issue
+    |> where([i], i.id in ^ids)
+    |> Repo.all()
+    |> Map.new(&{&1.id, &1})
+  end
+
+  defp row_for_upsert(entry, now) do
+    %{
+      id: entry.id,
+      project_id: entry.project_id,
+      fingerprint: entry.fingerprint,
+      title: entry.title,
+      culprit: entry.culprit,
+      level: entry.level,
+      platform: entry.platform,
+      status: :unresolved,
+      first_seen: entry.first_seen,
+      last_seen: entry.last_seen,
+      event_count: entry.count,
+      resolved_at: nil,
+      inserted_at: now,
+      updated_at: now
+    }
+  end
+
+  # Fires `Hive.Alerts.evaluate_error_issue/3` once per touched
+  # fingerprint. Failures inside the alerts pipeline (e.g. Oban
+  # unavailable) must not fail the coalescer flush — the event is
+  # already recorded — so each call is wrapped in a rescue that
+  # logs and continues.
+  defp evaluate_alerts_for(after_issues, entries, before_by_id) do
+    entry_by_id = Map.new(entries, &{&1.id, &1})
+
+    Enum.each(after_issues, fn %Issue{id: id} = issue ->
+      entry = Map.fetch!(entry_by_id, id)
+      before = Map.get(before_by_id, id, %{status: :unresolved, resolved_at: nil})
+      context = %{environment: entry.environment}
+
+      try do
+        Hive.Alerts.evaluate_error_issue(issue, before, context)
+      rescue
+        err ->
+          Logger.warning("issue_coalescer: alert evaluation failed: #{inspect(err)}")
+      end
+    end)
   end
 
   # `insert_all` with ON CONFLICT DO UPDATE. The counter is added to
