@@ -39,8 +39,6 @@ defmodule HiveWeb.ErrorsLive.Index do
     }
   end
 
-  def slack_unfurl(_uri, _params), do: :skip
-
   def mount(_params, _session, socket) do
     user = socket.assigns[:current_user]
 
