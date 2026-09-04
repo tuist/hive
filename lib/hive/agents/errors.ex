@@ -183,6 +183,10 @@ defmodule Hive.Agents.Errors do
      sanitize_reason(fallback_reason, fallback)}
   end
 
+  def sanitize_reason({:llm_request_failed, _status, _message} = reason, _fallback), do: reason
+
+  def sanitize_reason({:llm_response_failed, _status, _message} = reason, _fallback), do: reason
+
   def sanitize_reason({tag, reason}, fallback) when is_atom(tag) do
     {tag, sanitize_reason(reason, fallback)}
   end
