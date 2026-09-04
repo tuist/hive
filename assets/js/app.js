@@ -43,3 +43,28 @@ window.addEventListener("phx:copy-to-clipboard", (event) => {
     console.warn("Failed to copy text to clipboard", error)
   })
 })
+
+window.nooraChartFormatters = {
+  ...(window.nooraChartFormatters || {}),
+  firstAndLastDate: (el) => {
+    let total = 0
+    try {
+      const raw = el.querySelector('[data-part="data"]')?.textContent
+      const parsed = raw ? JSON.parse(raw) : null
+      total = parsed?.xAxis?.data?.length || 0
+    } catch (_) {
+      total = 0
+    }
+    return (value, index) => {
+      const first = index === 0
+      const last = total > 0 && index === total - 1
+      if (!first && !last) return ""
+      const date = new Date(value)
+      if (isNaN(date.getTime())) return String(value)
+      return date.toLocaleDateString(navigator.language, {
+        day: "numeric",
+        month: "short",
+      })
+    }
+  },
+}

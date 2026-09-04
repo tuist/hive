@@ -216,7 +216,12 @@ defmodule HiveWeb.ErrorsLive.Show do
               <.chart
                 id={"occurrences-#{@issue.id}"}
                 type="bar"
-                series={Enum.map(@occurrences, fn {_bucket, count} -> count end)}
+                series={[
+                  %{
+                    name: dgettext("dashboard_errors", "Events"),
+                    values: Enum.map(@occurrences, fn {_bucket, count} -> count end)
+                  }
+                ]}
                 labels={Enum.map(@occurrences, fn {bucket, _} -> format_bucket_label(bucket) end)}
                 show_legend={false}
                 extra_options={occurrences_chart_options()}
@@ -879,7 +884,7 @@ defmodule HiveWeb.ErrorsLive.Show do
 
   defp occurrences_from(_), do: DateTime.add(DateTime.utc_now(), -30, :day)
 
-  defp format_bucket_label(%DateTime{} = dt), do: Calendar.strftime(dt, "%m-%d %H:%M")
+  defp format_bucket_label(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M")
   defp format_bucket_label(other), do: to_string(other)
 
   defp occurrences_chart_options do
@@ -891,7 +896,7 @@ defmodule HiveWeb.ErrorsLive.Show do
         axisLabel: %{formatter: "fn:firstAndLastDate", color: "#8B8D97", fontSize: 10}
       },
       yAxis: %{show: true, splitLine: %{lineStyle: %{opacity: 0.15}}},
-      tooltip: %{show: true, trigger: "axis"},
+      tooltip: %{show: true, trigger: "axis", dateFormat: "minute"},
       legend: %{show: false}
     }
   end
