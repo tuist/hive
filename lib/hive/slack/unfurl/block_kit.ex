@@ -32,20 +32,23 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     section_label = attrs |> Map.get(:section_label) |> present_string()
     type_label = attrs |> Map.get(:type_label) |> present_string()
     highlights = attrs |> Map.get(:highlights, []) |> normalize_highlights()
+    details = attrs |> Map.get(:details, []) |> normalize_details()
     extra_blocks = attrs |> Map.get(:extra_blocks, []) |> normalize_blocks()
     action_label = attrs |> Map.get(:action_label, "Open in Hive") |> to_string()
+    action_style = attrs |> Map.get(:action_style) |> normalize_action_style()
 
     %{
       "blocks" =>
         ([
            header_block(title),
            description_block(description, description_format),
+           details_block(details),
            fields_block(highlights)
          ] ++
            extra_blocks ++
            [
              context_block([type_label || section_label, "Hive"]),
-             actions_block(uri, action_label)
+             actions_block(uri, action_label, action_style)
            ])
         |> Enum.reject(&is_nil/1)
     }
@@ -98,6 +101,25 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     }
   end
 
+  defp details_block([]), do: nil
+
+  defp details_block(details) do
+    %{
+      "type" => "section",
+      "fields" =>
+        details
+        |> Enum.take(10)
+        |> Enum.map(fn {label, value} ->
+          %{
+            "type" => "mrkdwn",
+            "text" =>
+              "*#{mrkdwn(label)}*\n#{mrkdwn(value)}"
+              |> truncate(@max_field_length)
+          }
+        end)
+    }
+  end
+
   defp context_block(parts) do
     text =
       parts
@@ -121,21 +143,23 @@ defmodule Hive.Slack.Unfurl.BlockKit do
     end
   end
 
-  defp actions_block(uri, label) do
+  defp actions_block(uri, label, style) do
+    button =
+      %{
+        "type" => "button",
+        "text" => %{
+          "type" => "plain_text",
+          "text" => label |> plain_text() |> truncate(@max_button_length),
+          "emoji" => true
+        },
+        "url" => URI.to_string(uri),
+        "action_id" => "open_hive_url"
+      }
+      |> maybe_put_style(style)
+
     %{
       "type" => "actions",
-      "elements" => [
-        %{
-          "type" => "button",
-          "text" => %{
-            "type" => "plain_text",
-            "text" => label |> plain_text() |> truncate(@max_button_length),
-            "emoji" => true
-          },
-          "url" => URI.to_string(uri),
-          "action_id" => "open_hive_url"
-        }
-      ]
+      "elements" => [button]
     }
   end
 
@@ -146,6 +170,29 @@ defmodule Hive.Slack.Unfurl.BlockKit do
   end
 
   defp normalize_highlights(_highlights), do: []
+
+  defp normalize_details(details) when is_list(details) do
+    Enum.flat_map(details, fn
+      {label, value} ->
+        case {present_string(label), present_string(value)} do
+          {nil, _value} -> []
+          {_label, nil} -> []
+          pair -> [pair]
+        end
+
+      _detail ->
+        []
+    end)
+  end
+
+  defp normalize_details(_details), do: []
+
+  defp normalize_action_style(style) when style in [:primary, "primary"], do: "primary"
+  defp normalize_action_style(style) when style in [:danger, "danger"], do: "danger"
+  defp normalize_action_style(_style), do: nil
+
+  defp maybe_put_style(button, nil), do: button
+  defp maybe_put_style(button, style), do: Map.put(button, "style", style)
 
   defp normalize_blocks(blocks) when is_list(blocks), do: Enum.reject(blocks, &is_nil/1)
   defp normalize_blocks(_blocks), do: []

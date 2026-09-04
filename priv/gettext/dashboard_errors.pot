@@ -23,47 +23,47 @@ msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:402
 #: lib/hive_web/live/errors_live/index.ex:627
-#: lib/hive_web/live/errors_live/show.ex:852
+#: lib/hive_web/live/errors_live/show.ex:872
 #, elixir-autogen, elixir-format
 msgid "%{n}d ago"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:401
 #: lib/hive_web/live/errors_live/index.ex:626
-#: lib/hive_web/live/errors_live/show.ex:851
+#: lib/hive_web/live/errors_live/show.ex:871
 #, elixir-autogen, elixir-format
 msgid "%{n}h ago"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:400
 #: lib/hive_web/live/errors_live/index.ex:625
-#: lib/hive_web/live/errors_live/show.ex:850
+#: lib/hive_web/live/errors_live/show.ex:870
 #, elixir-autogen, elixir-format
 msgid "%{n}m ago"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:403
 #: lib/hive_web/live/errors_live/index.ex:628
-#: lib/hive_web/live/errors_live/show.ex:853
+#: lib/hive_web/live/errors_live/show.ex:873
 #, elixir-autogen, elixir-format
 msgid "%{n}mo ago"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:399
 #: lib/hive_web/live/errors_live/index.ex:624
-#: lib/hive_web/live/errors_live/show.ex:849
+#: lib/hive_web/live/errors_live/show.ex:869
 #, elixir-autogen, elixir-format
 msgid "%{n}s ago"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:404
 #: lib/hive_web/live/errors_live/index.ex:629
-#: lib/hive_web/live/errors_live/show.ex:854
+#: lib/hive_web/live/errors_live/show.ex:874
 #, elixir-autogen, elixir-format
 msgid "%{n}y ago"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:73
+#: lib/hive_web/live/errors_live/show.ex:93
 #, elixir-autogen, elixir-format
 msgid "%{title} · %{product}"
 msgstr ""
@@ -74,7 +74,7 @@ msgid "%{total} total across all time"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:176
-#: lib/hive_web/live/errors_live/show.ex:444
+#: lib/hive_web/live/errors_live/show.ex:464
 #, elixir-autogen, elixir-format
 msgid "Additional data"
 msgstr ""
@@ -95,13 +95,13 @@ msgid "Apply"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:94
-#: lib/hive_web/live/errors_live/show.ex:385
+#: lib/hive_web/live/errors_live/show.ex:405
 #, elixir-autogen, elixir-format
 msgid "Body"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:130
-#: lib/hive_web/live/errors_live/show.ex:407
+#: lib/hive_web/live/errors_live/show.ex:427
 #, elixir-autogen, elixir-format
 msgid "Breadcrumbs"
 msgstr ""
@@ -112,12 +112,12 @@ msgid "Cancel"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:40
-#: lib/hive_web/live/errors_live/show.ex:338
+#: lib/hive_web/live/errors_live/show.ex:358
 #, elixir-autogen, elixir-format
 msgid "Contexts"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:114
+#: lib/hive_web/live/errors_live/show.ex:134
 #, elixir-autogen, elixir-format
 msgid "Could not update issue status."
 msgstr ""
@@ -133,32 +133,32 @@ msgid "Custom"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:649
-#: lib/hive_web/live/errors_live/show.ex:886
+#: lib/hive_web/live/errors_live/show.ex:923
 #, elixir-autogen, elixir-format
 msgid "Debug"
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:47
 #: lib/hive_web/live/errors_live/index.ex:577
-#: lib/hive_web/live/errors_live/show.ex:541
+#: lib/hive_web/live/errors_live/show.ex:561
 #, elixir-autogen, elixir-format
 msgid "Environment"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:646
-#: lib/hive_web/live/errors_live/show.ex:883
+#: lib/hive_web/live/errors_live/show.ex:920
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:208
-#: lib/hive_web/live/errors_live/event.ex:46
-#: lib/hive_web/live/errors_live/event.ex:90
-#: lib/hive_web/live/errors_live/event.ex:147
+#: lib/hive_web/live/errors_live/event.ex:86
+#: lib/hive_web/live/errors_live/event.ex:143
 #: lib/hive_web/live/errors_live/index.ex:31
 #: lib/hive_web/live/errors_live/index.ex:38
 #: lib/hive_web/live/errors_live/index.ex:189
 #: lib/hive_web/live/errors_live/show.ex:28
-#: lib/hive_web/live/errors_live/show.ex:141
+#: lib/hive_web/live/errors_live/show.ex:161
 #, elixir-autogen, elixir-format
 msgid "Errors"
 msgstr ""
@@ -168,49 +168,49 @@ msgstr ""
 msgid "Errors · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:79
+#: lib/hive_web/live/errors_live/event.ex:75
 #, elixir-autogen, elixir-format
 msgid "Event %{event_id} · %{title} · %{product}"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:59
-#: lib/hive_web/live/errors_live/event.ex:99
-#: lib/hive_web/live/errors_live/event.ex:154
-#: lib/hive_web/live/errors_live/event.ex:242
+#: lib/hive_web/live/errors_live/event.ex:95
+#: lib/hive_web/live/errors_live/event.ex:150
+#: lib/hive_web/live/errors_live/event.ex:238
 #, elixir-autogen, elixir-format
 msgid "Event %{short}"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:114
+#: lib/hive_web/live/errors_live/event.ex:110
 #, elixir-autogen, elixir-format
 msgid "Event not found."
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:324
-#: lib/hive_web/live/errors_live/show.ex:195
-#: lib/hive_web/live/errors_live/show.ex:233
+#: lib/hive_web/live/errors_live/show.ex:56
+#: lib/hive_web/live/errors_live/show.ex:215
+#: lib/hive_web/live/errors_live/show.ex:253
 #, elixir-autogen, elixir-format
 msgid "Events"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:551
+#: lib/hive_web/live/errors_live/show.ex:571
 #, elixir-autogen, elixir-format
 msgid "Events for this issue will appear here."
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:243
+#: lib/hive_web/live/errors_live/show.ex:263
 #, elixir-autogen, elixir-format
 msgid "Events per bucket from %{from} to %{to}. Buckets scale automatically to the window."
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:189
-#: lib/hive_web/live/errors_live/show.ex:288
+#: lib/hive_web/live/errors_live/event.ex:185
+#: lib/hive_web/live/errors_live/show.ex:308
 #, elixir-autogen, elixir-format
 msgid "External frame"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:645
-#: lib/hive_web/live/errors_live/show.ex:882
+#: lib/hive_web/live/errors_live/show.ex:919
 #, elixir-autogen, elixir-format
 msgid "Fatal"
 msgstr ""
@@ -220,42 +220,44 @@ msgstr ""
 msgid "Filter"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:205
+#: lib/hive_web/live/errors_live/show.ex:58
+#: lib/hive_web/live/errors_live/show.ex:225
 #, elixir-autogen, elixir-format
 msgid "First seen"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:106
-#: lib/hive_web/live/errors_live/show.ex:393
+#: lib/hive_web/live/errors_live/show.ex:413
 #, elixir-autogen, elixir-format
 msgid "Headers"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:164
+#: lib/hive_web/live/errors_live/show.ex:184
 #, elixir-autogen, elixir-format
 msgid "Ignore"
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:263
 #: lib/hive_web/live/errors_live/index.ex:637
-#: lib/hive_web/live/errors_live/show.ex:874
+#: lib/hive_web/live/errors_live/show.ex:894
 #, elixir-autogen, elixir-format
 msgid "Ignored"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:188
-#: lib/hive_web/live/errors_live/show.ex:287
+#: lib/hive_web/live/errors_live/event.ex:184
+#: lib/hive_web/live/errors_live/show.ex:307
 #, elixir-autogen, elixir-format
 msgid "In-app frame"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:648
-#: lib/hive_web/live/errors_live/show.ex:885
+#: lib/hive_web/live/errors_live/show.ex:922
 #, elixir-autogen, elixir-format
 msgid "Info"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:237
-#: lib/hive_web/live/errors_live/show.ex:489
+#: lib/hive_web/live/errors_live/show.ex:509
 #, elixir-autogen, elixir-format
 msgid "Integrations"
 msgstr ""
@@ -265,13 +267,13 @@ msgstr ""
 msgid "Issue"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:104
+#: lib/hive_web/live/errors_live/show.ex:124
 #, elixir-autogen, elixir-format
 msgid "Issue marked as %{status}."
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:120
-#: lib/hive_web/live/errors_live/show.ex:86
+#: lib/hive_web/live/errors_live/event.ex:116
+#: lib/hive_web/live/errors_live/show.ex:106
 #, elixir-autogen, elixir-format
 msgid "Issue not found."
 msgstr ""
@@ -307,13 +309,16 @@ msgid "Last 7 days"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:295
-#: lib/hive_web/live/errors_live/show.ex:211
+#: lib/hive_web/live/errors_live/show.ex:59
+#: lib/hive_web/live/errors_live/show.ex:231
 #, elixir-autogen, elixir-format
 msgid "Last seen"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:185
-#: lib/hive_web/live/errors_live/show.ex:534
+#: lib/hive_web/live/errors_live/event.ex:46
+#: lib/hive_web/live/errors_live/show.ex:55
+#: lib/hive_web/live/errors_live/show.ex:205
+#: lib/hive_web/live/errors_live/show.ex:554
 #, elixir-autogen, elixir-format
 msgid "Level"
 msgstr ""
@@ -328,20 +333,20 @@ msgstr ""
 msgid "Mark as unresolved"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:208
-#: lib/hive_web/live/errors_live/show.ex:307
+#: lib/hive_web/live/errors_live/event.ex:204
+#: lib/hive_web/live/errors_live/show.ex:327
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:197
-#: lib/hive_web/live/errors_live/show.ex:459
+#: lib/hive_web/live/errors_live/show.ex:479
 #, elixir-autogen, elixir-format
 msgid "Modules"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:226
-#: lib/hive_web/live/errors_live/show.ex:481
+#: lib/hive_web/live/errors_live/show.ex:501
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
@@ -361,29 +366,31 @@ msgstr ""
 msgid "No location"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:550
-#: lib/hive_web/live/errors_live/show.ex:560
+#: lib/hive_web/live/errors_live/show.ex:570
+#: lib/hive_web/live/errors_live/show.ex:580
 #, elixir-autogen, elixir-format
 msgid "No recent events"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:223
+#: lib/hive_web/live/errors_live/show.ex:243
 #, elixir-autogen, elixir-format
 msgid "Occurrences"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:171
+#: lib/hive_web/live/errors_live/show.ex:191
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:252
-#: lib/hive_web/live/errors_live/show.ex:501
+#: lib/hive_web/live/errors_live/show.ex:521
 #, elixir-autogen, elixir-format
 msgid "Packages"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:199
+#: lib/hive_web/live/errors_live/event.ex:50
+#: lib/hive_web/live/errors_live/show.ex:57
+#: lib/hive_web/live/errors_live/show.ex:219
 #, elixir-autogen, elixir-format
 msgid "Platform"
 msgstr ""
@@ -398,59 +405,63 @@ msgstr ""
 msgid "Private"
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:43
 #: lib/hive_web/live/errors_live/index.ex:567
+#: lib/hive_web/live/errors_live/show.ex:53
 #, elixir-autogen, elixir-format
 msgid "Project"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:90
-#: lib/hive_web/live/errors_live/show.ex:381
+#: lib/hive_web/live/errors_live/show.ex:401
 #, elixir-autogen, elixir-format
 msgid "Query string"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:518
+#: lib/hive_web/live/errors_live/show.ex:538
 #, elixir-autogen, elixir-format
 msgid "Recent events"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:544
+#: lib/hive_web/live/errors_live/event.ex:48
+#: lib/hive_web/live/errors_live/show.ex:564
 #, elixir-autogen, elixir-format
 msgid "Release"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:167
-#: lib/hive_web/live/errors_live/show.ex:268
+#: lib/hive_web/live/errors_live/event.ex:163
+#: lib/hive_web/live/errors_live/show.ex:288
 #, elixir-autogen, elixir-format
 msgid "Release %{release}"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:350
-#: lib/hive_web/live/errors_live/show.ex:158
+#: lib/hive_web/live/errors_live/show.ex:178
 #, elixir-autogen, elixir-format
 msgid "Reopen"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:73
-#: lib/hive_web/live/errors_live/show.ex:363
+#: lib/hive_web/live/errors_live/show.ex:383
 #, elixir-autogen, elixir-format
 msgid "Request"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:339
-#: lib/hive_web/live/errors_live/show.ex:152
+#: lib/hive_web/live/errors_live/show.ex:172
 #, elixir-autogen, elixir-format
 msgid "Resolve"
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:262
 #: lib/hive_web/live/errors_live/index.ex:636
-#: lib/hive_web/live/errors_live/show.ex:873
+#: lib/hive_web/live/errors_live/show.ex:893
 #, elixir-autogen, elixir-format
 msgid "Resolved"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:220
-#: lib/hive_web/live/errors_live/show.ex:474
+#: lib/hive_web/live/errors_live/show.ex:494
 #, elixir-autogen, elixir-format
 msgid "SDK"
 msgstr ""
@@ -470,35 +481,37 @@ msgstr ""
 msgid "Sentry-compatible"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:175
-#: lib/hive_web/live/errors_live/show.ex:255
+#: lib/hive_web/live/errors_live/event.ex:171
+#: lib/hive_web/live/errors_live/show.ex:275
 #, elixir-autogen, elixir-format
 msgid "Stack trace"
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:45
 #: lib/hive_web/live/errors_live/index.ex:557
-#: lib/hive_web/live/errors_live/show.ex:175
+#: lib/hive_web/live/errors_live/show.ex:54
+#: lib/hive_web/live/errors_live/show.ex:195
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:19
-#: lib/hive_web/live/errors_live/show.ex:323
+#: lib/hive_web/live/errors_live/show.ex:343
 #, elixir-autogen, elixir-format
 msgid "Tags"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:313
+#: lib/hive_web/live/errors_live/show.ex:333
 #, elixir-autogen, elixir-format
 msgid "This event has no stack trace. The captured log did not carry crash metadata; if you're reporting it from a Sentry-compatible client, include an exception in the event payload to enable full stack-trace rendering."
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:565
+#: lib/hive_web/live/errors_live/show.ex:585
 #, elixir-autogen, elixir-format
 msgid "This issue has no events in the visible window. It may have aged out of the ClickHouse retention."
 msgstr ""
 
-#: lib/hive_web/live/errors_live/show.ex:523
+#: lib/hive_web/live/errors_live/show.ex:543
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr ""
@@ -514,27 +527,28 @@ msgstr ""
 msgid "Unhandled exceptions captured from your applications and from Hive itself."
 msgstr ""
 
+#: lib/hive_web/live/errors_live/event.ex:261
 #: lib/hive_web/live/errors_live/index.ex:635
-#: lib/hive_web/live/errors_live/show.ex:872
+#: lib/hive_web/live/errors_live/show.ex:892
 #, elixir-autogen, elixir-format
 msgid "Unresolved"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/event_panels.ex:230
-#: lib/hive_web/live/errors_live/show.ex:485
+#: lib/hive_web/live/errors_live/show.ex:505
 #, elixir-autogen, elixir-format
 msgid "Version"
 msgstr ""
 
 #: lib/hive_web/live/errors_live/index.ex:647
-#: lib/hive_web/live/errors_live/show.ex:884
+#: lib/hive_web/live/errors_live/show.ex:921
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:108
+#: lib/hive_web/live/errors_live/event.ex:104
 #: lib/hive_web/live/errors_live/index.ex:490
-#: lib/hive_web/live/errors_live/show.ex:579
+#: lib/hive_web/live/errors_live/show.ex:599
 #, elixir-autogen, elixir-format
 msgid "You do not have access to errors."
 msgstr ""
@@ -549,7 +563,32 @@ msgstr ""
 msgid "just now"
 msgstr ""
 
-#: lib/hive_web/live/errors_live/event.ex:39
+#: lib/hive_web/live/errors_live/event.ex:49
 #, elixir-autogen, elixir-format
-msgid "Event %{short} on %{issue}. Captured %{timestamp}."
+msgid "Captured"
+msgstr ""
+
+#: lib/hive_web/live/errors_live/event.ex:53
+#, elixir-autogen, elixir-format
+msgid "Error event"
+msgstr ""
+
+#: lib/hive_web/live/errors_live/show.ex:62
+#, elixir-autogen, elixir-format
+msgid "Error issue"
+msgstr ""
+
+#: lib/hive_web/live/errors_live/event.ex:44
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr ""
+
+#: lib/hive_web/live/errors_live/show.ex:63
+#, elixir-autogen, elixir-format
+msgid "Open error"
+msgstr ""
+
+#: lib/hive_web/live/errors_live/event.ex:54
+#, elixir-autogen, elixir-format
+msgid "Open event"
 msgstr ""

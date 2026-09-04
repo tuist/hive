@@ -67,4 +67,37 @@ defmodule Hive.Slack.Unfurl.BlockKitTest do
     assert %{"type" => "actions", "elements" => [%{"text" => %{"text" => "Open spec"}}]} =
              List.last(payload["blocks"])
   end
+
+  test "builds labeled details and a styled action" do
+    uri = URI.parse("https://hive.tuist.dev/errors/1")
+
+    assert {:ok, payload} =
+             BlockKit.generic(uri, %{
+               title: "Error",
+               details: [
+                 {"Status", "Unresolved"},
+                 {"Events", 12},
+                 {"Unsafe <label>", "value & more"},
+                 {"Empty", nil}
+               ],
+               action_label: "Open error",
+               action_style: :primary
+             })
+
+    assert %{
+             "type" => "section",
+             "fields" => [
+               %{"text" => "*Status*\nUnresolved"},
+               %{"text" => "*Events*\n12"},
+               %{"text" => "*Unsafe &lt;label&gt;*\nvalue &amp; more"}
+             ]
+           } = Enum.at(payload["blocks"], 1)
+
+    assert %{
+             "type" => "actions",
+             "elements" => [
+               %{"style" => "primary", "text" => %{"text" => "Open error"}}
+             ]
+           } = List.last(payload["blocks"])
+  end
 end
