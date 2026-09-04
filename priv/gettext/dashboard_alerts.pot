@@ -11,279 +11,257 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:812
+#: lib/hive_web/live/alerts_live/index.ex:916
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:195
+#: lib/hive_web/live/alerts_live/index.ex:203
 #, elixir-autogen, elixir-format
 msgid "Alert rule %{name} created."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:157
+#: lib/hive_web/live/alerts_live/index.ex:165
+#: lib/hive_web/live/alerts_live/index.ex:223
 #, elixir-autogen, elixir-format
 msgid "Alert rule %{name} updated."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:177
+#: lib/hive_web/live/alerts_live/index.ex:188
 #, elixir-autogen, elixir-format
 msgid "Alert rule deleted."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:31
-#, elixir-autogen, elixir-format
-msgid "Alert rules for %{project}: when to notify, and where."
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:36
-#, elixir-autogen, elixir-format
-msgid "Alerts"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:69
-#, elixir-autogen, elixir-format
-msgid "Alerts require an org account."
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:40
-#: lib/hive_web/live/alerts_live/index.ex:361
-#, elixir-autogen, elixir-format
-msgid "Alerts · %{project}"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:59
-#, elixir-autogen, elixir-format
-msgid "Alerts · %{project} · %{product}"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:747
+#: lib/hive_web/live/alerts_live/index.ex:849
 #, elixir-autogen, elixir-format
 msgid "Any level"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:742
+#: lib/hive_web/live/alerts_live/index.ex:844
 #, elixir-autogen, elixir-format
 msgid "Attention"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:713
+#: lib/hive_web/live/alerts_live/index.ex:780
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:761
+#: lib/hive_web/live/alerts_live/index.ex:865
 #, elixir-autogen, elixir-format
 msgid "Choose workspace"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:418
+#: lib/hive_web/live/alerts_live/index.ex:458
 #, elixir-autogen, elixir-format
 msgid "Cooldown"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:625
+#: lib/hive_web/live/alerts_live/index.ex:683
 #, elixir-autogen, elixir-format
 msgid "Cooldown (minutes)"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:466
+#: lib/hive_web/live/alerts_live/index.ex:520
 #, elixir-autogen, elixir-format
 msgid "Create a rule to get notified in Slack or via webhook when errors need attention."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:721
+#: lib/hive_web/live/alerts_live/index.ex:817
 #, elixir-autogen, elixir-format
 msgid "Create alert rule"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:449
+#: lib/hive_web/live/alerts_live/index.ex:506
 #, elixir-autogen, elixir-format
 msgid "Delete alert rule %{name}?"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:442
-#: lib/hive_web/live/alerts_live/index.ex:453
-#: lib/hive_web/live/alerts_live/index.ex:454
-#, elixir-autogen, elixir-format
-msgid "Delete rule"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:415
-#: lib/hive_web/live/alerts_live/index.ex:632
+#: lib/hive_web/live/alerts_live/index.ex:455
+#: lib/hive_web/live/alerts_live/index.ex:691
 #, elixir-autogen, elixir-format
 msgid "Destination"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:430
+#: lib/hive_web/live/alerts_live/index.ex:485
 #, elixir-autogen, elixir-format
 msgid "Disable"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:431
+#: lib/hive_web/live/alerts_live/index.ex:486
 #, elixir-autogen, elixir-format
 msgid "Enable"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:421
+#: lib/hive_web/live/alerts_live/index.ex:461
 #, elixir-autogen, elixir-format
 msgid "Enabled"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:614
+#: lib/hive_web/live/alerts_live/index.ex:671
 #, elixir-autogen, elixir-format
 msgid "Environment (optional)"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:559
+#: lib/hive_web/live/alerts_live/index.ex:611
 #, elixir-autogen, elixir-format
 msgid "Events"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:799
+#: lib/hive_web/live/alerts_live/index.ex:903
 #, elixir-autogen, elixir-format
 msgid "Fires when a new issue reaches %{count} events in %{window} minutes"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:792
+#: lib/hive_web/live/alerts_live/index.ex:896
 #, elixir-autogen, elixir-format
 msgid "Fires when a resolved issue comes back"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:701
-#, elixir-autogen, elixir-format
-msgid "Hive POSTs a signed JSON envelope. A signing secret is minted on save; store it and verify the X-Hive-Signature header."
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:741
+#: lib/hive_web/live/alerts_live/index.ex:843
 #, elixir-autogen, elixir-format
 msgid "Incident"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:675
+#: lib/hive_web/live/alerts_live/index.ex:740
 #, elixir-autogen, elixir-format
 msgid "Mention"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:590
+#: lib/hive_web/live/alerts_live/index.ex:645
 #, elixir-autogen, elixir-format
 msgid "Minimum level"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:399
-#: lib/hive_web/live/alerts_live/index.ex:533
+#: lib/hive_web/live/alerts_live/index.ex:439
+#: lib/hive_web/live/alerts_live/index.ex:583
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:504
-#: lib/hive_web/live/alerts_live/index.ex:511
+#: lib/hive_web/live/alerts_live/index.ex:557
+#: lib/hive_web/live/alerts_live/index.ex:808
 #, elixir-autogen, elixir-format
 msgid "New alert rule"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:739
+#: lib/hive_web/live/alerts_live/index.ex:841
 #, elixir-autogen, elixir-format
 msgid "New issue crosses threshold"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:464
+#: lib/hive_web/live/alerts_live/index.ex:518
 #, elixir-autogen, elixir-format
 msgid "No alert rules yet"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:757
+#: lib/hive_web/live/alerts_live/index.ex:861
 #, elixir-autogen, elixir-format
 msgid "No connected workspace"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:789
+#: lib/hive_web/live/alerts_live/index.ex:893
 #, elixir-autogen, elixir-format
 msgid "No destination"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:752
+#: lib/hive_web/live/alerts_live/index.ex:854
 #, elixir-autogen, elixir-format
 msgid "No mention"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:260
+#: lib/hive_web/live/alerts_live/index.ex:325
 #, elixir-autogen, elixir-format
 msgid "Only administrators can manage alert rules."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:505
+#: lib/hive_web/live/alerts_live/index.ex:810
 #, elixir-autogen, elixir-format
 msgid "Pick a trigger, an urgency tier, and where the message should go."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:76
-#, elixir-autogen, elixir-format
-msgid "Project not found."
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:736
+#: lib/hive_web/live/alerts_live/index.ex:838
 #, elixir-autogen, elixir-format
 msgid "Regression (resolved issue reopens)"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:391
-#, elixir-autogen, elixir-format
-msgid "Rules"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:363
-#, elixir-autogen, elixir-format
-msgid "Rules watch this project's error tracking. Attention rules ping a channel; incident rules page it."
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:755
+#: lib/hive_web/live/alerts_live/index.ex:859
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:667
-#, elixir-autogen, elixir-format
-msgid "Slack channel ID"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:647
+#: lib/hive_web/live/alerts_live/index.ex:710
 #, elixir-autogen, elixir-format
 msgid "Slack workspace"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:405
-#: lib/hive_web/live/alerts_live/index.ex:576
+#: lib/hive_web/live/alerts_live/index.ex:445
+#: lib/hive_web/live/alerts_live/index.ex:630
 #, elixir-autogen, elixir-format
 msgid "Tier"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:541
+#: lib/hive_web/live/alerts_live/index.ex:592
 #, elixir-autogen, elixir-format
 msgid "Trigger"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:754
-#, elixir-autogen, elixir-format
-msgid "Webhook (HTTPS)"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:694
-#, elixir-autogen, elixir-format
-msgid "Webhook URL"
-msgstr ""
-
-#: lib/hive_web/live/alerts_live/index.ex:568
+#: lib/hive_web/live/alerts_live/index.ex:621
 #, elixir-autogen, elixir-format
 msgid "Window (minutes)"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:535
+#: lib/hive_web/live/alerts_live/index.ex:585
 #, elixir-autogen, elixir-format
 msgid "e.g. Production regressions"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:809
+#: lib/hive_web/live/alerts_live/index.ex:913
 #, elixir-autogen, elixir-format
 msgid "no cooldown"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:501
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:473
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:824
+#, elixir-autogen, elixir-format
+msgid "Edit alert rule"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:768
+#, elixir-autogen, elixir-format
+msgid "Hive sends a signed request payload. A signing secret is minted on save; store it and verify the X-Hive-Signature header."
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:833
+#, elixir-autogen, elixir-format
+msgid "Save changes"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:857
+#, elixir-autogen, elixir-format
+msgid "Secure webhook"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:731
+#, elixir-autogen, elixir-format
+msgid "Slack channel identifier"
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:826
+#, elixir-autogen, elixir-format
+msgid "Update when this rule fires, its urgency, or where the message should go."
+msgstr ""
+
+#: lib/hive_web/live/alerts_live/index.ex:760
+#, elixir-autogen, elixir-format
+msgid "Webhook address"
 msgstr ""
