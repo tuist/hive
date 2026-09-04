@@ -358,6 +358,29 @@ defmodule HiveWeb.ProjectLive.Show do
           </div>
         </div>
 
+        <.card
+          :if={@errors_enabled? and @member?}
+          title={dgettext("dashboard_projects", "Alerts")}
+          icon="bell"
+        >
+          <:actions>
+            <.button
+              label={dgettext("dashboard_projects", "Manage alerts")}
+              variant="secondary"
+              size="medium"
+              navigate={~p"/projects/#{@project.id}/alerts"}
+            />
+          </:actions>
+          <.card_section data-part="alerts-card">
+            <p data-part="alerts-intro">
+              {dgettext(
+                "dashboard_projects",
+                "Send Slack messages or webhook deliveries when this project's error tracking flags something worth attention. Configure rules per project with a tier, filter, and destination."
+              )}
+            </p>
+          </.card_section>
+        </.card>
+
         <.card :if={@editable?} title={dgettext("dashboard_projects", "Settings")} icon="apps">
           <.card_section>
             <.form

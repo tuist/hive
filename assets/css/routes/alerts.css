@@ -1,0 +1,160 @@
+#project-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-7);
+  min-width: 0;
+  width: 100%;
+
+  & > .noora-card,
+  & .noora-card__section {
+    min-width: 0;
+    width: 100%;
+  }
+
+  & > [data-part="header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--noora-spacing-6);
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  & > [data-part="header"] > [data-part="title-group"] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--noora-spacing-3);
+    min-width: 0;
+    max-width: 780px;
+  }
+
+  & > [data-part="header"] > [data-part="title-group"] h1 {
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+  }
+
+  & > [data-part="header"] > [data-part="title-group"] p {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    overflow-wrap: anywhere;
+  }
+
+  & [data-part="header-actions"] {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--noora-spacing-3);
+  }
+}
+
+/*
+ * Fix the modal shell width and cap its height. Noora's default
+ * `[data-part="content"]` is `width: max-content` with no height cap,
+ * so a long form (e.g. the Slack subsection expanded) stretches the
+ * dialog off-screen. Making the shell itself a flex column with a
+ * capped max-height lets the header and footer stay pinned while
+ * the middle body (our `[data-part="rule-form"]`) scrolls.
+ */
+/*
+ * Belt-and-suspenders scroll lock: Zag's `preventScroll` should stop
+ * page scrolling when the dialog is open, but if the modal shell
+ * ever fails to lock the body, `:has()` here fills in from CSS.
+ * Gated on `[data-state="open"]` so the lock only applies while the
+ * modal is actually shown.
+ */
+html:has(#new-alert-rule-modal [data-part="content"][data-state="open"]) {
+  overflow: hidden;
+}
+
+/*
+ * Only shape the modal shell when it is open. Applying `display: flex`
+ * unconditionally would fight the `hidden` attribute Zag uses to keep
+ * the modal offscreen while closed.
+ */
+#new-alert-rule-modal [data-part="content"][data-state="open"] {
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 92vw);
+  max-width: 520px;
+  max-height: min(85vh, 720px);
+  /*
+   * Make sure the visible dialog captures wheel events itself.
+   * Zag sets `pointer-events: auto` inline, but if the positioner
+   * ever propagates its own `pointer-events: none` to the content
+   * (older Zag builds, or an interrupted state transition), wheel
+   * events would fall through to the page.
+   */
+  pointer-events: auto;
+}
+
+/*
+ * Noora places our form inside its own `[data-part="body"]` wrapper
+ * (Zag teleports the template into `#{modal_id}-body`). Making that
+ * wrapper the flex-shrinkable scroll region keeps the modal header
+ * and footer pinned above and below while a long form scrolls. The
+ * `overscroll-behavior: contain` stops the wheel event from bubbling
+ * up to the page once the modal body reaches either end of its scroll.
+ */
+#new-alert-rule-modal [data-part="content"][data-state="open"] > [data-part="body"] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+[data-part="rule-form"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--noora-spacing-5);
+  padding-block: var(--noora-spacing-4);
+  padding-inline: var(--noora-spacing-1);
+
+  & [data-part="select-field"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-2);
+    color: var(--noora-surface-label-primary);
+    font: var(--noora-font-weight-medium) var(--noora-font-body-small);
+  }
+
+  & [data-part="select-field"] .noora-dropdown {
+    width: 100%;
+
+    & > [data-part="trigger"] {
+      width: 100%;
+    }
+  }
+
+  & [data-part="threshold-row"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--noora-spacing-4);
+  }
+
+  & [data-part="destination-fields"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--noora-spacing-4);
+    padding: var(--noora-spacing-4);
+    background: var(--noora-surface-background-secondary);
+    border-radius: var(--noora-radius-medium);
+  }
+
+  & [data-part="webhook-help"] {
+    color: var(--noora-surface-label-secondary);
+    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
+    margin: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  [data-part="rule-form"] {
+    width: 100%;
+
+    & [data-part="threshold-row"] {
+      grid-template-columns: 1fr;
+    }
+  }
+}

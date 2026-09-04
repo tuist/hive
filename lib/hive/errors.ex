@@ -54,13 +54,28 @@ defmodule Hive.Errors do
       # the count bump only happens on the successful CH path, a
       # transient CH failure never doubles the `event_count` for
       # the issue.
-      with {:ok, issue} <- ensure_issue(project, event, fingerprint),
-           :ok <- insert_event(project, issue, event, fingerprint) do
-        bump_issue_counters(issue, event)
+      with {:ok, before_issue} <- ensure_issue(project, event, fingerprint),
+           :ok <- insert_event(project, before_issue, event, fingerprint),
+           {:ok, issue} <- bump_issue_counters(before_issue, event) do
+        evaluate_alerts(issue, before_issue, event)
+        {:ok, issue}
       end
     else
       {:error, :not_configured}
     end
+  end
+
+  # Fire-and-forget alert evaluation. Enqueues per-rule Oban jobs; a
+  # failure here must not fail the event record (the event is already
+  # stored).
+  defp evaluate_alerts(%Issue{} = issue, %Issue{} = before_issue, %SentryEvent{} = event) do
+    Hive.Alerts.evaluate_error_issue(issue, before_issue, %{environment: event.environment})
+    :ok
+  rescue
+    err ->
+      require Logger
+      Logger.warning("[Errors] alert evaluation failed: #{inspect(err)}")
+      :ok
   end
 
   # Create the issue if it doesn't exist yet, or fetch the existing
