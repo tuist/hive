@@ -77,6 +77,14 @@ defmodule Hive.Agents.ErrorsTest do
       assert {:error, ReqLLM.Error.Invalid.Parameter, message} = Errors.sanitize_reason(reason)
       assert message =~ "text: cannot be empty"
     end
+
+    test "is idempotent on already-sanitized llm request and response failures" do
+      request = {:llm_request_failed, 502, "Provider response error (502): bad gateway"}
+      response = {:llm_response_failed, 500, "Provider response error (500): parse error"}
+
+      assert Errors.sanitize_reason(request) == request
+      assert Errors.sanitize_reason(response) == response
+    end
   end
 
   describe "reconsiderable_reasons/0 and reconsideration_cooldown/1" do
