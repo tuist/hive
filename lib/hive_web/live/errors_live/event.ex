@@ -25,38 +25,34 @@ defmodule HiveWeb.ErrorsLive.Event do
   def slack_unfurl(uri, %{"id" => id, "event_id" => event_id}) do
     with {:ok, issue} <- Errors.fetch_issue(id),
          %{} = event <- Errors.fetch_event(issue.id, event_id) do
-      BlockKit.open_graph(uri, event_open_graph(issue, event, event_id))
+      BlockKit.generic(uri, slack_unfurl_attributes(issue, event, event_id))
     else
       _ -> :skip
     end
   end
 
-  defp event_open_graph(issue, event, event_id) do
+  defp slack_unfurl_attributes(issue, event, event_id) do
     short = short_id(event[:event_id] || event_id)
+    payload = event[:payload] || %{}
+    level = event[:level] || issue.level
 
     %{
-      description:
-        dgettext(
-          "dashboard_errors",
-          "Event %{short} on %{issue}. Captured %{timestamp}.",
-          short: short,
-          issue: issue.title,
-          timestamp: format_datetime(event[:timestamp])
-        ),
-      section_label: dgettext("dashboard_errors", "Errors"),
-      highlights:
-        Enum.reject(
-          [
-            short,
-            project_name(issue),
-            to_string(event[:environment] || ""),
-            to_string(event[:release] || "")
-          ],
-          &(&1 == "")
-        ),
-      id: "error-event-#{event_id}",
-      path: "/errors/#{issue.id}/events/#{event_id}",
-      title: dgettext("dashboard_errors", "Event %{short}", short: short)
+      title: "#{slack_level_icon(level)} #{event_headline(event, payload)}",
+      description: event_location(event) || issue.culprit,
+      details: [
+        {dgettext("dashboard_errors", "Project"), project_name(issue)},
+        {dgettext("dashboard_errors", "Event"), short},
+        {dgettext("dashboard_errors", "Status"), status_label(issue.status)},
+        {dgettext("dashboard_errors", "Level"), level_label(level)},
+        {dgettext("dashboard_errors", "Environment"), event[:environment]},
+        {dgettext("dashboard_errors", "Release"), event[:release]},
+        {dgettext("dashboard_errors", "Captured"), format_datetime(event[:timestamp])},
+        {dgettext("dashboard_errors", "Platform"), platform_label(issue.platform)}
+      ],
+      extra_blocks: [%{"type" => "divider"}],
+      type_label: dgettext("dashboard_errors", "Error event"),
+      action_label: dgettext("dashboard_errors", "Open event"),
+      action_style: :primary
     }
   end
 
@@ -252,6 +248,41 @@ defmodule HiveWeb.ErrorsLive.Event do
   end
 
   defp short_id(other), do: other |> to_string() |> short_id()
+
+  defp event_location(event) do
+    [event[:top_frame_function], event[:top_frame_filename]]
+    |> Enum.filter(&present?/1)
+    |> case do
+      [] -> nil
+      parts -> Enum.join(parts, " at ")
+    end
+  end
+
+  defp status_label(:unresolved), do: dgettext("dashboard_errors", "Unresolved")
+  defp status_label(:resolved), do: dgettext("dashboard_errors", "Resolved")
+  defp status_label(:ignored), do: dgettext("dashboard_errors", "Ignored")
+  defp status_label(status), do: status |> to_string() |> String.capitalize()
+
+  defp level_label(level) do
+    level
+    |> to_string()
+    |> String.capitalize()
+  end
+
+  defp slack_level_icon(level) when level in [:fatal, "fatal", :error, "error"], do: "🚨"
+  defp slack_level_icon(level) when level in [:warning, "warning"], do: "⚠️"
+  defp slack_level_icon(level) when level in [:info, "info"], do: "ℹ️"
+  defp slack_level_icon(level) when level in [:debug, "debug"], do: "🐛"
+  defp slack_level_icon(_level), do: "❗"
+
+  defp platform_label(nil), do: "-"
+
+  defp platform_label(platform) do
+    platform
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 
   defp stack_frames(%{
          "exception" => %{"values" => [%{"stacktrace" => %{"frames" => frames}} | _]}

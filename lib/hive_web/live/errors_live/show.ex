@@ -40,9 +40,29 @@ defmodule HiveWeb.ErrorsLive.Show do
   @impl Hive.Slack.Unfurl
   def slack_unfurl(uri, %{"id" => id}) do
     case Errors.fetch_issue(id) do
-      {:ok, issue} -> BlockKit.open_graph(uri, open_graph(issue))
+      {:ok, issue} -> BlockKit.generic(uri, slack_unfurl_attributes(issue))
       {:error, :not_found} -> :skip
     end
+  end
+
+  defp slack_unfurl_attributes(issue) do
+    %{
+      title: "#{slack_status_icon(issue)} #{issue.title}",
+      description: issue.culprit,
+      details: [
+        {dgettext("dashboard_errors", "Project"), project_name(issue)},
+        {dgettext("dashboard_errors", "Status"), status_label(issue.status)},
+        {dgettext("dashboard_errors", "Level"), level_label(issue.level)},
+        {dgettext("dashboard_errors", "Events"), issue.event_count},
+        {dgettext("dashboard_errors", "Platform"), platform_label(issue.platform)},
+        {dgettext("dashboard_errors", "First seen"), format_datetime(issue.first_seen)},
+        {dgettext("dashboard_errors", "Last seen"), format_datetime(issue.last_seen)}
+      ],
+      extra_blocks: [%{"type" => "divider"}],
+      type_label: dgettext("dashboard_errors", "Error issue"),
+      action_label: dgettext("dashboard_errors", "Open error"),
+      action_style: :primary
+    }
   end
 
   @impl true
@@ -873,6 +893,23 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp status_label(:resolved), do: dgettext("dashboard_errors", "Resolved")
   defp status_label(:ignored), do: dgettext("dashboard_errors", "Ignored")
   defp status_label(_), do: "-"
+
+  defp slack_status_icon(%Issue{status: :resolved}), do: "✅"
+  defp slack_status_icon(%Issue{status: :ignored}), do: "🔕"
+  defp slack_status_icon(%Issue{level: :fatal}), do: "🚨"
+  defp slack_status_icon(%Issue{level: :warning}), do: "⚠️"
+  defp slack_status_icon(%Issue{level: :info}), do: "ℹ️"
+  defp slack_status_icon(%Issue{level: :debug}), do: "🐛"
+  defp slack_status_icon(_issue), do: "❗"
+
+  defp platform_label(nil), do: "-"
+
+  defp platform_label(platform) do
+    platform
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
 
   defp status_color(:unresolved), do: "warning"
   defp status_color(:resolved), do: "success"

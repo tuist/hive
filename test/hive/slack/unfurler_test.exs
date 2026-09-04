@@ -1,9 +1,11 @@
 defmodule Hive.Slack.UnfurlerTest do
   use Hive.DataCase, async: true
+  use Mimic
 
   alias Hive.Domains
   alias Hive.Drops
   alias Hive.Drops.WeeklyDigest
+  alias Hive.Errors
   alias Hive.ErrorsHelpers
   alias Hive.Errors.SentryEvent
   alias Hive.Forage
@@ -45,6 +47,8 @@ defmodule Hive.Slack.UnfurlerTest do
     "/ops/inference/providers",
     "/ops/audit"
   ]
+
+  setup :verify_on_exit!
 
   defp app_url(path), do: HiveWeb.Endpoint.url() <> path
   defp unique_name(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
@@ -370,9 +374,59 @@ defmodule Hive.Slack.UnfurlerTest do
 
     assert {:ok, payload} = Unfurler.unfurl(app_url("/errors/#{issue.id}"))
 
-    assert block_texts(payload) |> Enum.any?(&(&1 == issue.title))
-    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Errors"))
+    texts = block_texts(payload)
+
+    assert Enum.any?(texts, &(&1 == "❗ #{issue.title}"))
+    assert Enum.any?(texts, &(&1 == "*Project*\n#{project.name}"))
+    assert Enum.any?(texts, &(&1 == "*Status*\nUnresolved"))
+    assert Enum.any?(texts, &(&1 == "*Level*\nError"))
+    assert Enum.any?(texts, &(&1 == "*Events*\n1"))
+    assert Enum.any?(texts, &(&1 == "*Platform*\nElixir"))
+    assert Enum.any?(texts, &(&1 =~ "Error issue / Hive"))
+    assert Enum.any?(payload["blocks"], &(&1["type"] == "divider"))
+
+    assert get_in(List.last(payload["blocks"]), ["elements", Access.at(0), "style"]) ==
+             "primary"
+
     assert button_url(payload) == app_url("/errors/#{issue.id}")
+  end
+
+  test "delegates error event links with event-specific context" do
+    project = create_project!(%{name: unique_name("Errors")})
+    event_id = Ecto.UUID.generate() |> String.replace("-", "")
+    {:ok, issue} = ErrorsHelpers.seed_issue(project, fake_sentry_event())
+
+    stub(Errors, :fetch_event, fn issue_id, requested_event_id ->
+      assert issue_id == issue.id
+      assert requested_event_id == event_id
+
+      %{
+        event_id: event_id,
+        timestamp: ~U[2026-09-05 08:30:00Z],
+        level: "fatal",
+        environment: "production",
+        release: "2026.9.0",
+        exception_type: "RuntimeError",
+        exception_value: "checkout failed",
+        top_frame_function: "Hive.Checkout.charge/1",
+        top_frame_filename: "lib/hive/checkout.ex",
+        payload: %{}
+      }
+    end)
+
+    path = "/errors/#{issue.id}/events/#{event_id}"
+    assert {:ok, payload} = Unfurler.unfurl(app_url(path))
+    texts = block_texts(payload)
+
+    assert Enum.any?(texts, &(&1 == "🚨 RuntimeError: checkout failed"))
+    assert Enum.any?(texts, &(&1 == "Hive.Checkout.charge/1 at lib/hive/checkout.ex"))
+    assert Enum.any?(texts, &(&1 == "*Event*\n#{String.slice(event_id, 0, 8)}"))
+    assert Enum.any?(texts, &(&1 == "*Level*\nFatal"))
+    assert Enum.any?(texts, &(&1 == "*Environment*\nproduction"))
+    assert Enum.any?(texts, &(&1 == "*Release*\n2026.9.0"))
+    assert Enum.any?(texts, &(&1 == "*Captured*\n2026-09-05 08:30:00 UTC"))
+    assert Enum.any?(texts, &(&1 =~ "Error event / Hive"))
+    assert button_url(payload) == app_url(path)
   end
 
   test "skips error issue links for issues that do not exist" do
