@@ -97,6 +97,7 @@ defmodule Hive.MCP.Transport.StreamableHTTP do
         response =
           response
           |> put_negotiated_protocol_version(negotiated_protocol_version)
+          |> add_server_instructions(opts)
           |> add_output_schemas(opts)
 
         conn
@@ -117,6 +118,16 @@ defmodule Hive.MCP.Transport.StreamableHTTP do
   end
 
   defp put_negotiated_protocol_version(response, _negotiated_protocol_version), do: response
+
+  defp add_server_instructions(
+         %{"result" => %{"serverInfo" => _server_info} = result} = response,
+         opts
+       ) do
+    server = Keyword.fetch!(opts, :server)
+    put_in(response, ["result"], Map.put(result, "instructions", server.instructions()))
+  end
+
+  defp add_server_instructions(response, _opts), do: response
 
   defp add_output_schemas(%{"result" => %{"tools" => tools} = result} = response, opts)
        when is_list(tools) do

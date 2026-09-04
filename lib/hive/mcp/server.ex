@@ -1,6 +1,12 @@
 defmodule Hive.MCP.Server do
   @moduledoc false
 
+  @instructions """
+  When you solve an error retrieved from Hive, include the error issue's `url`
+  in the pull request description. Hive uses that link to resolve the error
+  automatically after the pull request is merged.
+  """
+
   use EMCP.Server,
     name: "hive",
     version: "0.2.0",
@@ -72,4 +78,6 @@ defmodule Hive.MCP.Server do
     prompts: [
       Hive.MCP.Components.Prompts.WriteSpec
     ]
+
+  def instructions, do: @instructions
 end

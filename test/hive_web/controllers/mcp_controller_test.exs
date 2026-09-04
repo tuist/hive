@@ -47,6 +47,10 @@ defmodule HiveWeb.MCPControllerTest do
       assert response["jsonrpc"] == "2.0"
       assert response["id"] == 1
       assert response["result"]["serverInfo"]["name"] == "hive"
+
+      assert response["result"]["instructions"] =~ "include the error issue's `url`"
+      assert response["result"]["instructions"] =~ "in the pull request description"
+
       assert get_resp_header(conn, "mcp-session-id") != []
     end
 
