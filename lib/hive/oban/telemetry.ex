@@ -89,9 +89,10 @@ defmodule Hive.Oban.Telemetry do
   # exception's module name.
   defp error_message(reason) do
     raw =
-      cond do
-        is_exception(reason) -> Exception.message(reason)
-        true -> inspect(reason, printable_limit: 500, limit: 50)
+      if is_exception(reason) do
+        Exception.message(reason)
+      else
+        inspect(reason, printable_limit: 500, limit: 50)
       end
 
     truncate(raw, 500)
