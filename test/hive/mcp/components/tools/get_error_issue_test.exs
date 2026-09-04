@@ -2,7 +2,6 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssueTest do
   use Hive.MCPToolCase
   use Mimic
 
-  alias Hive.Errors
   alias Hive.Errors.SentryEvent
   alias Hive.MCP.Components.Tools.GetErrorIssue
   alias Hive.Projects
@@ -24,7 +23,15 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssueTest do
     user = mcp_user("member@example.com", :member)
 
     response = GetErrorIssue.call(mcp_conn(user), %{"id" => issue.id})
-    assert %{"issue" => %{"title" => "boom"}} = response_json(response)
+
+    assert %{
+             "issue" => %{
+               "title" => "boom",
+               "url" => url
+             }
+           } = response_json(response)
+
+    assert url == "#{HiveWeb.Endpoint.url()}/errors/#{issue.id}"
   end
 
   test "returns not_found for missing ids" do

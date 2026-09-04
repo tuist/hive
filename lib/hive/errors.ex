@@ -352,6 +352,49 @@ defmodule Hive.Errors do
     |> Repo.update()
   end
 
+  @doc """
+  Resolves unresolved or ignored issues that belong to `project_id`.
+
+  Rows are locked before their status changes so repeated webhook deliveries
+  leave an already resolved issue untouched, including its original resolution
+  timestamp.
+  """
+  def resolve_issues(project_id, issue_ids)
+      when is_binary(project_id) and is_list(issue_ids) do
+    issue_ids = Enum.uniq(issue_ids)
+
+    if issue_ids == [] do
+      {:ok, []}
+    else
+      Repo.transaction(fn ->
+        issues =
+          Issue
+          |> where(
+            [issue],
+            issue.project_id == ^project_id and issue.id in ^issue_ids and
+              issue.status != :resolved
+          )
+          |> lock("FOR UPDATE")
+          |> Repo.all()
+
+        resolved_at = DateTime.utc_now()
+        ids = Enum.map(issues, & &1.id)
+
+        Issue
+        |> where([issue], issue.id in ^ids)
+        |> Repo.update_all(
+          set: [
+            status: :resolved,
+            resolved_at: resolved_at,
+            updated_at: DateTime.truncate(resolved_at, :second)
+          ]
+        )
+
+        Enum.map(issues, &%{&1 | status: :resolved, resolved_at: resolved_at})
+      end)
+    end
+  end
+
   ## Project key management
 
   def list_project_keys(project_id) do
@@ -839,6 +882,7 @@ defmodule Hive.Errors do
 
     %{
       id: issue.id,
+      url: String.trim_trailing(HiveWeb.Endpoint.url(), "/") <> "/errors/#{issue.id}",
       project_id: issue.project_id,
       project_name: project && project.name,
       fingerprint: issue.fingerprint,

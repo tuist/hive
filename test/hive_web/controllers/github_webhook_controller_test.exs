@@ -20,6 +20,28 @@ defmodule HiveWeb.GitHubWebhookControllerTest do
     assert response(conn, 202) == ""
   end
 
+  test "POST /webhooks/github dispatches the authenticated event", %{conn: conn} do
+    stub(Webhooks, :secret, fn -> {:ok, @secret} end)
+    body = ~s({"action":"closed","pull_request":{"merged":true}})
+
+    expect(Webhooks, :handle_event, fn "pull_request",
+                                       %{
+                                         "action" => "closed",
+                                         "pull_request" => %{"merged" => true}
+                                       } ->
+      :ok
+    end)
+
+    conn =
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-github-event", "pull_request")
+      |> put_req_header("x-hub-signature-256", signature(body, @secret))
+      |> post(~p"/webhooks/github", body)
+
+    assert response(conn, 202) == ""
+  end
+
   test "POST /webhooks/github rejects an invalid signature", %{conn: conn} do
     stub(Webhooks, :secret, fn -> {:ok, @secret} end)
 

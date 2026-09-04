@@ -82,6 +82,16 @@ into a separate issue per record. A Software Development Kit that
 supplies an explicit `fingerprint` field overrides this default,
 allowing bespoke grouping when required.
 
+## Resolution
+
+Organization members can resolve, reopen, or ignore an error from the
+dashboard or through connected-client tools. Error results returned through
+the [Model Context Protocol](https://modelcontextprotocol.io/) include the
+error's Hive link. When a connected client fixes an error, it should include
+that link in the pull request description. If the repository is linked to the
+same Hive project, Hive marks the error as resolved when the pull request is
+merged.
+
 ## Hive's own errors
 
 The running Hive instance records its own crashes through the same

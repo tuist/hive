@@ -250,6 +250,10 @@ defmodule Hive.Audit do
   def resource_path("flight", target_id, _metadata) when is_binary(target_id) and target_id != "",
     do: "/flights/#{target_id}"
 
+  def resource_path("error_issue", target_id, _metadata)
+      when is_binary(target_id) and target_id != "",
+      do: "/errors/#{target_id}"
+
   def resource_path("drop", _target_id, _metadata), do: "/drops"
 
   def resource_path("drop_digest", _target_id, %{"week_start" => week_start})

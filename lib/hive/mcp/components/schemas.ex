@@ -368,6 +368,7 @@ defmodule Hive.MCP.Components.Schemas do
       "type" => "object",
       "properties" => %{
         "id" => %{"type" => "string"},
+        "url" => %{"type" => "string"},
         "project_id" => %{"type" => "string"},
         "project_name" => %{"type" => ["string", "null"]},
         "fingerprint" => %{"type" => "string"},
@@ -383,6 +384,7 @@ defmodule Hive.MCP.Components.Schemas do
       },
       "required" => [
         "id",
+        "url",
         "project_id",
         "fingerprint",
         "title",

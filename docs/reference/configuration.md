@@ -200,7 +200,9 @@ Mail text or a base64-encoded value.
 
 ### HIVE_GITHUB_WEBHOOK_SECRET {#hive_github_webhook_secret}
 
-Optional signing secret for requests sent to `/webhooks/github`.
+Signing secret for GitHub App events sent to `/webhooks/github`. Configure it
+to resolve linked error issues when a pull request that references them is
+merged.
 
 ### HIVE_GITHUB_API_URL {#hive_github_api_url}
 
