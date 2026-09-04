@@ -61,7 +61,15 @@ defmodule Hive.Alerts.Workers.DeliverRuleTest do
     expect(Hive.Slack.API, :post_message, fn _installation, params ->
       assert params["channel"] == "C42"
       assert params["text"] =~ "Incident"
-      assert params["text"] =~ "<!here>"
+      # Mention prefix lives in a real `section` block since Slack's
+      # `header` block strips mention syntax.
+      mention_block =
+        Enum.find(params["blocks"], fn
+          %{"type" => "section", "text" => %{"text" => text}} -> text =~ "<!here>"
+          _ -> false
+        end)
+
+      assert mention_block, "expected a section block carrying <!here>"
       {:ok, %{"ok" => true, "ts" => "1.0"}}
     end)
 

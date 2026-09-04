@@ -23,11 +23,12 @@ defmodule Hive.Alerts.Workers.DeliverRule do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"rule_id" => rule_id, "subject_id" => subject_id} = args}) do
     reason = parse_reason(args["reason"])
+    environment = args["environment"]
 
     with {:ok, rule} <- fetch_rule(rule_id),
          {:ok, issue} <- fetch_issue(subject_id),
          :ok <- ensure_not_in_cooldown(rule, subject_id) do
-      deliver(rule, issue, reason)
+      deliver(rule, issue, reason, environment)
     else
       {:skip, _reason} -> :ok
       {:cancel, reason} -> {:cancel, reason}
@@ -66,8 +67,8 @@ defmodule Hive.Alerts.Workers.DeliverRule do
     end
   end
 
-  defp deliver(%Rule{} = rule, %Issue{} = issue, reason) do
-    case send_to_destination(rule, issue, reason) do
+  defp deliver(%Rule{} = rule, %Issue{} = issue, reason, environment) do
+    case send_to_destination(rule, issue, reason, environment) do
       :ok ->
         {:ok, _} =
           Alerts.record_notification(%{
@@ -96,15 +97,25 @@ defmodule Hive.Alerts.Workers.DeliverRule do
     end
   end
 
-  defp send_to_destination(%Rule{destination_type: :slack} = rule, %Issue{} = issue, reason) do
+  defp send_to_destination(
+         %Rule{destination_type: :slack} = rule,
+         %Issue{} = issue,
+         reason,
+         environment
+       ) do
     installation = Repo.preload(rule, :slack_installation).slack_installation
-    SlackDestination.deliver(rule, issue, installation, reason)
+    SlackDestination.deliver(rule, issue, installation, reason, environment: environment)
   end
 
-  defp send_to_destination(%Rule{destination_type: :webhook} = rule, %Issue{} = issue, reason),
-    do: WebhookDestination.deliver(rule, issue, reason)
+  defp send_to_destination(
+         %Rule{destination_type: :webhook} = rule,
+         %Issue{} = issue,
+         reason,
+         _environment
+       ),
+       do: WebhookDestination.deliver(rule, issue, reason)
 
-  defp send_to_destination(_rule, _issue, _reason),
+  defp send_to_destination(_rule, _issue, _reason, _environment),
     do: {:error, :unknown_destination}
 
   defp metadata(%Rule{} = rule, %Issue{} = issue, reason) do

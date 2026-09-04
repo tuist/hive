@@ -67,7 +67,15 @@ Two destination types are available.
 **Slack.** Post the message into a channel on any Slack workspace
 connected through the standard install flow. A rule stores the
 workspace, the channel ID, and whether to prefix the message with
-`@here`, `@channel`, or nothing.
+`@here`, `@channel`, or nothing. The message is a
+[Block Kit](https://docs.slack.dev/block-kit/) payload designed for
+one glance: a header carrying the tier and the reason it fired, the
+issue title with a link back into Hive, and a fields row that reads
+"how bad is this?" — level, environment, event count, first-seen,
+last-seen, and current status. `production` renders in bold so an
+on-call scanning a busy channel can pick production incidents out of
+staging noise. The tier controls the header marker (🚨 for incident,
+⚠️ for attention) and the optional mention prefix.
 
 **Webhook.** POST a signed JSON envelope to any HTTPS endpoint —
 Grafana, PagerDuty, an in-house receiver. Hive mints a signing secret

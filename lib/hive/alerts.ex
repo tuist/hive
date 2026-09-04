@@ -97,7 +97,8 @@ defmodule Hive.Alerts do
         "rule_id" => rule.id,
         "subject_type" => "error_issue",
         "subject_id" => issue.id,
-        "reason" => Atom.to_string(reason)
+        "reason" => Atom.to_string(reason),
+        "environment" => Map.get(context, :environment)
       }
       |> DeliverRule.new()
       |> Oban.insert()
