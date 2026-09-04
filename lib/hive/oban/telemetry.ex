@@ -67,6 +67,7 @@ defmodule Hive.Oban.Telemetry do
       state: metadata.state,
       error_kind: metadata.kind,
       error_type: error_type(metadata.reason),
+      error_message: error_message(metadata.reason),
       duration_ms: to_milliseconds(measurements.duration),
       queue_time_ms: to_milliseconds(measurements.queue_time)
     })
@@ -82,6 +83,28 @@ defmodule Hive.Oban.Telemetry do
 
   defp error_type(%{__struct__: module}), do: inspect(module)
   defp error_type(_reason), do: "unknown"
+
+  # Serialize the failure reason so downstream consumers (Sentry ingest,
+  # log search) see what actually failed rather than only the wrapping
+  # exception's module name.
+  defp error_message(reason) do
+    raw =
+      cond do
+        is_exception(reason) -> Exception.message(reason)
+        true -> inspect(reason, printable_limit: 500, limit: 50)
+      end
+
+    truncate(raw, 500)
+  end
+
+  defp truncate(nil, _max), do: nil
+
+  defp truncate(binary, max) when is_binary(binary) and byte_size(binary) > max do
+    binary_part(binary, 0, max) <> "..."
+  end
+
+  defp truncate(binary, _max) when is_binary(binary), do: binary
+  defp truncate(other, _max), do: to_string(other)
 
   defp to_milliseconds(value),
     do: System.convert_time_unit(value, :native, :millisecond)
