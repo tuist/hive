@@ -34,6 +34,7 @@ const docsSidebar = [
       { text: "Deployment options", link: "/guide/self-hosting/deployment" },
       { text: "Audit", link: "/guide/self-hosting/audit" },
       { text: "Errors", link: "/guide/self-hosting/errors" },
+      { text: "Alerts", link: "/guide/self-hosting/alerts" },
     ],
   },
   {
