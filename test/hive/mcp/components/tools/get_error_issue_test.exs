@@ -11,10 +11,11 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssueTest do
 
   setup do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
 
     {:ok, project} = Projects.create_project(%{"name" => unique_name("Proj")})
-    {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "boom"}))
+
+    {:ok, issue} =
+      Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
 
     {:ok, issue: issue}
   end

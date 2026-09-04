@@ -20,7 +20,8 @@ defmodule Hive.Application do
         {Phoenix.PubSub, name: Hive.PubSub},
         {Cachex, name: :hive},
         Hive.Errors.KeyTouches,
-        Hive.Errors.DropAlerter
+        Hive.Errors.DropAlerter,
+        Hive.Errors.IssueCoalescer
       ]
       |> maybe_add_clickhouse()
       |> maybe_add_oban()

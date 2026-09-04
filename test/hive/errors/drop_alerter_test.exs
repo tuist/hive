@@ -129,6 +129,10 @@ defmodule Hive.Errors.DropAlerterTest do
 
     test "falls back to a Logger.warning when no Slack installation exists",
          %{pid: pid} = ctx do
+      # Clear any pre-existing installations that leaked into the test
+      # database outside sandbox rollback, so the alerter's Repo.one
+      # actually returns nil.
+      Hive.Repo.delete_all(Hive.Slack.Installation)
       System.put_env("HIVE_ALERTS_SLACK_CHANNEL_ID", "C_TEST_CHANNEL")
       on_exit(fn -> System.delete_env("HIVE_ALERTS_SLACK_CHANNEL_ID") end)
 

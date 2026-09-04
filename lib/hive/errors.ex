@@ -17,13 +17,22 @@ defmodule Hive.Errors do
   ## Acceptance semantics
 
   A `200` on the envelope endpoint means "accepted for ingest", not
-  "durable in ClickHouse". Events are parsed inline, the Postgres issue
-  row is upserted synchronously, and the CH row is handed to
-  `Hive.Errors.Event.Buffer` — a per-table GenServer that flushes in
-  batches on a size or time threshold. Flush failures are logged and
-  dropped; Sentry SDKs cache and retry envelope submission on 5xx, so
-  we never return 5xx after DSN validation and rely on the SDK's retry
-  loop for durability.
+  "durable in ClickHouse". Events are parsed inline, the ClickHouse
+  row is cast to `Hive.Errors.Event.Buffer`, and the issue upsert is
+  cast to `Hive.Errors.IssueCoalescer` — both non-blocking. The buffer
+  batches ClickHouse writes on size/time; the coalescer batches
+  Postgres upserts per fingerprint. Flush failures on either path are
+  logged and reported through `Hive.Errors.DropAlerter`; Sentry SDKs
+  cache and retry envelope submission on 5xx, so we never return 5xx
+  after DSN validation and rely on the SDK's retry loop for durability.
+
+  The issue id is a deterministic UUIDv5 derived from
+  `(project_id, fingerprint)` — see `Hive.Errors.Issue.deterministic_id/2`
+  — so the ClickHouse row can name its owning issue in memory without
+  waiting on Postgres. Dashboard reads that go through Postgres see
+  new issues within the coalescer flush window (default 5 s);
+  ClickHouse-backed reads see the event immediately after the buffer
+  flush window (default 2 s).
   """
 
   import Ecto.Query
@@ -34,6 +43,7 @@ defmodule Hive.Errors do
   alias Hive.Errors.Event
   alias Hive.Errors.Fingerprint
   alias Hive.Errors.Issue
+  alias Hive.Errors.IssueCoalescer
   alias Hive.Errors.KeyTouches
   alias Hive.Errors.ProjectKey
   alias Hive.Errors.SentryEvent
@@ -74,7 +84,7 @@ defmodule Hive.Errors do
   defp ingest_event_item(project, item) do
     with {:ok, decoded} <- Jason.decode(item.payload),
          event = SentryEvent.parse(decoded),
-         {:ok, _issue} <- record_event(project, event) do
+         :ok <- record_event(project, event) do
       :ok
     else
       {:error, %Jason.DecodeError{}} ->
@@ -94,169 +104,43 @@ defmodule Hive.Errors do
   end
 
   @doc """
-  Records a parsed Sentry event against a project. Upserts the owning
-  issue in Postgres and appends the event to ClickHouse. Returns the
-  updated issue.
+  Records a parsed Sentry event against a project. Fires two
+  fire-and-forget casts: one to `Hive.Errors.Event.Buffer` (batches
+  the ClickHouse insert) and one to `Hive.Errors.IssueCoalescer`
+  (batches the Postgres issue upsert and counter bump). Both are
+  `GenServer.cast`s, so this call returns after computing the
+  deterministic issue id — never blocks on a database round-trip.
 
   Callers that received raw SDK JSON should build the `SentryEvent` via
   `Hive.Errors.SentryEvent.parse/1` first.
   """
-  @spec record_event(Project.t(), SentryEvent.t()) ::
-          {:ok, Issue.t()} | {:error, :not_configured | term()}
+  @spec record_event(Project.t(), SentryEvent.t()) :: :ok | {:error, :not_configured | term()}
   def record_event(%Project{} = project, %SentryEvent{} = event) do
     if enabled?() do
       fingerprint = Fingerprint.compute(event)
+      # Deterministic id — same `(project_id, fingerprint)` always
+      # resolves to the same UUID, so the ClickHouse row knows what
+      # issue it belongs to without waiting on Postgres.
+      issue_id = Issue.deterministic_id(project.id, fingerprint)
 
-      # Idempotency ordering: reserve or fetch the issue row first
-      # (upsert without incrementing the count), then insert the
-      # event into ClickHouse, then only increment the Postgres
-      # counters. If the ClickHouse insert fails, the worker retry
-      # re-runs the same steps against the same row — and because
-      # the count bump only happens on the successful CH path, a
-      # transient CH failure never doubles the `event_count` for
-      # the issue.
-      with {:ok, issue} <- ensure_issue(project, event, fingerprint),
-           :ok <- insert_event(project, issue, event, fingerprint) do
-        bump_issue_counters(issue, event)
-      end
+      row = build_event_row(project, issue_id, event, fingerprint)
+      {:ok, _} = Event.Buffer.insert(row)
+      :ok = IssueCoalescer.observe(project, fingerprint, event)
+      :ok
     else
       {:error, :not_configured}
     end
-  end
-
-  # Create the issue if it doesn't exist yet, or fetch the existing
-  # row without touching `event_count` or the seen-at timestamps —
-  # those updates live in `bump_issue_counters/2` and only run when
-  # the ClickHouse insert has succeeded.
-  defp ensure_issue(project, event, fingerprint) do
-    now = event.timestamp || DateTime.utc_now()
-    title = SentryEvent.title(event) |> truncate(500)
-    culprit = SentryEvent.culprit(event) |> truncate(500)
-
-    attrs = %{
-      project_id: project.id,
-      fingerprint: fingerprint,
-      title: title,
-      culprit: culprit,
-      level: String.to_atom(event.level),
-      platform: event.platform,
-      first_seen: now,
-      last_seen: now,
-      event_count: 0
-    }
-
-    changeset = Issue.changeset(%Issue{}, attrs)
-
-    # Only refresh mutable metadata — leave counters alone so a worker
-    # retry that lands here after a successful `insert_event/4` does
-    # not repeat the count bump.
-    on_conflict_query =
-      from(existing in Issue,
-        update: [
-          set: [
-            title: ^title,
-            culprit: ^culprit,
-            level: ^String.to_atom(event.level),
-            platform: ^event.platform,
-            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
-          ]
-        ]
-      )
-
-    case Repo.insert(changeset,
-           on_conflict: on_conflict_query,
-           conflict_target: [:project_id, :fingerprint],
-           returning: true
-         ) do
-      {:ok, issue} -> {:ok, issue}
-      {:error, _} = err -> err
-    end
-  end
-
-  # Runs only after `insert_event/4` has appended the row to
-  # ClickHouse, so `event_count` and the seen-at bounds can be moved
-  # forward without risk of double-counting on retry. This also carries
-  # the regression logic Sentry documents:
-  #
-  #   * ignored issues stay ignored
-  #   * resolved issues auto-reopen when the new event is strictly
-  #     newer than `resolved_at`; a backfilled older event does not
-  #     regress the resolution
-  #   * unresolved stays unresolved
-  #
-  # When the reopen fires the same CASE clears `resolved_at` so a
-  # subsequent Resolve gets a fresh timestamp.
-  defp bump_issue_counters(%Issue{id: id}, event) do
-    now = event.timestamp || DateTime.utc_now()
-
-    update_query =
-      from(existing in Issue,
-        where: existing.id == ^id,
-        update: [
-          inc: [event_count: 1],
-          set: [
-            last_seen: fragment("GREATEST(?, ?)", existing.last_seen, ^now),
-            first_seen: fragment("LEAST(?, ?)", existing.first_seen, ^now),
-            status:
-              fragment(
-                """
-                CASE
-                  WHEN ? = 'ignored' THEN ?
-                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN ?
-                  ELSE ?
-                END
-                """,
-                existing.status,
-                "ignored",
-                existing.status,
-                existing.resolved_at,
-                ^now,
-                existing.resolved_at,
-                "unresolved",
-                existing.status
-              ),
-            resolved_at:
-              fragment(
-                """
-                CASE
-                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN NULL
-                  ELSE ?
-                END
-                """,
-                existing.status,
-                existing.resolved_at,
-                ^now,
-                existing.resolved_at,
-                existing.resolved_at
-              ),
-            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
-          ]
-        ],
-        select: existing
-      )
-
-    case Repo.update_all(update_query, []) do
-      {1, [issue]} -> {:ok, issue}
-      {0, _} -> {:error, :issue_not_found}
-      other -> {:error, other}
-    end
-  end
-
-  defp insert_event(project, issue, event, fingerprint) do
-    row = build_event_row(project, issue, event, fingerprint)
-    {:ok, _} = Event.Buffer.insert(row)
-    :ok
   rescue
     error -> {:error, error}
   end
 
   # Builds the ClickHouse row as an `Event` struct. Kept separate from
-  # `insert_event/4` so its cyclomatic complexity — one branch per
+  # `record_event/2` so its cyclomatic complexity — one branch per
   # string-defaulted column — doesn't blow past Credo's threshold in the
   # outer function.
-  defp build_event_row(project, issue, event, fingerprint) do
+  defp build_event_row(project, issue_id, event, fingerprint) do
     fields =
-      core_columns(project, issue, event, fingerprint)
+      core_columns(project, issue_id, event, fingerprint)
       |> Map.merge(event_scalar_columns(event))
       |> Map.merge(frame_columns(event.top_frame))
       |> Map.merge(actor_columns(event))
@@ -267,11 +151,11 @@ defmodule Hive.Errors do
     struct!(Event, fields)
   end
 
-  defp core_columns(project, issue, event, fingerprint) do
+  defp core_columns(project, issue_id, event, fingerprint) do
     %{
       event_id: event.event_id |> to_uuid(),
       project_id: project.id,
-      issue_id: issue.id,
+      issue_id: issue_id,
       fingerprint: fingerprint,
       timestamp: DateTime.truncate(event.timestamp, :microsecond),
       received_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
@@ -332,9 +216,6 @@ defmodule Hive.Errors do
   end
 
   defp to_uuid(_), do: Ecto.UUID.generate()
-
-  defp truncate(nil, _), do: nil
-  defp truncate(binary, max) when is_binary(binary), do: String.slice(binary, 0, max)
 
   ## Issue queries
 
