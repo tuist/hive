@@ -54,6 +54,13 @@ env:
   # LLM model identifier in ReqLLM `provider:model_id` form, shared by
   # every agentic feature. The API key is pulled from 1Password below.
   HIVE_LLM_MODEL: "fireworks_ai:accounts/fireworks/models/kimi-k2p7-code"
+  # Channel in the tuist-company Slack that Hive.Errors.DropAlerter
+  # pings when the ingest pipeline is dropping events on the floor
+  # (buffer flush failures, unrecoverable per-event errors). Alerts
+  # here are meant to be all-hands stop-what-you're-doing; if the
+  # channel gets noisy from routine failures, fix the root cause,
+  # don't move it somewhere quieter.
+  HIVE_ALERTS_SLACK_CHANNEL_ID: "C061VCZC2V8"
 
 codingRuns:
   # Temporarily disabled to unblock deploys. The coding-sandbox pool is a

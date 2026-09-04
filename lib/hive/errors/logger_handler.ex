@@ -70,11 +70,49 @@ defmodule Hive.Errors.LoggerHandler do
 
   defp recording?, do: Process.get(:hive_errors_recording?) == true
 
-  defp ignore?(%{domain: domain}) when is_list(domain) do
+  defp ignore?(meta) do
+    from_ignored_domain?(meta) or from_click_house_infra?(meta) or
+      from_click_house_exception?(meta)
+  end
+
+  defp from_ignored_domain?(%{domain: domain}) when is_list(domain) do
     Enum.any?(domain, &(&1 in [:hive_errors, :cowboy, :bandit]))
   end
 
-  defp ignore?(_), do: false
+  defp from_ignored_domain?(_), do: false
+
+  # Any log emitted from a Ch.Connection process (the CH driver logs
+  # "failed to connect" on every pool worker's failed attempt), the
+  # ClickHouse Ecto adapter, or Hive's own ingest buffer. Recording
+  # them requires the very CH pool that is currently unhealthy, which
+  # amplifies the outage into a log storm without adding a single new
+  # data point beyond what the operator already sees in the pod log.
+  defp from_click_house_infra?(%{mfa: {mod, _fun, _arity}}) do
+    name = Atom.to_string(mod)
+
+    String.starts_with?(name, "Elixir.Ch.") or
+      String.starts_with?(name, "Elixir.Ecto.Adapters.ClickHouse") or
+      String.starts_with?(name, "Elixir.Hive.Ingestion.")
+  end
+
+  defp from_click_house_infra?(_), do: false
+
+  # Same loop-break for exceptions bubbling up as `:crash_reason`.
+  # `Ch.Error` is a CH server error — always. `DBConnection.ConnectionError`
+  # is only skipped when the message identifies the ingest repo; a
+  # Postgres pool error is a distinct problem and should be recorded.
+  defp from_click_house_exception?(%{crash_reason: {reason, _stack}}),
+    do: click_house_exception?(reason)
+
+  defp from_click_house_exception?(_), do: false
+
+  defp click_house_exception?(%{__struct__: Ch.Error}), do: true
+
+  defp click_house_exception?(%{__struct__: DBConnection.ConnectionError, message: msg})
+       when is_binary(msg),
+       do: String.contains?(msg, "Hive.IngestRepo")
+
+  defp click_house_exception?(_), do: false
 
   defp record(level, msg, meta, event) do
     with %Project{} = project <- self_project() do

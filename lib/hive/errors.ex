@@ -13,15 +13,40 @@ defmodule Hive.Errors do
   every dashboard, feed, and MCP tool that reads issues or events
   requires an authenticated org member. The ingest endpoint itself is
   public but authenticated by DSN public key.
+
+  ## Acceptance semantics
+
+  A `200` on the envelope endpoint means "accepted for ingest", not
+  "durable in ClickHouse". Events are parsed inline, the ClickHouse
+  row is cast to `Hive.Errors.Event.Buffer`, and the issue upsert is
+  cast to `Hive.Errors.IssueCoalescer` — both non-blocking. The buffer
+  batches ClickHouse writes on size/time; the coalescer batches
+  Postgres upserts per fingerprint. Flush failures on either path are
+  logged and reported through `Hive.Errors.DropAlerter`; Sentry SDKs
+  cache and retry envelope submission on 5xx, so we never return 5xx
+  after DSN validation and rely on the SDK's retry loop for durability.
+
+  The issue id is a deterministic UUIDv5 derived from
+  `(project_id, fingerprint)` — see `Hive.Errors.Issue.deterministic_id/2`
+  — so the ClickHouse row can name its owning issue in memory without
+  waiting on Postgres. Dashboard reads that go through Postgres see
+  new issues within the coalescer flush window (default 5 s);
+  ClickHouse-backed reads see the event immediately after the buffer
+  flush window (default 2 s).
   """
 
   import Ecto.Query
 
+  require Logger
+
+  alias Hive.Errors.Envelope
+  alias Hive.Errors.Event
   alias Hive.Errors.Fingerprint
   alias Hive.Errors.Issue
+  alias Hive.Errors.IssueCoalescer
+  alias Hive.Errors.KeyTouches
   alias Hive.Errors.ProjectKey
   alias Hive.Errors.SentryEvent
-  alias Hive.IngestRepo
   alias Hive.Projects.Project
   alias Hive.Repo
 
@@ -33,198 +58,104 @@ defmodule Hive.Errors do
   def enabled?, do: Hive.Errors.Availability.enabled?()
 
   @doc """
-  Records a parsed Sentry event against a project. Upserts the owning
-  issue in Postgres and appends the event to ClickHouse. Returns the
-  updated issue.
+  Ingests a raw Sentry envelope body for a project. Parses each event
+  item and hands it to `record_event/2`. Malformed envelopes and
+  malformed items are dropped with a warning — never propagated as
+  errors to the caller — so the ingest endpoint can always return 200
+  once the DSN has been validated (Sentry SDKs never retry on 200 but
+  do retry on 5xx, and a stuck malformed envelope would loop forever).
+  """
+  @spec ingest_envelope(Project.t(), binary()) :: :ok
+  def ingest_envelope(%Project{} = project, body) when is_binary(body) do
+    case Envelope.parse(body) do
+      {:ok, envelope} ->
+        envelope.items
+        |> Enum.filter(&(&1.type == "event"))
+        |> Enum.each(&ingest_event_item(project, &1))
+
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("errors: dropping malformed envelope: #{inspect(reason)}")
+        :ok
+    end
+  end
+
+  defp ingest_event_item(project, item) do
+    with {:ok, decoded} <- Jason.decode(item.payload),
+         event = SentryEvent.parse(decoded),
+         :ok <- record_event(project, event) do
+      :ok
+    else
+      {:error, %Jason.DecodeError{}} ->
+        # Malformed SDK input. Not our fault, not worth alerting on.
+        :ok
+
+      {:error, :not_configured} ->
+        # ClickHouse disabled on this instance (self-hosters without CH).
+        # Silent by design so the app keeps working.
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("errors: dropping event: #{inspect(reason)}")
+        Hive.Errors.DropAlerter.report_ingest_failure(reason, %{project_id: project.id})
+        :ok
+    end
+  end
+
+  @doc """
+  Records a parsed Sentry event against a project. Fires two
+  fire-and-forget casts: one to `Hive.Errors.Event.Buffer` (batches
+  the ClickHouse insert) and one to `Hive.Errors.IssueCoalescer`
+  (batches the Postgres issue upsert and counter bump). Both are
+  `GenServer.cast`s, so this call returns after computing the
+  deterministic issue id — never blocks on a database round-trip.
 
   Callers that received raw SDK JSON should build the `SentryEvent` via
   `Hive.Errors.SentryEvent.parse/1` first.
   """
-  @spec record_event(Project.t(), SentryEvent.t()) ::
-          {:ok, Issue.t()} | {:error, :not_configured | term()}
+  @spec record_event(Project.t(), SentryEvent.t()) :: :ok | {:error, :not_configured | term()}
   def record_event(%Project{} = project, %SentryEvent{} = event) do
     if enabled?() do
       fingerprint = Fingerprint.compute(event)
+      # Deterministic id — same `(project_id, fingerprint)` always
+      # resolves to the same UUID, so the ClickHouse row knows what
+      # issue it belongs to without waiting on Postgres.
+      issue_id = Issue.deterministic_id(project.id, fingerprint)
 
-      # Idempotency ordering: reserve or fetch the issue row first
-      # (upsert without incrementing the count), then insert the
-      # event into ClickHouse, then only increment the Postgres
-      # counters. If the ClickHouse insert fails, the worker retry
-      # re-runs the same steps against the same row — and because
-      # the count bump only happens on the successful CH path, a
-      # transient CH failure never doubles the `event_count` for
-      # the issue.
-      with {:ok, before_issue} <- ensure_issue(project, event, fingerprint),
-           :ok <- insert_event(project, before_issue, event, fingerprint),
-           {:ok, issue} <- bump_issue_counters(before_issue, event) do
-        evaluate_alerts(issue, before_issue, event)
-        {:ok, issue}
-      end
+      row = build_event_row(project, issue_id, event, fingerprint)
+      {:ok, _} = Event.Buffer.insert(row)
+      :ok = IssueCoalescer.observe(project, fingerprint, event)
+      :ok
     else
       {:error, :not_configured}
-    end
-  end
-
-  # Fire-and-forget alert evaluation. Enqueues per-rule Oban jobs; a
-  # failure here must not fail the event record (the event is already
-  # stored).
-  defp evaluate_alerts(%Issue{} = issue, %Issue{} = before_issue, %SentryEvent{} = event) do
-    Hive.Alerts.evaluate_error_issue(issue, before_issue, %{environment: event.environment})
-    :ok
-  rescue
-    err ->
-      require Logger
-      Logger.warning("[Errors] alert evaluation failed: #{inspect(err)}")
-      :ok
-  end
-
-  # Create the issue if it doesn't exist yet, or fetch the existing
-  # row without touching `event_count` or the seen-at timestamps —
-  # those updates live in `bump_issue_counters/2` and only run when
-  # the ClickHouse insert has succeeded.
-  defp ensure_issue(project, event, fingerprint) do
-    now = event.timestamp || DateTime.utc_now()
-    title = SentryEvent.title(event) |> truncate(500)
-    culprit = SentryEvent.culprit(event) |> truncate(500)
-
-    attrs = %{
-      project_id: project.id,
-      fingerprint: fingerprint,
-      title: title,
-      culprit: culprit,
-      level: String.to_atom(event.level),
-      platform: event.platform,
-      first_seen: now,
-      last_seen: now,
-      event_count: 0
-    }
-
-    changeset = Issue.changeset(%Issue{}, attrs)
-
-    # Only refresh mutable metadata — leave counters alone so a worker
-    # retry that lands here after a successful `insert_event/4` does
-    # not repeat the count bump.
-    on_conflict_query =
-      from(existing in Issue,
-        update: [
-          set: [
-            title: ^title,
-            culprit: ^culprit,
-            level: ^String.to_atom(event.level),
-            platform: ^event.platform,
-            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
-          ]
-        ]
-      )
-
-    case Repo.insert(changeset,
-           on_conflict: on_conflict_query,
-           conflict_target: [:project_id, :fingerprint],
-           returning: true
-         ) do
-      {:ok, issue} -> {:ok, issue}
-      {:error, _} = err -> err
-    end
-  end
-
-  # Runs only after `insert_event/4` has appended the row to
-  # ClickHouse, so `event_count` and the seen-at bounds can be moved
-  # forward without risk of double-counting on retry. This also carries
-  # the regression logic Sentry documents:
-  #
-  #   * ignored issues stay ignored
-  #   * resolved issues auto-reopen when the new event is strictly
-  #     newer than `resolved_at`; a backfilled older event does not
-  #     regress the resolution
-  #   * unresolved stays unresolved
-  #
-  # When the reopen fires the same CASE clears `resolved_at` so a
-  # subsequent Resolve gets a fresh timestamp.
-  defp bump_issue_counters(%Issue{id: id}, event) do
-    now = event.timestamp || DateTime.utc_now()
-
-    update_query =
-      from(existing in Issue,
-        where: existing.id == ^id,
-        update: [
-          inc: [event_count: 1],
-          set: [
-            last_seen: fragment("GREATEST(?, ?)", existing.last_seen, ^now),
-            first_seen: fragment("LEAST(?, ?)", existing.first_seen, ^now),
-            status:
-              fragment(
-                """
-                CASE
-                  WHEN ? = 'ignored' THEN ?
-                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN ?
-                  ELSE ?
-                END
-                """,
-                existing.status,
-                "ignored",
-                existing.status,
-                existing.resolved_at,
-                ^now,
-                existing.resolved_at,
-                "unresolved",
-                existing.status
-              ),
-            resolved_at:
-              fragment(
-                """
-                CASE
-                  WHEN ? = 'resolved' AND ? IS NOT NULL AND ? > ? THEN NULL
-                  ELSE ?
-                END
-                """,
-                existing.status,
-                existing.resolved_at,
-                ^now,
-                existing.resolved_at,
-                existing.resolved_at
-              ),
-            updated_at: ^(DateTime.utc_now() |> DateTime.truncate(:second))
-          ]
-        ],
-        select: existing
-      )
-
-    case Repo.update_all(update_query, []) do
-      {1, [issue]} -> {:ok, issue}
-      {0, _} -> {:error, :issue_not_found}
-      other -> {:error, other}
-    end
-  end
-
-  defp insert_event(project, issue, event, fingerprint) do
-    row = build_event_row(project, issue, event, fingerprint)
-
-    case IngestRepo.insert_all("errors_events", [row], types: event_column_types()) do
-      {_count, _} -> :ok
     end
   rescue
     error -> {:error, error}
   end
 
-  # Builds the ClickHouse row map. Kept separate from `insert_event/4`
-  # so its cyclomatic complexity — one branch per string-defaulted
-  # column — doesn't blow past Credo's threshold in the outer
-  # function.
-  defp build_event_row(project, issue, event, fingerprint) do
-    core_columns(project, issue, event, fingerprint)
-    |> Map.merge(event_scalar_columns(event))
-    |> Map.merge(frame_columns(event.top_frame))
-    |> Map.merge(actor_columns(event))
-    |> Map.merge(sdk_columns(event))
-    |> Map.put(:tags, event.tags)
-    |> Map.put(:payload, Jason.encode!(event.payload))
+  # Builds the ClickHouse row as an `Event` struct. Kept separate from
+  # `record_event/2` so its cyclomatic complexity — one branch per
+  # string-defaulted column — doesn't blow past Credo's threshold in the
+  # outer function.
+  defp build_event_row(project, issue_id, event, fingerprint) do
+    fields =
+      core_columns(project, issue_id, event, fingerprint)
+      |> Map.merge(event_scalar_columns(event))
+      |> Map.merge(frame_columns(event.top_frame))
+      |> Map.merge(actor_columns(event))
+      |> Map.merge(sdk_columns(event))
+      |> Map.put(:tags, event.tags)
+      |> Map.put(:payload, Jason.encode!(event.payload))
+
+    struct!(Event, fields)
   end
 
-  defp core_columns(project, issue, event, fingerprint) do
+  defp core_columns(project, issue_id, event, fingerprint) do
     %{
       event_id: event.event_id |> to_uuid(),
       project_id: project.id,
-      issue_id: issue.id,
+      issue_id: issue_id,
       fingerprint: fingerprint,
       timestamp: DateTime.truncate(event.timestamp, :microsecond),
       received_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
@@ -274,41 +205,6 @@ defmodule Hive.Errors do
   defp default(nil, fallback), do: fallback
   defp default(value, _fallback), do: value
 
-  # ClickHouse column types for `errors_events`, required by ecto_ch when
-  # inserting into a raw table name.
-  defp event_column_types do
-    %{
-      event_id: "UUID",
-      project_id: "String",
-      issue_id: "String",
-      fingerprint: "FixedString(64)",
-      timestamp: "DateTime64(6, 'UTC')",
-      received_at: "DateTime64(6, 'UTC')",
-      platform: "LowCardinality(String)",
-      level: "LowCardinality(String)",
-      environment: "LowCardinality(String)",
-      release: "String",
-      dist: "String",
-      server_name: "String",
-      transaction: "String",
-      logger: "LowCardinality(String)",
-      exception_type: "String",
-      exception_value: "String",
-      top_frame_function: "String",
-      top_frame_module: "String",
-      top_frame_filename: "String",
-      user_id: "String",
-      user_email: "String",
-      user_ip: "String",
-      request_url: "String",
-      request_method: "LowCardinality(String)",
-      sdk_name: "LowCardinality(String)",
-      sdk_version: "LowCardinality(String)",
-      tags: "Map(LowCardinality(String), String)",
-      payload: "String"
-    }
-  end
-
   defp frame_field(nil, _), do: ""
   defp frame_field(frame, key) when is_map(frame), do: to_string(frame[key] || "")
 
@@ -320,9 +216,6 @@ defmodule Hive.Errors do
   end
 
   defp to_uuid(_), do: Ecto.UUID.generate()
-
-  defp truncate(nil, _), do: nil
-  defp truncate(binary, max) when is_binary(binary), do: String.slice(binary, 0, max)
 
   ## Issue queries
 
@@ -468,12 +361,49 @@ defmodule Hive.Errors do
     |> Repo.all()
   end
 
+  # DSN keys change only on rotation. Cache lookups by public key for
+  # `@project_key_cache_ttl` and invalidate on `rotate_project_key/1`
+  # and `create_project_key/2`. Miss → PG lookup → cache. Positive
+  # results are cached; misses fall through and are not cached so a
+  # newly minted key becomes usable within the same request.
+  @project_key_cache :hive
+  @project_key_cache_ttl :timer.minutes(5)
+
   def fetch_project_key_by_public_key(public_key) when is_binary(public_key) do
-    case Repo.get_by(ProjectKey, public_key: public_key) do
-      nil -> {:error, :not_found}
-      %ProjectKey{} = key -> {:ok, Repo.preload(key, :project)}
+    cache_key = {:project_key, public_key}
+
+    case Cachex.fetch(@project_key_cache, cache_key, fn ->
+           case Repo.get_by(ProjectKey, public_key: public_key) do
+             nil -> {:ignore, {:error, :not_found}}
+             %ProjectKey{} = key -> {:commit, {:ok, Repo.preload(key, :project)}}
+           end
+         end) do
+      {:ok, result} ->
+        result
+
+      {:commit, result} ->
+        Cachex.expire(@project_key_cache, cache_key, @project_key_cache_ttl)
+        result
+
+      {:ignore, result} ->
+        result
+
+      {:error, _reason} ->
+        # Cache unavailable — fall back to a direct PG lookup so ingest
+        # keeps working. Do not treat this as auth failure.
+        case Repo.get_by(ProjectKey, public_key: public_key) do
+          nil -> {:error, :not_found}
+          %ProjectKey{} = key -> {:ok, Repo.preload(key, :project)}
+        end
     end
   end
+
+  defp invalidate_project_key_cache(public_key) when is_binary(public_key) do
+    _ = Cachex.del(@project_key_cache, {:project_key, public_key})
+    :ok
+  end
+
+  defp invalidate_project_key_cache(_), do: :ok
 
   @doc """
   Provisions a default Data Source Name for the project if one does not
@@ -530,14 +460,24 @@ defmodule Hive.Errors do
   Called when an operator suspects a Data Source Name has leaked.
   """
   def rotate_project_key(%Project{id: id}) do
-    Repo.transaction(fn ->
-      {_deleted, _} = Repo.delete_all(from(k in ProjectKey, where: k.project_id == ^id))
+    existing_public_keys =
+      ProjectKey
+      |> where([k], k.project_id == ^id)
+      |> select([k], k.public_key)
+      |> Repo.all()
 
-      case create_project_key(id, %{"name" => "default"}) do
-        {:ok, key} -> key
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
-    end)
+    result =
+      Repo.transaction(fn ->
+        {_deleted, _} = Repo.delete_all(from(k in ProjectKey, where: k.project_id == ^id))
+
+        case create_project_key(id, %{"name" => "default"}) do
+          {:ok, key} -> key
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    Enum.each(existing_public_keys, &invalidate_project_key_cache/1)
+    result
   end
 
   def rotate_project_key(_), do: {:error, :invalid_project}
@@ -551,19 +491,26 @@ defmodule Hive.Errors do
       |> Map.put_new("secret_key", ProjectKey.generate_key())
       |> Map.put_new("name", "default")
 
-    %ProjectKey{}
-    |> ProjectKey.changeset(attrs)
-    |> Repo.insert()
+    case %ProjectKey{} |> ProjectKey.changeset(attrs) |> Repo.insert() do
+      {:ok, %ProjectKey{public_key: public_key}} = ok ->
+        # Positive-only cache: an earlier `:not_found` was ignored, so
+        # no invalidation is needed. But if a caller previously fetched
+        # a cached miss under any code path that DID cache it, this
+        # keeps the invariant safe.
+        invalidate_project_key_cache(public_key)
+        ok
+
+      other ->
+        other
+    end
   end
 
-  def touch_project_key(%ProjectKey{} = key) do
-    now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
-
-    from(k in ProjectKey, where: k.id == ^key.id)
-    |> Repo.update_all(set: [last_used_at: now])
-
+  def touch_project_key(%ProjectKey{id: id}) do
+    KeyTouches.touch(id)
     :ok
   end
+
+  def touch_project_key(_), do: :ok
 
   @doc """
   Returns the distinct environments seen for events matching the

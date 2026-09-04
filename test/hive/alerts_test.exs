@@ -16,8 +16,8 @@ defmodule Hive.AlertsTest do
   setup :verify_on_exit!
 
   setup do
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
+    stub(Hive.Errors.Event.Buffer, :insert, fn row -> {:ok, row} end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
 
@@ -122,7 +122,8 @@ defmodule Hive.AlertsTest do
       {:ok, _rule} =
         Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 5}))
 
-      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "boom"}))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
 
       before = %{issue | event_count: 0}
       assert Alerts.matching_rules_for_issue(issue, before, %{environment: nil}) == []
@@ -135,9 +136,11 @@ defmodule Hive.AlertsTest do
       {:ok, %Rule{id: rule_id}} =
         Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 2}))
 
-      payload = %{"message" => "sideways"}
-      {:ok, _} = Errors.record_event(project, SentryEvent.parse(payload))
-      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(payload))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "sideways"}))
+
+      # Simulate the coalescer having bumped the counter to 2.
+      {:ok, issue} = Repo.update(Ecto.Changeset.change(issue, event_count: 2))
 
       before = %{issue | event_count: 1}
       matches = Alerts.matching_rules_for_issue(issue, before, %{environment: nil})
@@ -154,14 +157,11 @@ defmodule Hive.AlertsTest do
       {:ok, %Rule{id: rule_id}} =
         Alerts.create_rule(project, rule_attrs(installation, %{"trigger" => "regression"}))
 
-      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "reopens"}))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "reopens"}))
+
       {:ok, resolved} = Errors.update_issue_status(issue, :resolved)
-
-      newer =
-        %{"message" => "reopens"}
-        |> Map.put("timestamp", DateTime.to_iso8601(DateTime.utc_now()))
-
-      {:ok, reopened} = Errors.record_event(project, SentryEvent.parse(newer))
+      {:ok, reopened} = Errors.update_issue_status(resolved, :unresolved)
 
       before = %{reopened | status: resolved.status}
 
@@ -173,7 +173,9 @@ defmodule Hive.AlertsTest do
       {:ok, _rule} =
         Alerts.create_rule(project, rule_attrs(installation, %{"trigger" => "regression"}))
 
-      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "again"}))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "again"}))
+
       before = %{issue | event_count: 0}
 
       assert Alerts.matching_rules_for_issue(issue, before, %{environment: nil}) == []
@@ -183,7 +185,9 @@ defmodule Hive.AlertsTest do
   describe "in_cooldown?/2" do
     test "true within window, false after", %{project: project, installation: installation} do
       {:ok, rule} = Alerts.create_rule(project, rule_attrs(installation))
-      {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "z"}))
+
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "z"}))
 
       {:ok, _notification} =
         Alerts.record_notification(%{
@@ -205,7 +209,13 @@ defmodule Hive.AlertsTest do
     end
   end
 
-  describe "record_event/2 integration" do
+  describe "evaluate_error_issue/3 integration" do
+    # `Hive.Errors.record_event/2` casts through the IssueCoalescer so
+    # the alerts pipeline fires from the coalescer's flush, not from
+    # the request path. The coalescer is exercised end-to-end in
+    # `Hive.Errors.IssueCoalescerTest`; here we assert the wiring:
+    # `evaluate_error_issue/3` enqueues a `DeliverRule` job when a
+    # rule matches, and does not otherwise.
     test "enqueues a delivery job for a matching rule", %{
       project: project,
       installation: installation
@@ -216,7 +226,12 @@ defmodule Hive.AlertsTest do
           rule_attrs(installation, %{"threshold_event_count" => 1})
         )
 
-      {:ok, _issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "hi"}))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "hi"}))
+
+      Alerts.evaluate_error_issue(issue, %{status: :unresolved, resolved_at: nil}, %{
+        environment: nil
+      })
 
       assert_enqueued(
         worker: DeliverRule,
@@ -225,7 +240,13 @@ defmodule Hive.AlertsTest do
     end
 
     test "does not enqueue when no rule matches", %{project: project} do
-      {:ok, _issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "silent"}))
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "silent"}))
+
+      Alerts.evaluate_error_issue(issue, %{status: :unresolved, resolved_at: nil}, %{
+        environment: nil
+      })
+
       refute_enqueued(worker: DeliverRule)
     end
   end

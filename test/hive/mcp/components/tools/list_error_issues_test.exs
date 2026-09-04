@@ -11,7 +11,6 @@ defmodule Hive.MCP.Components.Tools.ListErrorIssuesTest do
 
   setup do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
-    stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
     :ok
   end
 
@@ -20,7 +19,7 @@ defmodule Hive.MCP.Components.Tools.ListErrorIssuesTest do
     {:ok, project} = Projects.create_project(%{"name" => unique_name("Proj")})
 
     {:ok, _issue} =
-      Errors.record_event(
+      Hive.ErrorsHelpers.seed_issue(
         project,
         SentryEvent.parse(%{"message" => "database timeout"})
       )
@@ -37,10 +36,11 @@ defmodule Hive.MCP.Components.Tools.ListErrorIssuesTest do
     user = mcp_user("member@example.com", :member)
     {:ok, project} = Projects.create_project(%{"name" => unique_name("Proj")})
 
-    {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "one"}))
+    {:ok, issue} =
+      Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "one"}))
 
     {:ok, _} =
-      Errors.record_event(
+      Hive.ErrorsHelpers.seed_issue(
         project,
         SentryEvent.parse(%{"exception" => %{"values" => [%{"type" => "two"}]}})
       )

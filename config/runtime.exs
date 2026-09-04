@@ -87,7 +87,18 @@ if clickhouse_enabled? do
     settings: [session_timezone: "UTC"]
   ]
 
-  config :hive, Hive.IngestRepo, clickhouse_config
+  ingest_repo_config =
+    clickhouse_config
+    |> Keyword.put(
+      :flush_interval_ms,
+      System.get_env("HIVE_INGEST_FLUSH_INTERVAL_MS", "2000") |> String.to_integer()
+    )
+    |> Keyword.put(
+      :max_buffer_size,
+      System.get_env("HIVE_INGEST_MAX_BUFFER_SIZE", "1048576") |> String.to_integer()
+    )
+
+  config :hive, Hive.IngestRepo, ingest_repo_config
   config :hive, Hive.ClickHouseRepo, Keyword.put(clickhouse_config, :read_only, true)
   config :hive, :ecto_repos, [Hive.Repo, Hive.IngestRepo]
   config :hive, :clickhouse_enabled, true

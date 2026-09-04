@@ -5,7 +5,6 @@ defmodule Hive.Alerts.Workers.DeliverRuleTest do
   alias Hive.Alerts
   alias Hive.Alerts.Notification
   alias Hive.Alerts.Workers.DeliverRule
-  alias Hive.Errors
   alias Hive.Errors.SentryEvent
   alias Hive.Projects
   alias Hive.Slack.Installation
@@ -13,7 +12,6 @@ defmodule Hive.Alerts.Workers.DeliverRuleTest do
   setup :verify_on_exit!
 
   setup do
-    stub(Hive.IngestRepo, :insert_all, fn _t, rows, _o -> {length(rows), nil} end)
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
@@ -41,7 +39,8 @@ defmodule Hive.Alerts.Workers.DeliverRuleTest do
         "cooldown_minutes" => 5
       })
 
-    {:ok, issue} = Errors.record_event(project, SentryEvent.parse(%{"message" => "boom"}))
+    {:ok, issue} =
+      Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
 
     {:ok, rule: rule, issue: issue}
   end
