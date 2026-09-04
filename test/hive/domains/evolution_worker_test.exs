@@ -45,8 +45,16 @@ defmodule Hive.Domains.EvolutionWorkerTest do
     assert {:cancel, :llm_credit_limit} = EvolutionWorker.perform(%Oban.Job{})
   end
 
-  test "perform/1 preserves the sanitized reason returned by Evolution" do
+  test "perform/1 snoozes when the model provider is unavailable" do
     sanitized = {:llm_request_failed, 502, "Provider response error (502): bad gateway"}
+
+    expect(Evolution, :evolve_from_work_items, fn -> {:error, sanitized} end)
+
+    assert {:snooze, 3_600} = EvolutionWorker.perform(%Oban.Job{})
+  end
+
+  test "perform/1 preserves other sanitized errors for retry" do
+    sanitized = {:domain_evolution_failed, :unexpected_response}
 
     expect(Evolution, :evolve_from_work_items, fn -> {:error, sanitized} end)
 
