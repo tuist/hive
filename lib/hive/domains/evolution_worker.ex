@@ -18,6 +18,7 @@ defmodule Hive.Domains.EvolutionWorker do
   alias Hive.Domains.Evolution
 
   @default_debounce_seconds 30
+  @model_provider_unavailable_snooze_seconds 3_600
 
   @doc """
   Enqueues a debounced evolution job when agentic workflows are enabled.
@@ -47,10 +48,27 @@ defmodule Hive.Domains.EvolutionWorker do
         :ok
 
       {:error, reason} ->
-        Errors.oban_error(reason, :domain_evolution_failed)
+        handle_evolution_error(reason)
 
       other ->
         {:error, {:unexpected_evolution_result, other}}
+    end
+  end
+
+  defp handle_evolution_error(reason) do
+    cond do
+      hard_reason = Errors.hard_failure_reason(reason) ->
+        {:cancel, hard_reason}
+
+      Errors.provider_unavailable?(reason) ->
+        Logger.warning(
+          "[Domains.EvolutionWorker] Model provider unavailable: #{inspect(Errors.sanitize_reason(reason, :domain_evolution_failed))}"
+        )
+
+        {:snooze, @model_provider_unavailable_snooze_seconds}
+
+      true ->
+        {:error, Errors.sanitize_reason(reason, :domain_evolution_failed)}
     end
   end
 end
