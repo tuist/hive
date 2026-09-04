@@ -153,7 +153,8 @@
   }
 }
 
-#error-issue {
+#error-issue,
+#error-event {
   display: flex;
   flex-direction: column;
   gap: var(--noora-spacing-7);

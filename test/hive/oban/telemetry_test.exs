@@ -48,7 +48,7 @@ defmodule Hive.Oban.TelemetryTest do
             job: job,
             state: :failure,
             kind: :error,
-            reason: %RuntimeError{message: "also sensitive"}
+            reason: %RuntimeError{message: "boom"}
           },
           nil
         )
@@ -59,5 +59,49 @@ defmodule Hive.Oban.TelemetryTest do
     assert log =~ "job_id: 123"
     assert log =~ "duration_ms: 25"
     refute log =~ "sensitive"
+  end
+
+  test "includes the failure reason so downstream ingest can surface it" do
+    job = %Oban.Job{id: 1, worker: "Hive.Worker", queue: "default", attempt: 1, max_attempts: 3}
+
+    log =
+      capture_log(fn ->
+        Telemetry.handle_event(
+          [:oban, :job, :exception],
+          %{duration: 0, queue_time: 0},
+          %{
+            job: job,
+            state: :failure,
+            kind: :error,
+            reason: %Oban.PerformError{
+              reason: {:error, :domain_evolution_failed},
+              message: "Hive.Worker: {:error, :domain_evolution_failed}"
+            }
+          },
+          nil
+        )
+      end)
+
+    assert log =~ "error_type: \"Oban.PerformError\""
+    assert log =~ "error_message:"
+    assert log =~ ":domain_evolution_failed"
+  end
+
+  test "truncates absurdly long reason messages" do
+    job = %Oban.Job{id: 2, worker: "Hive.Worker", queue: "default", attempt: 1, max_attempts: 3}
+    long = String.duplicate("x", 1_000)
+
+    log =
+      capture_log(fn ->
+        Telemetry.handle_event(
+          [:oban, :job, :exception],
+          %{duration: 0, queue_time: 0},
+          %{job: job, state: :failure, kind: :error, reason: %RuntimeError{message: long}},
+          nil
+        )
+      end)
+
+    assert log =~ "..."
+    refute log =~ String.duplicate("x", 600)
   end
 end

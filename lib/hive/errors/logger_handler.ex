@@ -142,12 +142,18 @@ defmodule Hive.Errors.LoggerHandler do
     state = Map.get(report, :state, :error)
     worker = to_string(Map.get(report, :worker, "Oban.Worker"))
     error_type = to_string(Map.get(report, :error_type, ""))
+    error_message = to_string(Map.get(report, :error_message, ""))
     kind = to_string(Map.get(report, :kind, Map.get(report, :error_kind, "")))
 
     type = "Oban.#{Macro.camelize(to_string(state))}Error"
 
+    detail =
+      present_or_nil(error_message) ||
+        present_or_nil(error_type) ||
+        present_or_nil(kind)
+
     value =
-      [worker, present_or_nil(error_type) || present_or_nil(kind)]
+      [worker, detail]
       |> Enum.reject(&is_nil/1)
       |> Enum.join(": ")
 
