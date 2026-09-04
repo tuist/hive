@@ -56,6 +56,7 @@ defmodule Hive.MixProject do
       {:req, "~> 0.5"},
       {:ex_aws_auth, "~> 1.3"},
       {:carta, "~> 0.2.0"},
+      {:cachex, "~> 3.6"},
       {:browse_chrome, "~> 0.4.0"},
       {:browse, "~> 0.5.0", override: true},
       {:muontrap, "~> 1.7", override: true},

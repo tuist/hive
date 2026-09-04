@@ -1,8 +1,10 @@
 defmodule HiveWeb.ErrorsAPI.EnvelopeController do
   @moduledoc """
   Sentry-compatible ingest endpoint. Accepts envelopes at
-  `POST /api/:project_id/envelope/` and hands the raw body to
-  `Hive.Errors.Workers.IngestEnvelope` for parsing and storage.
+  `POST /api/:project_id/envelope/`, validates the DSN, and ingests
+  event items inline via `Hive.Errors.ingest_envelope/2` — the actual
+  ClickHouse write is buffered by `Hive.Errors.Event.Buffer`, so the
+  request returns quickly without paying an Oban round-trip per event.
 
   This endpoint is public but authenticated by DSN public key. The
   `X-Sentry-Auth` header (or `?sentry_key=` fallback, or a `dsn`
@@ -25,8 +27,9 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
          {:ok, body} <- decode_body(body, encoding(conn)),
          {:ok, public_key} <- resolve_public_key(conn, body),
          {:ok, key} <- Errors.fetch_project_key_by_public_key(public_key),
-         :ok <- verify_project(key, project_id),
-         {:ok, event_id} <- enqueue(key.project_id, body) do
+         :ok <- verify_project(key, project_id) do
+      event_id = extract_event_id(body)
+      :ok = Errors.ingest_envelope(key.project, body)
       Errors.touch_project_key(key)
 
       conn
@@ -45,9 +48,6 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
 
       {:error, :project_mismatch} ->
         send_resp(conn, 403, "")
-
-      {:error, :not_configured} ->
-        send_resp(conn, 503, "")
 
       {:error, reason} ->
         Logger.warning("errors: ingest failed: #{inspect(reason)}")
@@ -161,18 +161,6 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
     if to_string(key.dsn_project_id) == to_string(project_id),
       do: :ok,
       else: {:error, :project_mismatch}
-  end
-
-  defp enqueue(project_id, body) do
-    event_id = extract_event_id(body)
-
-    %{"project_id" => project_id, "body" => body}
-    |> Hive.Errors.Workers.IngestEnvelope.new()
-    |> Oban.insert()
-    |> case do
-      {:ok, _job} -> {:ok, event_id}
-      {:error, changeset} -> {:error, changeset}
-    end
   end
 
   defp extract_event_id(body) do

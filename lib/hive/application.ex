@@ -17,7 +17,10 @@ defmodule Hive.Application do
         HiveWeb.Telemetry,
         Hive.Repo,
         {DNSCluster, query: Application.get_env(:hive, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Hive.PubSub}
+        {Phoenix.PubSub, name: Hive.PubSub},
+        {Cachex, name: :hive},
+        Hive.Errors.KeyTouches,
+        Hive.Errors.DropAlerter
       ]
       |> maybe_add_clickhouse()
       |> maybe_add_oban()
@@ -45,7 +48,12 @@ defmodule Hive.Application do
 
   defp maybe_add_clickhouse(children) do
     if Application.get_env(:hive, :clickhouse_enabled, false) do
-      children ++ [Hive.ClickHouseRepo, Hive.IngestRepo]
+      children ++
+        [
+          Hive.ClickHouseRepo,
+          Hive.IngestRepo,
+          Supervisor.child_spec(Hive.Errors.Event.Buffer, id: Hive.Errors.Event.Buffer)
+        ]
     else
       children
     end
