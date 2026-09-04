@@ -1,7 +1,4 @@
-#project-alerts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--noora-spacing-7);
+.project-alerts {
   min-width: 0;
   width: 100%;
 
@@ -11,41 +8,48 @@
     width: 100%;
   }
 
-  & > [data-part="header"] {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--noora-spacing-6);
-    max-width: 100%;
+  & #alerts-rules-table {
+    overflow: visible;
+  }
+
+  & #alerts-rules-table > table {
+    min-width: 100%;
+    table-layout: fixed;
+  }
+
+  & #alerts-rules-table td:first-child [data-part="column"] {
     min-width: 0;
-    width: 100%;
   }
 
-  & > [data-part="header"] > [data-part="title-group"] {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--noora-spacing-3);
-    min-width: 0;
-    max-width: 780px;
+  & #alerts-rules-table td:first-child [data-part="label"],
+  & #alerts-rules-table td:first-child [data-part="description"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  & > [data-part="header"] > [data-part="title-group"] h1 {
-    color: var(--noora-surface-label-primary);
-    font: var(--noora-font-weight-medium) var(--noora-font-heading-large);
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(1) {
+    width: 35%;
   }
 
-  & > [data-part="header"] > [data-part="title-group"] p {
-    color: var(--noora-surface-label-secondary);
-    font: var(--noora-font-weight-regular) var(--noora-font-body-small);
-    overflow-wrap: anywhere;
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(2) {
+    width: 12%;
   }
 
-  & [data-part="header-actions"] {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--noora-spacing-3);
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(3) {
+    width: 20%;
+  }
+
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(4) {
+    width: 12%;
+  }
+
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(5) {
+    width: 12%;
+  }
+
+  &:has(#alerts-rules-table th:nth-child(6)) #alerts-rules-table th:nth-child(6) {
+    width: 9%;
   }
 }
 
@@ -64,7 +68,7 @@
  * Gated on `[data-state="open"]` so the lock only applies while the
  * modal is actually shown.
  */
-html:has(#new-alert-rule-modal [data-part="content"][data-state="open"]) {
+html:has(.project-alerts .noora-modal [data-part="content"][data-state="open"]) {
   overflow: hidden;
 }
 
@@ -73,7 +77,7 @@ html:has(#new-alert-rule-modal [data-part="content"][data-state="open"]) {
  * unconditionally would fight the `hidden` attribute Zag uses to keep
  * the modal offscreen while closed.
  */
-#new-alert-rule-modal [data-part="content"][data-state="open"] {
+.project-alerts .noora-modal [data-part="content"][data-state="open"] {
   display: flex;
   flex-direction: column;
   width: min(520px, 92vw);
@@ -97,14 +101,14 @@ html:has(#new-alert-rule-modal [data-part="content"][data-state="open"]) {
  * `overscroll-behavior: contain` stops the wheel event from bubbling
  * up to the page once the modal body reaches either end of its scroll.
  */
-#new-alert-rule-modal [data-part="content"][data-state="open"] > [data-part="body"] {
+.project-alerts .noora-modal [data-part="content"][data-state="open"] > [data-part="body"] {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-[data-part="rule-form"] {
+.project-alerts [data-part="rule-form"] {
   display: flex;
   flex-direction: column;
   gap: var(--noora-spacing-5);
