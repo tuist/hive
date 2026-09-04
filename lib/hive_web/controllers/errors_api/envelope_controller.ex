@@ -26,7 +26,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
          {:ok, public_key} <- resolve_public_key(conn, body),
          {:ok, key} <- Errors.fetch_project_key_by_public_key(public_key),
          :ok <- verify_project(key, project_id),
-         {:ok, event_id} <- enqueue(project_id, body) do
+         {:ok, event_id} <- enqueue(key.project_id, body) do
       Errors.touch_project_key(key)
 
       conn
@@ -157,8 +157,10 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
     end
   end
 
-  defp verify_project(%{project_id: pid}, project_id) do
-    if to_string(pid) == to_string(project_id), do: :ok, else: {:error, :project_mismatch}
+  defp verify_project(key, project_id) do
+    if to_string(key.dsn_project_id) == to_string(project_id),
+      do: :ok,
+      else: {:error, :project_mismatch}
   end
 
   defp enqueue(project_id, body) do

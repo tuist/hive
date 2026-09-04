@@ -18,6 +18,7 @@ defmodule Hive.Errors.ProjectKey do
   @foreign_key_type :binary_id
 
   schema "errors_project_keys" do
+    field :dsn_project_id, :integer, read_after_writes: true
     field :public_key, :string
     field :secret_key, :string
     field :name, :string, default: "default"
@@ -51,9 +52,9 @@ defmodule Hive.Errors.ProjectKey do
 
   @doc """
   Renders the DSN string SDKs consume, given a host built from the
-  endpoint URL and the project id.
+  endpoint URL and the numeric project id required by Sentry clients.
   """
-  def dsn(%__MODULE__{public_key: public_key, project_id: project_id}, endpoint_url)
+  def dsn(%__MODULE__{public_key: public_key, dsn_project_id: project_id}, endpoint_url)
       when is_binary(endpoint_url) do
     uri = URI.parse(endpoint_url)
     scheme = uri.scheme || "https"

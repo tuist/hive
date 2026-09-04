@@ -37,7 +37,7 @@ identifies which project an event belongs to. Every project owns one
 or more keys; each key produces a Data Source Name of the form:
 
 ```
-https://<public_key>@<hive-host>/<project_id>
+https://<public_key>@<hive-host>/<numeric_project_id>
 ```
 
 Software Development Kits that speak the Sentry protocol accept this
@@ -51,7 +51,7 @@ example, one per deployment) and rotated without downtime.
 ## Ingest endpoint
 
 Software Development Kits send events as envelopes to
-`POST /api/<project_id>/envelope/` on the deployed host. The endpoint
+`POST /api/<numeric_project_id>/envelope/` on the deployed host. The endpoint
 follows the public Sentry envelope specification:
 
 - Authentication comes from the `X-Sentry-Auth` header. When a client

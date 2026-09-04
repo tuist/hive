@@ -139,11 +139,20 @@ defmodule Hive.ErrorsTest do
 
   describe "project keys" do
     test "create_project_key/2 mints a random public and secret key", %{project: project} do
-      {:ok, %ProjectKey{public_key: pk, secret_key: sk}} = Errors.create_project_key(project.id)
+      {:ok, %ProjectKey{public_key: pk, secret_key: sk, dsn_project_id: project_id}} =
+        Errors.create_project_key(project.id)
 
       assert byte_size(pk) == 32
       assert byte_size(sk) == 32
+      assert is_integer(project_id)
       refute pk == sk
+    end
+
+    test "renders a Data Source Name with a numeric project id", %{project: project} do
+      {:ok, key} = Errors.create_project_key(project.id)
+
+      assert ProjectKey.dsn(key, "https://errors.example.com") ==
+               "https://#{key.public_key}@errors.example.com/#{key.dsn_project_id}"
     end
 
     test "fetch_project_key_by_public_key/1 returns the key with its project", %{project: project} do
