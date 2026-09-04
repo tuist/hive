@@ -4,6 +4,8 @@ defmodule Hive.Slack.UnfurlerTest do
   alias Hive.Domains
   alias Hive.Drops
   alias Hive.Drops.WeeklyDigest
+  alias Hive.ErrorsHelpers
+  alias Hive.Errors.SentryEvent
   alias Hive.Forage
   alias Hive.Forage.FeatureRequest
   alias Hive.Projects
@@ -31,6 +33,7 @@ defmodule Hive.Slack.UnfurlerTest do
     "/drops/digest",
     "/flights",
     "/domains",
+    "/errors",
     "/projects",
     "/account/identities",
     "/account/notifications",
@@ -359,6 +362,52 @@ defmodule Hive.Slack.UnfurlerTest do
 
   test "skips a missing historical weekly Drops digest" do
     assert Unfurler.unfurl(app_url("/drops/digest/2025-01-06")) == :skip
+  end
+
+  test "delegates error issue links to the owning route" do
+    project = create_project!(%{name: unique_name("Errors")})
+    {:ok, issue} = ErrorsHelpers.seed_issue(project, fake_sentry_event())
+
+    assert {:ok, payload} = Unfurler.unfurl(app_url("/errors/#{issue.id}"))
+
+    assert block_texts(payload) |> Enum.any?(&(&1 == issue.title))
+    assert block_texts(payload) |> Enum.any?(&(&1 =~ "Errors"))
+    assert button_url(payload) == app_url("/errors/#{issue.id}")
+  end
+
+  test "skips error issue links for issues that do not exist" do
+    assert Unfurler.unfurl(app_url("/errors/#{Ecto.UUID.generate()}")) == :skip
+  end
+
+  test "skips error event links whose issue does not exist" do
+    missing_issue = Ecto.UUID.generate()
+    missing_event = Ecto.UUID.generate() |> String.replace("-", "")
+
+    assert Unfurler.unfurl(app_url("/errors/#{missing_issue}/events/#{missing_event}")) == :skip
+  end
+
+  defp fake_sentry_event do
+    %SentryEvent{
+      event_id: Ecto.UUID.generate() |> String.replace("-", ""),
+      timestamp: DateTime.utc_now(),
+      level: "error",
+      platform: "elixir",
+      environment: "prod",
+      release: nil,
+      dist: nil,
+      server_name: nil,
+      transaction: nil,
+      logger: nil,
+      exception_type: "RuntimeError",
+      exception_value: "kaboom",
+      top_frame: nil,
+      tags: %{},
+      user: %{id: nil, email: nil, ip_address: nil},
+      request: %{url: nil, method: nil},
+      sdk_name: nil,
+      sdk_version: nil,
+      payload: %{}
+    }
   end
 
   defp insert_drop_digest! do

@@ -9,17 +9,58 @@ defmodule HiveWeb.ErrorsLive.Event do
   use HiveWeb, :live_view
   use Noora
 
+  @behaviour Hive.Slack.Unfurl
+
   import HiveWeb.ErrorsLive.EventPanels
   import HiveWeb.PlatformIcon
 
   alias Hive.Errors
   alias Hive.Errors.Issue
   alias Hive.Errors.Policy
+  alias Hive.Slack.Unfurl.BlockKit
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
-  def slack_unfurl(_uri, _params), do: :skip
+  @impl Hive.Slack.Unfurl
+  def slack_unfurl(uri, %{"id" => id, "event_id" => event_id}) do
+    with {:ok, issue} <- Errors.fetch_issue(id),
+         %{} = event <- Errors.fetch_event(issue.id, event_id) do
+      BlockKit.open_graph(uri, event_open_graph(issue, event, event_id))
+    else
+      _ -> :skip
+    end
+  end
 
+  defp event_open_graph(issue, event, event_id) do
+    short = short_id(event[:event_id] || event_id)
+
+    %{
+      description:
+        dgettext(
+          "dashboard_errors",
+          "Event %{short} on %{issue}. Captured %{timestamp}.",
+          short: short,
+          issue: issue.title,
+          timestamp: format_datetime(event[:timestamp])
+        ),
+      section_label: dgettext("dashboard_errors", "Errors"),
+      highlights:
+        Enum.reject(
+          [
+            short,
+            project_name(issue),
+            to_string(event[:environment] || ""),
+            to_string(event[:release] || "")
+          ],
+          &(&1 == "")
+        ),
+      id: "error-event-#{event_id}",
+      path: "/errors/#{issue.id}/events/#{event_id}",
+      title: dgettext("dashboard_errors", "Event %{short}", short: short)
+    }
+  end
+
+  @impl true
   def mount(%{"id" => id, "event_id" => event_id}, _session, socket) do
     user = socket.assigns[:current_user]
 
@@ -81,6 +122,7 @@ defmodule HiveWeb.ErrorsLive.Event do
     end
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.dashboard

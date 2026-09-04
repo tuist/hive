@@ -4,11 +4,14 @@ defmodule HiveWeb.ErrorsLive.Show do
   use HiveWeb, :live_view
   use Noora
 
+  @behaviour Hive.Slack.Unfurl
+
   import HiveWeb.PlatformIcon
 
   alias Hive.Errors
   alias Hive.Errors.Issue
   alias Hive.Errors.Policy
+  alias Hive.Slack.Unfurl.BlockKit
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -34,8 +37,15 @@ defmodule HiveWeb.ErrorsLive.Show do
     }
   end
 
-  def slack_unfurl(_uri, _params), do: :skip
+  @impl Hive.Slack.Unfurl
+  def slack_unfurl(uri, %{"id" => id}) do
+    case Errors.fetch_issue(id) do
+      {:ok, issue} -> BlockKit.open_graph(uri, open_graph(issue))
+      {:error, :not_found} -> :skip
+    end
+  end
 
+  @impl true
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns[:current_user]
 
@@ -78,6 +88,7 @@ defmodule HiveWeb.ErrorsLive.Show do
     end
   end
 
+  @impl true
   def handle_event("resolve", _params, socket), do: update_status(socket, :resolved)
   def handle_event("unresolve", _params, socket), do: update_status(socket, :unresolved)
   def handle_event("ignore", _params, socket), do: update_status(socket, :ignored)
@@ -105,6 +116,7 @@ defmodule HiveWeb.ErrorsLive.Show do
     end
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.dashboard
