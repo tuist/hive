@@ -1,144 +1,155 @@
 defmodule HiveWeb.AlertsLive.Index do
-  @moduledoc """
-  Lists a project's alert rules and lets admins create, enable, disable,
-  or delete them.
-
-  Rule creation lives in a modal on this page. Form state is kept in
-  socket assigns and each input reports back via a `phx-keyup` /
-  `phx-click` event, mirroring `../tuist/server/lib/tuist_web/live/webhooks_live.ex`.
-  This sidesteps a Noora Select portal quirk where the select's value
-  can be dropped from `phx-submit` params inside a modal.
-  """
+  @moduledoc false
 
   use HiveWeb, :live_view
-  use Noora
-
-  alias Hive.Alerts
-  alias Hive.Alerts.Policy
-  alias Hive.Alerts.Rule
-  alias Hive.Auth
-  alias Hive.Projects
-  alias Hive.Slack
-  alias Hive.Slack.Installation
-  alias HiveWeb.Layouts
-  alias HiveWeb.OpenGraph
 
   def slack_unfurl(_uri, _params), do: :skip
 
-  def open_graph(project) do
-    %{
-      description:
-        dgettext(
-          "dashboard_alerts",
-          "Alert rules for %{project}: when to notify, and where.",
-          project: project.name
-        ),
-      section_label: dgettext("dashboard_alerts", "Alerts"),
-      highlights: [project.name],
-      id: "project-#{project.id}-alerts",
-      path: "/projects/#{project.id}/alerts",
-      title: dgettext("dashboard_alerts", "Alerts · %{project}", project: project.name)
-    }
+  @impl true
+  def mount(%{"id" => id}, _session, socket) do
+    {:ok, push_navigate(socket, to: ~p"/projects/#{id}")}
   end
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
-    user = socket.assigns[:current_user]
+  def render(assigns) do
+    ~H"""
+    <div></div>
+    """
+  end
+end
 
-    case Projects.fetch_visible_project(id, user) do
-      {:ok, project} ->
-        if Policy.authorize?(:alert_rule_read, user, nil) do
-          {:ok,
-           socket
-           |> assign(:project, project)
-           |> assign(:can_manage?, Auth.admin?(user))
-           |> assign(:installations, connected_installations())
-           |> assign(:rules, Alerts.list_rules_for_project(project))
-           |> assign(
-             :page_title,
-             dgettext("dashboard_alerts", "Alerts · %{project} · %{product}",
-               project: project.name,
-               product: socket.assigns.product_name
-             )
-           )
-           |> assign(OpenGraph.assigns(open_graph(project)))
-           |> reset_create_form()}
-        else
-          {:ok,
-           socket
-           |> put_flash(:error, dgettext("dashboard_alerts", "Alerts require an org account."))
-           |> push_navigate(to: ~p"/projects/#{project.id}")}
-        end
+defmodule HiveWeb.AlertsLive.Rules do
+  @moduledoc """
+  Renders and manages a project's alert rules from the project page.
 
-      {:error, :not_found} ->
-        {:ok,
-         socket
-         |> put_flash(:error, dgettext("dashboard_alerts", "Project not found."))
-         |> push_navigate(to: ~p"/projects")}
+  The rule form keeps each value in component state because Noora dropdown
+  content is portalled outside the surrounding form.
+  """
+
+  use Phoenix.LiveComponent
+  use Gettext, backend: HiveWeb.Gettext
+  use Noora
+
+  alias Hive.Alerts
+  alias Hive.Alerts.Rule
+  alias Hive.Slack
+  alias Hive.Slack.Installation
+
+  @impl true
+  def mount(socket) do
+    {:ok, assign(socket, :initialized_project_id, nil)}
+  end
+
+  @impl true
+  def update(%{project: project} = assigns, socket) do
+    socket = assign(socket, assigns)
+
+    if socket.assigns.initialized_project_id == project.id do
+      {:ok, socket}
+    else
+      {:ok,
+       socket
+       |> assign(:initialized_project_id, project.id)
+       |> assign(:installations, connected_installations())
+       |> assign(:rules, Alerts.list_rules_for_project(project))
+       |> assign(:editing_rule_id, nil)
+       |> reset_form()}
     end
   end
 
-  ## Form field events — each input owns one, so the modal's portal cannot
-  ## drop values on submit.
-
   @impl true
+  def handle_event("start_create", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:editing_rule_id, nil)
+     |> reset_form()}
+  end
+
+  def handle_event("start_edit", %{"id" => rule_id}, socket) do
+    if socket.assigns.can_manage? do
+      case find_rule(socket, rule_id) do
+        %Rule{} = rule ->
+          {:noreply,
+           socket
+           |> assign(:editing_rule_id, rule.id)
+           |> assign(:rule_form, form_from_rule(rule))
+           |> push_event("open-modal", %{id: "edit-alert-rule-modal"})}
+
+        nil ->
+          {:noreply, socket}
+      end
+    else
+      {:noreply, deny(socket)}
+    end
+  end
+
   def handle_event("update_form_name", %{"value" => value}, socket),
-    do: {:noreply, socket |> assign(:form_name, value) |> assign(:form_error, nil)}
+    do: {:noreply, socket |> put_form(:name, value) |> put_form(:error, nil)}
 
   def handle_event("update_form_trigger", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_trigger, to_atom(value, :new_issue_threshold))}
+    do: {:noreply, put_form(socket, :trigger, to_atom(value, :new_issue_threshold))}
 
   def handle_event("update_form_threshold_count", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_threshold_count, parse_positive_int(value, 5))}
+    do: {:noreply, put_form(socket, :threshold_count, parse_positive_int(value, 5))}
 
   def handle_event("update_form_threshold_window", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_threshold_window, parse_positive_int(value, 60))}
+    do: {:noreply, put_form(socket, :threshold_window, parse_positive_int(value, 60))}
 
   def handle_event("update_form_tier", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_tier, to_atom(value, :attention))}
+    do: {:noreply, put_form(socket, :tier, to_atom(value, :attention))}
 
   def handle_event("update_form_min_level", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_min_level, to_atom_or_nil(value))}
+    do: {:noreply, put_form(socket, :min_level, to_atom_or_nil(value))}
 
   def handle_event("update_form_environment", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_environment, value)}
+    do: {:noreply, put_form(socket, :environment, value)}
 
   def handle_event("update_form_cooldown", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_cooldown, parse_non_negative_int(value, 60))}
+    do: {:noreply, put_form(socket, :cooldown, parse_non_negative_int(value, 60))}
 
   def handle_event("update_form_destination", %{"value" => value}, socket) do
     destination = to_atom(value, :slack)
-    {:noreply, socket |> assign(:form_destination, destination) |> assign(:form_error, nil)}
+    {:noreply, socket |> put_form(:destination, destination) |> put_form(:error, nil)}
   end
 
   def handle_event("update_form_slack_installation", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_slack_installation_id, blank_to_nil(value))}
+    do: {:noreply, put_form(socket, :slack_installation_id, blank_to_nil(value))}
 
   def handle_event("update_form_slack_channel", %{"value" => value}, socket),
-    do: {:noreply, socket |> assign(:form_slack_channel, value) |> assign(:form_error, nil)}
+    do: {:noreply, socket |> put_form(:slack_channel, value) |> put_form(:error, nil)}
 
   def handle_event("update_form_slack_mention", %{"value" => value}, socket),
-    do: {:noreply, assign(socket, :form_slack_mention, to_atom(value, :none))}
+    do: {:noreply, put_form(socket, :slack_mention, to_atom(value, :none))}
 
   def handle_event("update_form_webhook_url", %{"value" => value}, socket),
-    do: {:noreply, socket |> assign(:form_webhook_url, value) |> assign(:form_error, nil)}
-
-  def handle_event("create_modal_open_change", %{"open" => false}, socket),
-    do: {:noreply, reset_create_form(socket)}
-
-  def handle_event("create_modal_open_change", _params, socket),
-    do: {:noreply, socket}
+    do: {:noreply, socket |> put_form(:webhook_url, value) |> put_form(:error, nil)}
 
   def handle_event("cancel_create", _params, socket) do
     {:noreply,
      socket
-     |> reset_create_form()
+     |> reset_form()
      |> push_event("close-modal", %{id: "new-alert-rule-modal"})}
+  end
+
+  def handle_event("cancel_edit", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:editing_rule_id, nil)
+     |> reset_form()
+     |> push_event("close-modal", %{id: "edit-alert-rule-modal"})}
   end
 
   def handle_event("create_rule", _params, socket) do
     if socket.assigns.can_manage? do
-      do_create_rule(socket)
+      create_rule(socket)
+    else
+      {:noreply, deny(socket)}
+    end
+  end
+
+  def handle_event("update_rule", _params, socket) do
+    if socket.assigns.can_manage? do
+      update_rule(socket)
     else
       {:noreply, deny(socket)}
     end
@@ -146,19 +157,19 @@ defmodule HiveWeb.AlertsLive.Index do
 
   def handle_event("toggle_enabled", %{"id" => rule_id}, socket) do
     if socket.assigns.can_manage? do
-      case Enum.find(socket.assigns.rules, &(&1.id == rule_id)) do
+      case find_rule(socket, rule_id) do
         %Rule{} = rule ->
-          {:ok, _} = Alerts.update_rule(rule, %{"enabled" => !rule.enabled})
+          {:ok, _rule} = Alerts.update_rule(rule, %{"enabled" => !rule.enabled})
+
+          message =
+            dgettext("dashboard_alerts", "Alert rule %{name} updated.", name: rule.name)
 
           {:noreply,
            socket
-           |> put_flash(
-             :info,
-             dgettext("dashboard_alerts", "Alert rule %{name} updated.", name: rule.name)
-           )
+           |> notify_parent(:info, message)
            |> reload_rules()}
 
-        _ ->
+        nil ->
           {:noreply, socket}
       end
     else
@@ -168,16 +179,16 @@ defmodule HiveWeb.AlertsLive.Index do
 
   def handle_event("delete", %{"id" => rule_id}, socket) do
     if socket.assigns.can_manage? do
-      case Enum.find(socket.assigns.rules, &(&1.id == rule_id)) do
+      case find_rule(socket, rule_id) do
         %Rule{} = rule ->
-          {:ok, _} = Alerts.delete_rule(rule)
+          {:ok, _rule} = Alerts.delete_rule(rule)
 
           {:noreply,
            socket
-           |> put_flash(:info, dgettext("dashboard_alerts", "Alert rule deleted."))
+           |> notify_parent(:info, dgettext("dashboard_alerts", "Alert rule deleted."))
            |> reload_rules()}
 
-        _ ->
+        nil ->
           {:noreply, socket}
       end
     else
@@ -185,80 +196,139 @@ defmodule HiveWeb.AlertsLive.Index do
     end
   end
 
-  defp do_create_rule(socket) do
-    case Alerts.create_rule(socket.assigns.project, form_attrs(socket.assigns)) do
+  defp create_rule(socket) do
+    case Alerts.create_rule(socket.assigns.project, form_attrs(socket.assigns.rule_form)) do
       {:ok, rule} ->
+        message =
+          dgettext("dashboard_alerts", "Alert rule %{name} created.", name: rule.name)
+
         {:noreply,
          socket
-         |> put_flash(
-           :info,
-           dgettext("dashboard_alerts", "Alert rule %{name} created.", name: rule.name)
-         )
+         |> notify_parent(:info, message)
          |> reload_rules()
-         |> reset_create_form()
+         |> reset_form()
          |> push_event("close-modal", %{id: "new-alert-rule-modal"})}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :form_error, humanize_errors(changeset))}
+        {:noreply, put_form(socket, :error, humanize_errors(changeset))}
     end
   end
+
+  defp update_rule(socket) do
+    case find_rule(socket, socket.assigns.editing_rule_id) do
+      %Rule{} = rule ->
+        case Alerts.update_rule(rule, form_attrs(socket.assigns.rule_form)) do
+          {:ok, updated_rule} ->
+            message =
+              dgettext("dashboard_alerts", "Alert rule %{name} updated.", name: updated_rule.name)
+
+            {:noreply,
+             socket
+             |> notify_parent(:info, message)
+             |> reload_rules()
+             |> assign(:editing_rule_id, nil)
+             |> reset_form()
+             |> push_event("close-modal", %{id: "edit-alert-rule-modal"})}
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:noreply, put_form(socket, :error, humanize_errors(changeset))}
+        end
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  defp find_rule(socket, rule_id),
+    do: Enum.find(socket.assigns.rules, &(&1.id == rule_id))
 
   defp reload_rules(socket),
     do: assign(socket, :rules, Alerts.list_rules_for_project(socket.assigns.project))
 
-  defp reset_create_form(socket) do
-    socket
-    |> assign(:form_name, "")
-    |> assign(:form_trigger, :new_issue_threshold)
-    |> assign(:form_threshold_count, 5)
-    |> assign(:form_threshold_window, 60)
-    |> assign(:form_tier, :attention)
-    |> assign(:form_min_level, nil)
-    |> assign(:form_environment, "")
-    |> assign(:form_cooldown, 60)
-    |> assign(:form_destination, :slack)
-    |> assign(:form_slack_installation_id, default_installation_id(socket))
-    |> assign(:form_slack_channel, "")
-    |> assign(:form_slack_mention, :none)
-    |> assign(:form_webhook_url, "")
-    |> assign(:form_error, nil)
+  defp reset_form(socket) do
+    assign(socket, :rule_form, %{
+      name: "",
+      trigger: :new_issue_threshold,
+      threshold_count: 5,
+      threshold_window: 60,
+      tier: :attention,
+      min_level: nil,
+      environment: "",
+      cooldown: 60,
+      destination: :slack,
+      slack_installation_id: default_installation_id(socket),
+      slack_channel: "",
+      slack_mention: :none,
+      webhook_url: "",
+      error: nil
+    })
   end
 
-  defp default_installation_id(%{assigns: %{installations: [%Installation{id: id} | _]}}), do: id
+  defp form_from_rule(%Rule{} = rule) do
+    %{
+      name: rule.name,
+      trigger: rule.trigger,
+      threshold_count: rule.threshold_event_count || 5,
+      threshold_window: rule.threshold_window_minutes || 60,
+      tier: rule.tier,
+      min_level: rule.min_level,
+      environment: rule.environment || "",
+      cooldown: rule.cooldown_minutes,
+      destination: rule.destination_type,
+      slack_installation_id: rule.slack_installation_id,
+      slack_channel: rule.slack_channel_id || "",
+      slack_mention: rule.slack_mention || :none,
+      webhook_url: rule.webhook_url || "",
+      error: nil
+    }
+  end
+
+  defp put_form(socket, key, value) do
+    update(socket, :rule_form, &Map.put(&1, key, value))
+  end
+
+  defp default_installation_id(%{assigns: %{installations: [%Installation{id: id} | _]}}),
+    do: id
+
   defp default_installation_id(_socket), do: nil
 
-  defp form_attrs(assigns) do
+  defp form_attrs(form) do
     base = %{
-      "name" => assigns.form_name,
-      "trigger" => Atom.to_string(assigns.form_trigger),
-      "tier" => Atom.to_string(assigns.form_tier),
-      "min_level" => (assigns.form_min_level && Atom.to_string(assigns.form_min_level)) || nil,
-      "environment" => nil_if_blank(assigns.form_environment),
-      "cooldown_minutes" => assigns.form_cooldown,
-      "destination_type" => Atom.to_string(assigns.form_destination),
-      "threshold_event_count" => assigns.form_threshold_count,
-      "threshold_window_minutes" => assigns.form_threshold_window
+      "name" => form.name,
+      "trigger" => Atom.to_string(form.trigger),
+      "tier" => Atom.to_string(form.tier),
+      "min_level" => (form.min_level && Atom.to_string(form.min_level)) || nil,
+      "environment" => nil_if_blank(form.environment),
+      "cooldown_minutes" => form.cooldown,
+      "destination_type" => Atom.to_string(form.destination),
+      "threshold_event_count" => form.threshold_count,
+      "threshold_window_minutes" => form.threshold_window
     }
 
-    case assigns.form_destination do
+    case form.destination do
       :slack ->
         Map.merge(base, %{
-          "slack_installation_id" => assigns.form_slack_installation_id,
-          "slack_channel_id" => assigns.form_slack_channel,
-          "slack_mention" => Atom.to_string(assigns.form_slack_mention)
+          "slack_installation_id" => form.slack_installation_id,
+          "slack_channel_id" => form.slack_channel,
+          "slack_mention" => Atom.to_string(form.slack_mention)
         })
 
       :webhook ->
-        Map.put(base, "webhook_url", assigns.form_webhook_url)
+        Map.put(base, "webhook_url", form.webhook_url)
     end
   end
 
   defp deny(socket) do
-    put_flash(
+    notify_parent(
       socket,
       :error,
       dgettext("dashboard_alerts", "Only administrators can manage alert rules.")
     )
+  end
+
+  defp notify_parent(socket, kind, message) do
+    send(self(), {:alert_rule_flash, kind, message})
+    socket
   end
 
   defp connected_installations do
@@ -286,15 +356,15 @@ defmodule HiveWeb.AlertsLive.Index do
 
   defp parse_positive_int(value, default) do
     case parse_int(value) do
-      n when is_integer(n) and n > 0 -> n
-      _ -> default
+      number when is_integer(number) and number > 0 -> number
+      _other -> default
     end
   end
 
   defp parse_non_negative_int(value, default) do
     case parse_int(value) do
-      n when is_integer(n) and n >= 0 -> n
-      _ -> default
+      number when is_integer(number) and number >= 0 -> number
+      _other -> default
     end
   end
 
@@ -302,12 +372,12 @@ defmodule HiveWeb.AlertsLive.Index do
 
   defp parse_int(value) when is_binary(value) do
     case Integer.parse(String.trim(value)) do
-      {n, ""} -> n
-      _ -> nil
+      {number, ""} -> number
+      _other -> nil
     end
   end
 
-  defp parse_int(_), do: nil
+  defp parse_int(_value), do: nil
 
   defp nil_if_blank(nil), do: nil
 
@@ -321,13 +391,13 @@ defmodule HiveWeb.AlertsLive.Index do
 
   defp humanize_errors(%Ecto.Changeset{} = changeset) do
     changeset
-    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
+    |> Ecto.Changeset.traverse_errors(fn {message, options} ->
+      Enum.reduce(options, message, fn {key, value}, result ->
+        String.replace(result, "%{#{key}}", to_string(value))
       end)
     end)
-    |> Enum.map_join(". ", fn {field, errs} ->
-      "#{humanize_field(field)}: #{Enum.join(errs, ", ")}"
+    |> Enum.map_join(". ", fn {field, errors} ->
+      "#{humanize_field(field)}: #{Enum.join(errors, ", ")}"
     end)
   end
 
@@ -341,260 +411,246 @@ defmodule HiveWeb.AlertsLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.dashboard
-      flash={@flash}
-      product_name={@product_name}
-      user_name={@user_name}
-      user_email={@user_email}
-      avatar_color={@avatar_color}
-      auth_enabled?={@auth_enabled?}
-      signed_in?={@signed_in?}
-      admin?={@admin?}
-      member?={@member?}
-      csrf_token={@csrf_token}
-      current_path={@current_path}
-      forage_sources={@forage_sources}
-    >
-      <section id="project-alerts">
-        <div data-part="header">
-          <div data-part="title-group">
-            <h1>{dgettext("dashboard_alerts", "Alerts · %{project}", project: @project.name)}</h1>
-            <p>
-              {dgettext(
-                "dashboard_alerts",
-                "Rules watch this project's error tracking. Attention rules ping a channel; incident rules page it."
-              )}
-            </p>
-          </div>
-          <div data-part="header-actions">
-            <.new_rule_modal
-              :if={@can_manage?}
-              installations={@installations}
-              form_name={@form_name}
-              form_trigger={@form_trigger}
-              form_threshold_count={@form_threshold_count}
-              form_threshold_window={@form_threshold_window}
-              form_tier={@form_tier}
-              form_min_level={@form_min_level}
-              form_environment={@form_environment}
-              form_cooldown={@form_cooldown}
-              form_destination={@form_destination}
-              form_slack_installation_id={@form_slack_installation_id}
-              form_slack_channel={@form_slack_channel}
-              form_slack_mention={@form_slack_mention}
-              form_webhook_url={@form_webhook_url}
-              form_error={@form_error}
-            />
-          </div>
-        </div>
+    <div id={@id} class="project-alerts" phx-target={"##{@id}"}>
+      <.card title={dgettext("dashboard_projects", "Alerts")} icon="bell">
+        <:actions :if={@can_manage?}>
+          <.rule_modal
+            mode={:create}
+            form={@rule_form}
+            installations={@installations}
+            target={"##{@id}"}
+          />
+        </:actions>
 
-        <.card title={dgettext("dashboard_alerts", "Rules")} icon="bell">
-          <.card_section>
-            <div data-part="resource-table">
-              <.table
-                id="alerts-rules-table"
-                rows={@rules}
-                row_key={fn rule -> "alert-rule-#{rule.id}" end}
-              >
-                <:col :let={rule} label={dgettext("dashboard_alerts", "Name")}>
-                  <.text_and_description_cell
-                    label={rule.name}
-                    description={trigger_description(rule)}
+        <.card_section data-part="alerts-card">
+          <p data-part="alerts-intro">
+            {dgettext(
+              "dashboard_projects",
+              "Send Slack messages or webhook deliveries when this project's error tracking flags something worth attention. Configure rules per project with a tier, filter, and destination."
+            )}
+          </p>
+
+          <div data-part="resource-table">
+            <.table
+              id="alerts-rules-table"
+              rows={@rules}
+              row_key={fn rule -> "alert-rule-#{rule.id}" end}
+            >
+              <:col :let={rule} label={dgettext("dashboard_alerts", "Name")}>
+                <.text_and_description_cell
+                  label={rule.name}
+                  description={trigger_description(rule)}
+                />
+              </:col>
+              <:col :let={rule} label={dgettext("dashboard_alerts", "Tier")}>
+                <div data-part="cell" data-type="badge">
+                  <.badge
+                    label={tier_label(rule.tier)}
+                    color={tier_color(rule.tier)}
+                    style="light-fill"
+                    size="large"
                   />
-                </:col>
-                <:col :let={rule} label={dgettext("dashboard_alerts", "Tier")}>
-                  <div data-part="cell" data-type="badge">
-                    <.badge
-                      label={tier_label(rule.tier)}
-                      color={tier_color(rule.tier)}
-                      style="light-fill"
-                      size="large"
-                    />
-                  </div>
-                </:col>
-                <:col :let={rule} label={dgettext("dashboard_alerts", "Destination")}>
-                  <.text_cell label={destination_label(rule)} />
-                </:col>
-                <:col :let={rule} label={dgettext("dashboard_alerts", "Cooldown")}>
-                  <.text_cell label={cooldown_label(rule.cooldown_minutes)} />
-                </:col>
-                <:col :let={rule} label={dgettext("dashboard_alerts", "Enabled")}>
-                  <.text_cell label={if(rule.enabled, do: "Yes", else: "No")} />
-                </:col>
-                <:col :if={@can_manage?} :let={rule} label="">
-                  <.button_cell>
-                    <:button>
-                      <.button
+                </div>
+              </:col>
+              <:col :let={rule} label={dgettext("dashboard_alerts", "Destination")}>
+                <.text_cell label={destination_label(rule)} />
+              </:col>
+              <:col :let={rule} label={dgettext("dashboard_alerts", "Cooldown")}>
+                <.text_cell label={cooldown_label(rule.cooldown_minutes)} />
+              </:col>
+              <:col :let={rule} label={dgettext("dashboard_alerts", "Enabled")}>
+                <.text_cell label={if(rule.enabled, do: "Yes", else: "No")} />
+              </:col>
+              <:col :if={@can_manage?} :let={rule} label="">
+                <.button_cell>
+                  <:button>
+                    <.dropdown id={"alert-rule-actions-#{rule.id}"} icon_only size="medium">
+                      <:icon><.dots_vertical /></:icon>
+
+                      <.dropdown_item
+                        id={"edit-alert-rule-#{rule.id}"}
+                        value="edit"
+                        label={dgettext("dashboard_alerts", "Edit")}
+                        on_click="start_edit"
+                        phx-value-id={rule.id}
+                        phx-target={"##{@id}"}
+                      >
+                        <:left_icon><.pencil /></:left_icon>
+                      </.dropdown_item>
+                      <.dropdown_item
+                        id={"toggle-alert-rule-#{rule.id}"}
+                        value={if(rule.enabled, do: "disable", else: "enable")}
                         label={
                           if(rule.enabled,
                             do: dgettext("dashboard_alerts", "Disable"),
                             else: dgettext("dashboard_alerts", "Enable")
                           )
                         }
-                        size="medium"
-                        variant="secondary"
-                        phx-click="toggle_enabled"
+                        on_click="toggle_enabled"
                         phx-value-id={rule.id}
-                      />
-                    </:button>
-                    <:button>
-                      <.button
-                        label={dgettext("dashboard_alerts", "Delete rule")}
-                        size="large"
-                        variant="secondary"
-                        icon_only={true}
-                        phx-click="delete"
-                        phx-value-id={rule.id}
-                        data-confirm={
-                          dgettext("dashboard_alerts", "Delete alert rule %{name}?",
-                            name: rule.name
-                          )
-                        }
-                        title={dgettext("dashboard_alerts", "Delete rule")}
-                        aria-label={dgettext("dashboard_alerts", "Delete rule")}
+                        phx-target={"##{@id}"}
                       >
-                        <.trash />
-                      </.button>
-                    </:button>
-                  </.button_cell>
-                </:col>
-                <:empty_state>
-                  <.table_empty_state
-                    icon="bell"
-                    title={dgettext("dashboard_alerts", "No alert rules yet")}
-                    subtitle={
-                      dgettext(
-                        "dashboard_alerts",
-                        "Create a rule to get notified in Slack or via webhook when errors need attention."
-                      )
-                    }
-                  />
-                </:empty_state>
-              </.table>
-            </div>
-          </.card_section>
-        </.card>
-      </section>
-    </Layouts.dashboard>
+                        <:left_icon>
+                          <.circle_x :if={rule.enabled} />
+                          <.circle_check :if={!rule.enabled} />
+                        </:left_icon>
+                      </.dropdown_item>
+                      <.dropdown_item
+                        id={"delete-alert-rule-#{rule.id}"}
+                        value="delete"
+                        label={dgettext("dashboard_alerts", "Delete")}
+                        on_click="delete"
+                        phx-value-id={rule.id}
+                        phx-target={"##{@id}"}
+                        data-confirm={
+                          dgettext("dashboard_alerts", "Delete alert rule %{name}?", name: rule.name)
+                        }
+                      >
+                        <:left_icon><.trash /></:left_icon>
+                      </.dropdown_item>
+                    </.dropdown>
+                  </:button>
+                </.button_cell>
+              </:col>
+              <:empty_state>
+                <.table_empty_state
+                  icon="bell"
+                  title={dgettext("dashboard_alerts", "No alert rules yet")}
+                  subtitle={
+                    dgettext(
+                      "dashboard_alerts",
+                      "Create a rule to get notified in Slack or via webhook when errors need attention."
+                    )
+                  }
+                />
+              </:empty_state>
+            </.table>
+          </div>
+        </.card_section>
+      </.card>
+
+      <.rule_modal
+        :if={@editing_rule_id}
+        mode={:edit}
+        form={@rule_form}
+        installations={@installations}
+        target={"##{@id}"}
+      />
+    </div>
     """
   end
 
-  ## Modal shell
-
+  attr :mode, :atom, values: [:create, :edit], required: true
+  attr :form, :map, required: true
   attr :installations, :list, required: true
-  attr :form_name, :string, required: true
-  attr :form_trigger, :atom, required: true
-  attr :form_threshold_count, :integer, required: true
-  attr :form_threshold_window, :integer, required: true
-  attr :form_tier, :atom, required: true
-  attr :form_min_level, :any, required: true
-  attr :form_environment, :string, required: true
-  attr :form_cooldown, :integer, required: true
-  attr :form_destination, :atom, required: true
-  attr :form_slack_installation_id, :any, required: true
-  attr :form_slack_channel, :string, required: true
-  attr :form_slack_mention, :atom, required: true
-  attr :form_webhook_url, :string, required: true
-  attr :form_error, :any, required: true
+  attr :target, :any, required: true
 
-  defp new_rule_modal(assigns) do
+  defp rule_modal(assigns) do
+    assigns = assign(assigns, modal_options(assigns.mode))
+
     ~H"""
-    <.modal
-      id="new-alert-rule-modal"
-      title={dgettext("dashboard_alerts", "New alert rule")}
-      description={dgettext("dashboard_alerts", "Pick a trigger, an urgency tier, and where the message should go.")}
-      on_dismiss="cancel_create"
-      on_open_change="create_modal_open_change"
-    >
+    <.modal id={@modal_id} title={@title} description={@description} phx-target={@target}>
       <:trigger :let={attrs}>
         <.button
+          :if={@mode == :create}
+          id="new-alert-rule"
           label={dgettext("dashboard_alerts", "New alert rule")}
           size="medium"
           variant="primary"
+          type="button"
+          phx-click="start_create"
+          phx-target={@target}
           {attrs}
         >
           <:icon_left><.circle_plus /></:icon_left>
         </.button>
+        <button :if={@mode == :edit} type="button" hidden {attrs}></button>
       </:trigger>
 
       <div data-part="rule-form">
         <.alert
-          :if={@form_error}
+          :if={@form.error}
           status="error"
           type="secondary"
           size="small"
-          title={@form_error}
+          title={@form.error}
         />
 
         <.text_input
-          id="alert-rule-name"
+          id={"#{@modal_id}-name"}
           name="name"
           type="basic"
           label={dgettext("dashboard_alerts", "Name")}
-          value={@form_name}
+          value={@form.name}
           placeholder={dgettext("dashboard_alerts", "e.g. Production regressions")}
           phx-keyup="update_form_name"
+          phx-target={@target}
           phx-debounce="200"
         />
 
         <div data-part="select-field">
           <span>{dgettext("dashboard_alerts", "Trigger")}</span>
-          <.dropdown id="alert-rule-trigger" label={trigger_label(@form_trigger)}>
+          <.dropdown id={"#{@modal_id}-trigger"} label={trigger_label(@form.trigger)}>
             <.dropdown_item
               :for={trigger <- [:new_issue_threshold, :regression]}
               value={Atom.to_string(trigger)}
               label={trigger_label(trigger)}
               phx-click="update_form_trigger"
               phx-value-value={Atom.to_string(trigger)}
-              data-selected={trigger == @form_trigger}
+              phx-target={@target}
+              data-selected={trigger == @form.trigger}
             />
           </.dropdown>
         </div>
 
-        <div :if={@form_trigger == :new_issue_threshold} data-part="threshold-row">
+        <div :if={@form.trigger == :new_issue_threshold} data-part="threshold-row">
           <.text_input
-            id="alert-rule-threshold-count"
+            id={"#{@modal_id}-threshold-count"}
             name="threshold_event_count"
             type="basic"
             label={dgettext("dashboard_alerts", "Events")}
-            value={to_string(@form_threshold_count)}
+            value={to_string(@form.threshold_count)}
             phx-keyup="update_form_threshold_count"
+            phx-target={@target}
             phx-debounce="200"
           />
           <.text_input
-            id="alert-rule-threshold-window"
+            id={"#{@modal_id}-threshold-window"}
             name="threshold_window_minutes"
             type="basic"
             label={dgettext("dashboard_alerts", "Window (minutes)")}
-            value={to_string(@form_threshold_window)}
+            value={to_string(@form.threshold_window)}
             phx-keyup="update_form_threshold_window"
+            phx-target={@target}
             phx-debounce="200"
           />
         </div>
 
         <div data-part="select-field">
           <span>{dgettext("dashboard_alerts", "Tier")}</span>
-          <.dropdown id="alert-rule-tier" label={tier_label(@form_tier)}>
+          <.dropdown id={"#{@modal_id}-tier"} label={tier_label(@form.tier)}>
             <.dropdown_item
               :for={tier <- [:attention, :incident]}
               value={Atom.to_string(tier)}
               label={tier_label(tier)}
               phx-click="update_form_tier"
               phx-value-value={Atom.to_string(tier)}
-              data-selected={tier == @form_tier}
+              phx-target={@target}
+              data-selected={tier == @form.tier}
             />
           </.dropdown>
         </div>
 
         <div data-part="select-field">
           <span>{dgettext("dashboard_alerts", "Minimum level")}</span>
-          <.dropdown id="alert-rule-min-level" label={level_label(@form_min_level)}>
+          <.dropdown id={"#{@modal_id}-min-level"} label={level_label(@form.min_level)}>
             <.dropdown_item
               value=""
               label={level_label(nil)}
               phx-click="update_form_min_level"
               phx-value-value=""
-              data-selected={is_nil(@form_min_level)}
+              phx-target={@target}
+              data-selected={is_nil(@form.min_level)}
             />
             <.dropdown_item
               :for={level <- [:warning, :error, :fatal]}
@@ -602,52 +658,59 @@ defmodule HiveWeb.AlertsLive.Index do
               label={level_label(level)}
               phx-click="update_form_min_level"
               phx-value-value={Atom.to_string(level)}
-              data-selected={level == @form_min_level}
+              phx-target={@target}
+              data-selected={level == @form.min_level}
             />
           </.dropdown>
         </div>
 
         <.text_input
-          id="alert-rule-environment"
+          id={"#{@modal_id}-environment"}
           name="environment"
           type="basic"
           label={dgettext("dashboard_alerts", "Environment (optional)")}
-          value={@form_environment}
+          value={@form.environment}
           placeholder="production"
           phx-keyup="update_form_environment"
+          phx-target={@target}
           phx-debounce="200"
         />
 
         <.text_input
-          id="alert-rule-cooldown"
+          id={"#{@modal_id}-cooldown"}
           name="cooldown_minutes"
           type="basic"
           label={dgettext("dashboard_alerts", "Cooldown (minutes)")}
-          value={to_string(@form_cooldown)}
+          value={to_string(@form.cooldown)}
           phx-keyup="update_form_cooldown"
+          phx-target={@target}
           phx-debounce="200"
         />
 
         <div data-part="select-field">
           <span>{dgettext("dashboard_alerts", "Destination")}</span>
-          <.dropdown id="alert-rule-destination" label={destination_type_label(@form_destination)}>
+          <.dropdown
+            id={"#{@modal_id}-destination"}
+            label={destination_type_label(@form.destination)}
+          >
             <.dropdown_item
               :for={destination <- [:slack, :webhook]}
               value={Atom.to_string(destination)}
               label={destination_type_label(destination)}
               phx-click="update_form_destination"
               phx-value-value={Atom.to_string(destination)}
-              data-selected={destination == @form_destination}
+              phx-target={@target}
+              data-selected={destination == @form.destination}
             />
           </.dropdown>
         </div>
 
-        <div :if={@form_destination == :slack} data-part="destination-fields">
+        <div :if={@form.destination == :slack} data-part="destination-fields">
           <div data-part="select-field">
             <span>{dgettext("dashboard_alerts", "Slack workspace")}</span>
             <.dropdown
-              id="alert-rule-installation"
-              label={installation_label(@installations, @form_slack_installation_id)}
+              id={"#{@modal_id}-installation"}
+              label={installation_label(@installations, @form.slack_installation_id)}
             >
               <.dropdown_item
                 :for={installation <- @installations}
@@ -655,52 +718,56 @@ defmodule HiveWeb.AlertsLive.Index do
                 label={installation.team_name || installation.team_id}
                 phx-click="update_form_slack_installation"
                 phx-value-value={installation.id}
-                data-selected={installation.id == @form_slack_installation_id}
+                phx-target={@target}
+                data-selected={installation.id == @form.slack_installation_id}
               />
             </.dropdown>
           </div>
 
           <.text_input
-            id="alert-rule-channel"
+            id={"#{@modal_id}-channel"}
             name="slack_channel_id"
             type="basic"
-            label={dgettext("dashboard_alerts", "Slack channel ID")}
-            value={@form_slack_channel}
+            label={dgettext("dashboard_alerts", "Slack channel identifier")}
+            value={@form.slack_channel}
             placeholder="C0123456789"
             phx-keyup="update_form_slack_channel"
+            phx-target={@target}
             phx-debounce="200"
           />
 
           <div data-part="select-field">
             <span>{dgettext("dashboard_alerts", "Mention")}</span>
-            <.dropdown id="alert-rule-mention" label={mention_label(@form_slack_mention)}>
+            <.dropdown id={"#{@modal_id}-mention"} label={mention_label(@form.slack_mention)}>
               <.dropdown_item
                 :for={mention <- [:none, :here, :channel]}
                 value={Atom.to_string(mention)}
                 label={mention_label(mention)}
                 phx-click="update_form_slack_mention"
                 phx-value-value={Atom.to_string(mention)}
-                data-selected={mention == @form_slack_mention}
+                phx-target={@target}
+                data-selected={mention == @form.slack_mention}
               />
             </.dropdown>
           </div>
         </div>
 
-        <div :if={@form_destination == :webhook} data-part="destination-fields">
+        <div :if={@form.destination == :webhook} data-part="destination-fields">
           <.text_input
-            id="alert-rule-webhook-url"
+            id={"#{@modal_id}-webhook-url"}
             name="webhook_url"
             type="basic"
-            label={dgettext("dashboard_alerts", "Webhook URL")}
-            value={@form_webhook_url}
+            label={dgettext("dashboard_alerts", "Webhook address")}
+            value={@form.webhook_url}
             placeholder="https://example.com/hooks/hive"
             phx-keyup="update_form_webhook_url"
+            phx-target={@target}
             phx-debounce="200"
           />
           <p data-part="webhook-help">
             {dgettext(
               "dashboard_alerts",
-              "Hive POSTs a signed JSON envelope. A signing secret is minted on save; store it and verify the X-Hive-Signature header."
+              "Hive sends a signed request payload. A signing secret is minted on save; store it and verify the X-Hive-Signature header."
             )}
           </p>
         </div>
@@ -713,15 +780,20 @@ defmodule HiveWeb.AlertsLive.Index do
               label={dgettext("dashboard_alerts", "Cancel")}
               variant="secondary"
               size="medium"
-              phx-click="cancel_create"
+              type="button"
+              phx-click={@cancel_event}
+              phx-target={@target}
             />
           </:action>
           <:action>
             <.button
-              label={dgettext("dashboard_alerts", "Create alert rule")}
+              id={@save_button_id}
+              label={@save_label}
               variant="primary"
               size="medium"
-              phx-click="create_rule"
+              type="button"
+              phx-click={@save_event}
+              phx-target={@target}
             />
           </:action>
         </.modal_footer>
@@ -730,7 +802,37 @@ defmodule HiveWeb.AlertsLive.Index do
     """
   end
 
-  ## Label helpers
+  defp modal_options(:create) do
+    %{
+      modal_id: "new-alert-rule-modal",
+      title: dgettext("dashboard_alerts", "New alert rule"),
+      description:
+        dgettext(
+          "dashboard_alerts",
+          "Pick a trigger, an urgency tier, and where the message should go."
+        ),
+      cancel_event: "cancel_create",
+      save_event: "create_rule",
+      save_button_id: "create-alert-rule",
+      save_label: dgettext("dashboard_alerts", "Create alert rule")
+    }
+  end
+
+  defp modal_options(:edit) do
+    %{
+      modal_id: "edit-alert-rule-modal",
+      title: dgettext("dashboard_alerts", "Edit alert rule"),
+      description:
+        dgettext(
+          "dashboard_alerts",
+          "Update when this rule fires, its urgency, or where the message should go."
+        ),
+      cancel_event: "cancel_edit",
+      save_event: "update_rule",
+      save_button_id: "save-alert-rule",
+      save_label: dgettext("dashboard_alerts", "Save changes")
+    }
+  end
 
   defp trigger_label(:regression),
     do: dgettext("dashboard_alerts", "Regression (resolved issue reopens)")
@@ -751,7 +853,9 @@ defmodule HiveWeb.AlertsLive.Index do
   defp mention_label(:channel), do: "@channel"
   defp mention_label(_none), do: dgettext("dashboard_alerts", "No mention")
 
-  defp destination_type_label(:webhook), do: dgettext("dashboard_alerts", "Webhook (HTTPS)")
+  defp destination_type_label(:webhook),
+    do: dgettext("dashboard_alerts", "Secure webhook")
+
   defp destination_type_label(_slack), do: dgettext("dashboard_alerts", "Slack")
 
   defp installation_label([], _id), do: dgettext("dashboard_alerts", "No connected workspace")
@@ -767,8 +871,8 @@ defmodule HiveWeb.AlertsLive.Index do
        when is_binary(url) and url != "" do
     host =
       case URI.parse(url) do
-        %URI{host: h} when is_binary(h) -> h
-        _ -> url
+        %URI{host: host} when is_binary(host) -> host
+        _other -> url
       end
 
     "Webhook · #{host}"
