@@ -65,7 +65,8 @@ defmodule Hive.Errors.Issue do
   variant bits forced into place.
   """
   @spec deterministic_id(binary(), binary()) :: Ecto.UUID.t()
-  def deterministic_id(project_id, fingerprint), do: deterministic_id(project_id, nil, fingerprint)
+  def deterministic_id(project_id, fingerprint),
+    do: deterministic_id(project_id, nil, fingerprint)
 
   @spec deterministic_id(binary(), binary() | nil, binary()) :: Ecto.UUID.t()
   def deterministic_id(project_id, nil, fingerprint)

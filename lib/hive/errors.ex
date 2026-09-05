@@ -143,7 +143,10 @@ defmodule Hive.Errors do
 
       row = build_event_row(project, issue_id, event, fingerprint, domain_id)
       {:ok, _} = Event.Buffer.insert(row)
-      :ok = IssueCoalescer.observe(IssueCoalescer, project, fingerprint, event, domain_id: domain_id)
+
+      :ok =
+        IssueCoalescer.observe(IssueCoalescer, project, fingerprint, event, domain_id: domain_id)
+
       :ok
     else
       {:error, :not_configured}

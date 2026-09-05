@@ -14,7 +14,10 @@ defmodule Hive.MCP.Components.Tools.RotateDomainErrorDsnTest do
     stub(Hive.IngestRepo, :insert_all, fn _table, rows, _opts -> {length(rows), nil} end)
 
     {:ok, project} = Projects.create_project(%{"name" => unique_name("Proj")})
-    {:ok, domain} = Domains.create_domain(%{"name" => unique_name("Dom"), "visibility" => "public"})
+
+    {:ok, domain} =
+      Domains.create_domain(%{"name" => unique_name("Dom"), "visibility" => "public"})
+
     :ok = Domains.link_domain_to_project(domain, project.id)
 
     {:ok, project: project, domain: domain}
