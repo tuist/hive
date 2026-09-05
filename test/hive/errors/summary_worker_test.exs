@@ -15,7 +15,7 @@ defmodule Hive.Errors.SummaryWorkerTest do
       slack_channel_id: "C123"
     }
 
-    stub(Summaries, :run, fn opts ->
+    stub(Summaries, :reconcile, fn opts ->
       assert opts[:retry?] == false
       assert opts[:scheduled_for] == ~U[2026-09-05 12:01:00Z]
       {:ok, run, :delivered}
@@ -38,7 +38,7 @@ defmodule Hive.Errors.SummaryWorkerTest do
   end
 
   test "retries a transient failure" do
-    stub(Summaries, :run, fn opts ->
+    stub(Summaries, :reconcile, fn opts ->
       assert opts[:retry?]
       {:error, :temporary_failure}
     end)
@@ -47,7 +47,7 @@ defmodule Hive.Errors.SummaryWorkerTest do
   end
 
   test "cancels a provider credit failure" do
-    stub(Summaries, :run, fn opts ->
+    stub(Summaries, :reconcile, fn opts ->
       refute opts[:retry?]
       {:error, :llm_credit_limit}
     end)

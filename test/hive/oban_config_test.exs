@@ -2,7 +2,6 @@ defmodule Hive.ObanConfigTest do
   use ExUnit.Case, async: true
 
   alias Hive.Errors.SummaryWorker
-  alias Hive.Oban.Config
 
   test "rescues orphaned executing jobs" do
     plugins =
@@ -30,25 +29,8 @@ defmodule Hive.ObanConfigTest do
     assert {"5 18 * * *", Hive.Drops.WeeklyDigestWorker} in crontab
   end
 
-  test "adds the configured error summary schedule only when enabled" do
-    base = Application.fetch_env!(:hive, Oban)
-
-    disabled =
-      Config.build(base, %{
-        enabled: false,
-        schedule: "15 8 * * 1",
-        slack_channel_id: "C123"
-      })
-
-    enabled =
-      Config.build(base, %{
-        enabled: true,
-        schedule: "15 8 * * 1",
-        slack_channel_id: "C123"
-      })
-
-    refute {"15 8 * * 1", SummaryWorker} in crontab(disabled)
-    assert {"15 8 * * 1", SummaryWorker} in crontab(enabled)
+  test "reconciles runtime-managed error summary settings every minute" do
+    assert {"* * * * *", SummaryWorker} in crontab(Application.fetch_env!(:hive, Oban))
   end
 
   defp crontab(config) do

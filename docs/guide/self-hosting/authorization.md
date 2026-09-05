@@ -36,6 +36,7 @@ Changing the configured domains later does not change existing roles.
 | View private product work | no | no | yes | yes |
 | Create and manage projects, domains, specs, and postmortems | no | no | yes | yes |
 | Manage Forage intake | no | no | no | yes |
+| Manage error summary scheduling and delivery | no | no | no | yes |
 | Manage Slack and model gateway settings | no | no | no | yes |
 | View the audit trail | no | no | no | yes |
 | View captured errors and update their status | no | no | yes | yes |

@@ -138,12 +138,14 @@ member must start each Flight from the Forage item, a Grafana alert thread in
 Slack, or a connected client. When inference is not configured, Hive continues
 to run and uses the documented non-model behavior for each feature.
 
-Error summaries are disabled by default. Operators choose the reporting
-frequency and Slack channel through the
-[runtime configuration](/reference/configuration#hive_error_summary_enabled).
-Hive stores each reporting period before model generation and stores generated
-text before posting it. A delivery retry therefore reuses the stored text, and
-an empty period uses no model tokens.
+Error summaries are disabled by default. Instance administrators can enable
+them and change their schedule or Slack channel under **Ops -> Errors**. Changes
+take effect at runtime without restarting Hive. The corresponding
+[launch-time configuration](/reference/configuration#hive_error_summary_enabled)
+provides initial values for a new installation. Hive stores each reporting
+period before model generation and stores generated text before posting it. A
+delivery retry therefore reuses the stored text, and an empty period uses no
+model tokens.
 
 Hive's built-in inference token caps each model response at 1,200 tokens. It
 is a final guardrail for workflows using the **Use for Hive inference** profile,

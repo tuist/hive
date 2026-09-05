@@ -14,6 +14,7 @@ defmodule Hive.Errors.Summaries do
   alias Hive.Errors.Agents.SummaryAgent
   alias Hive.Errors.Issue
   alias Hive.Errors.SummaryRun
+  alias Hive.Errors.SummarySettings
   alias Hive.Repo
   alias Hive.Slack.API
   alias Hive.Slack.Installation
@@ -28,8 +29,21 @@ defmodule Hive.Errors.Summaries do
   )
   @initial_window_seconds 86_400
   @max_issues 50
+  @settings_id "default"
 
-  def config(conf \\ Application.get_env(:hive, :error_summary, [])) do
+  def config do
+    settings() |> config()
+  end
+
+  def config(%SummarySettings{} = settings) do
+    %{
+      enabled: settings.enabled,
+      schedule: settings.schedule,
+      slack_channel_id: settings.slack_channel_id
+    }
+  end
+
+  def config(conf) when is_list(conf) do
     %{
       enabled: Keyword.get(conf, :enabled, false),
       schedule: Keyword.get(conf, :schedule, "0 9 * * *"),
@@ -37,8 +51,47 @@ defmodule Hive.Errors.Summaries do
     }
   end
 
+  def settings do
+    case Repo.get(SummarySettings, @settings_id) do
+      %SummarySettings{} = settings -> settings
+      nil -> create_default_settings()
+    end
+  end
+
+  def change_settings(%SummarySettings{} = settings, attrs \\ %{}) do
+    SummarySettings.changeset(settings, attrs)
+  end
+
+  def update_settings(%SummarySettings{} = settings, attrs) do
+    settings
+    |> SummarySettings.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def reconcile(opts \\ []) do
+    scheduled_for =
+      Keyword.get(opts, :scheduled_for, DateTime.utc_now()) |> DateTime.truncate(:second)
+
+    conf = Keyword.get_lazy(opts, :config, &config/0)
+
+    if due?(scheduled_for, conf) do
+      run(Keyword.put(opts, :config, conf))
+    else
+      {:ok, nil, if(conf.enabled, do: :not_due, else: :disabled)}
+    end
+  end
+
+  def due?(_scheduled_for, %{enabled: false}), do: false
+
+  def due?(%DateTime{} = scheduled_for, %{enabled: true, schedule: schedule}) do
+    case Oban.Plugins.Cron.parse(schedule) do
+      {:ok, expression} -> Oban.Cron.Expression.now?(expression, scheduled_for)
+      {:error, _error} -> false
+    end
+  end
+
   def run(opts \\ []) do
-    conf = Keyword.get(opts, :config, config())
+    conf = Keyword.get_lazy(opts, :config, &config/0)
 
     if conf.enabled do
       scheduled_for =
@@ -72,6 +125,18 @@ defmodule Hive.Errors.Summaries do
       end
     else
       {:ok, nil, :disabled}
+    end
+  end
+
+  defp create_default_settings do
+    defaults = config(Application.get_env(:hive, :error_summary, []))
+
+    changeset =
+      SummarySettings.changeset(%SummarySettings{id: @settings_id}, defaults)
+
+    case Repo.insert(changeset) do
+      {:ok, settings} -> settings
+      {:error, _changeset} -> Repo.get!(SummarySettings, @settings_id)
     end
   end
 

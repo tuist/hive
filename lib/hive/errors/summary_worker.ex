@@ -27,7 +27,7 @@ defmodule Hive.Errors.SummaryWorker do
       |> then(&(div(&1, 60) * 60))
       |> DateTime.from_unix!()
 
-    case Summaries.run(retry?: job.attempt > 1, scheduled_for: scheduled_for) do
+    case Summaries.reconcile(retry?: job.attempt > 1, scheduled_for: scheduled_for) do
       {:ok, run, :delivered} ->
         Audit.record("error.summary.posted", %{
           target_type: "error_summary",

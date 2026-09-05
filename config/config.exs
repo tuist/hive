@@ -82,7 +82,8 @@ config :hive, Oban,
        {"*/15 * * * *", Hive.Forage.GitHubIssueSyncer},
        {"*/15 * * * *", Hive.Forage.GitHubIssueClassificationSweeper},
        {"*/15 * * * *", Hive.Drops.DomainClassificationSweeper},
-       {"* * * * *", Hive.Notifications.DispatcherWorker}
+       {"* * * * *", Hive.Notifications.DispatcherWorker},
+       {"* * * * *", Hive.Errors.SummaryWorker}
      ]}
   ]
 

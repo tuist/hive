@@ -66,8 +66,8 @@ env:
   # none disables account email notifications. Set to postmark or smtp
   # and provide the matching credentials through a Secret.
   HIVE_EMAIL_PROVIDER: "none"
-  # Periodic model-generated error summaries are opt-in. When enabled,
-  # set the Cron schedule and the destination Slack channel identifier.
+  # These values initialize the runtime-managed error summary settings.
+  # Instance administrators can change them later under Ops -> Errors.
   HIVE_ERROR_SUMMARY_ENABLED: "false"
   HIVE_ERROR_SUMMARY_SCHEDULE: "0 9 * * *"
   # HIVE_ERROR_SUMMARY_SLACK_CHANNEL_ID: "C0123456789"
