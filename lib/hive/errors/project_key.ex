@@ -1,10 +1,18 @@
 defmodule Hive.Errors.ProjectKey do
   @moduledoc """
   A Data Source Name ([DSN](https://docs.sentry.io/product/sentry-basics/dsn-explainer/))
-  minted for a project. The `public_key` is the identifier SDKs send in
-  the `X-Sentry-Auth` header (or `sentry_key` query parameter). The
-  `secret_key` is a Sentry legacy field kept for compatibility with
-  older SDKs; modern SDKs ignore it.
+  minted for a project, optionally scoped to a single domain. The
+  `public_key` is the identifier SDKs send in the `X-Sentry-Auth` header
+  (or `sentry_key` query parameter). The `secret_key` is a Sentry legacy
+  field kept for compatibility with older SDKs; modern SDKs ignore it.
+
+  When `domain_id` is set, the row represents a domain-scoped DSN:
+  events ingested through it are attributed to both the project and the
+  domain at the credential layer, so a service that maps to one domain
+  never has to add an SDK tag to land classified. Every project also has
+  a plain project-level DSN (`domain_id: nil`) that catches everything
+  else — one-off scripts, crons, and any subsystem that isn't dedicated
+  to a single domain.
   """
 
   use Ecto.Schema
@@ -12,6 +20,7 @@ defmodule Hive.Errors.ProjectKey do
   import Ecto.Changeset
 
   alias Hive.Accounts.User
+  alias Hive.Domains.Domain
   alias Hive.Projects.Project
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -25,6 +34,7 @@ defmodule Hive.Errors.ProjectKey do
     field :last_used_at, :utc_datetime_usec
 
     belongs_to :project, Project
+    belongs_to :domain, Domain
     belongs_to :created_by, User, foreign_key: :created_by_user_id
 
     timestamps(type: :utc_datetime)
@@ -32,12 +42,23 @@ defmodule Hive.Errors.ProjectKey do
 
   def changeset(project_key, attrs) do
     project_key
-    |> cast(attrs, [:project_id, :public_key, :secret_key, :name, :created_by_user_id])
+    |> cast(attrs, [
+      :project_id,
+      :domain_id,
+      :public_key,
+      :secret_key,
+      :name,
+      :created_by_user_id
+    ])
     |> validate_required([:project_id, :public_key, :name])
     |> validate_length(:public_key, is: 32)
     |> validate_length(:secret_key, is: 32)
     |> validate_length(:name, min: 1, max: 100)
     |> unique_constraint(:public_key)
+    |> unique_constraint([:project_id, :domain_id],
+      name: :errors_project_keys_project_id_domain_id_index,
+      message: "domain already has a DSN for this project"
+    )
   end
 
   @doc """

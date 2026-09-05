@@ -33,8 +33,8 @@ alone grants no other access to the instance.
 
 A Data Source Name
 ([DSN](https://docs.sentry.io/product/sentry-basics/dsn-explainer/))
-identifies which project an event belongs to. Every project owns one
-or more keys; each key produces a Data Source Name of the form:
+identifies which project an event belongs to. Every key produces a
+Data Source Name of the form:
 
 ```
 https://<public_key>@<hive-host>/<numeric_project_id>
@@ -44,9 +44,28 @@ Software Development Kits that speak the Sentry protocol accept this
 value directly. Any of the community-maintained language libraries
 work — no Hive-specific integration is required.
 
-The Hive dashboard mints keys for a project from its settings page.
-Keys can be labelled to keep long-lived environments apart (for
-example, one per deployment) and rotated without downtime.
+Hive mints two kinds of Data Source Name:
+
+- **Project-scoped.** Every project has one. Events sent through it are
+  attributed to the project only and act as the catch-all for
+  subsystems that don't map to a single domain (the server itself,
+  one-off scripts, crons). Copy or rotate it from the project's
+  settings page.
+- **Domain-scoped.** Any project linked to a domain can mint one
+  additional key per `(project, domain)` pair. A service that lives
+  under one domain — for example, the `registry/` service under a
+  "Registry" domain — points its Sentry Software Development Kit at
+  the domain-scoped Data Source Name and every event it sends is
+  attributed to both the project and the domain at ingest, with no
+  per-caller tag. Copy or rotate these from the domain's page; each
+  linked project shows its own row, and rotating one only invalidates
+  that single credential.
+
+The URL shape is identical for both kinds — the domain does not appear
+in it — so any existing Sentry Software Development Kit works without
+modification. Deleting or rotating a domain-scoped Data Source Name
+cuts off exactly that one subsystem; the project-scoped Data Source
+Name and every other domain's Data Source Name keep working.
 
 ## Ingest endpoint
 

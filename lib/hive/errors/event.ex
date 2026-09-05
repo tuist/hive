@@ -13,6 +13,7 @@ defmodule Hive.Errors.Event do
   @primary_key {:event_id, Ch, type: "UUID", autogenerate: false}
   schema "errors_events" do
     field :project_id, Ch, type: "String"
+    field :domain_id, Ch, type: "String"
     field :issue_id, Ch, type: "String"
     field :fingerprint, Ch, type: "FixedString(64)"
     field :timestamp, Ch, type: "DateTime64(6, 'UTC')"

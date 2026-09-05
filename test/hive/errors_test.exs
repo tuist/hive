@@ -13,7 +13,13 @@ defmodule Hive.ErrorsTest do
   setup do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
     stub(Hive.Errors.Event.Buffer, :insert, fn row -> {:ok, row} end)
-    stub(Hive.Errors.IssueCoalescer, :observe, fn _project, _fingerprint, _event -> :ok end)
+    stub(Hive.Errors.IssueCoalescer, :observe, fn _server,
+                                                   _project,
+                                                   _fingerprint,
+                                                   _event,
+                                                   _opts ->
+      :ok
+    end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
     {:ok, project: project}
@@ -30,7 +36,11 @@ defmodule Hive.ErrorsTest do
         {:ok, row}
       end)
 
-      expect(Hive.Errors.IssueCoalescer, :observe, fn ^project, fingerprint, ^event ->
+      expect(Hive.Errors.IssueCoalescer, :observe, fn _server,
+                                                       ^project,
+                                                       fingerprint,
+                                                       ^event,
+                                                       _opts ->
         send(test_pid, {:observation, fingerprint})
         :ok
       end)

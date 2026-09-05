@@ -2,6 +2,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
   use HiveWeb.ConnCase, async: true
   use Mimic
 
+  alias Hive.Domains
   alias Hive.Errors
   alias Hive.Projects
 
@@ -9,7 +10,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
 
   setup %{conn: conn} do
     stub(Hive.Errors.Availability, :enabled?, fn -> true end)
-    stub(Hive.Errors, :ingest_envelope, fn _project, _body -> :ok end)
+    stub(Hive.Errors, :ingest_envelope, fn _project, _body, _opts -> :ok end)
 
     {:ok, project} = Projects.create_project(%{"name" => "Widgets"})
     {:ok, key} = Errors.create_project_key(project.id)
@@ -29,7 +30,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
     test "accepts a valid event envelope at the numeric project id", %{conn: conn, key: key} do
       test_pid = self()
 
-      expect(Hive.Errors, :ingest_envelope, fn _project, body ->
+      expect(Hive.Errors, :ingest_envelope, fn _project, body, _opts ->
         send(test_pid, {:ingested, body})
         :ok
       end)
@@ -69,7 +70,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
     end
 
     test "accepts inline even when ClickHouse is disabled", %{conn: conn, key: key} do
-      # `ingest_envelope/2` handles the disabled case internally by dropping
+      # `ingest_envelope/3` handles the disabled case internally by dropping
       # events (record_event returns `:not_configured`, which the item-loop
       # swallows and logs). Controller still returns 200 so SDKs don't retry.
       stub(Hive.Errors.Availability, :enabled?, fn -> false end)
@@ -77,6 +78,36 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeControllerTest do
 
       conn = post(conn, ~p"/api/#{key.dsn_project_id}/envelope/", body)
       assert conn.status == 200
+    end
+
+    test "forwards the domain_id from a domain-scoped DSN to ingest_envelope",
+         %{conn: base_conn, project: project} do
+      {:ok, domain} =
+        Domains.create_domain(%{"name" => "Registry", "visibility" => "public"})
+
+      :ok = Domains.link_domain_to_project(domain, project.id)
+      {:ok, domain_key} = Errors.create_domain_key(project.id, domain.id)
+      test_pid = self()
+
+      expect(Hive.Errors, :ingest_envelope, fn _project, _body, opts ->
+        send(test_pid, {:ingested_with, Keyword.get(opts, :domain_id)})
+        :ok
+      end)
+
+      conn =
+        base_conn
+        |> Plug.Conn.delete_req_header("x-sentry-auth")
+        |> put_req_header(
+          "x-sentry-auth",
+          "Sentry sentry_version=7, sentry_key=#{domain_key.public_key}"
+        )
+
+      body = envelope_body("evt-domain", ~s({"level":"error"}))
+      conn = post(conn, ~p"/api/#{domain_key.dsn_project_id}/envelope/", body)
+      domain_id = domain.id
+
+      assert conn.status == 200
+      assert_received {:ingested_with, ^domain_id}
     end
   end
 

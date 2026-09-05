@@ -11,6 +11,7 @@ defmodule Hive.Errors.Issue do
   import Ecto.Changeset
 
   alias Hive.Accounts.User
+  alias Hive.Domains.Domain
   alias Hive.Projects.Project
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -38,6 +39,7 @@ defmodule Hive.Errors.Issue do
     field :event_count, :integer, default: 0
 
     belongs_to :project, Project
+    belongs_to :domain, Domain
     belongs_to :assignee, User
 
     timestamps(type: :utc_datetime)
@@ -48,19 +50,35 @@ defmodule Hive.Errors.Issue do
 
   @doc """
   Deterministic UUIDv5-shaped id for the issue that groups events with
-  this `fingerprint` inside `project_id`. Same inputs always produce
-  the same id, so `Hive.Errors.record_event/2` can build the
+  this `fingerprint` inside `(project_id, domain_id)`. Same inputs always
+  produce the same id, so `Hive.Errors.record_event/3` can build the
   ClickHouse row (which references `issue_id`) without a Postgres
   round-trip to the `errors_issues` row.
 
+  `domain_id` is optional. When absent the id formula matches the
+  original `(project_id, fingerprint)` scheme so existing rows keep
+  their UUIDs; when present the domain participates in the hash, so a
+  domain-scoped Data Source Name produces distinct issues from the
+  project-level one even for the same exception fingerprint.
+
   RFC 4122 §4.3 UUIDv5: SHA-1 of `namespace <> name`, with version and
-  variant bits forced into place. `name` = `project_id <> ":" <> fingerprint`.
+  variant bits forced into place.
   """
   @spec deterministic_id(binary(), binary()) :: Ecto.UUID.t()
-  def deterministic_id(project_id, fingerprint)
-      when is_binary(project_id) and is_binary(fingerprint) do
-    name = project_id <> ":" <> fingerprint
+  def deterministic_id(project_id, fingerprint), do: deterministic_id(project_id, nil, fingerprint)
 
+  @spec deterministic_id(binary(), binary() | nil, binary()) :: Ecto.UUID.t()
+  def deterministic_id(project_id, nil, fingerprint)
+      when is_binary(project_id) and is_binary(fingerprint) do
+    build_id(project_id <> ":" <> fingerprint)
+  end
+
+  def deterministic_id(project_id, domain_id, fingerprint)
+      when is_binary(project_id) and is_binary(domain_id) and is_binary(fingerprint) do
+    build_id(project_id <> ":" <> domain_id <> ":" <> fingerprint)
+  end
+
+  defp build_id(name) do
     <<time_low::32, time_mid::16, _::4, time_hi::12, _::2, clock_hi::14, node::48, _rest::binary>> =
       :crypto.hash(:sha, @uuid_namespace <> name)
 
@@ -73,6 +91,7 @@ defmodule Hive.Errors.Issue do
     |> cast(attrs, [
       :id,
       :project_id,
+      :domain_id,
       :fingerprint,
       :title,
       :culprit,
@@ -91,23 +110,26 @@ defmodule Hive.Errors.Issue do
     |> validate_length(:title, max: 500)
     |> validate_inclusion(:status, @statuses)
     |> validate_inclusion(:level, @levels)
-    |> unique_constraint([:project_id, :fingerprint])
+    |> unique_constraint([:project_id, :domain_id, :fingerprint],
+      name: :errors_issues_project_id_domain_id_fingerprint_index
+    )
   end
 
   # Safety net for callers that don't set the id explicitly (e.g. test
   # factories, one-off scripts). When both `project_id` and
   # `fingerprint` are present, compute the deterministic id so a plain
-  # `Repo.insert` still produces the same row `Hive.Errors.record_event/2`
+  # `Repo.insert` still produces the same row `Hive.Errors.record_event/3`
   # would.
   defp put_deterministic_id_if_missing(changeset) do
     if get_field(changeset, :id) do
       changeset
     else
       project_id = get_field(changeset, :project_id)
+      domain_id = get_field(changeset, :domain_id)
       fingerprint = get_field(changeset, :fingerprint)
 
       if project_id && fingerprint do
-        put_change(changeset, :id, deterministic_id(project_id, fingerprint))
+        put_change(changeset, :id, deterministic_id(project_id, domain_id, fingerprint))
       else
         changeset
       end
