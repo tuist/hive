@@ -41,6 +41,8 @@ Changing the configured domains later does not change existing roles.
 | View captured errors and update their status | no | no | yes | yes |
 | See a project's Sentry-compatible Data Source Name | no | no | yes | yes |
 | Rotate a project's Sentry-compatible Data Source Name | no | no | no | yes |
+| See a domain-scoped Sentry-compatible Data Source Name | no | no | yes | yes |
+| Rotate a domain-scoped Sentry-compatible Data Source Name | no | no | no | yes |
 | View a project's alert rules | no | no | yes | yes |
 | Create, edit, or delete alert rules | no | no | no | yes |
 

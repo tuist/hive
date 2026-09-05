@@ -73,7 +73,9 @@ defmodule Hive.MCP.Server do
       Hive.MCP.Components.Tools.UnresolveErrorIssue,
       Hive.MCP.Components.Tools.IgnoreErrorIssue,
       Hive.MCP.Components.Tools.GetProjectErrorDsn,
-      Hive.MCP.Components.Tools.RotateProjectErrorDsn
+      Hive.MCP.Components.Tools.RotateProjectErrorDsn,
+      Hive.MCP.Components.Tools.GetDomainErrorDsn,
+      Hive.MCP.Components.Tools.RotateDomainErrorDsn
     ],
     prompts: [
       Hive.MCP.Components.Prompts.WriteSpec

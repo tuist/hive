@@ -5,6 +5,7 @@ defmodule HiveWeb.DomainLive.Show do
 
   alias Hive.Auth
   alias Hive.Domains
+  alias Hive.Errors
   alias HiveWeb.DomainComponents
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
@@ -62,6 +63,8 @@ defmodule HiveWeb.DomainLive.Show do
          |> assign(:domain, domain)
          |> assign(:editable?, editable?)
          |> assign(:delete_domain_form, delete_domain_form())
+         |> assign(:errors_enabled?, Errors.enabled?())
+         |> assign_domain_keys(domain)
          |> assign(OpenGraph.assigns(open_graph(domain)))
          |> assign_form(Domains.change_domain(domain))}
 
@@ -70,6 +73,23 @@ defmodule HiveWeb.DomainLive.Show do
          socket
          |> put_flash(:error, dgettext("dashboard_domains", "Domain not found."))
          |> redirect(to: ~p"/domains")}
+    end
+  end
+
+  # Load one DSN per linked project so the "Error tracking" card can
+  # render Copy + Rotate per pair. Only admins see DSNs today, and
+  # `primary_domain_key/2` provisions lazily so the first render mints
+  # the credential — no separate "generate" step required.
+  defp assign_domain_keys(socket, domain) do
+    if socket.assigns[:admin?] and socket.assigns[:errors_enabled?] do
+      keys =
+        Map.new(domain.projects, fn project ->
+          {project.id, Errors.primary_domain_key(project, domain)}
+        end)
+
+      assign(socket, :domain_keys, keys)
+    else
+      assign(socket, :domain_keys, %{})
     end
   end
 
@@ -103,6 +123,24 @@ defmodule HiveWeb.DomainLive.Show do
      |> push_event("close-modal", %{id: "delete-domain-modal"})}
   end
 
+  def handle_event("rotate_domain_error_key", %{"project-id" => project_id}, socket) do
+    cond do
+      not socket.assigns[:admin?] ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_domains", "Only administrators can rotate Data Source Names.")
+         )}
+
+      project = Enum.find(socket.assigns.domain.projects, &(&1.id == project_id)) ->
+        rotate_domain_key(socket, project)
+
+      true ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("delete_domain", %{"name" => name}, socket) do
     cond do
       not socket.assigns.editable? ->
@@ -124,6 +162,30 @@ defmodule HiveWeb.DomainLive.Show do
 
       true ->
         {:noreply, assign(socket, :delete_domain_form, delete_domain_form())}
+    end
+  end
+
+  defp rotate_domain_key(socket, project) do
+    case Errors.rotate_domain_key(project, socket.assigns.domain) do
+      {:ok, key} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           dgettext(
+             "dashboard_domains",
+             "Rotated. Update your Sentry-compatible client to the new Data Source Name."
+           )
+         )
+         |> assign(:domain_keys, Map.put(socket.assigns.domain_keys, project.id, key))}
+
+      {:error, _} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           dgettext("dashboard_domains", "Could not rotate the Data Source Name.")
+         )}
     end
   end
 
@@ -193,6 +255,9 @@ defmodule HiveWeb.DomainLive.Show do
       <DomainComponents.domain_detail
         domain={@domain}
         editable?={@editable?}
+        admin?={@admin?}
+        errors_enabled?={@errors_enabled?}
+        domain_keys={@domain_keys}
         form={@form}
         delete_domain_form={@delete_domain_form}
       />

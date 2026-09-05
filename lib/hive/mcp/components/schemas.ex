@@ -424,13 +424,14 @@ defmodule Hive.MCP.Components.Schemas do
       "properties" => %{
         "id" => %{"type" => "string"},
         "project_id" => %{"type" => "string"},
+        "domain_id" => %{"type" => ["string", "null"]},
         "public_key" => %{"type" => "string"},
         "name" => %{"type" => "string"},
         "dsn" => %{"type" => "string"},
         "last_used_at" => %{"type" => ["string", "null"]},
         "inserted_at" => %{"type" => ["string", "null"]}
       },
-      "required" => ["id", "project_id", "public_key", "name", "dsn"],
+      "required" => ["id", "project_id", "domain_id", "public_key", "name", "dsn"],
       "additionalProperties" => false
     }
   end

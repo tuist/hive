@@ -55,11 +55,15 @@ defmodule Hive.Errors.IssueCoalescer do
 
   @doc """
   Records an observation of `event` for the issue identified by
-  `{project.id, fingerprint}` inside the coalescer. Non-blocking.
+  `{project.id, domain_id, fingerprint}` inside the coalescer. Pass
+  `:domain_id` in `opts` when the event came in through a domain-scoped
+  Data Source Name; omit it (or pass nil) for the project-level DSN.
+  Non-blocking.
   """
-  def observe(server \\ __MODULE__, %Project{} = project, fingerprint, %SentryEvent{} = event)
+  def observe(server, %Project{} = project, fingerprint, %SentryEvent{} = event, opts \\ [])
       when is_binary(fingerprint) do
-    GenServer.cast(server, {:observe, project, fingerprint, event})
+    domain_id = Keyword.get(opts, :domain_id)
+    GenServer.cast(server, {:observe, project, domain_id, fingerprint, event})
   end
 
   @doc """
@@ -78,8 +82,10 @@ defmodule Hive.Errors.IssueCoalescer do
 
     {:ok,
      %{
-       # Accumulator keyed by {project_id, fingerprint}. Value shape
-       # documented on `merge_observation/3`.
+       # Accumulator keyed by {project_id, domain_id, fingerprint}. A
+       # domain_id of nil is the project-level DSN and gets its own
+       # bucket, distinct from any domain-scoped observation of the same
+       # fingerprint. Value shape documented on `merge_observation/4`.
        accumulator: %{},
        timer: timer,
        interval: interval
@@ -87,10 +93,10 @@ defmodule Hive.Errors.IssueCoalescer do
   end
 
   @impl true
-  def handle_cast({:observe, project, fingerprint, event}, state) do
-    key = {project.id, fingerprint}
+  def handle_cast({:observe, project, domain_id, fingerprint, event}, state) do
+    key = {project.id, domain_id, fingerprint}
     entry = Map.get(state.accumulator, key)
-    updated = merge_observation(entry, project, fingerprint, event)
+    updated = merge_observation(entry, project, domain_id, fingerprint, event)
     {:noreply, %{state | accumulator: Map.put(state.accumulator, key, updated)}}
   end
 
@@ -119,12 +125,13 @@ defmodule Hive.Errors.IssueCoalescer do
   # matching). The most-recently-observed values win for the mutable
   # metadata (title/culprit/level/platform/environment); count is
   # additive; first/last-seen are min/max of every event's timestamp.
-  defp merge_observation(nil, project, fingerprint, event) do
+  defp merge_observation(nil, project, domain_id, fingerprint, event) do
     ts = event_timestamp(event)
 
     %{
-      id: Issue.deterministic_id(project.id, fingerprint),
+      id: Issue.deterministic_id(project.id, domain_id, fingerprint),
       project_id: project.id,
+      domain_id: domain_id,
       fingerprint: fingerprint,
       title: SentryEvent.title(event) |> truncate(500),
       culprit: SentryEvent.culprit(event) |> truncate(500),
@@ -137,7 +144,7 @@ defmodule Hive.Errors.IssueCoalescer do
     }
   end
 
-  defp merge_observation(entry, _project, _fingerprint, event) do
+  defp merge_observation(entry, _project, _domain_id, _fingerprint, event) do
     ts = event_timestamp(event)
 
     %{
@@ -194,7 +201,7 @@ defmodule Hive.Errors.IssueCoalescer do
           Issue,
           rows,
           on_conflict: on_conflict_query(),
-          conflict_target: [:project_id, :fingerprint],
+          conflict_target: [:project_id, :domain_id, :fingerprint],
           returning: true
         )
 
@@ -229,6 +236,7 @@ defmodule Hive.Errors.IssueCoalescer do
     %{
       id: entry.id,
       project_id: entry.project_id,
+      domain_id: entry.domain_id,
       fingerprint: entry.fingerprint,
       title: entry.title,
       culprit: entry.culprit,

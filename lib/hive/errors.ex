@@ -39,6 +39,7 @@ defmodule Hive.Errors do
 
   require Logger
 
+  alias Hive.Domains.Domain
   alias Hive.Errors.Envelope
   alias Hive.Errors.Event
   alias Hive.Errors.Fingerprint
@@ -59,19 +60,25 @@ defmodule Hive.Errors do
 
   @doc """
   Ingests a raw Sentry envelope body for a project. Parses each event
-  item and hands it to `record_event/2`. Malformed envelopes and
+  item and hands it to `record_event/3`. Malformed envelopes and
   malformed items are dropped with a warning — never propagated as
   errors to the caller — so the ingest endpoint can always return 200
   once the DSN has been validated (Sentry SDKs never retry on 200 but
   do retry on 5xx, and a stuck malformed envelope would loop forever).
+
+  ## Options
+
+    * `:domain_id` — when the envelope came in through a domain-scoped
+      Data Source Name, the domain the credential resolved to. Every
+      event in the envelope inherits that attribution.
   """
-  @spec ingest_envelope(Project.t(), binary()) :: :ok
-  def ingest_envelope(%Project{} = project, body) when is_binary(body) do
+  @spec ingest_envelope(Project.t(), binary(), keyword()) :: :ok
+  def ingest_envelope(%Project{} = project, body, opts \\ []) when is_binary(body) do
     case Envelope.parse(body) do
       {:ok, envelope} ->
         envelope.items
         |> Enum.filter(&(&1.type == "event"))
-        |> Enum.each(&ingest_event_item(project, &1))
+        |> Enum.each(&ingest_event_item(project, &1, opts))
 
         :ok
 
@@ -81,10 +88,10 @@ defmodule Hive.Errors do
     end
   end
 
-  defp ingest_event_item(project, item) do
+  defp ingest_event_item(project, item, opts) do
     with {:ok, decoded} <- Jason.decode(item.payload),
          event = SentryEvent.parse(decoded),
-         :ok <- record_event(project, event) do
+         :ok <- record_event(project, event, opts) do
       :ok
     else
       {:error, %Jason.DecodeError{}} ->
@@ -113,19 +120,33 @@ defmodule Hive.Errors do
 
   Callers that received raw SDK JSON should build the `SentryEvent` via
   `Hive.Errors.SentryEvent.parse/1` first.
-  """
-  @spec record_event(Project.t(), SentryEvent.t()) :: :ok | {:error, :not_configured | term()}
-  def record_event(%Project{} = project, %SentryEvent{} = event) do
-    if enabled?() do
-      fingerprint = Fingerprint.compute(event)
-      # Deterministic id — same `(project_id, fingerprint)` always
-      # resolves to the same UUID, so the ClickHouse row knows what
-      # issue it belongs to without waiting on Postgres.
-      issue_id = Issue.deterministic_id(project.id, fingerprint)
 
-      row = build_event_row(project, issue_id, event, fingerprint)
+  Pass `:domain_id` in `opts` to attribute the event to a domain — this
+  is what a domain-scoped Data Source Name uses to route events into
+  their own issue rows independent of the project-level DSN.
+  """
+  @spec record_event(Project.t(), SentryEvent.t(), keyword()) ::
+          :ok | {:error, :not_configured | term()}
+  def record_event(project, event, opts \\ [])
+
+  def record_event(%Project{} = project, %SentryEvent{} = event, opts) do
+    if enabled?() do
+      domain_id = Keyword.get(opts, :domain_id)
+      fingerprint = Fingerprint.compute(event)
+      # Deterministic id — same `(project_id, domain_id, fingerprint)`
+      # always resolves to the same UUID, so the ClickHouse row knows
+      # what issue it belongs to without waiting on Postgres. When no
+      # domain is attached, the id matches the historical
+      # `(project_id, fingerprint)` formula so pre-domain issues stay
+      # stable.
+      issue_id = Issue.deterministic_id(project.id, domain_id, fingerprint)
+
+      row = build_event_row(project, issue_id, event, fingerprint, domain_id)
       {:ok, _} = Event.Buffer.insert(row)
-      :ok = IssueCoalescer.observe(project, fingerprint, event)
+
+      :ok =
+        IssueCoalescer.observe(IssueCoalescer, project, fingerprint, event, domain_id: domain_id)
+
       :ok
     else
       {:error, :not_configured}
@@ -135,12 +156,12 @@ defmodule Hive.Errors do
   end
 
   # Builds the ClickHouse row as an `Event` struct. Kept separate from
-  # `record_event/2` so its cyclomatic complexity — one branch per
+  # `record_event/3` so its cyclomatic complexity — one branch per
   # string-defaulted column — doesn't blow past Credo's threshold in the
   # outer function.
-  defp build_event_row(project, issue_id, event, fingerprint) do
+  defp build_event_row(project, issue_id, event, fingerprint, domain_id) do
     fields =
-      core_columns(project, issue_id, event, fingerprint)
+      core_columns(project, issue_id, event, fingerprint, domain_id)
       |> Map.merge(event_scalar_columns(event))
       |> Map.merge(frame_columns(event.top_frame))
       |> Map.merge(actor_columns(event))
@@ -151,10 +172,11 @@ defmodule Hive.Errors do
     struct!(Event, fields)
   end
 
-  defp core_columns(project, issue_id, event, fingerprint) do
+  defp core_columns(project, issue_id, event, fingerprint, domain_id) do
     %{
       event_id: event.event_id |> to_uuid(),
       project_id: project.id,
+      domain_id: domain_id || "",
       issue_id: issue_id,
       fingerprint: fingerprint,
       timestamp: DateTime.truncate(event.timestamp, :microsecond),
@@ -555,6 +577,131 @@ defmodule Hive.Errors do
 
   def touch_project_key(_), do: :ok
 
+  ## Domain-scoped key management
+  #
+  # A domain-scoped DSN lives in the same `errors_project_keys` table as
+  # the project-level one but carries a `domain_id`. Ingested events
+  # inherit the domain attribution from the credential, so a service
+  # that maps to one domain never has to add an SDK tag to land
+  # classified. The URL shape SDKs see is unchanged.
+
+  @doc """
+  Lists domain-scoped keys for a given `(project_id, domain_id)` pair,
+  oldest first. Excludes project-level keys.
+  """
+  def list_domain_keys(project_id, domain_id)
+      when is_binary(project_id) and is_binary(domain_id) do
+    ProjectKey
+    |> where([key], key.project_id == ^project_id and key.domain_id == ^domain_id)
+    |> order_by([key], asc: key.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Provisions a default domain-scoped Data Source Name for the
+  `(project, domain)` pair if none exists yet and error tracking is
+  available. Safe to call from contexts that don't know or care whether
+  ClickHouse is enabled — returns `:ok` in every branch.
+  """
+  def ensure_default_domain_key(%Project{id: project_id}, %Domain{id: domain_id}) do
+    if enabled?() do
+      case list_domain_keys(project_id, domain_id) do
+        [] ->
+          case create_domain_key(project_id, domain_id, %{"name" => "default"}) do
+            {:ok, _key} -> :ok
+            {:error, _} -> :ok
+          end
+
+        _keys ->
+          :ok
+      end
+    else
+      :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  def ensure_default_domain_key(_, _), do: :ok
+
+  @doc """
+  Returns the single Data Source Name for a `(project, domain)` pair —
+  the oldest active key. Provisions one lazily when missing so the
+  domain page can render a copyable value without a separate
+  "provision" step.
+  """
+  def primary_domain_key(%Project{id: project_id} = project, %Domain{id: domain_id} = domain) do
+    case list_domain_keys(project_id, domain_id) do
+      [key | _] ->
+        key
+
+      [] ->
+        ensure_default_domain_key(project, domain)
+
+        case list_domain_keys(project_id, domain_id) do
+          [key | _] -> key
+          [] -> nil
+        end
+    end
+  end
+
+  def primary_domain_key(_, _), do: nil
+
+  @doc """
+  Deletes every existing key for the `(project, domain)` pair and mints
+  a fresh one. Called when an operator suspects a domain-scoped Data
+  Source Name has leaked. Does not touch the project-level DSN or any
+  other domain's DSN.
+  """
+  def rotate_domain_key(%Project{id: project_id}, %Domain{id: domain_id}) do
+    existing_public_keys =
+      ProjectKey
+      |> where([k], k.project_id == ^project_id and k.domain_id == ^domain_id)
+      |> select([k], k.public_key)
+      |> Repo.all()
+
+    result =
+      Repo.transaction(fn ->
+        {_deleted, _} =
+          Repo.delete_all(
+            from(k in ProjectKey,
+              where: k.project_id == ^project_id and k.domain_id == ^domain_id
+            )
+          )
+
+        case create_domain_key(project_id, domain_id, %{"name" => "default"}) do
+          {:ok, key} -> key
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    Enum.each(existing_public_keys, &invalidate_project_key_cache/1)
+    result
+  end
+
+  def rotate_domain_key(_, _), do: {:error, :invalid_pair}
+
+  def create_domain_key(project_id, domain_id, attrs \\ %{})
+      when is_binary(project_id) and is_binary(domain_id) do
+    attrs =
+      attrs
+      |> Map.new(fn {k, v} -> {to_string(k), v} end)
+      |> Map.put("project_id", project_id)
+      |> Map.put("domain_id", domain_id)
+      |> Map.put_new("public_key", ProjectKey.generate_key())
+      |> Map.put_new("secret_key", ProjectKey.generate_key())
+      |> Map.put_new("name", "default")
+
+    case %ProjectKey{} |> ProjectKey.changeset(attrs) |> Repo.insert() do
+      {:ok, %ProjectKey{public_key: public_key}} = ok ->
+        invalidate_project_key_cache(public_key)
+        ok
+
+      other ->
+        other
+    end
+  end
+
   @doc """
   Returns the distinct environments seen for events matching the
   filters. Used by the dashboard's environment filter dropdown.
@@ -906,6 +1053,7 @@ defmodule Hive.Errors do
     %{
       id: key.id,
       project_id: key.project_id,
+      domain_id: key.domain_id,
       public_key: key.public_key,
       name: key.name,
       dsn: ProjectKey.dsn(key, endpoint_url),

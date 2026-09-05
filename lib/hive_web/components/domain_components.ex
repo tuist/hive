@@ -5,6 +5,8 @@ defmodule HiveWeb.DomainComponents do
 
   use HiveWeb, :html
 
+  alias Hive.Errors.ProjectKey
+  alias HiveWeb.Endpoint
   alias HiveWeb.Layouts
 
   attr :domains, :list, required: true
@@ -98,6 +100,9 @@ defmodule HiveWeb.DomainComponents do
 
   attr :domain, :map, required: true
   attr :editable?, :boolean, default: false
+  attr :admin?, :boolean, default: false
+  attr :errors_enabled?, :boolean, default: false
+  attr :domain_keys, :map, default: %{}
   attr :form, :any, required: true
   attr :delete_domain_form, :any, default: nil
 
@@ -158,6 +163,12 @@ defmodule HiveWeb.DomainComponents do
           </.card_section>
         </.card>
 
+        <.domain_error_tracking_card
+          :if={@admin? and @errors_enabled?}
+          domain={@domain}
+          domain_keys={@domain_keys}
+        />
+
         <.delete_domain_section
           :if={@editable?}
           domain={@domain}
@@ -167,6 +178,106 @@ defmodule HiveWeb.DomainComponents do
     </section>
     """
   end
+
+  attr :domain, :map, required: true
+  attr :domain_keys, :map, required: true
+
+  defp domain_error_tracking_card(assigns) do
+    ~H"""
+    <.card
+      title={dgettext("dashboard_domains", "Error tracking")}
+      icon="alert_hexagon"
+    >
+      <.card_section data-part="domain-error-tracking-card">
+        <p data-part="domain-error-tracking-intro">
+          {dgettext(
+            "dashboard_domains",
+            "Point any Sentry-compatible client at these Data Source Names and its events will be attributed to this domain automatically. One credential per linked project, so rotating one only cuts off that subsystem."
+          )}
+        </p>
+
+        <div :if={domain_projects(@domain) == []} data-part="domain-error-tracking-empty">
+          <p>
+            {dgettext(
+              "dashboard_domains",
+              "Link this domain to a project first. Each linked project gets its own Data Source Name."
+            )}
+          </p>
+        </div>
+
+        <ul :if={domain_projects(@domain) != []} data-part="domain-dsn-list">
+          <li
+            :for={project <- domain_projects(@domain)}
+            data-part="domain-dsn-row"
+            id={"domain-dsn-#{project.id}"}
+          >
+            <div data-part="dsn-project-label">
+              <.icon name="apps" />
+              <span>{project.name}</span>
+            </div>
+
+            <.domain_dsn_value :if={Map.get(@domain_keys, project.id)} project={project} key={Map.get(@domain_keys, project.id)} />
+
+            <div :if={is_nil(Map.get(@domain_keys, project.id))} data-part="dsn-meta">
+              {dgettext("dashboard_domains", "Data Source Name unavailable.")}
+            </div>
+          </li>
+        </ul>
+      </.card_section>
+    </.card>
+    """
+  end
+
+  attr :project, :map, required: true
+  attr :key, :map, required: true
+
+  defp domain_dsn_value(assigns) do
+    ~H"""
+    <div data-part="dsn-row">
+      <div data-part="dsn-value">
+        <code>{ProjectKey.dsn(@key, Endpoint.url())}</code>
+        <.button
+          id={"copy-domain-dsn-#{@key.id}"}
+          variant="secondary"
+          size="small"
+          icon_only
+          type="button"
+          phx-hook="Clipboard"
+          data-clipboard-value={ProjectKey.dsn(@key, Endpoint.url())}
+          aria-label={dgettext("dashboard_domains", "Copy Data Source Name")}
+          data-part="copy-button"
+        >
+          <span data-part="copy-icon"><.icon name="copy" /></span>
+          <span data-part="copy-check-icon"><.icon name="copy_check" /></span>
+        </.button>
+        <.button
+          variant="secondary"
+          size="small"
+          label={dgettext("dashboard_domains", "Rotate")}
+          phx-click="rotate_domain_error_key"
+          phx-value-project-id={@project.id}
+          data-confirm={
+            dgettext(
+              "dashboard_domains",
+              "Rotating invalidates the current Data Source Name for %{project}. Clients using it will need to be updated with the new value.",
+              project: @project.name
+            )
+          }
+        />
+      </div>
+      <div :if={@key.last_used_at} data-part="dsn-meta">
+        {dgettext("dashboard_domains", "Last used %{when}",
+          when: format_short_datetime(@key.last_used_at)
+        )}
+      </div>
+      <div :if={!@key.last_used_at} data-part="dsn-meta">
+        {dgettext("dashboard_domains", "Never used")}
+      </div>
+    </div>
+    """
+  end
+
+  defp format_short_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%Y-%m-%d %H:%M UTC")
 
   attr :domain, :map, required: true
   attr :delete_domain_form, :any, required: true

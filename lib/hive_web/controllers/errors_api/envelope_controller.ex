@@ -2,14 +2,16 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
   @moduledoc """
   Sentry-compatible ingest endpoint. Accepts envelopes at
   `POST /api/:project_id/envelope/`, validates the DSN, and ingests
-  event items inline via `Hive.Errors.ingest_envelope/2` — the actual
+  event items inline via `Hive.Errors.ingest_envelope/3` — the actual
   ClickHouse write is buffered by `Hive.Errors.Event.Buffer`, so the
   request returns quickly without paying an Oban round-trip per event.
 
   This endpoint is public but authenticated by DSN public key. The
   `X-Sentry-Auth` header (or `?sentry_key=` fallback, or a `dsn`
   field on the envelope header) identifies the project key; the
-  key's project must match the URL's `:project_id`.
+  key's project must match the URL's `:project_id`. When the key is
+  domain-scoped, every event in the envelope inherits its `domain_id`
+  attribution — the URL shape does not change.
   """
 
   use HiveWeb, :controller
@@ -29,7 +31,7 @@ defmodule HiveWeb.ErrorsAPI.EnvelopeController do
          {:ok, key} <- Errors.fetch_project_key_by_public_key(public_key),
          :ok <- verify_project(key, project_id) do
       event_id = extract_event_id(body)
-      :ok = Errors.ingest_envelope(key.project, body)
+      :ok = Errors.ingest_envelope(key.project, body, domain_id: key.domain_id)
       Errors.touch_project_key(key)
 
       conn
