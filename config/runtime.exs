@@ -157,6 +157,31 @@ config :hive, :slack,
   scopes: System.get_env("HIVE_SLACK_BOT_SCOPES"),
   allowed_team_ids: System.get_env("HIVE_SLACK_ALLOWED_TEAM_IDS")
 
+error_summary_enabled? = parse_boolean.(System.get_env("HIVE_ERROR_SUMMARY_ENABLED"))
+
+error_summary_schedule =
+  System.get_env("HIVE_ERROR_SUMMARY_SCHEDULE", "0 9 * * *") |> String.trim()
+
+error_summary_slack_channel_id =
+  System.get_env("HIVE_ERROR_SUMMARY_SLACK_CHANNEL_ID")
+  |> case do
+    value when is_binary(value) -> String.trim(value)
+    _other -> nil
+  end
+
+if error_summary_enabled? and error_summary_slack_channel_id in [nil, ""] do
+  raise "HIVE_ERROR_SUMMARY_SLACK_CHANNEL_ID is required when error summaries are enabled"
+end
+
+if error_summary_enabled? and error_summary_schedule == "" do
+  raise "HIVE_ERROR_SUMMARY_SCHEDULE is required when error summaries are enabled"
+end
+
+config :hive, :error_summary,
+  enabled: error_summary_enabled?,
+  schedule: error_summary_schedule,
+  slack_channel_id: error_summary_slack_channel_id
+
 email_provider =
   System.get_env("HIVE_EMAIL_PROVIDER", "none")
   |> String.trim()

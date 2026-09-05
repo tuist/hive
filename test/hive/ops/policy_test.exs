@@ -27,4 +27,10 @@ defmodule Hive.Ops.PolicyTest do
   test "anonymous visitors cannot manage drop sources" do
     refute Policy.authorize?(:drop_source_manage, nil, nil)
   end
+
+  test "only admin users can manage error summary settings" do
+    assert Policy.authorize?(:error_summary_settings_manage, %User{role: :admin}, nil)
+    refute Policy.authorize?(:error_summary_settings_manage, %User{role: :member}, nil)
+    refute Policy.authorize?(:error_summary_settings_manage, nil, nil)
+  end
 end

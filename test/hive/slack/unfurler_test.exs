@@ -42,6 +42,7 @@ defmodule Hive.Slack.UnfurlerTest do
     "/ops/slack",
     "/ops/drops",
     "/ops/forage",
+    "/ops/errors",
     "/ops/inference",
     "/ops/inference/profiles",
     "/ops/inference/providers",

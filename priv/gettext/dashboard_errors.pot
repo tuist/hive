@@ -155,6 +155,7 @@ msgid "Error"
 msgstr ""
 
 #: lib/hive_web/components/layouts.ex:208
+#: lib/hive_web/components/layouts.ex:340
 #: lib/hive_web/live/errors_live/event.ex:86
 #: lib/hive_web/live/errors_live/event.ex:143
 #: lib/hive_web/live/errors_live/index.ex:31
@@ -599,6 +600,108 @@ msgstr ""
 #: lib/hive_web/live/errors_live/event.ex:54
 #, elixir-autogen, elixir-format
 msgid "Open event"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:15
+#, elixir-autogen, elixir-format
+msgid "Configure scheduled Slack error summaries."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:146
+#, elixir-autogen, elixir-format
+msgid "Coordinated Universal Time"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:134
+#, elixir-autogen, elixir-format
+msgid "Enable error summaries"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:24
+#: lib/hive_web/live/ops_live/errors.ex:103
+#: lib/hive_web/live/ops_live/errors.ex:205
+#, elixir-autogen, elixir-format
+msgid "Error summaries"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:53
+#, elixir-autogen, elixir-format
+msgid "Error summaries · %{product}"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:79
+#, elixir-autogen, elixir-format
+msgid "Error summary settings updated."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:136
+#, elixir-autogen, elixir-format
+msgid "Generate a summary when the schedule matches and post it to Slack."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:36
+#, elixir-autogen, elixir-format
+msgid "Log in to manage error summaries."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:44
+#, elixir-autogen, elixir-format
+msgid "Only instance admins can manage error summaries."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:16
+#, elixir-autogen, elixir-format
+msgid "Ops"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:18
+#, elixir-autogen, elixir-format
+msgid "Runtime scheduling"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:173
+#, elixir-autogen, elixir-format
+msgid "Save settings"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:145
+#, elixir-autogen, elixir-format
+msgid "Schedule"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:105
+#, elixir-autogen, elixir-format
+msgid "Send recurring summaries of unresolved errors to Slack and call out the issues that need special attention. Changes take effect without restarting Hive."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:160
+#, elixir-autogen, elixir-format
+msgid "Slack channel identifier"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:19
+#, elixir-autogen, elixir-format
+msgid "Slack delivery"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:115
+#, elixir-autogen, elixir-format
+msgid "Slack summary"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:20
+#, elixir-autogen, elixir-format
+msgid "Special-attention issues"
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:148
+#, elixir-autogen, elixir-format
+msgid "Use a five-field Cron schedule, for example 0 9 * * * for every day at 09:00."
+msgstr ""
+
+#: lib/hive_web/live/ops_live/errors.ex:162
+#, elixir-autogen, elixir-format
+msgid "Use the channel identifier from the connected Slack workspace, for example C0123456789."
 msgstr ""
 
 #: lib/hive_web/live/errors_live/show.ex:344

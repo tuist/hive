@@ -1,6 +1,8 @@
 defmodule Hive.ObanConfigTest do
   use ExUnit.Case, async: true
 
+  alias Hive.Errors.SummaryWorker
+
   test "rescues orphaned executing jobs" do
     plugins =
       :hive
@@ -25,5 +27,18 @@ defmodule Hive.ObanConfigTest do
     crontab = Keyword.fetch!(opts, :crontab)
     assert {"@reboot", Hive.Drops.WeeklyDigestWorker} in crontab
     assert {"5 18 * * *", Hive.Drops.WeeklyDigestWorker} in crontab
+  end
+
+  test "reconciles runtime-managed error summary settings every minute" do
+    assert {"* * * * *", SummaryWorker} in crontab(Application.fetch_env!(:hive, Oban))
+  end
+
+  defp crontab(config) do
+    config
+    |> Keyword.fetch!(:plugins)
+    |> Enum.find_value(fn
+      {Oban.Plugins.Cron, opts} -> Keyword.fetch!(opts, :crontab)
+      _plugin -> nil
+    end)
   end
 end

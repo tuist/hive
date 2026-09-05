@@ -442,6 +442,34 @@ link unfurling.
 
 Optional comma-separated Slack workspace identifier allowlist.
 
+### HIVE_ERROR_SUMMARY_ENABLED {#hive_error_summary_enabled}
+
+Set to `true` or `1` to post periodic, model-generated summaries of recently
+observed unresolved errors to Slack. The workflow also requires error tracking,
+a connected Slack workspace, and either a profile marked **Use for Hive
+inference** or the launch-time model provider configuration. Defaults to
+disabled. This value initializes the setting for a new installation. Instance
+administrators can later change it under **Ops -> Errors** without restarting
+Hive.
+
+### HIVE_ERROR_SUMMARY_SCHEDULE {#hive_error_summary_schedule}
+
+A five-field [Cron schedule](https://en.wikipedia.org/wiki/Cron) controlling how
+often Hive prepares an error summary. Defaults to `0 9 * * *`, once per day at
+09:00 in Coordinated Universal Time. A summary covers unresolved issues observed
+since the last successfully completed period, or the preceding 24 hours on its
+first run. Inputs and generated output are persisted, so retries do not request
+the same model output twice. This value initializes the setting for a new
+installation and can later be changed under **Ops -> Errors**.
+
+### HIVE_ERROR_SUMMARY_SLACK_CHANNEL_ID {#hive_error_summary_slack_channel_id}
+
+Slack channel identifier that receives error summaries. Required when error
+summaries are enabled. Hive uses the oldest connected Slack workspace
+installation to post, matching its existing operational alert behavior. This
+value initializes the setting for a new installation and can later be changed
+under **Ops -> Errors**.
+
 ## ClickHouse
 
 ### HIVE_CLICKHOUSE_ENABLED {#hive_clickhouse_enabled}

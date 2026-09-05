@@ -66,6 +66,11 @@ env:
   # none disables account email notifications. Set to postmark or smtp
   # and provide the matching credentials through a Secret.
   HIVE_EMAIL_PROVIDER: "none"
+  # These values initialize the runtime-managed error summary settings.
+  # Instance administrators can change them later under Ops -> Errors.
+  HIVE_ERROR_SUMMARY_ENABLED: "false"
+  HIVE_ERROR_SUMMARY_SCHEDULE: "0 9 * * *"
+  # HIVE_ERROR_SUMMARY_SLACK_CHANNEL_ID: "C0123456789"
   HIVE_S3_FORCE_PATH_STYLE: "false"
   # When the Sentry Data Source Name is present, events are tagged with
   # this deployment environment. SENTRY_RELEASE is usually set per deploy.
