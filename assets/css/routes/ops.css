@@ -172,7 +172,6 @@
 
   & [data-part="settings-card"] {
     width: 100%;
-    max-width: 720px;
   }
 
   & [data-part="form-actions"] {
