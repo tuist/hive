@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 
 #: lib/hive_web/components/account_components.ex:55
-#: lib/hive_web/components/layouts.ex:433
+#: lib/hive_web/components/layouts.ex:439
 #: lib/hive_web/live/account_live/identities.ex:17
 #: lib/hive_web/live/account_live/notifications.ex:33
 #, elixir-autogen, elixir-format
@@ -98,7 +98,7 @@ msgstr ""
 msgid "Log in to manage your account."
 msgstr ""
 
-#: lib/hive_web/components/layouts.ex:441
+#: lib/hive_web/components/layouts.ex:447
 #, elixir-autogen, elixir-format
 msgid "Log out"
 msgstr ""
