@@ -11,73 +11,73 @@
 msgid ""
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:52
-#: lib/hive_web/live/domain_live/show.ex:140
+#: lib/hive_web/live/domain_live/show.ex:53
+#: lib/hive_web/live/domain_live/show.ex:202
 #, elixir-autogen, elixir-format
 msgid "%{domain} · Domains · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:304
+#: lib/hive_web/components/domain_components.ex:415
 #, elixir-autogen, elixir-format
 msgid "Add domain"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:192
+#: lib/hive_web/components/domain_components.ex:303
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this?"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:73
+#: lib/hive_web/components/domain_components.ex:75
 #, elixir-autogen, elixir-format
 msgid "Atom"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:225
-#: lib/hive_web/components/domain_components.ex:333
+#: lib/hive_web/components/domain_components.ex:336
+#: lib/hive_web/components/domain_components.ex:444
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:298
+#: lib/hive_web/components/domain_components.ex:409
 #, elixir-autogen, elixir-format
 msgid "Create a reusable domain the team can link to projects."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:341
+#: lib/hive_web/components/domain_components.ex:452
 #, elixir-autogen, elixir-format
 msgid "Create domain"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:282
+#: lib/hive_web/components/domain_components.ex:393
 #, elixir-autogen, elixir-format
 msgid "Create the first domain to give Hive a domain boundary."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:235
+#: lib/hive_web/components/domain_components.ex:346
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:178
-#: lib/hive_web/components/domain_components.ex:198
+#: lib/hive_web/components/domain_components.ex:289
+#: lib/hive_web/components/domain_components.ex:309
 #, elixir-autogen, elixir-format
 msgid "Delete domain"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:210
+#: lib/hive_web/components/domain_components.ex:321
 #, elixir-autogen, elixir-format
 msgid "Deleting the domain will permanently remove all of its data"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:141
-#: lib/hive_web/components/domain_components.ex:321
+#: lib/hive_web/components/domain_components.ex:146
+#: lib/hive_web/components/domain_components.ex:432
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:38
-#: lib/hive_web/components/domain_components.ex:122
-#: lib/hive_web/live/domain_live/show.ex:21
+#: lib/hive_web/components/domain_components.ex:40
+#: lib/hive_web/components/domain_components.ex:127
+#: lib/hive_web/live/domain_live/show.ex:22
 #, elixir-autogen, elixir-format
 msgid "Domain"
 msgstr ""
@@ -87,23 +87,23 @@ msgstr ""
 msgid "Domain created."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:121
+#: lib/hive_web/live/domain_live/show.ex:159
 #, elixir-autogen, elixir-format
 msgid "Domain deleted."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:71
+#: lib/hive_web/live/domain_live/show.ex:74
 #, elixir-autogen, elixir-format
 msgid "Domain not found."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:137
+#: lib/hive_web/live/domain_live/show.ex:199
 #, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:19
-#: lib/hive_web/components/domain_components.ex:24
+#: lib/hive_web/components/domain_components.ex:21
+#: lib/hive_web/components/domain_components.ex:26
 #: lib/hive_web/components/layouts.ex:176
 #: lib/hive_web/live/domain_live/index.ex:20
 #: lib/hive_web/live/domain_live/index.ex:28
@@ -117,45 +117,45 @@ msgstr ""
 msgid "Domains · %{product}"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:214
+#: lib/hive_web/components/domain_components.ex:325
 #, elixir-autogen, elixir-format
 msgid "Enter this domain's name to confirm"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:66
+#: lib/hive_web/components/domain_components.ex:68
 #, elixir-autogen, elixir-format
 msgid "Feed"
 msgstr ""
 
 #: lib/hive_web/controllers/feed_controller.ex:202
-#: lib/hive_web/live/domain_live/show.ex:58
+#: lib/hive_web/live/domain_live/show.ex:59
 #, elixir-autogen, elixir-format
 msgid "Hive · %{domain}"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:134
-#: lib/hive_web/components/domain_components.ex:314
+#: lib/hive_web/components/domain_components.ex:139
+#: lib/hive_web/components/domain_components.ex:425
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:297
+#: lib/hive_web/components/domain_components.ex:408
 #, elixir-autogen, elixir-format
 msgid "New domain"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:354
+#: lib/hive_web/components/domain_components.ex:465
 #, elixir-autogen, elixir-format
 msgid "No description"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:87
+#: lib/hive_web/components/domain_components.ex:89
 #, elixir-autogen, elixir-format
 msgid "No domains yet"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:49
-#: lib/hive_web/components/domain_components.ex:260
+#: lib/hive_web/components/domain_components.ex:51
+#: lib/hive_web/components/domain_components.ex:371
 #, elixir-autogen, elixir-format
 msgid "No project"
 msgstr ""
@@ -165,53 +165,53 @@ msgstr ""
 msgid "Only organization members can create domains."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:113
+#: lib/hive_web/live/domain_live/show.ex:151
 #, elixir-autogen, elixir-format
 msgid "Only organization members can delete domains."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:94
+#: lib/hive_web/live/domain_live/show.ex:114
 #, elixir-autogen, elixir-format
 msgid "Only organization members can edit domains."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:285
+#: lib/hive_web/components/domain_components.ex:396
 #, elixir-autogen, elixir-format
 msgid "Organization members will populate this list."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:44
-#: lib/hive_web/components/domain_components.ex:255
+#: lib/hive_web/components/domain_components.ex:46
+#: lib/hive_web/components/domain_components.ex:366
 #, elixir-autogen, elixir-format
 msgid "Projects"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:80
+#: lib/hive_web/components/domain_components.ex:82
 #, elixir-autogen, elixir-format
 msgid "RSS"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:151
+#: lib/hive_web/components/domain_components.ex:156
 #, elixir-autogen, elixir-format
 msgid "Save domain"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:71
+#: lib/hive_web/components/domain_components.ex:73
 #, elixir-autogen, elixir-format
 msgid "Subscribe via Atom"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:78
+#: lib/hive_web/components/domain_components.ex:80
 #, elixir-autogen, elixir-format
 msgid "Subscribe via RSS"
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:20
+#: lib/hive_web/components/domain_components.ex:22
 #, elixir-autogen, elixir-format
 msgid "The domains this Hive instance plans and routes work for."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:180
+#: lib/hive_web/components/domain_components.ex:291
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone."
 msgstr ""
@@ -221,18 +221,18 @@ msgstr ""
 msgid "Updates belonging to the %{domain} domain."
 msgstr ""
 
-#: lib/hive_web/components/domain_components.ex:143
-#: lib/hive_web/components/domain_components.ex:323
+#: lib/hive_web/components/domain_components.ex:148
+#: lib/hive_web/components/domain_components.ex:434
 #, elixir-autogen, elixir-format
 msgid "What this domain covers inside the organization."
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:23
+#: lib/hive_web/live/domain_live/show.ex:24
 #, elixir-autogen, elixir-format
 msgid "%{count} projects"
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:24
+#: lib/hive_web/live/domain_live/show.ex:25
 #, elixir-autogen, elixir-format
 msgid "%{visibility} visibility"
 msgstr ""
@@ -257,7 +257,7 @@ msgstr ""
 msgid "Shared ownership"
 msgstr ""
 
-#: lib/hive_web/live/domain_live/show.ex:16
+#: lib/hive_web/live/domain_live/show.ex:17
 #, elixir-autogen, elixir-format
 msgid "Specs, forage items, drops, and projects linked to %{domain}."
 msgstr ""
@@ -265,4 +265,64 @@ msgstr ""
 #: lib/hive_web/live/home_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "The lasting areas of the product that requests and releases are grouped under."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:247
+#, elixir-autogen, elixir-format
+msgid "Copy Data Source Name"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:187
+#, elixir-autogen, elixir-format
+msgid "Could not rotate the Data Source Name."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:222
+#, elixir-autogen, elixir-format
+msgid "Data Source Name unavailable."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:188
+#, elixir-autogen, elixir-format
+msgid "Error tracking"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:269
+#, elixir-autogen, elixir-format
+msgid "Last used %{when}"
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:201
+#, elixir-autogen, elixir-format
+msgid "Link this domain to a project first. Each linked project gets its own Data Source Name."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:274
+#, elixir-autogen, elixir-format
+msgid "Never used"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:133
+#, elixir-autogen, elixir-format
+msgid "Only administrators can rotate Data Source Names."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:193
+#, elixir-autogen, elixir-format
+msgid "Point any Sentry-compatible client at these Data Source Names and its events will be attributed to this domain automatically. One credential per linked project, so rotating one only cuts off that subsystem."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:256
+#, elixir-autogen, elixir-format
+msgid "Rotate"
+msgstr ""
+
+#: lib/hive_web/live/domain_live/show.ex:175
+#, elixir-autogen, elixir-format
+msgid "Rotated. Update your Sentry-compatible client to the new Data Source Name."
+msgstr ""
+
+#: lib/hive_web/components/domain_components.ex:260
+#, elixir-autogen, elixir-format
+msgid "Rotating invalidates the current Data Source Name for %{project}. Clients using it will need to be updated with the new value."
 msgstr ""
