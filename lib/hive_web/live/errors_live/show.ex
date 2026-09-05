@@ -7,11 +7,14 @@ defmodule HiveWeb.ErrorsLive.Show do
   @behaviour Hive.Slack.Unfurl
 
   import HiveWeb.PlatformIcon
+  import Noora.DatePicker
 
+  alias Phoenix.LiveView.JS
   alias Hive.Errors
   alias Hive.Errors.Issue
   alias Hive.Errors.Policy
   alias Hive.Slack.Unfurl.BlockKit
+  alias HiveWeb.Helpers.DatePicker
   alias HiveWeb.Layouts
   alias HiveWeb.OpenGraph
 
@@ -75,19 +78,12 @@ defmodule HiveWeb.ErrorsLive.Show do
       latest = List.first(events) || %{}
       payload = latest[:payload] || %{}
 
-      occurrences_from = occurrences_from(issue)
-      occurrences_to = DateTime.utc_now()
-      occurrences = Errors.issue_occurrences(issue.id, occurrences_from, occurrences_to)
-
       {:ok,
        socket
        |> assign(:issue, issue)
        |> assign(:events, events)
        |> assign(:latest_event, List.first(events))
        |> assign(:latest_payload, payload)
-       |> assign(:occurrences, occurrences)
-       |> assign(:occurrences_from, occurrences_from)
-       |> assign(:occurrences_to, occurrences_to)
        |> assign(
          :page_title,
          dgettext("dashboard_errors", "%{title} · %{product}",
@@ -109,9 +105,55 @@ defmodule HiveWeb.ErrorsLive.Show do
   end
 
   @impl true
+  def handle_params(params, uri, socket) do
+    %{preset: preset, period: {from, to}} =
+      DatePicker.date_picker_params(params, "occurrences", default_preset: "last-30-days")
+
+    occurrences = Errors.issue_occurrences(socket.assigns.issue.id, from, to)
+
+    {:noreply,
+     socket
+     |> assign(:uri, URI.parse(uri))
+     |> assign(:occurrences, occurrences)
+     |> assign(:occurrences_from, from)
+     |> assign(:occurrences_to, to)
+     |> assign(:occurrences_preset, preset)
+     |> assign(:occurrences_period, {from, to})}
+  end
+
+  @impl true
   def handle_event("resolve", _params, socket), do: update_status(socket, :resolved)
   def handle_event("unresolve", _params, socket), do: update_status(socket, :unresolved)
   def handle_event("ignore", _params, socket), do: update_status(socket, :ignored)
+
+  def handle_event(
+        "occurrences_period_changed",
+        %{"value" => %{"start" => start_date, "end" => end_date}, "preset" => preset},
+        socket
+      ) do
+    params = current_query_params(socket)
+
+    updated =
+      if preset == "custom" do
+        params
+        |> Map.put("occurrences-date-range", "custom")
+        |> Map.put("occurrences-start-date", start_date)
+        |> Map.put("occurrences-end-date", end_date)
+      else
+        params
+        |> Map.put("occurrences-date-range", preset)
+        |> Map.delete("occurrences-start-date")
+        |> Map.delete("occurrences-end-date")
+      end
+
+    {:noreply, push_patch(socket, to: ~p"/errors/#{socket.assigns.issue.id}?#{updated}")}
+  end
+
+  defp current_query_params(%{assigns: %{uri: %URI{query: query}}}) do
+    query
+    |> Kernel.||("")
+    |> URI.decode_query()
+  end
 
   defp update_status(socket, status) do
     case Errors.update_issue_status(socket.assigns.issue, status) do
@@ -239,15 +281,46 @@ defmodule HiveWeb.ErrorsLive.Show do
         </div>
 
         <.card
-          :if={@occurrences != []}
           title={dgettext("dashboard_errors", "Occurrences")}
           icon="chart_arcs"
         >
+          <:actions>
+            <.date_picker
+              id="occurrences-date-range-picker"
+              name="occurrences-date-range"
+              presets={occurrences_date_presets()}
+              selected_preset={@occurrences_preset}
+              period={@occurrences_period}
+              on_period_change="occurrences_period_changed"
+              max={Date.utc_today()}
+            >
+              <:actions>
+                <.button
+                  label={dgettext("dashboard_errors", "Cancel")}
+                  variant="secondary"
+                  phx-click={
+                    JS.dispatch("phx:date-picker-cancel",
+                      detail: %{id: "occurrences-date-range-picker"}
+                    )
+                  }
+                />
+                <.button
+                  label={dgettext("dashboard_errors", "Apply")}
+                  phx-click={
+                    JS.dispatch("phx:date-picker-apply",
+                      detail: %{id: "occurrences-date-range-picker"}
+                    )
+                  }
+                />
+              </:actions>
+            </.date_picker>
+          </:actions>
           <.card_section>
-            <div data-part="occurrences-chart">
+            <div :if={@occurrences != []} data-part="occurrences-chart">
               <.chart
                 id={"occurrences-#{@issue.id}"}
                 type="bar"
+                bar_width={16}
                 series={[
                   %{
                     name: dgettext("dashboard_errors", "Events"),
@@ -259,13 +332,16 @@ defmodule HiveWeb.ErrorsLive.Show do
                 extra_options={occurrences_chart_options()}
               />
             </div>
-            <p data-part="occurrences-hint">
+            <p :if={@occurrences != []} data-part="occurrences-hint">
               {dgettext(
                 "dashboard_errors",
                 "Events per bucket from %{from} to %{to}. Buckets scale automatically to the window.",
                 from: format_datetime(@occurrences_from),
                 to: format_datetime(@occurrences_to)
               )}
+            </p>
+            <p :if={@occurrences == []} data-part="occurrences-empty">
+              {dgettext("dashboard_errors", "No events in the selected range.")}
             </p>
           </.card_section>
         </.card>
@@ -923,15 +999,32 @@ defmodule HiveWeb.ErrorsLive.Show do
   defp level_label(:debug), do: dgettext("dashboard_errors", "Debug")
   defp level_label(_), do: "-"
 
-  # Pick the window for the occurrences chart. Prefer the interval
-  # between first_seen and now (bounded to 30 days) so short-lived
-  # issues aren't dwarfed by empty older buckets.
-  defp occurrences_from(%{first_seen: %DateTime{} = first}) do
-    thirty_days_ago = DateTime.add(DateTime.utc_now(), -30, :day)
-    if DateTime.compare(first, thirty_days_ago) == :lt, do: thirty_days_ago, else: first
+  defp occurrences_date_presets do
+    [
+      %{
+        id: "last-1-hour",
+        label: dgettext("dashboard_errors", "Last 1 hour"),
+        period: {1, :hour}
+      },
+      %{
+        id: "last-24-hours",
+        label: dgettext("dashboard_errors", "Last 24 hours"),
+        period: {24, :hour}
+      },
+      %{id: "last-7-days", label: dgettext("dashboard_errors", "Last 7 days"), period: {7, :day}},
+      %{
+        id: "last-30-days",
+        label: dgettext("dashboard_errors", "Last 30 days"),
+        period: {30, :day}
+      },
+      %{
+        id: "last-12-months",
+        label: dgettext("dashboard_errors", "Last 12 months"),
+        period: {12, :month}
+      },
+      %{id: "custom", label: dgettext("dashboard_errors", "Custom")}
+    ]
   end
-
-  defp occurrences_from(_), do: DateTime.add(DateTime.utc_now(), -30, :day)
 
   defp format_bucket_label(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%d %H:%M")
   defp format_bucket_label(other), do: to_string(other)
