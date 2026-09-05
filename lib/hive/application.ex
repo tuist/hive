@@ -63,7 +63,7 @@ defmodule Hive.Application do
   defp add_endpoint(children), do: children ++ [HiveWeb.Endpoint]
 
   defp maybe_add_oban(children) do
-    children ++ [{Oban, Application.fetch_env!(:hive, Oban)}]
+    children ++ [{Oban, Hive.Oban.Config.build(Application.fetch_env!(:hive, Oban))}]
   end
 
   defp ensure_mcp_session_store_started do

@@ -86,6 +86,11 @@ config :hive, Oban,
      ]}
   ]
 
+config :hive, :error_summary,
+  enabled: false,
+  schedule: "0 9 * * *",
+  slack_channel_id: nil
+
 config :hive, :email, from: nil
 
 config :hive, Hive.Notifications.Mailer, adapter: Swoosh.Adapters.Local

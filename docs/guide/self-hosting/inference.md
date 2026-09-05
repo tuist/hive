@@ -129,6 +129,7 @@ Hive currently uses language models for:
 | Drop generation | Extracts individual, user-facing feature drops from published GitHub releases. Hive supplies release notes and up to six directly referenced GitHub issues or pull requests, never crawling linked webpages. The model receives one turn per release, and the scheduled backlog advances by one release at a time. A release from a project with one domain is linked directly; multi-domain releases use the normal drop classification workflow. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
+| Error summaries | Posts a scheduled Slack digest of recently observed unresolved errors and highlights up to five issues whose severity, recurrence, or freshness requires special attention. The model receives only bounded aggregate issue metadata, never raw event payloads. |
 | Postmortem semantic retrieval | Stores a durable vector for each published postmortem so related incidents can be found by meaning. |
 
 Most of these workflows start from their scheduled or event-driven trigger
@@ -136,6 +137,13 @@ when Hive inference is configured. Flights are different: an organization
 member must start each Flight from the Forage item, a Grafana alert thread in
 Slack, or a connected client. When inference is not configured, Hive continues
 to run and uses the documented non-model behavior for each feature.
+
+Error summaries are disabled by default. Operators choose the reporting
+frequency and Slack channel through the
+[runtime configuration](/reference/configuration#hive_error_summary_enabled).
+Hive stores each reporting period before model generation and stores generated
+text before posting it. A delivery retry therefore reuses the stored text, and
+an empty period uses no model tokens.
 
 Hive's built-in inference token caps each model response at 1,200 tokens. It
 is a final guardrail for workflows using the **Use for Hive inference** profile,
