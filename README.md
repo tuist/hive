@@ -39,6 +39,18 @@ Hive can also connect Slack workspaces. Instance admins manage workspace
 installs, and signed-in users can turn Slack messages into forage items
 or receive bot replies in Slack threads.
 
+Hive also has native applications for carrying work from intent to execution.
+The macOS application hosts local projects and agent sessions. The iPhone and
+Apple Watch applications surface remote sessions from Hive and from nearby Macs
+running Hive on the same network. The existing server-backed Forage,
+specification, drop, and account surfaces remain available from the iPhone
+application.
+
+Native product state and execution capabilities live behind focused Rust
+modules. Each platform links only the capabilities it uses, keeping mobile
+applications independent from desktop-only project and agent machinery. See
+[`native/README.md`](native/README.md) for the architecture and build commands.
+
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 
