@@ -3,6 +3,6 @@
     <item
         android:width="108dp"
         android:height="108dp"
-        android:drawable="@drawable/ic_hive"
+        android:drawable="@drawable/hive_app_icon"
         android:gravity="center" />
 </layer-list>

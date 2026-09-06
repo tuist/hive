@@ -1,5 +1,5 @@
 [[target]]
-name = "SharedRust"
+name = "HiveMobileCore"
 kind = "rust_mobile_library"
 srcs = ["mobile/shared/src/**/*.rs"]
 
@@ -13,7 +13,7 @@ android_abi = "arm64-v8a"
 android_api = 24
 
 [[target]]
-name = "SharedRustTests"
+name = "HiveMobileCoreTests"
 kind = "rust_test"
 srcs = ["mobile/shared/src/**/*.rs"]
 
@@ -23,10 +23,10 @@ crate_root = "mobile/shared/src/lib.rs"
 edition = "2021"
 
 [[target]]
-name = "AppleApp"
+name = "HiveiOS"
 kind = "apple_application"
-srcs = ["mobile/ios/Hive/**/*.swift"]
-deps = ["./SharedRust"]
+srcs = ["mobile/ios/Hive/**/*.swift", "native/apple/Shared/**/*.swift"]
+deps = ["./HiveMobileCore", "./HiveWorkiOSCore"]
 
 [target.attrs]
 platform = "ios"
@@ -35,13 +35,111 @@ bundle_id = "dev.tuist.hive"
 minimum_os = "17.0"
 families = ["iphone", "ipad"]
 product_name = "Hive"
-sdk_frameworks = ["AuthenticationServices", "Foundation", "Security", "SwiftUI", "UIKit"]
+sdk_frameworks = ["AuthenticationServices", "CryptoKit", "Foundation", "Network", "Security", "SwiftUI", "UIKit"]
+asset_catalogs = ["mobile/ios/Assets.xcassets"]
+app_icon = "AppIcon"
+info_plist = "mobile/ios/Info.plist"
 
 [[target]]
-name = "AndroidApp"
+name = "HiveWorkCore"
+kind = "rust_library"
+srcs = ["native/rust/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_work_core"
+crate_root = "native/rust/src/lib.rs"
+edition = "2024"
+target = "aarch64-apple-darwin"
+crate_type = "staticlib"
+
+[[target]]
+name = "HiveWorkCoreTestSupport"
+kind = "rust_library"
+srcs = ["native/rust/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_work_core"
+crate_root = "native/rust/src/lib.rs"
+edition = "2024"
+target = "aarch64-apple-darwin"
+
+[[target]]
+name = "HiveWorkCoreTests"
+kind = "rust_test"
+srcs = ["native/rust/tests/**/*.rs"]
+deps = ["./HiveWorkCoreTestSupport"]
+
+[target.attrs]
+crate_name = "hive_work_core_tests"
+crate_root = "native/rust/tests/identity_tests.rs"
+edition = "2024"
+target = "aarch64-apple-darwin"
+labels = ["unit"]
+
+[[target]]
+name = "HiveWorkAgent"
+kind = "rust_binary"
+srcs = ["native/rust/src/**/*.rs"]
+deps = ["./HiveWorkCoreTestSupport"]
+
+[target.attrs]
+crate_name = "hive_work_agent"
+crate_root = "native/rust/src/bin/hive_work_agent.rs"
+edition = "2024"
+env_inherit = ["HIVE_WORK_AGENT_API_KEY"]
+
+[[target]]
+name = "HiveWorkiOSCore"
+kind = "rust_library"
+srcs = ["native/rust/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_work_core"
+crate_root = "native/rust/src/lib.rs"
+edition = "2024"
+target = "aarch64-apple-ios-sim"
+crate_type = "staticlib"
+
+[[target]]
+name = "HiveDesktop"
+kind = "apple_application"
+srcs = ["native/apple/Shared/**/*.swift", "native/apple/macOS/Sources/**/*.swift"]
+deps = ["./HiveWorkCore"]
+
+[target.attrs]
+platform = "macos"
+bundle_id = "dev.tuist.hive.macos"
+minimum_os = "15.0"
+families = ["mac"]
+product_name = "Hive"
+resources = [".once/out/HiveWorkAgent/hive_work_agent"]
+prebuild_actions = ["{\"name\":\"Build Rust Agent\",\"script\":\"once build HiveWorkAgent\",\"cacheable\":false}"]
+asset_catalogs = ["native/apple/macOS/Assets.xcassets"]
+app_icon = "AppIcon"
+info_plist = "native/apple/macOS/Info.plist"
+sdk_frameworks = ["AppKit", "AuthenticationServices", "CryptoKit", "Foundation", "Network", "Security", "SwiftUI"]
+
+[[target]]
+name = "HiveWatch"
+kind = "apple_application"
+srcs = ["native/apple/Shared/NearbyDesktopStore.swift", "native/apple/watchOS/Sources/**/*.swift"]
+
+[target.attrs]
+platform = "watchos"
+bundle_id = "dev.tuist.hive.watch"
+minimum_os = "11.0"
+sdk_variant = "simulator"
+families = ["watch"]
+product_name = "Hive"
+info_plist = "native/apple/watchOS/Info.plist"
+sdk_frameworks = ["Foundation", "Network", "SwiftUI"]
+resources = ["native/apple/watchOS/Resources/hive-watch-icon.png"]
+
+[[target]]
+name = "HiveAndroid"
 kind = "android_binary"
 srcs = ["mobile/android/src/**/*.kt"]
-deps = ["./SharedRust"]
+deps = ["./HiveMobileCore"]
 
 [target.attrs]
 application_id = "dev.tuist.hive"

@@ -58,20 +58,37 @@ description = "Stop the local ClickHouse server"
 run = "mise/tasks/clickhouse/stop.sh"
 
 [tasks."mobile:test"]
-description = "Run the shared Rust core tests through Once"
+description = "Run the server client and work core tests through Once"
 depends = ["mobile:toolchains"]
-run = "once test SharedRustTests"
+run = ["once test HiveMobileCoreTests", "once test HiveWorkCoreTests"]
 
 [tasks."mobile:build:ios"]
 description = "Build the Swift iOS application through Once"
 depends = ["mobile:toolchains"]
-run = "once build AppleApp"
+run = "once build HiveiOS"
 
 [tasks."mobile:build:android"]
 description = "Build the Kotlin Android application through Once"
 depends = ["mobile:toolchains"]
-run = "once build AndroidApp"
+run = '''
+set -eu
+PATH="$(mise where kotlin)/kotlinc/bin:$PATH" once build HiveAndroid
+'''
+
+[tasks."mobile:build:watch"]
+description = "Build the watchOS application through Once"
+depends = ["mobile:toolchains"]
+run = "once build HiveWatch"
 
 [tasks."mobile:build"]
-description = "Build both native mobile applications"
-depends = ["mobile:build:ios", "mobile:build:android"]
+description = "Build the native companion applications"
+depends = ["mobile:build:ios", "mobile:build:android", "mobile:build:watch"]
+
+[tasks."native:build:macos"]
+description = "Build the Hive macOS execution host through Once"
+depends = ["mobile:toolchains"]
+run = "once build HiveDesktop"
+
+[tasks."native:build"]
+description = "Build every native Hive application"
+depends = ["mobile:build", "native:build:macos"]
