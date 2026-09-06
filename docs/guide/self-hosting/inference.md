@@ -129,7 +129,7 @@ Hive currently uses language models for:
 | Drop generation | Extracts individual, user-facing feature drops from published GitHub releases. Hive supplies release notes and up to six directly referenced GitHub issues or pull requests, never crawling linked webpages. The model receives one turn per release, and the scheduled backlog advances by one release at a time. A release from a project with one domain is linked directly; multi-domain releases use the normal drop classification workflow. |
 | Drop classification | Links shipped improvements to the relevant domains. |
 | Weekly Drops digest | Connects the week's public improvements into a narrated edition. |
-| Error summaries | Posts a scheduled Slack digest of recently observed unresolved errors and highlights up to five issues whose severity, recurrence, or freshness requires special attention. The model receives only bounded aggregate issue metadata, never raw event payloads. |
+| Error summaries | Posts a scheduled Slack digest of recently observed unresolved errors and highlights up to five issues whose severity, recurrence, or freshness requires special attention. Each highlighted issue shows its project, level, and event count. The model receives only bounded aggregate issue metadata, never raw event payloads. |
 | Postmortem semantic retrieval | Stores a durable vector for each published postmortem so related incidents can be found by meaning. |
 
 Most of these workflows start from their scheduled or event-driven trigger
