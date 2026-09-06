@@ -66,6 +66,22 @@ defmodule Hive.Errors.SummariesTest do
     assert payload["channel"] == "C123"
     assert inspect(payload["blocks"]) =~ "Requires special attention"
     assert inspect(payload["blocks"]) =~ "/errors/#{issue.id}"
+
+    assert Enum.any?(payload["blocks"], fn
+             %{
+               "type" => "context",
+               "elements" => [
+                 %{"text" => "*Project:* Storefront"},
+                 %{"text" => "*Level:* fatal"},
+                 %{"text" => "*Events:* 42"}
+               ]
+             } ->
+               true
+
+             _block ->
+               false
+           end)
+
     refute inspect(payload["blocks"]) =~ "This identifier was not supplied"
   end
 

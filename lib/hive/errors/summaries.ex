@@ -424,7 +424,7 @@ defmodule Hive.Errors.Summaries do
 
   defp slack_payload(run, issues) do
     issue_by_id = Map.new(issues, &{&1.id, &1})
-    attention = attention_text(run.attention, issue_by_id)
+    attention_blocks = attention_blocks(run.attention, issue_by_id)
 
     blocks = [
       %{
@@ -450,7 +450,7 @@ defmodule Hive.Errors.Summaries do
     ]
 
     blocks =
-      if attention == "" do
+      if attention_blocks == [] do
         blocks
       else
         blocks ++
@@ -460,10 +460,10 @@ defmodule Hive.Errors.Summaries do
               "type" => "section",
               "text" => %{
                 "type" => "mrkdwn",
-                "text" => "*Requires special attention*\n" <> attention
+                "text" => "*Requires special attention*"
               }
             }
-          ]
+          ] ++ attention_blocks
       end
 
     %{
@@ -475,7 +475,7 @@ defmodule Hive.Errors.Summaries do
     }
   end
 
-  defp attention_text(items, issue_by_id) do
+  defp attention_blocks(items, issue_by_id) do
     items
     |> Enum.flat_map(fn item ->
       case issue_by_id[item["issue_id"]] do
@@ -483,16 +483,37 @@ defmodule Hive.Errors.Summaries do
           url = Endpoint.url() <> "/errors/" <> issue.id
 
           [
-            "• *<#{url}|#{issue.title |> slack_safe() |> truncate(180)}>*: " <>
-              (item["reason"] |> slack_safe() |> truncate(240))
+            %{
+              "type" => "section",
+              "text" => %{
+                "type" => "mrkdwn",
+                "text" =>
+                  "*<#{url}|#{issue.title |> slack_safe() |> truncate(180)}>*\n" <>
+                    (item["reason"] |> slack_safe() |> truncate(240))
+              }
+            },
+            %{
+              "type" => "context",
+              "elements" => [
+                context_element("Project", issue_project_name(issue)),
+                context_element("Level", issue.level),
+                context_element("Events", issue.event_count)
+              ]
+            }
           ]
 
         nil ->
           []
       end
     end)
-    |> Enum.join("\n")
   end
+
+  defp context_element(label, value) do
+    %{"type" => "mrkdwn", "text" => "*#{label}:* #{value |> slack_safe() |> truncate(120)}"}
+  end
+
+  defp issue_project_name(%Issue{project: %{name: name}}), do: name
+  defp issue_project_name(_issue), do: "Unknown project"
 
   defp update_run(run, attrs), do: run |> SummaryRun.changeset(attrs) |> Repo.update()
 
