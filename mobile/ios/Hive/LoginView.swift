@@ -4,7 +4,7 @@ import UIKit
 
 @MainActor
 final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
-    @Published var serverAddress = ""
+    @Published var serverAddress = "https://hive.tuist.dev"
     @Published var errorMessage: String?
     @Published var isLoading = false
 
@@ -199,15 +199,12 @@ struct LoginView: View {
 
 struct HiveMark: View {
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.indigo.gradient)
-                .frame(width: 72, height: 72)
-                .shadow(color: Color.indigo.opacity(0.24), radius: 20, y: 10)
-            Image(systemName: "hexagon.fill")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(.white)
-        }
+        Image("HiveLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 72, height: 72)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.orange.opacity(0.22), radius: 20, y: 10)
         .accessibilityLabel("Hive")
     }
 }

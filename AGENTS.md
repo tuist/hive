@@ -30,6 +30,17 @@ Phoenix application that hosts Tuist's agentic domain orchestration. MPL-2.0 lic
 - `infra/helm/hive/` — generic Helm chart with `values-production.yaml` Tuist overlay
 - `.github/workflows/deploy.yml` — builds, pushes to GHCR, `helm upgrade` against the production cluster
 
+## Native platform boundaries
+
+- Organize Rust code into focused capability modules and platform entry points.
+- Give each application target an explicit Rust dependency set containing only the capabilities that platform uses.
+- Do not make every platform link one catch-all Rust library. In particular, keep dynamically loaded libraries small to reduce application startup and loading costs.
+- When adding a shared Rust capability, decide which platform targets need it and opt those targets in through the build graph.
+- Treat iPhone and Apple Watch as remote-only clients for workspaces, projects, and sessions. They must not offer local repository, worktree, or session execution.
+- Session topology can come from the Hive service and from running macOS applications discovered on the local network.
+- Treat macOS as a local session execution host. Reconcile local workspaces, projects, worktrees, and sessions with remote records by stable identifiers while preserving local filesystem locations.
+- Do not generalize session topology to unrelated product data. For accounts and other non-session resources, treat the Hive service as the source of truth and keep optional local caching behind a Rust-owned storage boundary.
+
 ## Setup
 
 ```bash
