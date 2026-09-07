@@ -60,7 +60,7 @@ defmodule Hive.Alerts.Destinations.Slack do
     env_part = if environment in [nil, ""], do: "", else: " · #{environment}"
 
     "#{tier_emoji(tier)} #{tier_label(tier)} · #{reason_label(reason)} · " <>
-      "#{level_label(issue.level)}#{env_part} · #{issue.title}"
+      "#{level_label(issue.level)}#{env_part} · #{single_line(issue.title)}"
   end
 
   defp blocks(%Rule{} = rule, %Issue{} = issue, reason, environment) do
@@ -111,7 +111,7 @@ defmodule Hive.Alerts.Destinations.Slack do
       "type" => "section",
       "text" => %{
         "type" => "mrkdwn",
-        "text" => "*<#{url}|#{escape(truncate(issue.title, 200))}>*#{subtitle}"
+        "text" => "*<#{url}|#{escape(truncate(single_line(issue.title), 200))}>*#{subtitle}"
       }
     }
   end
@@ -242,10 +242,20 @@ defmodule Hive.Alerts.Destinations.Slack do
   end
 
   defp culprit_line(%Issue{culprit: culprit}) when is_binary(culprit) and culprit != "" do
-    truncate(culprit, 200)
+    truncate(single_line(culprit), 200)
   end
 
   defp culprit_line(_), do: nil
+
+  # Slack's `*bold*` and `<url|label>` markup break across newlines, so
+  # any text that flows into them must be flattened to one line first.
+  defp single_line(text) when is_binary(text) do
+    text
+    |> String.replace(~r/\s+/u, " ")
+    |> String.trim()
+  end
+
+  defp single_line(other), do: to_string(other)
 
   defp project_name(%Issue{project: %Hive.Projects.Project{name: name}}) when is_binary(name),
     do: name
