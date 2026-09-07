@@ -639,12 +639,12 @@ msgstr ""
 msgid "Rotating the Data Source Name invalidates the current one. Clients using it will need to be updated with the new value."
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:415
+#: lib/hive_web/live/alerts_live/index.ex:409
 #, elixir-autogen, elixir-format
 msgid "Alerts"
 msgstr ""
 
-#: lib/hive_web/live/alerts_live/index.ex:427
+#: lib/hive_web/live/alerts_live/index.ex:421
 #, elixir-autogen, elixir-format
 msgid "Send Slack messages or webhook deliveries when this project's error tracking flags something worth attention. Configure rules per project with a tier, filter, and destination."
 msgstr ""
