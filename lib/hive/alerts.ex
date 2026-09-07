@@ -6,8 +6,7 @@ defmodule Hive.Alerts do
   A rule describes:
 
     * **when** to alert — a `trigger` on a supported `source` (v1 wires
-      `:error_issue` with the `:new_issue_threshold`, `:event_rate`, and
-      `:regression` triggers)
+      `:error_issue` with the `:event_rate` and `:regression` triggers)
     * **for which project** — every rule belongs to exactly one
       `Hive.Projects.Project`
     * **where** to send the alert — the destination fields (v1 wires
@@ -157,22 +156,12 @@ defmodule Hive.Alerts do
 
   defp fire_reason(%Rule{trigger: :regression}, _issue, _before), do: nil
 
-  defp fire_reason(
-         %Rule{trigger: :new_issue_threshold} = rule,
-         %Issue{} = issue,
-         _before
-       ) do
-    if issue.event_count >= rule.threshold_event_count and
-         within_window?(issue.first_seen, rule.threshold_window_minutes) do
-      :new_issue_threshold
-    end
-  end
-
   # `:event_rate` fires whenever the issue has accumulated
   # `threshold_event_count` more events than at the last delivered
-  # notification for this (rule, issue) pair — no window on `first_seen`
-  # — so long-running incidents keep paging as they roll on. Cooldown
-  # controls how often those pages actually go out.
+  # notification for this (rule, issue) pair, so a brand-new issue that
+  # crosses the threshold pages once (baseline is 0) and a long-running
+  # incident keeps paging as it rolls on. Cooldown controls how often
+  # those pages actually go out.
   defp fire_reason(
          %Rule{trigger: :event_rate} = rule,
          %Issue{} = issue,
@@ -186,13 +175,6 @@ defmodule Hive.Alerts do
   end
 
   defp fire_reason(_rule, _issue, _before), do: nil
-
-  defp within_window?(nil, _minutes), do: false
-
-  defp within_window?(%DateTime{} = first_seen, minutes) when is_integer(minutes) do
-    cutoff = DateTime.add(DateTime.utc_now(), -minutes * 60, :second)
-    DateTime.compare(first_seen, cutoff) != :lt
-  end
 
   ## Cooldown
 

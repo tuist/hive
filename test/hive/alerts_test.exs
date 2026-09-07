@@ -40,9 +40,8 @@ defmodule Hive.AlertsTest do
     Map.merge(
       %{
         "name" => "Fresh crashes",
-        "trigger" => "new_issue_threshold",
+        "trigger" => "event_rate",
         "threshold_event_count" => 3,
-        "threshold_window_minutes" => 60,
         "tier" => "attention",
         "cooldown_minutes" => 30,
         "destination_type" => "slack",
@@ -110,62 +109,10 @@ defmodule Hive.AlertsTest do
         Alerts.create_rule(project, rule_attrs(installation, %{"trigger" => "regression"}))
 
       assert rule.threshold_event_count == nil
-      assert rule.threshold_window_minutes == nil
-    end
-  end
-
-  describe "matching_rules_for_issue/3 with new_issue_threshold" do
-    test "does not fire before threshold is reached", %{
-      project: project,
-      installation: installation
-    } do
-      {:ok, _rule} =
-        Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 5}))
-
-      {:ok, issue} =
-        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
-
-      before = %{issue | event_count: 0}
-      assert Alerts.matching_rules_for_issue(issue, before, %{environment: nil}) == []
-    end
-
-    test "fires once the issue crosses the threshold within the window", %{
-      project: project,
-      installation: installation
-    } do
-      {:ok, %Rule{id: rule_id}} =
-        Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 2}))
-
-      {:ok, issue} =
-        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "sideways"}))
-
-      # Simulate the coalescer having bumped the counter to 2.
-      {:ok, issue} = Repo.update(Ecto.Changeset.change(issue, event_count: 2))
-
-      before = %{issue | event_count: 1}
-      matches = Alerts.matching_rules_for_issue(issue, before, %{environment: nil})
-
-      assert [{%Rule{id: ^rule_id}, :new_issue_threshold}] = matches
     end
   end
 
   describe "matching_rules_for_issue/3 with event_rate" do
-    test "clears window field on create", %{project: project, installation: installation} do
-      {:ok, rule} =
-        Alerts.create_rule(
-          project,
-          rule_attrs(installation, %{
-            "trigger" => "event_rate",
-            "threshold_event_count" => 25,
-            "threshold_window_minutes" => 60
-          })
-        )
-
-      assert rule.trigger == :event_rate
-      assert rule.threshold_event_count == 25
-      assert rule.threshold_window_minutes == nil
-    end
-
     test "fires on the first burst when count crosses the threshold", %{
       project: project,
       installation: installation
@@ -346,7 +293,7 @@ defmodule Hive.AlertsTest do
 
       assert_enqueued(
         worker: DeliverRule,
-        args: %{"rule_id" => rule_id, "reason" => "new_issue_threshold"}
+        args: %{"rule_id" => rule_id, "reason" => "event_rate"}
       )
     end
 
