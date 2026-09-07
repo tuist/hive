@@ -85,6 +85,55 @@ defmodule Hive.Errors.LoggerHandlerTest do
       assert :ok = LoggerHandler.log(event, %{})
     end
 
+    test "drops routine Bandit transport noise (no crash_reason)" do
+      reject(&Hive.Errors.record_event/2)
+
+      event = %{
+        level: :error,
+        msg: {:string, "** (Bandit.HTTPError) request line HTTP error: too long"},
+        meta: %{
+          domain: [:elixir, :bandit],
+          time: System.system_time(:microsecond)
+        }
+      }
+
+      assert :ok = LoggerHandler.log(event, %{})
+    end
+
+    test "does NOT drop Bandit-domain logs that carry a real handler crash" do
+      {:ok, project} =
+        Hive.Projects.create_project(%{
+          "name" => "logger-handler-bandit-#{System.unique_integer([:positive])}"
+        })
+
+      stub(Hive.Errors.SelfMonitor, :self_project_id, fn -> project.id end)
+      test_pid = self()
+
+      expect(Hive.Errors, :record_event, fn _project, _event ->
+        send(test_pid, :recorded)
+        {:ok, %{}}
+      end)
+
+      event = %{
+        level: :error,
+        msg: {:string, "** (ArgumentError) unknown option :retry_max_count"},
+        meta: %{
+          domain: [:elixir, :bandit],
+          crash_reason:
+            {%ArgumentError{message: "unknown option :retry_max_count"},
+             [
+               {ReqLLM.Generation, :generate_text, 3,
+                [file: ~c"lib/req_llm/generation.ex", line: 74]}
+             ]},
+          request_id: "req-1",
+          time: System.system_time(:microsecond)
+        }
+      }
+
+      assert :ok = LoggerHandler.log(event, %{})
+      assert_received :recorded
+    end
+
     test "does NOT drop DBConnection.ConnectionError from Hive.Repo (Postgres)" do
       # A real Postgres pool error is a separate problem and should be
       # recorded. Stub the self-project lookup so we can observe

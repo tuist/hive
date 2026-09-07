@@ -71,15 +71,26 @@ defmodule Hive.Errors.LoggerHandler do
   defp recording?, do: Process.get(:hive_errors_recording?) == true
 
   defp ignore?(meta) do
-    from_ignored_domain?(meta) or from_click_house_infra?(meta) or
-      from_click_house_exception?(meta)
+    from_ignored_domain?(meta) or from_transport_only_domain?(meta) or
+      from_click_house_infra?(meta) or from_click_house_exception?(meta)
   end
 
   defp from_ignored_domain?(%{domain: domain}) when is_list(domain) do
-    Enum.any?(domain, &(&1 in [:hive_errors, :cowboy, :bandit]))
+    Enum.any?(domain, &(&1 in [:hive_errors]))
   end
 
   defp from_ignored_domain?(_), do: false
+
+  # `:cowboy` / `:bandit` domains are noisy at the HTTP-transport layer —
+  # malformed requests from scanners, TLS handshake failures, and so on —
+  # but they are also the channel through which a Plug/controller crash
+  # bubbles up. Skip them only when the log carries no exception (no
+  # `crash_reason`), so real handler crashes still reach the self-project.
+  defp from_transport_only_domain?(%{domain: domain} = meta) when is_list(domain) do
+    Enum.any?(domain, &(&1 in [:cowboy, :bandit])) and not Map.has_key?(meta, :crash_reason)
+  end
+
+  defp from_transport_only_domain?(_), do: false
 
   # Any log emitted from a Ch.Connection process (the CH driver logs
   # "failed to connect" on every pool worker's failed attempt), the
