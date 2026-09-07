@@ -5,10 +5,6 @@
 initial_tag = "app@0.1.0"
 no_increment_regex = "^docs?(\\([^)]*\\))?:"
 
-[remote.github]
-owner = "tuist"
-repo = "hive"
-
 [changelog]
 header = ""
 body = """
