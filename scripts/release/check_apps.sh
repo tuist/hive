@@ -27,11 +27,11 @@ export GH_TOKEN=""
 
 if [[ -n "$latest_tag" ]]; then
   range="$latest_tag..HEAD"
-  next_tag=$(git cliff "${cliff_arguments[@]}" --bumped-version 2>/dev/null -- "$range" || true)
-  release_commit_count=$(git cliff "${cliff_arguments[@]}" --context 2>/dev/null -- "$range" | jq '[.[].commits[] | select(.group != "Documentation" or .breaking)] | length')
+  next_tag=$(git-cliff "${cliff_arguments[@]}" --bumped-version -- "$range" || true)
+  release_commit_count=$(git-cliff "${cliff_arguments[@]}" --context -- "$range" | jq '[.[].commits[] | select(.group != "Documentation" or .breaking)] | length')
 else
-  next_tag=$(git cliff "${cliff_arguments[@]}" --bumped-version 2>/dev/null || true)
-  release_commit_count=$(git cliff "${cliff_arguments[@]}" --context 2>/dev/null | jq '[.[].commits[] | select(.group != "Documentation" or .breaking)] | length')
+  next_tag=$(git-cliff "${cliff_arguments[@]}" --bumped-version || true)
+  release_commit_count=$(git-cliff "${cliff_arguments[@]}" --context | jq '[.[].commits[] | select(.group != "Documentation" or .breaking)] | length')
 fi
 
 next_version=${next_tag#app@}

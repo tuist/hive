@@ -30,7 +30,7 @@ jobs:
           cache: true
           install_args: git-cliff jq
       - id: release
-        run: mise run release:apps:check
+        run: bash scripts/release/check_apps.sh
 
   preflight:
     name: Validate application release credentials
@@ -296,9 +296,9 @@ jobs:
             --include-path ".github/workflows/release-applications.yml"
           )
           if [[ -n "$latest_tag" ]]; then
-            git cliff "${cliff_arguments[@]}" --tag "$TAG" -- "$latest_tag..HEAD" > release-notes.md
+            git-cliff "${cliff_arguments[@]}" --tag "$TAG" -- "$latest_tag..HEAD" > release-notes.md
           else
-            git cliff "${cliff_arguments[@]}" --tag "$TAG" > release-notes.md
+            git-cliff "${cliff_arguments[@]}" --tag "$TAG" > release-notes.md
           fi
           (cd release && shasum -a 256 Hive-* > SHA256SUMS.txt)
           (cd release && shasum -a 512 Hive-* > SHA512SUMS.txt)
