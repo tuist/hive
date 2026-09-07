@@ -1,12 +1,12 @@
-# git-cliff config for the Hive app (Phoenix server + Docker image).
+# git-cliff config for the Hive server (Phoenix server + Docker image).
 #
 # Tagging scheme: plain semver `X.Y.Z` (the chart in infra/helm/hive
 # has its own `helm@X.Y.Z` scheme, see infra/helm/hive/cliff.toml). The
 # tag_pattern below also matches the legacy `server@X.Y.Z` tags so the
 # bump logic keeps working until the latest tag is a plain one.
-# Conventional commits scoped with `(helm)` are skipped so they only
-# affect the chart's changelog; everything else here counts toward the
-# next app release.
+# Conventional commits scoped with `(helm)`, `(native)`, `(mobile)`,
+# `(app)`, or `(apps)` are skipped so each component keeps an independent
+# release history.
 
 [bump]
 initial_tag = "0.1.0"
@@ -70,8 +70,10 @@ commit_preprocessors = [
     { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" },
 ]
 commit_parsers = [
-    # Helm-scoped commits belong to the chart's changelog, not the app's.
+    # Helm-scoped commits belong to the chart's changelog, not the server's.
     { message = "^[a-z]+\\([^)]*\\bhelm\\b[^)]*\\)", skip = true },
+    # Native application commits belong to the app@ release track.
+    { message = "^[a-z]+\\((native|mobile|app|apps)\\):", skip = true },
     # Group everything else by type. Scoped or unscoped, both count.
     { message = "^feat(\\(.*\\))?:", group = "<!-- 0 -->⛰️  Features" },
     { message = "^fix(\\(.*\\))?:", group = "<!-- 1 -->🐛 Bug Fixes" },

@@ -36,4 +36,5 @@ npm-debug.log
 
 # Once build outputs.
 /.once/
+/.build/
 /mobile/shared/target/

@@ -23,6 +23,18 @@ crate_root = "mobile/shared/src/lib.rs"
 edition = "2021"
 
 [[target]]
+name = "HiveMobileCoreRelease"
+kind = "rust_library"
+srcs = ["mobile/shared/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_mobile_core"
+crate_root = "mobile/shared/src/lib.rs"
+edition = "2021"
+target = "aarch64-apple-ios"
+crate_type = "staticlib"
+
+[[target]]
 name = "HiveiOS"
 kind = "apple_application"
 srcs = ["mobile/ios/Hive/**/*.swift", "native/apple/Shared/**/*.swift"]
@@ -77,6 +89,18 @@ target = "aarch64-apple-darwin"
 labels = ["unit"]
 
 [[target]]
+name = "HiveWorkiOSCoreRelease"
+kind = "rust_library"
+srcs = ["native/rust/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_work_core"
+crate_root = "native/rust/src/lib.rs"
+edition = "2024"
+target = "aarch64-apple-ios"
+crate_type = "staticlib"
+
+[[target]]
 name = "HiveWorkAgent"
 kind = "rust_binary"
 srcs = ["native/rust/src/**/*.rs"]
@@ -112,12 +136,38 @@ bundle_id = "dev.tuist.hive.macos"
 minimum_os = "15.0"
 families = ["mac"]
 product_name = "Hive"
-resources = [".once/out/HiveWorkAgent/hive_work_agent"]
-prebuild_actions = ["{\"name\":\"Build Rust Agent\",\"script\":\"once build HiveWorkAgent\",\"cacheable\":false}"]
 asset_catalogs = ["native/apple/macOS/Assets.xcassets"]
 app_icon = "AppIcon"
 info_plist = "native/apple/macOS/Info.plist"
 sdk_frameworks = ["AppKit", "AuthenticationServices", "CryptoKit", "Foundation", "Network", "Security", "SwiftUI"]
+swift_flags = ["-F", ".build/sparkle/Sparkle.xcframework/macos-arm64_x86_64"]
+linkopts = [
+  "-F.build/sparkle/Sparkle.xcframework/macos-arm64_x86_64",
+  "-framework",
+  "Sparkle",
+  "-Xlinker",
+  "-rpath",
+  "-Xlinker",
+  "@executable_path/../Frameworks",
+]
+
+[[target]]
+name = "HiveiOSRelease"
+kind = "apple_application"
+srcs = ["mobile/ios/Hive/**/*.swift", "native/apple/Shared/**/*.swift"]
+deps = ["./HiveMobileCoreRelease", "./HiveWorkiOSCoreRelease"]
+
+[target.attrs]
+platform = "ios"
+sdk_variant = "device"
+bundle_id = "dev.tuist.hive"
+minimum_os = "17.0"
+families = ["iphone", "ipad"]
+product_name = "Hive"
+sdk_frameworks = ["AuthenticationServices", "CryptoKit", "Foundation", "Network", "Security", "SwiftUI", "UIKit"]
+asset_catalogs = ["mobile/ios/Assets.xcassets"]
+app_icon = "AppIcon"
+info_plist = "mobile/ios/Info.plist"
 
 [[target]]
 name = "HiveWatch"
@@ -154,3 +204,23 @@ version_code = 1
 version_name = "1.0"
 launch_activity = ".MainActivity"
 emulator_device = "once_example"
+
+[[target]]
+name = "HiveAndroidRelease"
+kind = "android_binary"
+srcs = ["mobile/android/src/**/*.kt"]
+deps = ["./HiveMobileCore"]
+
+[target.attrs]
+application_id = "dev.tuist.hive"
+manifest = "mobile/android/AndroidManifest.xml"
+resource_files = ["mobile/android/res/**"]
+resource_dirs = ["mobile/android/res"]
+compile_sdk = 35
+min_sdk_version = 24
+target_sdk_version = 35
+build_tools_version = "35.0.0"
+version_code = 1
+version_name = "1.0"
+launch_activity = ".MainActivity"
+signing = "none"

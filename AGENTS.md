@@ -41,6 +41,12 @@ Phoenix application that hosts Tuist's agentic domain orchestration. MPL-2.0 lic
 - Treat macOS as a local session execution host. Reconcile local workspaces, projects, worktrees, and sessions with remote records by stable identifiers while preserving local filesystem locations.
 - Do not generalize session topology to unrelated product data. For accounts and other non-session resources, treat the Hive service as the source of truth and keep optional local caching behind a Rust-owned storage boundary.
 
+## Release boundaries
+
+- Keep server, native application, and Helm chart versions independent.
+- Use the `native`, `mobile`, `app`, or `apps` conventional-commit scope for changes that should produce an `app@X.Y.Z` application release without producing a server release.
+- Every application release must publish the signed Android and iOS packages, the signed and notarized macOS archive, checksum files, and a freshly signed Sparkle application cast.
+
 ## Setup
 
 ```bash

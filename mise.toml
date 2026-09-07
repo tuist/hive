@@ -18,7 +18,7 @@ rust = "1.88.0"
 java = "17.0.2"
 kotlin = "2.1.0"
 android-sdk = "21.0"
-"github:tuist/once" = { version = "0.28.0", exe = "once" }
+"github:tuist/once" = { version = "0.53.1", exe = "once" }
 
 [tools."github:ClickHouse/ClickHouse"]
 version = "26.1.2.11-stable"
@@ -60,25 +60,25 @@ run = "mise/tasks/clickhouse/stop.sh"
 [tasks."mobile:test"]
 description = "Run the server client and work core tests through Once"
 depends = ["mobile:toolchains"]
-run = ["once test HiveMobileCoreTests", "once test HiveWorkCoreTests"]
+run = ["mise exec -- once test HiveMobileCoreTests", "mise exec -- once test HiveWorkCoreTests"]
 
 [tasks."mobile:build:ios"]
 description = "Build the Swift iOS application through Once"
 depends = ["mobile:toolchains"]
-run = "once build HiveiOS"
+run = "mise exec -- once build HiveiOS"
 
 [tasks."mobile:build:android"]
 description = "Build the Kotlin Android application through Once"
 depends = ["mobile:toolchains"]
 run = '''
 set -eu
-PATH="$(mise where kotlin)/kotlinc/bin:$PATH" once build HiveAndroid
+PATH="$(mise where kotlin)/kotlinc/bin:$PATH" mise exec -- once build HiveAndroid
 '''
 
 [tasks."mobile:build:watch"]
 description = "Build the watchOS application through Once"
 depends = ["mobile:toolchains"]
-run = "once build HiveWatch"
+run = "mise exec -- once build HiveWatch"
 
 [tasks."mobile:build"]
 description = "Build the native companion applications"
@@ -86,9 +86,23 @@ depends = ["mobile:build:ios", "mobile:build:android", "mobile:build:watch"]
 
 [tasks."native:build:macos"]
 description = "Build the Hive macOS execution host through Once"
-depends = ["mobile:toolchains"]
-run = "once build HiveDesktop"
+depends = ["mobile:toolchains", "prepare:sparkle"]
+run = '''
+set -eu
+mise exec -- once build HiveWorkAgent
+mise exec -- once build HiveDesktop
+cp .once/out/HiveWorkAgent/hive_work_agent .once/out/HiveDesktop/Hive.app/hive_work_agent
+scripts/embed_sparkle.sh
+'''
 
 [tasks."native:build"]
 description = "Build every native Hive application"
 depends = ["mobile:build", "native:build:macos"]
+
+[tasks."prepare:sparkle"]
+description = "Download the checksum-pinned Sparkle framework"
+run = "scripts/prepare_sparkle.sh"
+
+[tasks."release:apps:check"]
+description = "Detect whether application changes require a release"
+run = "bash scripts/release/check_apps.sh"
