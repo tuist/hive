@@ -433,6 +433,60 @@ defmodule Hive.InferenceTest do
       assert {"authorization", "Bearer runtime-token"} in Keyword.fetch!(request, :headers)
       assert Keyword.fetch!(request, :receive_timeout) == 120_000
     end
+
+    test "attaches transport-level retry so a single POST transport blip does not surface as 502" do
+      binding = model_binding!(upstream_model: "accounts/fireworks/models/kimi-k2p5")
+
+      assert {:ok, request} =
+               Inference.relay_request(
+                 binding,
+                 %{"model" => "blick-code-review", "messages" => []},
+                 config: [
+                   providers: %{
+                     "fireworks-ai" => %{
+                       "base_url" => "https://api.fireworks.ai/inference/v1/",
+                       "api_key" => "fw-test"
+                     }
+                   }
+                 ]
+               )
+
+      retry_fun = Keyword.fetch!(request, :retry)
+      assert is_function(retry_fun, 2)
+      # Verify the wired-up predicate has the transport-retry semantics: never
+      # retry a real response, always retry an exception.
+      refute retry_fun.(%Req.Request{}, %Req.Response{status: 502})
+      assert retry_fun.(%Req.Request{}, %Mint.TransportError{reason: :closed})
+
+      assert Keyword.fetch!(request, :retry_max_count) >= 1
+
+      retry_delay = Keyword.fetch!(request, :retry_delay)
+      assert is_function(retry_delay, 1)
+      assert retry_delay.(0) > 0
+    end
+  end
+
+  describe "transport_retry?/2" do
+    test "does not retry once the upstream returned a real response (avoids double-billing)" do
+      refute Inference.transport_retry?(%Req.Request{}, %Req.Response{status: 502})
+      refute Inference.transport_retry?(%Req.Request{}, %Req.Response{status: 429})
+      refute Inference.transport_retry?(%Req.Request{}, %Req.Response{status: 200})
+    end
+
+    test "retries when Req hands us an exception (transport-level failure)" do
+      assert Inference.transport_retry?(%Req.Request{}, %RuntimeError{message: "boom"})
+      assert Inference.transport_retry?(%Req.Request{}, %Mint.TransportError{reason: :closed})
+    end
+  end
+
+  describe "transport_retry_delay/1" do
+    test "grows the delay between attempts" do
+      first = Inference.transport_retry_delay(0)
+      second = Inference.transport_retry_delay(1)
+
+      assert first > 0
+      assert second > first
+    end
   end
 
   describe "usage" do

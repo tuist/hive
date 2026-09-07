@@ -1,6 +1,8 @@
 defmodule HiveWeb.InferenceController do
   use HiveWeb, :controller
 
+  require Logger
+
   alias Hive.Audit
   alias Hive.Inference
   alias Hive.Inference.ModelBinding
@@ -118,7 +120,8 @@ defmodule HiveWeb.InferenceController do
           send_upstream_response(conn, response, "application/json")
         end
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        log_upstream_transport_failure(binding, operation, reason)
         openai_error(conn, :bad_gateway, "The upstream provider request failed.", "server_error")
     end
   end
@@ -140,7 +143,9 @@ defmodule HiveWeb.InferenceController do
               record_relay(binding, token, response, nil, operation)
               send_upstream_response(conn, response, "application/json")
 
-            {:error, _reason} ->
+            {:error, reason} ->
+              log_upstream_stream_decode_failure(binding, operation, reason)
+
               openai_error(
                 conn,
                 :bad_gateway,
@@ -149,7 +154,9 @@ defmodule HiveWeb.InferenceController do
               )
           end
 
-        {:error, _reason} ->
+        {:error, reason} ->
+          log_upstream_transport_failure(binding, operation, reason)
+
           openai_error(
             conn,
             :bad_gateway,
@@ -190,7 +197,8 @@ defmodule HiveWeb.InferenceController do
 
           response
 
-        {:error, _reason} ->
+        {:error, reason} ->
+          log_upstream_transport_failure(binding, :chat_completion, reason)
           nil
       end
 
@@ -390,5 +398,42 @@ defmodule HiveWeb.InferenceController do
         code: nil
       }
     })
+  end
+
+  # When Req.request/1 returns {:error, exception}, Hive was unable to talk to
+  # the upstream provider at all: TLS reset, connection refused, receive timeout,
+  # DNS failure, etc. record_relay never runs (nothing to bill), so this is the
+  # only place these failures are visible. Log at :warning so the app error
+  # tracker captures the underlying cause.
+  defp log_upstream_transport_failure(%ModelBinding{} = binding, operation, reason) do
+    Logger.warning(fn ->
+      [
+        "hive.inference upstream transport failure ",
+        "operation=",
+        inspect(operation),
+        " binding=",
+        binding.name,
+        " provider=",
+        to_string(binding.upstream_provider),
+        " model=",
+        to_string(binding.upstream_model),
+        " reason=",
+        inspect(reason, limit: 20)
+      ]
+    end)
+  end
+
+  defp log_upstream_stream_decode_failure(%ModelBinding{} = binding, operation, reason) do
+    Logger.warning(fn ->
+      [
+        "hive.inference upstream stream decode failure ",
+        "operation=",
+        inspect(operation),
+        " binding=",
+        binding.name,
+        " reason=",
+        inspect(reason, limit: 20)
+      ]
+    end)
   end
 end

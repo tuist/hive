@@ -553,6 +553,9 @@ defmodule Hive.Inference do
   defp maybe_put_usage(body, usage) when is_map(usage), do: Map.put(body, "usage", usage)
   defp maybe_put_usage(body, _usage), do: body
 
+  @transport_retry_max 2
+  @transport_retry_base_delay_ms 300
+
   defp relay_request_to(%ModelBinding{} = binding, path, body, streamed?, opts) do
     with {:ok, upstream} <- upstream_for(binding, opts) do
       {:ok,
@@ -566,9 +569,26 @@ defmodule Hive.Inference do
              "model",
              ModelIdentifier.upstream_model(binding.upstream_model, binding.upstream_provider)
            ),
-         receive_timeout: upstream.timeout
+         receive_timeout: upstream.timeout,
+         retry: &transport_retry?/2,
+         retry_max_count: @transport_retry_max,
+         retry_delay: &transport_retry_delay/1
        ]}
     end
+  end
+
+  # Req's default `:safe_transient` skips POST, so a single transient TLS or
+  # transport hiccup between Hive and the upstream provider surfaces as a 502
+  # to the caller. Retry only when Req hands us an exception (transport-level
+  # failure); never retry a %Req.Response{}, so a real 4xx/5xx from the
+  # provider that may already carry a bill is not re-issued.
+  @doc false
+  def transport_retry?(_request, %Req.Response{}), do: false
+  def transport_retry?(_request, _exception), do: true
+
+  @doc false
+  def transport_retry_delay(attempt) when is_integer(attempt) and attempt >= 0 do
+    @transport_retry_base_delay_ms * round(:math.pow(2, attempt))
   end
 
   def touch_model_binding(%ModelBinding{id: id}) do
