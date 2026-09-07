@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      preflight_only:
+        description: Validate release credentials without building or publishing
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -50,7 +56,7 @@ jobs:
   macos:
     name: Build, sign, and notarize macOS
     needs: [check, preflight]
-    if: github.event_name != 'pull_request' && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
+    if: github.event_name != 'pull_request' && inputs.preflight_only != true && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
     runs-on: macos-15
     env:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN_APPLICATIONS }}
@@ -150,7 +156,7 @@ jobs:
   ios:
     name: Build and sign iOS
     needs: [check, preflight]
-    if: github.event_name != 'pull_request' && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
+    if: github.event_name != 'pull_request' && inputs.preflight_only != true && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
     runs-on: macos-15
     env:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN_APPLICATIONS }}
@@ -211,7 +217,7 @@ jobs:
   android:
     name: Build and sign Android
     needs: [check, preflight]
-    if: github.event_name != 'pull_request' && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
+    if: github.event_name != 'pull_request' && inputs.preflight_only != true && needs.check.outputs.should-release == 'true' && needs.preflight.result == 'success'
     runs-on: ubuntu-24.04
     env:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN_APPLICATIONS }}
