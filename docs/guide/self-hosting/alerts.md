@@ -29,15 +29,16 @@ configured window.
 
 Two triggers are available today:
 
-- **New issue crosses threshold.** Fires when a newly-seen error issue
-  reaches a chosen number of events inside a chosen window since it was
-  first seen. This is the recommended default because a single, one-off
-  transient does not page anyone — the rule only fires once the issue
-  proves it is sustained.
+- **Issue crosses event rate.** Fires every time an issue accumulates a
+  chosen number of new events since the last alert for that same
+  (rule, issue) pair. A brand-new issue fires the first time it reaches
+  the threshold (baseline is zero), and a long-running incident keeps
+  firing as it rolls on. The rule cooldown controls how often those
+  re-alerts actually go out.
 - **Regression.** Fires when a previously resolved issue is seen again.
 
-More triggers (frequency spikes, per-user thresholds) can be added
-later without breaking existing rules.
+More triggers (per-user thresholds, frequency spikes tied to a rolling
+event window, etc.) can be added later without breaking existing rules.
 
 ### Tiers
 

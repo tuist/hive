@@ -21,7 +21,7 @@ defmodule Hive.Alerts.Rule do
   @foreign_key_type :binary_id
 
   @sources [:error_issue]
-  @triggers [:new_issue_threshold, :regression]
+  @triggers [:event_rate, :regression]
   @tiers [:attention, :incident]
   @levels [:fatal, :error, :warning, :info, :debug]
   @mentions [:none, :here, :channel]
@@ -35,7 +35,6 @@ defmodule Hive.Alerts.Rule do
     field :enabled, :boolean, default: true
 
     field :threshold_event_count, :integer
-    field :threshold_window_minutes, :integer
 
     field :min_level, Ecto.Enum, values: @levels
     field :environment, :string
@@ -83,7 +82,6 @@ defmodule Hive.Alerts.Rule do
       :tier,
       :enabled,
       :threshold_event_count,
-      :threshold_window_minutes,
       :min_level,
       :environment,
       :cooldown_minutes,
@@ -105,22 +103,18 @@ defmodule Hive.Alerts.Rule do
     |> validate_destination()
   end
 
-  # `new_issue_threshold` needs both a count and a window; other triggers
-  # ignore them. We clear the fields when they do not apply so the row
-  # does not carry stale values from a previous edit.
+  # `:event_rate` uses `threshold_event_count` as the delta between
+  # successive fires; other triggers ignore it. Clear the field when
+  # it does not apply so the row does not carry stale values.
   defp validate_threshold_fields(changeset) do
     case get_field(changeset, :trigger) do
-      :new_issue_threshold ->
+      :event_rate ->
         changeset
         |> put_change_default(:threshold_event_count, 5)
-        |> put_change_default(:threshold_window_minutes, 60)
         |> validate_number(:threshold_event_count, greater_than: 0)
-        |> validate_number(:threshold_window_minutes, greater_than: 0)
 
       _other ->
-        changeset
-        |> put_change(:threshold_event_count, nil)
-        |> put_change(:threshold_window_minutes, nil)
+        put_change(changeset, :threshold_event_count, nil)
     end
   end
 

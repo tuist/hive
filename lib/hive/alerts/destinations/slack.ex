@@ -179,7 +179,7 @@ defmodule Hive.Alerts.Destinations.Slack do
   defp tier_label(:incident), do: "Incident"
   defp tier_label(_attention), do: "Attention"
 
-  defp reason_label(:new_issue_threshold), do: "New issue crossed threshold"
+  defp reason_label(:event_rate), do: "Issue crossed event rate"
   defp reason_label(:regression), do: "Regression"
   defp reason_label(reason) when is_atom(reason), do: Atom.to_string(reason)
   defp reason_label(reason) when is_binary(reason), do: reason

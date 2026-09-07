@@ -87,13 +87,10 @@ defmodule HiveWeb.AlertsLive.Rules do
     do: {:noreply, socket |> put_form(:name, value) |> put_form(:error, nil)}
 
   def handle_event("update_form_trigger", %{"value" => value}, socket),
-    do: {:noreply, put_form(socket, :trigger, to_atom(value, :new_issue_threshold))}
+    do: {:noreply, put_form(socket, :trigger, to_atom(value, :event_rate))}
 
   def handle_event("update_form_threshold_count", %{"value" => value}, socket),
     do: {:noreply, put_form(socket, :threshold_count, parse_positive_int(value, 5))}
-
-  def handle_event("update_form_threshold_window", %{"value" => value}, socket),
-    do: {:noreply, put_form(socket, :threshold_window, parse_positive_int(value, 60))}
 
   def handle_event("update_form_tier", %{"value" => value}, socket),
     do: {:noreply, put_form(socket, :tier, to_atom(value, :attention))}
@@ -248,9 +245,8 @@ defmodule HiveWeb.AlertsLive.Rules do
   defp reset_form(socket) do
     assign(socket, :rule_form, %{
       name: "",
-      trigger: :new_issue_threshold,
+      trigger: :event_rate,
       threshold_count: 5,
-      threshold_window: 60,
       tier: :attention,
       min_level: nil,
       environment: "",
@@ -269,7 +265,6 @@ defmodule HiveWeb.AlertsLive.Rules do
       name: rule.name,
       trigger: rule.trigger,
       threshold_count: rule.threshold_event_count || 5,
-      threshold_window: rule.threshold_window_minutes || 60,
       tier: rule.tier,
       min_level: rule.min_level,
       environment: rule.environment || "",
@@ -301,8 +296,7 @@ defmodule HiveWeb.AlertsLive.Rules do
       "environment" => nil_if_blank(form.environment),
       "cooldown_minutes" => form.cooldown,
       "destination_type" => Atom.to_string(form.destination),
-      "threshold_event_count" => form.threshold_count,
-      "threshold_window_minutes" => form.threshold_window
+      "threshold_event_count" => form.threshold_count
     }
 
     case form.destination do
@@ -592,7 +586,7 @@ defmodule HiveWeb.AlertsLive.Rules do
           <span>{dgettext("dashboard_alerts", "Trigger")}</span>
           <.dropdown id={"#{@modal_id}-trigger"} label={trigger_label(@form.trigger)}>
             <.dropdown_item
-              :for={trigger <- [:new_issue_threshold, :regression]}
+              :for={trigger <- [:event_rate, :regression]}
               value={Atom.to_string(trigger)}
               label={trigger_label(trigger)}
               phx-click="update_form_trigger"
@@ -603,7 +597,7 @@ defmodule HiveWeb.AlertsLive.Rules do
           </.dropdown>
         </div>
 
-        <div :if={@form.trigger == :new_issue_threshold} data-part="threshold-row">
+        <div :if={@form.trigger == :event_rate} data-part="threshold-row">
           <.text_input
             id={"#{@modal_id}-threshold-count"}
             name="threshold_event_count"
@@ -611,16 +605,6 @@ defmodule HiveWeb.AlertsLive.Rules do
             label={dgettext("dashboard_alerts", "Events")}
             value={to_string(@form.threshold_count)}
             phx-keyup="update_form_threshold_count"
-            phx-target={@target}
-            phx-debounce="200"
-          />
-          <.text_input
-            id={"#{@modal_id}-threshold-window"}
-            name="threshold_window_minutes"
-            type="basic"
-            label={dgettext("dashboard_alerts", "Window (minutes)")}
-            value={to_string(@form.threshold_window)}
-            phx-keyup="update_form_threshold_window"
             phx-target={@target}
             phx-debounce="200"
           />
@@ -837,8 +821,8 @@ defmodule HiveWeb.AlertsLive.Rules do
   defp trigger_label(:regression),
     do: dgettext("dashboard_alerts", "Regression (resolved issue reopens)")
 
-  defp trigger_label(_new_issue_threshold),
-    do: dgettext("dashboard_alerts", "New issue crosses threshold")
+  defp trigger_label(_event_rate),
+    do: dgettext("dashboard_alerts", "Issue crosses event rate")
 
   defp tier_label(:incident), do: dgettext("dashboard_alerts", "Incident")
   defp tier_label(_attention), do: dgettext("dashboard_alerts", "Attention")
@@ -896,15 +880,13 @@ defmodule HiveWeb.AlertsLive.Rules do
     do: dgettext("dashboard_alerts", "Fires when a resolved issue comes back")
 
   defp trigger_description(%Rule{
-         trigger: :new_issue_threshold,
-         threshold_event_count: count,
-         threshold_window_minutes: window
+         trigger: :event_rate,
+         threshold_event_count: count
        }) do
     dgettext(
       "dashboard_alerts",
-      "Fires when a new issue reaches %{count} events in %{window} minutes",
-      count: count,
-      window: window
+      "Fires every time an issue accumulates %{count} more events since the last alert",
+      count: count
     )
   end
 

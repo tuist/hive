@@ -140,9 +140,8 @@ defmodule HiveWeb.AlertsLive.IndexTest do
   defp create_slack_rule(project, installation) do
     Alerts.create_rule(project, %{
       "name" => "Fresh crashes",
-      "trigger" => "new_issue_threshold",
+      "trigger" => "event_rate",
       "threshold_event_count" => 3,
-      "threshold_window_minutes" => 60,
       "tier" => "attention",
       "destination_type" => "slack",
       "slack_installation_id" => installation.id,

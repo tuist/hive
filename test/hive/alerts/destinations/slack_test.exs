@@ -144,7 +144,7 @@ defmodule Hive.Alerts.Destinations.SlackTest do
                attention_rule,
                issue(),
                connected_installation(),
-               :new_issue_threshold
+               :event_rate
              )
 
     assert_receive {:posted, params}

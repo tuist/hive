@@ -40,9 +40,8 @@ defmodule Hive.AlertsTest do
     Map.merge(
       %{
         "name" => "Fresh crashes",
-        "trigger" => "new_issue_threshold",
+        "trigger" => "event_rate",
         "threshold_event_count" => 3,
-        "threshold_window_minutes" => 60,
         "tier" => "attention",
         "cooldown_minutes" => 30,
         "destination_type" => "slack",
@@ -110,42 +109,101 @@ defmodule Hive.AlertsTest do
         Alerts.create_rule(project, rule_attrs(installation, %{"trigger" => "regression"}))
 
       assert rule.threshold_event_count == nil
-      assert rule.threshold_window_minutes == nil
     end
   end
 
-  describe "matching_rules_for_issue/3 with new_issue_threshold" do
-    test "does not fire before threshold is reached", %{
-      project: project,
-      installation: installation
-    } do
-      {:ok, _rule} =
-        Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 5}))
-
-      {:ok, issue} =
-        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
-
-      before = %{issue | event_count: 0}
-      assert Alerts.matching_rules_for_issue(issue, before, %{environment: nil}) == []
-    end
-
-    test "fires once the issue crosses the threshold within the window", %{
+  describe "matching_rules_for_issue/3 with event_rate" do
+    test "fires on the first burst when count crosses the threshold", %{
       project: project,
       installation: installation
     } do
       {:ok, %Rule{id: rule_id}} =
-        Alerts.create_rule(project, rule_attrs(installation, %{"threshold_event_count" => 2}))
+        Alerts.create_rule(
+          project,
+          rule_attrs(installation, %{
+            "trigger" => "event_rate",
+            "threshold_event_count" => 5
+          })
+        )
 
       {:ok, issue} =
-        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "sideways"}))
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "surge"}))
 
-      # Simulate the coalescer having bumped the counter to 2.
-      {:ok, issue} = Repo.update(Ecto.Changeset.change(issue, event_count: 2))
+      {:ok, issue} = Repo.update(Ecto.Changeset.change(issue, event_count: 5))
 
-      before = %{issue | event_count: 1}
-      matches = Alerts.matching_rules_for_issue(issue, before, %{environment: nil})
+      matches = Alerts.matching_rules_for_issue(issue, %{issue | event_count: 4}, %{})
+      assert [{%Rule{id: ^rule_id}, :event_rate}] = matches
+    end
 
-      assert [{%Rule{id: ^rule_id}, :new_issue_threshold}] = matches
+    test "re-fires on a long-running issue when delta since last alert crosses the threshold", %{
+      project: project,
+      installation: installation
+    } do
+      {:ok, %Rule{id: rule_id} = rule} =
+        Alerts.create_rule(
+          project,
+          rule_attrs(installation, %{
+            "trigger" => "event_rate",
+            "threshold_event_count" => 10
+          })
+        )
+
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "keeps going"}))
+
+      # Simulate a prior sent notification at event_count 200.
+      {:ok, _} =
+        Alerts.record_notification(%{
+          rule_id: rule.id,
+          subject_type: "error_issue",
+          subject_id: issue.id,
+          status: "sent",
+          metadata: %{"event_count" => 200}
+        })
+
+      # 208 - 200 = 8, below the threshold of 10 — no match.
+      {:ok, issue_208} = Repo.update(Ecto.Changeset.change(issue, event_count: 208))
+
+      assert Alerts.matching_rules_for_issue(issue_208, %{issue_208 | event_count: 207}, %{}) ==
+               []
+
+      # 215 - 200 = 15, above the threshold — matches.
+      {:ok, issue_215} = Repo.update(Ecto.Changeset.change(issue_208, event_count: 215))
+
+      matches = Alerts.matching_rules_for_issue(issue_215, %{issue_215 | event_count: 214}, %{})
+      assert [{%Rule{id: ^rule_id}, :event_rate}] = matches
+    end
+
+    test "ignores prior notifications that failed or were skipped", %{
+      project: project,
+      installation: installation
+    } do
+      {:ok, %Rule{id: rule_id} = rule} =
+        Alerts.create_rule(
+          project,
+          rule_attrs(installation, %{
+            "trigger" => "event_rate",
+            "threshold_event_count" => 5
+          })
+        )
+
+      {:ok, issue} =
+        Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "flaky send"}))
+
+      {:ok, _} =
+        Alerts.record_notification(%{
+          rule_id: rule.id,
+          subject_type: "error_issue",
+          subject_id: issue.id,
+          status: "failed",
+          metadata: %{"event_count" => 4},
+          last_error: "boom"
+        })
+
+      {:ok, issue} = Repo.update(Ecto.Changeset.change(issue, event_count: 5))
+
+      matches = Alerts.matching_rules_for_issue(issue, %{issue | event_count: 4}, %{})
+      assert [{%Rule{id: ^rule_id}, :event_rate}] = matches
     end
   end
 
@@ -235,7 +293,7 @@ defmodule Hive.AlertsTest do
 
       assert_enqueued(
         worker: DeliverRule,
-        args: %{"rule_id" => rule_id, "reason" => "new_issue_threshold"}
+        args: %{"rule_id" => rule_id, "reason" => "event_rate"}
       )
     end
 
