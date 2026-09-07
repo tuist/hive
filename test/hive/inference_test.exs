@@ -458,11 +458,15 @@ defmodule Hive.InferenceTest do
       refute retry_fun.(%Req.Request{}, %Req.Response{status: 502})
       assert retry_fun.(%Req.Request{}, %Mint.TransportError{reason: :closed})
 
-      assert Keyword.fetch!(request, :retry_max_count) >= 1
+      assert Keyword.fetch!(request, :max_retries) >= 1
 
       retry_delay = Keyword.fetch!(request, :retry_delay)
       assert is_function(retry_delay, 1)
       assert retry_delay.(0) > 0
+
+      # Every option we wire must be one Req actually understands — catches
+      # rename/removal upstream instead of surfacing as a 500 in production.
+      assert %Req.Request{} = Req.new(request)
     end
   end
 

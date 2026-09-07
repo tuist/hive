@@ -571,7 +571,7 @@ defmodule Hive.Inference do
            ),
          receive_timeout: upstream.timeout,
          retry: &transport_retry?/2,
-         retry_max_count: @transport_retry_max,
+         max_retries: @transport_retry_max,
          retry_delay: &transport_retry_delay/1
        ]}
     end
