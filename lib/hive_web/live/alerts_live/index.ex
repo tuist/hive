@@ -592,7 +592,7 @@ defmodule HiveWeb.AlertsLive.Rules do
           <span>{dgettext("dashboard_alerts", "Trigger")}</span>
           <.dropdown id={"#{@modal_id}-trigger"} label={trigger_label(@form.trigger)}>
             <.dropdown_item
-              :for={trigger <- [:new_issue_threshold, :regression]}
+              :for={trigger <- [:new_issue_threshold, :event_rate, :regression]}
               value={Atom.to_string(trigger)}
               label={trigger_label(trigger)}
               phx-click="update_form_trigger"
@@ -603,7 +603,10 @@ defmodule HiveWeb.AlertsLive.Rules do
           </.dropdown>
         </div>
 
-        <div :if={@form.trigger == :new_issue_threshold} data-part="threshold-row">
+        <div
+          :if={@form.trigger in [:new_issue_threshold, :event_rate]}
+          data-part="threshold-row"
+        >
           <.text_input
             id={"#{@modal_id}-threshold-count"}
             name="threshold_event_count"
@@ -615,6 +618,7 @@ defmodule HiveWeb.AlertsLive.Rules do
             phx-debounce="200"
           />
           <.text_input
+            :if={@form.trigger == :new_issue_threshold}
             id={"#{@modal_id}-threshold-window"}
             name="threshold_window_minutes"
             type="basic"
@@ -837,6 +841,9 @@ defmodule HiveWeb.AlertsLive.Rules do
   defp trigger_label(:regression),
     do: dgettext("dashboard_alerts", "Regression (resolved issue reopens)")
 
+  defp trigger_label(:event_rate),
+    do: dgettext("dashboard_alerts", "Issue crosses event rate")
+
   defp trigger_label(_new_issue_threshold),
     do: dgettext("dashboard_alerts", "New issue crosses threshold")
 
@@ -905,6 +912,17 @@ defmodule HiveWeb.AlertsLive.Rules do
       "Fires when a new issue reaches %{count} events in %{window} minutes",
       count: count,
       window: window
+    )
+  end
+
+  defp trigger_description(%Rule{
+         trigger: :event_rate,
+         threshold_event_count: count
+       }) do
+    dgettext(
+      "dashboard_alerts",
+      "Fires every time an issue accumulates %{count} more events since the last alert",
+      count: count
     )
   end
 

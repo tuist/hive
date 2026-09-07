@@ -27,17 +27,25 @@ configured window.
 
 ### Triggers
 
-Two triggers are available today:
+Three triggers are available today:
 
 - **New issue crosses threshold.** Fires when a newly-seen error issue
   reaches a chosen number of events inside a chosen window since it was
-  first seen. This is the recommended default because a single, one-off
-  transient does not page anyone — the rule only fires once the issue
-  proves it is sustained.
+  first seen. This is the recommended default for spotting fresh
+  incidents because a single, one-off transient does not page anyone —
+  the rule only fires once the issue proves it is sustained. It only
+  ever fires within the window that starts at first-seen, so it does
+  not re-page for the same issue if the storm keeps rolling.
+- **Issue crosses event rate.** Fires every time an issue accumulates a
+  chosen number of new events since the last alert for that same
+  (rule, issue) pair. Use this alongside — or instead of — the new-issue
+  trigger to keep getting paged while a long-running incident is still
+  producing events, no matter how old the issue is. The rule cooldown
+  controls how often those re-alerts actually go out.
 - **Regression.** Fires when a previously resolved issue is seen again.
 
-More triggers (frequency spikes, per-user thresholds) can be added
-later without breaking existing rules.
+More triggers (per-user thresholds, frequency spikes tied to a rolling
+event window, etc.) can be added later without breaking existing rules.
 
 ### Tiers
 
