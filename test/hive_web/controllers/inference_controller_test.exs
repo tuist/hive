@@ -456,6 +456,30 @@ defmodule HiveWeb.InferenceControllerTest do
     assert response["error"]["code"] == "invalid_api_key"
   end
 
+  test "logs and returns 502 when the upstream is unreachable", %{conn: conn} do
+    put_relay_config(fn _request -> {:error, %Mint.TransportError{reason: :closed}} end)
+
+    {_binding, token_value} = relay_token!()
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        response =
+          conn
+          |> put_req_header("authorization", "Bearer #{token_value}")
+          |> post(~p"/inference/v1/chat/completions", %{
+            "model" => "blick-code-review",
+            "messages" => [%{"role" => "user", "content" => "Review this change."}]
+          })
+          |> json_response(502)
+
+        assert response["error"]["message"] == "The upstream provider request failed."
+        assert response["error"]["type"] == "server_error"
+      end)
+
+    assert log =~ "hive.inference upstream transport failure"
+    assert log =~ "reason=%Mint.TransportError{"
+  end
+
   defp relay_token!(attrs \\ %{}) do
     {:ok, binding} =
       Inference.create_model_binding(
