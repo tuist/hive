@@ -162,6 +162,7 @@ class MainActivity : Activity() {
         }
         addressInput = EditText(this).apply {
             hint = "https://hive.example.com"
+            setText("https://hive.tuist.dev")
             textSize = 16f
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             isSingleLine = true
@@ -1030,13 +1031,9 @@ class MainActivity : Activity() {
         container.addView(content, FrameLayout.LayoutParams(matchParent(), matchParent()))
     }
 
-    private fun hiveMark(): TextView = TextView(this).apply {
-        text = "H"
-        textSize = 30f
-        typeface = Typeface.DEFAULT_BOLD
-        gravity = Gravity.CENTER
-        setTextColor(Color.WHITE)
-        background = rounded(INDIGO, 22f)
+    private fun hiveMark(): ImageView = ImageView(this).apply {
+        setImageResource(R.drawable.hive_app_icon)
+        scaleType = ImageView.ScaleType.FIT_CENTER
         contentDescription = "Hive"
     }
 

@@ -17,6 +17,8 @@ struct LaunchView: View {
 struct MainTabView: View {
     var body: some View {
         TabView {
+            HiveWorkView()
+                .tabItem { Label("Work", systemImage: "hammer") }
             ForageListView()
                 .tabItem { Label("Forage", systemImage: "tray.full") }
             SpecListView()

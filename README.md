@@ -39,6 +39,39 @@ Hive can also connect Slack workspaces. Instance admins manage workspace
 installs, and signed-in users can turn Slack messages into forage items
 or receive bot replies in Slack threads.
 
+Hive also has native applications for carrying work from intent to execution.
+The macOS application hosts local projects and agent sessions. The iPhone and
+Apple Watch applications surface remote sessions from Hive and from nearby Macs
+running Hive on the same network. The existing server-backed Forage,
+specification, drop, and account surfaces remain available from the iPhone
+application.
+
+Native product state and execution capabilities live behind focused Rust
+modules. Each platform links only the capabilities it uses, keeping mobile
+applications independent from desktop-only project and agent machinery. See
+[`native/README.md`](native/README.md) for the architecture and build commands.
+
+## Releases
+
+Hive keeps server, native application, and Helm chart releases independent:
+
+- Server releases use plain semantic version tags such as `0.58.0` and publish
+  the server container image.
+- Native application releases use tags such as `app@0.1.0` and attach signed
+  Android and iOS packages, a signed and notarized macOS archive, and checksum
+  files to a dedicated GitHub release.
+- Helm chart releases use tags such as `helm@0.1.3`.
+
+The macOS application uses [Sparkle](https://sparkle-project.org/) to check the
+stable `appcast` GitHub release. Every application release regenerates that
+feed from the newly notarized archive and recent application releases, signs
+it with the existing Tuist application update key, and publishes it only after
+all native artifacts have been built and signed successfully.
+
+Application signing reads the `OP_SERVICE_ACCOUNT_TOKEN_APPLICATIONS`
+repository secret. It is intentionally separate from the service account used
+to deploy the Hive server.
+
 Hive is licensed under [MPL-2.0](LICENSE.md). We don't offer it as a
 managed service, but you can try our own instance, or self-host your own.
 

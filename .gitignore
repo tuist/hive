@@ -36,5 +36,5 @@ npm-debug.log
 
 # Once build outputs.
 /.once/
-/mobile/shared/Cargo.lock
+/.build/
 /mobile/shared/target/
