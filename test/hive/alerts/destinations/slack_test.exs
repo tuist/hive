@@ -129,6 +129,55 @@ defmodule Hive.Alerts.Destinations.SlackTest do
              )
   end
 
+  test "multi-line titles and culprits are flattened so Slack markup stays intact" do
+    parent = self()
+
+    expect(Hive.Slack.API, :post_message, fn _installation, params ->
+      send(parent, {:posted, params})
+      {:ok, %{"ok" => true}}
+    end)
+
+    multiline_issue =
+      issue(%{
+        title: "BadMapError: expected a map, got:\n\n  nil\n",
+        culprit: "anonymous fn/2 in Tuist.Tests.create_or_update/1\n  at lib/tuist/tests.ex:736"
+      })
+
+    assert :ok =
+             SlackDestination.deliver(
+               rule(),
+               multiline_issue,
+               connected_installation(),
+               :event_rate,
+               environment: "production"
+             )
+
+    assert_receive {:posted, params}
+
+    title_section =
+      find_block(params["blocks"], "section", fn block ->
+        text = get_in(block, ["text", "text"]) || ""
+        String.contains?(text, "BadMapError")
+      end)
+
+    assert title_section
+    title_text = title_section["text"]["text"]
+
+    refute title_text =~ "\n\n",
+           "title/culprit rendering must not contain blank lines that break Slack bold/link markup"
+
+    refute title_text =~ ~r/<[^>]*\n[^>]*\|/,
+           "the <url|label> link must not contain newlines"
+
+    refute title_text =~ ~r/\*[^*]*\n[^*]*\*/s,
+           "the *bold* span must not contain newlines"
+
+    assert title_text =~ "BadMapError: expected a map, got: nil"
+
+    refute params["text"] =~ "\n",
+           "fallback notification text must be a single line"
+  end
+
   test "attention tier uses the ⚠️ marker and no @here" do
     parent = self()
 
