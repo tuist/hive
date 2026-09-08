@@ -11,6 +11,7 @@ struct HiveDesktopApp: App {
     @StateObject private var themeStore = HiveWorkThemeStore()
     @StateObject private var inferenceAccounts = InferenceAccountStore()
     @StateObject private var agentRuntime = AgentSessionRuntimeStore()
+    @StateObject private var hiveAccount = HiveAccountStore()
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,7 @@ struct HiveDesktopApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(inferenceAccounts)
                 .environmentObject(agentRuntime)
+                .environmentObject(hiveAccount)
                 .hiveWorkTheme(themeStore.selectedTheme)
                 .frame(minWidth: 800, minHeight: 500)
         }
@@ -33,6 +35,7 @@ struct HiveDesktopApp: App {
                 .environmentObject(themeStore)
                 .environmentObject(inferenceAccounts)
                 .environmentObject(agentRuntime)
+                .environmentObject(hiveAccount)
                 .hiveWorkTheme(themeStore.selectedTheme)
         }
     }

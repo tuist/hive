@@ -34,8 +34,13 @@ defmodule HiveWeb.Plugs.OAuthBearerAuthentication do
     end
   end
 
-  defp scope_allowed?(token_scope, required_scope) when is_binary(token_scope),
-    do: required_scope in String.split(token_scope, " ", trim: true)
+  defp scope_allowed?(token_scope, required) when is_binary(required),
+    do: scope_allowed?(token_scope, [required])
+
+  defp scope_allowed?(token_scope, required) when is_list(required) and is_binary(token_scope) do
+    granted = String.split(token_scope, " ", trim: true)
+    Enum.any?(required, &(&1 in granted))
+  end
 
   defp scope_allowed?(_token_scope, _required_scope), do: false
 

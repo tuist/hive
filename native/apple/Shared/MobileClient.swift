@@ -63,15 +63,30 @@ private struct NativeResponse {
 }
 
 struct MobileClient {
-    static let redirectURI = "dev.tuist.hive://oauth2redirect"
+    static let defaultRedirectURI = "dev.tuist.hive://oauth2redirect"
+
+    let redirectURI: String
 
     private let core = SharedCore()
     private let transport = NativeHTTPTransport()
 
+    init(redirectURI: String = MobileClient.defaultRedirectURI) {
+        self.redirectURI = redirectURI
+    }
+
+    var callbackURLScheme: String {
+        let scheme = redirectURI
+            .split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            .first
+            .map(String.init) ?? ""
+
+        return scheme.isEmpty ? "dev.tuist.hive" : scheme
+    }
+
     func prepare(server: String) async throws -> PreparedAuthorization {
         let effect = try core.authorizationStart(
             server: server,
-            redirectURI: Self.redirectURI,
+            redirectURI: redirectURI,
             state: try randomSecret(),
             verifier: try randomSecret()
         )

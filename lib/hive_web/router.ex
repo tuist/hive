@@ -34,7 +34,22 @@ defmodule HiveWeb.Router do
   pipeline :mobile_api do
     plug :accepts, ["json"]
     plug OpenApiSpex.Plug.PutApiSpec, module: HiveWeb.ApiSpec
-    plug HiveWeb.Plugs.MobileAPIAuthentication
+  end
+
+  pipeline :mobile_api_me do
+    plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.me.read"
+  end
+
+  pipeline :mobile_api_forage do
+    plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.forage.read"
+  end
+
+  pipeline :mobile_api_specs do
+    plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.specs.read"
+  end
+
+  pipeline :mobile_api_drops do
+    plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.drops.read"
   end
 
   pipeline :feed do
@@ -106,17 +121,30 @@ defmodule HiveWeb.Router do
   end
 
   scope "/api/v1", HiveWeb.Api.V1 do
-    pipe_through :mobile_api
+    scope "/" do
+      pipe_through [:mobile_api, :mobile_api_me]
+      get "/me", SessionController, :show
+    end
 
-    get "/me", SessionController, :show
-    get "/forage", ForageController, :index
-    get "/forage/:item_id", ForageController, :show
-    get "/specs", SpecController, :index
-    get "/specs/:number", SpecController, :show
-    get "/drops", DropController, :index
-    get "/drops/digests", DropDigestController, :index
-    get "/drops/digests/:week_start", DropDigestController, :show
-    get "/drops/:number", DropController, :show
+    scope "/forage" do
+      pipe_through [:mobile_api, :mobile_api_forage]
+      get "/", ForageController, :index
+      get "/:item_id", ForageController, :show
+    end
+
+    scope "/specs" do
+      pipe_through [:mobile_api, :mobile_api_specs]
+      get "/", SpecController, :index
+      get "/:number", SpecController, :show
+    end
+
+    scope "/drops" do
+      pipe_through [:mobile_api, :mobile_api_drops]
+      get "/", DropController, :index
+      get "/digests", DropDigestController, :index
+      get "/digests/:week_start", DropDigestController, :show
+      get "/:number", DropController, :show
+    end
   end
 
   scope "/", HiveWeb do
