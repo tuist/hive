@@ -13,7 +13,7 @@ defmodule HiveWeb.Api.V1.DropController do
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
   tags(["Drops"])
-  security([%{"oauth2" => ["mobile"]}])
+  security([%{"oauth2" => ["mobile.drops.read"]}])
 
   operation(:index,
     summary: "List visible drops",

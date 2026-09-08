@@ -7,7 +7,7 @@ defmodule HiveWeb.Api.V1.SessionController do
   alias HiveWeb.Api.V1.Schemas.UserResponse
 
   tags(["Session"])
-  security([%{"oauth2" => ["mobile"]}])
+  security([%{"oauth2" => ["mobile.me.read"]}])
 
   operation(:show,
     summary: "Get the current user",

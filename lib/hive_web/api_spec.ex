@@ -34,7 +34,13 @@ defmodule HiveWeb.ApiSpec do
                 authorizationUrl: "/oauth2/authorize",
                 tokenUrl: "/oauth2/token",
                 refreshUrl: "/oauth2/token",
-                scopes: %{"mobile" => "Read resources visible in the Hive mobile application."}
+                scopes: %{
+                  "mobile" => "Umbrella scope. Requesting it grants every mobile.* scope below.",
+                  "mobile.me.read" => "Read the signed-in user's profile.",
+                  "mobile.forage.read" => "Read forage items.",
+                  "mobile.specs.read" => "Read specifications.",
+                  "mobile.drops.read" => "Read drops and digests."
+                }
               }
             }
           }
