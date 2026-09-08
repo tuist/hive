@@ -153,6 +153,30 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       refute Repo.exists?(Token)
     end
 
+    test "rejects a request object to prevent scope-expansion bypass", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "request-object@example.com")
+      client = oauth_client!()
+
+      assert_raise Plug.BadRequestError, fn ->
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&state=state&request=eyJhbGciOiJub25lIn0"
+        )
+      end
+    end
+
+    test "rejects a request_uri parameter to prevent outbound fetches", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "request-uri@example.com")
+      client = oauth_client!()
+
+      assert_raise Plug.BadRequestError, fn ->
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&state=state&request_uri=http://evil/x"
+        )
+      end
+    end
+
     test "returns an OAuth JSON error for a signed-in invalid request", %{conn: conn} do
       {conn, _user} = sign_in(conn, "alice@example.com")
 
