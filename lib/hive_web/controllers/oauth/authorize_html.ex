@@ -34,7 +34,7 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
       csrf_token: Keyword.fetch!(opts, :csrf_token),
       open_graph: OpenGraph.assigns(open_graph())[:open_graph],
       redirect_uri: authorization.redirect_uri || "",
-      scope: scope_label(authorization.scope || ""),
+      scopes: scope_labels(authorization.scope || ""),
       user: authorization.resource_owner.username
     }
 
@@ -85,7 +85,11 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
           <dl data-part="client-info">
             <div data-part="client-info-row">
               <dt data-part="client-info-label">{dgettext("dashboard_auth", "Access")}</dt>
-              <dd data-part="client-info-value">{@scope}</dd>
+              <dd data-part="client-info-value">
+                <ul data-part="scope-list">
+                  <li :for={label <- @scopes}>{label}</li>
+                </ul>
+              </dd>
             </div>
             <div data-part="client-info-row">
               <dt data-part="client-info-label">{dgettext("dashboard_auth", "Returns to")}</dt>
@@ -160,7 +164,26 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
     """
   end
 
+  defp scope_labels(scope) when is_binary(scope) do
+    case String.split(scope, " ", trim: true) do
+      [] -> [dgettext("dashboard_auth", "No specific access requested")]
+      scopes -> Enum.map(scopes, &scope_label/1)
+    end
+  end
+
   defp scope_label("mobile"), do: dgettext("dashboard_auth", "Mobile app access")
+
+  defp scope_label("mobile.me.read"),
+    do: dgettext("dashboard_auth", "Read your Hive profile")
+
+  defp scope_label("mobile.forage.read"),
+    do: dgettext("dashboard_auth", "Read forage items")
+
+  defp scope_label("mobile.specs.read"),
+    do: dgettext("dashboard_auth", "Read specifications")
+
+  defp scope_label("mobile.drops.read"),
+    do: dgettext("dashboard_auth", "Read drops and digests")
 
   defp scope_label("mcp"),
     do: dgettext("dashboard_auth", "Model Context Protocol access")

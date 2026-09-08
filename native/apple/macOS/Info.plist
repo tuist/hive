@@ -30,6 +30,7 @@
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>tuist</string>
+                <string>dev.tuist.hive.macos</string>
             </array>
         </dict>
     </array>

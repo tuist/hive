@@ -48,6 +48,25 @@ defmodule HiveWeb.Api.V1.SessionControllerTest do
            |> json_response(401)
   end
 
+  test "accepts a granular mobile.me.read token", %{conn: conn} do
+    {token, user} =
+      mobile_access_token!("granular@example.com", "mobile.me.read", @resource)
+
+    conn = conn |> authorize(token) |> get(~p"/api/v1/me")
+
+    assert json_response(conn, 200)["data"]["email"] == user.email
+  end
+
+  test "rejects a token scoped only for another mobile resource", %{conn: conn} do
+    {forage_only, _user} =
+      mobile_access_token!("forage-only@example.com", "mobile.forage.read", @resource)
+
+    assert conn
+           |> authorize(forage_only)
+           |> get(~p"/api/v1/me")
+           |> json_response(401)
+  end
+
   defp authorize(conn, token),
     do: put_req_header(conn, "authorization", "Bearer #{token.value}")
 end

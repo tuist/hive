@@ -41,7 +41,7 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
     private func beginBrowserAuthorization(_ prepared: PreparedAuthorization) {
         let session = ASWebAuthenticationSession(
             url: prepared.url,
-            callbackURLScheme: "dev.tuist.hive"
+            callbackURLScheme: client.callbackURLScheme
         ) { [weak self] callbackURL, error in
             Task { @MainActor in
                 guard let self else { return }

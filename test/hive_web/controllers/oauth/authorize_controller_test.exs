@@ -94,6 +94,50 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert sub == user.id
     end
 
+    test "expands the mobile umbrella into granular scopes on the issued code", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "mobile-umbrella@example.com")
+      client = oauth_client!(supports: "mobile")
+
+      conn =
+        post(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mobile&resource=http://www.example.com/api/v1&state=state",
+          %{"decision" => "approve"}
+        )
+
+      uri = redirected_to(conn) |> URI.parse()
+      query = URI.decode_query(uri.query)
+
+      assert %Token{scope: scope} = Repo.get_by(Token, value: query["code"])
+
+      granted = String.split(scope, " ", trim: true)
+
+      assert "mobile.me.read" in granted
+      assert "mobile.forage.read" in granted
+      assert "mobile.specs.read" in granted
+      assert "mobile.drops.read" in granted
+      refute "mobile" in granted
+    end
+
+    test "renders each granular scope on the consent page after expansion", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "mobile-consent@example.com")
+      client = oauth_client!(supports: "mobile")
+
+      conn =
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mobile&resource=http://www.example.com/api/v1&state=state"
+        )
+
+      response = html_response(conn, 200)
+
+      assert response =~ "Read your Hive profile"
+      assert response =~ "Read forage items"
+      assert response =~ "Read specifications"
+      assert response =~ "Read drops and digests"
+      refute response =~ "Mobile app access"
+    end
+
     test "does not issue an authorization code when consent is denied", %{conn: conn} do
       {conn, _user} = sign_in(conn, "alice@example.com")
       client = oauth_client!()
@@ -109,6 +153,30 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       refute Repo.exists?(Token)
     end
 
+    test "rejects a request object to prevent scope-expansion bypass", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "request-object@example.com")
+      client = oauth_client!()
+
+      assert_raise Plug.BadRequestError, fn ->
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&state=state&request=eyJhbGciOiJub25lIn0"
+        )
+      end
+    end
+
+    test "rejects a request_uri parameter to prevent outbound fetches", %{conn: conn} do
+      {conn, _user} = sign_in(conn, "request-uri@example.com")
+      client = oauth_client!()
+
+      assert_raise Plug.BadRequestError, fn ->
+        get(
+          conn,
+          ~p"/oauth2/authorize?response_type=code&client_id=#{client.id}&redirect_uri=http://client.example/callback&scope=mcp&state=state&request_uri=http://evil/x"
+        )
+      end
+    end
+
     test "returns an OAuth JSON error for a signed-in invalid request", %{conn: conn} do
       {conn, _user} = sign_in(conn, "alice@example.com")
 
@@ -122,16 +190,33 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
     end
   end
 
-  defp oauth_client! do
-    {:ok, client} =
-      %Client{}
-      |> Client.create_changeset(%{
-        name: "MCP test client",
-        redirect_uris: ["http://client.example/callback"],
-        supported_grant_types: ["authorization_code", "refresh_token"]
-      })
-      |> Repo.insert()
+  defp oauth_client!(opts \\ []) do
+    scope_attrs =
+      case Keyword.get(opts, :supports) do
+        nil ->
+          %{}
 
+        "mobile" ->
+          %{
+            authorized_scopes:
+              Enum.map(
+                ~w(mobile.me.read mobile.forage.read mobile.specs.read mobile.drops.read),
+                &%{name: &1}
+              )
+          }
+      end
+
+    attrs =
+      Map.merge(
+        %{
+          name: "MCP test client",
+          redirect_uris: ["http://client.example/callback"],
+          supported_grant_types: ["authorization_code", "refresh_token"]
+        },
+        scope_attrs
+      )
+
+    {:ok, client} = %Client{} |> Client.create_changeset(attrs) |> Repo.insert()
     client
   end
 end

@@ -12,7 +12,7 @@ defmodule HiveWeb.Api.V1.ForageController do
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
   tags(["Forage"])
-  security([%{"oauth2" => ["mobile"]}])
+  security([%{"oauth2" => ["mobile.forage.read"]}])
 
   operation(:index,
     summary: "List visible forage items",

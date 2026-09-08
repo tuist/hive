@@ -51,6 +51,36 @@ Anonymous access also depends on
 [`HIVE_VISIBILITY`](/reference/configuration#hive_visibility). A private
 instance requires sign-in before any dashboard content is shown.
 
+## OAuth scopes
+
+Connected clients obtain access tokens through Hive's OAuth 2.0 endpoints.
+Every access token carries one or more scopes that determine which
+protected resources it can read.
+
+| Scope | Grants |
+|---|---|
+| `api` | The application programming interface under `/api` used by ingestion clients |
+| `mcp` | The Model Context Protocol endpoint under `/mcp` |
+| `mobile` | Umbrella. When a client requests `mobile`, Hive issues a token that carries every `mobile.*` scope below. Use this when the application needs the full mobile surface. |
+| `mobile.me.read` | Read the signed-in user at `/api/v1/me` |
+| `mobile.forage.read` | Read forage items at `/api/v1/forage` |
+| `mobile.specs.read` | Read specifications at `/api/v1/specs` |
+| `mobile.drops.read` | Read drops and digests at `/api/v1/drops` and `/api/v1/drops/digests` |
+
+Applications that only need a subset of the mobile surface should request
+only the granular scopes they use. The consent page shows the human name
+of every scope so the person signing in sees the concrete permissions
+before approving. `mobile` is expanded at authorization time, so
+audit-log entries and issued tokens always list the granular scopes,
+never the umbrella.
+
+Dynamic client registration is enabled at
+[`POST /oauth2/register`](https://datatracker.ietf.org/doc/html/rfc7591).
+Native applications can register themselves as public clients with
+`token_endpoint_auth_method: "none"`. Hive enforces PKCE for these
+clients and issues refresh tokens that the client can rotate without a
+client secret.
+
 ## Resource visibility
 
 Projects, domains, and postmortems can be public or private. Specs inherit

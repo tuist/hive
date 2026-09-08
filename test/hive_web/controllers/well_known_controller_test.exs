@@ -24,7 +24,17 @@ defmodule HiveWeb.WellKnownControllerTest do
       assert response["token_endpoint"] == "http://www.example.com/oauth2/token"
       assert response["revocation_endpoint"] == "http://www.example.com/oauth2/revoke"
       assert response["registration_endpoint"] == "http://www.example.com/oauth2/register"
-      assert response["scopes_supported"] == ["api", "mcp", "mobile"]
+
+      assert response["scopes_supported"] == [
+               "api",
+               "mcp",
+               "mobile",
+               "mobile.me.read",
+               "mobile.forage.read",
+               "mobile.specs.read",
+               "mobile.drops.read"
+             ]
+
       assert "S256" in response["code_challenge_methods_supported"]
     end
   end
@@ -67,7 +77,14 @@ defmodule HiveWeb.WellKnownControllerTest do
       assert response["resource_name"] == "Hive Mobile"
       assert response["authorization_servers"] == ["http://www.example.com"]
       assert response["bearer_methods_supported"] == ["header"]
-      assert response["scopes_supported"] == ["mobile"]
+
+      assert response["scopes_supported"] == [
+               "mobile",
+               "mobile.me.read",
+               "mobile.forage.read",
+               "mobile.specs.read",
+               "mobile.drops.read"
+             ]
     end
   end
 end

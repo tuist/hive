@@ -10,12 +10,14 @@ defmodule HiveWeb.OAuth.AuthorizeController do
   alias Boruta.Oauth.AuthorizationSuccess
   alias Boruta.Oauth.ResourceOwner
   alias Hive.Auth
+  alias Hive.OAuth.Scopes
   alias HiveWeb.OAuth.AuthorizeHTML
 
   @max_state_length 10_000
 
   def authorize(conn, params) do
     validate_state_length!(params)
+    reject_request_object!(params)
 
     case Auth.current_user(conn) do
       nil ->
@@ -25,12 +27,15 @@ defmodule HiveWeb.OAuth.AuthorizeController do
         |> halt()
 
       user ->
-        Oauth.preauthorize(conn, resource_owner(user), __MODULE__)
+        conn
+        |> expand_scope()
+        |> Oauth.preauthorize(resource_owner(user), __MODULE__)
     end
   end
 
   def approve(conn, %{"decision" => "approve"} = params) do
     validate_state_length!(params)
+    reject_request_object!(params)
 
     case Auth.current_user(conn) do
       nil ->
@@ -40,7 +45,9 @@ defmodule HiveWeb.OAuth.AuthorizeController do
         |> halt()
 
       user ->
-        Oauth.authorize(conn, resource_owner(user), __MODULE__)
+        conn
+        |> expand_scope()
+        |> Oauth.authorize(resource_owner(user), __MODULE__)
     end
   end
 
@@ -96,5 +103,38 @@ defmodule HiveWeb.OAuth.AuthorizeController do
 
   defp validate_state_length!(_params), do: :ok
 
+  defp reject_request_object!(%{"request" => value}) when is_binary(value) and value != "" do
+    raise Plug.BadRequestError,
+      message:
+        dgettext(
+          "dashboard_auth",
+          "Signed request objects are not supported by this authorization endpoint."
+        )
+  end
+
+  defp reject_request_object!(%{"request_uri" => value}) when is_binary(value) and value != "" do
+    raise Plug.BadRequestError,
+      message:
+        dgettext(
+          "dashboard_auth",
+          "Request URIs are not supported by this authorization endpoint."
+        )
+  end
+
+  defp reject_request_object!(_params), do: :ok
+
   defp resource_owner(user), do: %ResourceOwner{sub: user.id, username: user.email}
+
+  defp expand_scope(conn) do
+    conn
+    |> Map.update!(:query_params, &rewrite_scope/1)
+    |> Map.update!(:params, &rewrite_scope/1)
+    |> Map.update!(:body_params, &rewrite_scope/1)
+  end
+
+  defp rewrite_scope(%{"scope" => scope} = params) when is_binary(scope) do
+    Map.put(params, "scope", Scopes.expand(scope))
+  end
+
+  defp rewrite_scope(params), do: params
 end

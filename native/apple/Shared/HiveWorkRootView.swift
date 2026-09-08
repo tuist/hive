@@ -1989,6 +1989,11 @@ struct HiveWorkSettingsView: View {
                 Label("General", systemImage: "gear")
             }
 
+            HiveAccountSettingsView()
+                .tabItem {
+                    Label("Hive", systemImage: "person.badge.key")
+                }
+
             InferenceAccountsSettingsView()
                 .tabItem {
                     Label("Accounts", systemImage: "person.crop.circle")

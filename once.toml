@@ -35,6 +35,18 @@ target = "aarch64-apple-ios"
 crate_type = "staticlib"
 
 [[target]]
+name = "HiveMobileCoreMacOS"
+kind = "rust_library"
+srcs = ["mobile/shared/src/**/*.rs"]
+
+[target.attrs]
+crate_name = "hive_mobile_core"
+crate_root = "mobile/shared/src/lib.rs"
+edition = "2021"
+target = "aarch64-apple-darwin"
+crate_type = "staticlib"
+
+[[target]]
 name = "HiveiOS"
 kind = "apple_application"
 srcs = ["mobile/ios/Hive/**/*.swift", "native/apple/Shared/**/*.swift"]
@@ -128,7 +140,7 @@ crate_type = "staticlib"
 name = "HiveDesktop"
 kind = "apple_application"
 srcs = ["native/apple/Shared/**/*.swift", "native/apple/macOS/Sources/**/*.swift"]
-deps = ["./HiveWorkCore"]
+deps = ["./HiveWorkCore", "./HiveMobileCoreMacOS"]
 
 [target.attrs]
 platform = "macos"

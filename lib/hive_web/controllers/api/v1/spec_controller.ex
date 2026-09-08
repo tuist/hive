@@ -12,7 +12,7 @@ defmodule HiveWeb.Api.V1.SpecController do
   plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
 
   tags(["Specs"])
-  security([%{"oauth2" => ["mobile"]}])
+  security([%{"oauth2" => ["mobile.specs.read"]}])
 
   operation(:index,
     summary: "List visible specs",
