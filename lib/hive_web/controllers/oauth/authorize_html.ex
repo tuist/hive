@@ -185,6 +185,9 @@ defmodule HiveWeb.OAuth.AuthorizeHTML do
   defp scope_label("mobile.drops.read"),
     do: dgettext("dashboard_auth", "Read drops and digests")
 
+  defp scope_label("mobile.errors.read"),
+    do: dgettext("dashboard_auth", "Read captured error issues")
+
   defp scope_label("mcp"),
     do: dgettext("dashboard_auth", "Model Context Protocol access")
 

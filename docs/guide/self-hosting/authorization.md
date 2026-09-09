@@ -29,6 +29,7 @@ Changing the configured domains later does not change existing roles.
 |---|---|---|---|---|
 | View public projects, domains, specs, postmortems, and drops | yes | yes | yes | yes |
 | Use the mobile application to view visible Forage items, specs, and Drops | no | yes | yes | yes |
+| Use the mobile application to browse captured error issues | no | no | yes | yes |
 | Submit Forage items | no | yes | yes | yes |
 | Comment on visible Forage items and specs | no | yes | yes | yes |
 | Create Forage items as GitHub issues | no | no | yes | yes |
@@ -66,6 +67,7 @@ protected resources it can read.
 | `mobile.forage.read` | Read forage items at `/api/v1/forage` |
 | `mobile.specs.read` | Read specifications at `/api/v1/specs` |
 | `mobile.drops.read` | Read drops and digests at `/api/v1/drops` and `/api/v1/drops/digests` |
+| `mobile.errors.read` | Read error issues at `/api/v1/errors` (requires `member` role or above) |
 
 Applications that only need a subset of the mobile surface should request
 only the granular scopes they use. The consent page shows the human name

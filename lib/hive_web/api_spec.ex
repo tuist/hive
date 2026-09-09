@@ -39,7 +39,8 @@ defmodule HiveWeb.ApiSpec do
                   "mobile.me.read" => "Read the signed-in user's profile.",
                   "mobile.forage.read" => "Read forage items.",
                   "mobile.specs.read" => "Read specifications.",
-                  "mobile.drops.read" => "Read drops and digests."
+                  "mobile.drops.read" => "Read drops and digests.",
+                  "mobile.errors.read" => "Read error issues captured by the Sentry-compatible ingest."
                 }
               }
             }

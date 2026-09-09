@@ -52,6 +52,10 @@ defmodule HiveWeb.Router do
     plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.drops.read"
   end
 
+  pipeline :mobile_api_errors do
+    plug HiveWeb.Plugs.MobileAPIAuthentication, scope: "mobile.errors.read"
+  end
+
   pipeline :feed do
     plug :accepts, ["xml"]
     plug :fetch_session
@@ -144,6 +148,19 @@ defmodule HiveWeb.Router do
       get "/digests", DropDigestController, :index
       get "/digests/:week_start", DropDigestController, :show
       get "/:number", DropController, :show
+    end
+
+    scope "/errors" do
+      pipe_through [:mobile_api, :mobile_api_errors]
+      get "/", ErrorsController, :index
+      get "/:id", ErrorsController, :show
+    end
+
+    if Application.compile_env(:hive, :dev_routes, false) do
+      scope "/dev" do
+        pipe_through :json_api
+        post "/mobile_session", DevSessionController, :create
+      end
     end
   end
 
