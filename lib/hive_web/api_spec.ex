@@ -40,7 +40,8 @@ defmodule HiveWeb.ApiSpec do
                   "mobile.forage.read" => "Read forage items.",
                   "mobile.specs.read" => "Read specifications.",
                   "mobile.drops.read" => "Read drops and digests.",
-                  "mobile.errors.read" => "Read error issues captured by the Sentry-compatible ingest."
+                  "mobile.errors.read" =>
+                    "Read error issues captured by the Sentry-compatible ingest."
                 }
               }
             }
