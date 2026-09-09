@@ -81,26 +81,24 @@ defmodule HiveWeb.Api.V1.ErrorsController do
   end
 
   def show(conn, params) do
-    cond do
-      not authorized?(conn) ->
-        forbidden(conn)
+    if authorized?(conn) do
+      case Errors.fetch_issue(param(params, "id", nil)) do
+        {:ok, issue} ->
+          origin = HiveWeb.RequestOrigin.from_conn(conn)
 
-      true ->
-        case Errors.fetch_issue(param(params, "id", nil)) do
-          {:ok, issue} ->
-            origin = HiveWeb.RequestOrigin.from_conn(conn)
+          json(conn, %{
+            data:
+              Presenter.error_issue(issue,
+                latest_event: latest_event(issue.id),
+                dashboard_url: dashboard_url(origin, issue.id)
+              )
+          })
 
-            json(conn, %{
-              data:
-                Presenter.error_issue(issue,
-                  latest_event: latest_event(issue.id),
-                  dashboard_url: dashboard_url(origin, issue.id)
-                )
-            })
-
-          {:error, :not_found} ->
-            not_found(conn)
-        end
+        {:error, :not_found} ->
+          not_found(conn)
+      end
+    else
+      forbidden(conn)
     end
   end
 
