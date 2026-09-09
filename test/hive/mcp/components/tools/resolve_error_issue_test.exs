@@ -23,13 +23,13 @@ defmodule Hive.MCP.Components.Tools.ResolveErrorIssueTest do
   test "flips the status to resolved for a member", %{issue: issue} do
     user = mcp_user("member@example.com", :member)
 
-    response = ResolveErrorIssue.call(mcp_conn(user), %{"id" => issue.id})
+    response = ResolveErrorIssue.call(mcp_conn(user), %{"issue_id" => issue.id})
     assert %{"issue" => %{"status" => "resolved"}} = response_json(response)
   end
 
   test "returns forbidden for non-members", %{issue: issue} do
     outsider = mcp_user("guest@example.com", :collaborator)
-    response = ResolveErrorIssue.call(mcp_conn(outsider), %{"id" => issue.id})
+    response = ResolveErrorIssue.call(mcp_conn(outsider), %{"issue_id" => issue.id})
     assert response_json(response) == %{"error" => "forbidden"}
   end
 end

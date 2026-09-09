@@ -6,8 +6,8 @@ defmodule Hive.MCP.Components.Tools.IgnoreErrorIssue do
     title: "Ignore Error Issue",
     schema: %{
       "type" => "object",
-      "required" => ["id"],
-      "properties" => %{"id" => %{"type" => "string", "description" => "Issue id."}}
+      "required" => ["issue_id"],
+      "properties" => %{"issue_id" => %{"type" => "string", "description" => "Issue id."}}
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
@@ -24,11 +24,11 @@ defmodule Hive.MCP.Components.Tools.IgnoreErrorIssue do
       "Mark an error issue as ignored so it stops appearing in default views. Restricted to organization members."
 
   @impl EMCP.Tool
-  def call(conn, %{"id" => id}) do
+  def call(conn, %{"issue_id" => issue_id}) do
     user = conn.assigns[:current_user]
 
     with true <- Policy.authorize?(:error_issue_ignore, user, nil) or {:error, "forbidden"},
-         {:ok, issue} <- Errors.fetch_issue(id),
+         {:ok, issue} <- Errors.fetch_issue(issue_id),
          {:ok, updated} <- Errors.update_issue_status(issue, :ignored) do
       updated = %{updated | project: issue.project}
       json_response(%{issue: Errors.serialize_issue(updated)})
