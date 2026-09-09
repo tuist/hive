@@ -12,18 +12,19 @@ struct HiveDesktopApp: App {
     @StateObject private var inferenceAccounts = InferenceAccountStore()
     @StateObject private var agentRuntime = AgentSessionRuntimeStore()
     @StateObject private var hiveAccount = HiveAccountStore()
+    @StateObject private var hiveOverview = HiveOverviewStore()
 
     var body: some Scene {
         WindowGroup {
-            HiveWorkRootView()
+            HiveDesktopRootScene()
                 .environmentObject(themeStore)
                 .environmentObject(inferenceAccounts)
                 .environmentObject(agentRuntime)
                 .environmentObject(hiveAccount)
+                .environmentObject(hiveOverview)
                 .hiveWorkTheme(themeStore.selectedTheme)
-                .frame(minWidth: 800, minHeight: 500)
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
@@ -36,7 +37,37 @@ struct HiveDesktopApp: App {
                 .environmentObject(inferenceAccounts)
                 .environmentObject(agentRuntime)
                 .environmentObject(hiveAccount)
+                .environmentObject(hiveOverview)
                 .hiveWorkTheme(themeStore.selectedTheme)
+        }
+    }
+}
+
+private struct HiveDesktopRootScene: View {
+    @EnvironmentObject private var account: HiveAccountStore
+    @EnvironmentObject private var overview: HiveOverviewStore
+
+    var body: some View {
+        Group {
+            if account.isBootstrapping {
+                ProgressView()
+                    .controlSize(.large)
+                    .frame(width: 480, height: 320)
+            } else if account.isSignedIn {
+                HiveWorkRootView()
+                    .frame(minWidth: 800, minHeight: 500)
+                    .task { await overview.reload(using: account) }
+            } else {
+                HiveDesktopLoginView()
+                    .frame(minWidth: 480, idealWidth: 520, minHeight: 640, idealHeight: 700)
+            }
+        }
+        .onChange(of: account.isSignedIn) { _, signedIn in
+            if signedIn {
+                Task { await overview.reload(using: account) }
+            } else {
+                overview.clear()
+            }
         }
     }
 }

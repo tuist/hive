@@ -216,6 +216,7 @@ fn validate_resource_response(
         Resource::Specs => validate_list(data, validate_spec)?,
         Resource::Drops => validate_list(data, validate_drop)?,
         Resource::DropDigests => validate_list(data, validate_digest)?,
+        Resource::Errors => validate_list(data, validate_error_issue)?,
     }
     let pagination = if resource.paginated() {
         Some(validate_pagination(&response, expected_page)?)
@@ -333,6 +334,30 @@ fn validate_drop(value: &BTreeMap<String, Value>) -> Result<()> {
     validate_domains(value)
 }
 
+fn validate_error_issue(value: &BTreeMap<String, Value>) -> Result<()> {
+    required_strings(value, &["id", "title", "level", "status"])?;
+    optional_strings(
+        value,
+        &[
+            "culprit",
+            "platform",
+            "first_seen",
+            "last_seen",
+            "project_id",
+            "project_name",
+            "fingerprint",
+            "dashboard_url",
+            "environment",
+            "release",
+            "exception_type",
+            "exception_value",
+            "top_frame_function",
+            "top_frame_filename",
+        ],
+    )?;
+    required_numbers(value, &["event_count"])
+}
+
 fn validate_digest(value: &BTreeMap<String, Value>) -> Result<()> {
     required_strings(
         value,
@@ -414,6 +439,7 @@ enum Resource {
     Specs,
     Drops,
     DropDigests,
+    Errors,
 }
 
 struct Pagination {
@@ -429,6 +455,7 @@ impl Resource {
             "specs" => Ok(Self::Specs),
             "drops" => Ok(Self::Drops),
             "drop_digests" => Ok(Self::DropDigests),
+            "errors" => Ok(Self::Errors),
             _ => Err("The application requested an unknown Hive resource.".to_string()),
         }
     }
@@ -440,6 +467,7 @@ impl Resource {
             Self::Specs => "specs",
             Self::Drops => "drops",
             Self::DropDigests => "drop_digests",
+            Self::Errors => "errors",
         }
     }
 
@@ -454,6 +482,7 @@ impl Resource {
             Self::Specs => format!("/specs?page_size=100&page={page}"),
             Self::Drops => format!("/drops?page_size=100&page={page}"),
             Self::DropDigests => format!("/drops/digests?page_size=100&page={page}"),
+            Self::Errors => format!("/errors?page_size=100&page={page}"),
         }
     }
 }

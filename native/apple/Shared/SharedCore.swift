@@ -56,6 +56,7 @@ enum HiveResource: String {
     case specs
     case drops
     case dropDigests = "drop_digests"
+    case errors
 }
 
 struct SharedCore {

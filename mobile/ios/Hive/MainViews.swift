@@ -17,19 +17,243 @@ struct LaunchView: View {
 struct MainTabView: View {
     var body: some View {
         TabView {
-            HiveWorkView()
-                .tabItem { Label("Work", systemImage: "hammer") }
-            ForageListView()
-                .tabItem { Label("Forage", systemImage: "tray.full") }
+            HomeOverviewView()
+                .tabItem { Label("Home", systemImage: "house") }
+            ErrorsListView()
+                .tabItem { Label("Errors", systemImage: "exclamationmark.triangle") }
             SpecListView()
                 .tabItem { Label("Specs", systemImage: "doc.text") }
-            DropListView()
-                .tabItem { Label("Drops", systemImage: "shippingbox.fill") }
             AccountView()
                 .tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
         .tint(.indigo)
         .accessibilityIdentifier("main-navigation")
+    }
+}
+
+struct HomeOverviewView: View {
+    @EnvironmentObject private var app: AppModel
+    @State private var issues: [HiveErrorIssue] = []
+    @State private var specs: [HiveSpec] = []
+    @State private var errorMessage: String?
+    @State private var isLoading = true
+
+    private var unresolvedIssues: [HiveErrorIssue] {
+        issues.filter { $0.status.lowercased() == "unresolved" }
+    }
+
+    private var specsNeedingAttention: [HiveSpec] {
+        specs.filter { $0.hasNewActivity }
+    }
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Good morning"
+        case 12..<18: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading && issues.isEmpty && specs.isEmpty {
+                    ProgressView("Loading Hive…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage, issues.isEmpty, specs.isEmpty {
+                    ContentUnavailableView(
+                        "Overview could not load",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(errorMessage)
+                    )
+                } else {
+                    List {
+                        Section {
+                            HomeHeader(
+                                greeting: greeting,
+                                userName: app.user?.name ?? app.user?.email,
+                                server: app.server
+                            )
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                        }
+
+                        Section("Needs attention") {
+                            NavigationLink {
+                                ErrorsListView()
+                            } label: {
+                                AttentionRow(
+                                    icon: "exclamationmark.triangle.fill",
+                                    tint: unresolvedIssues.isEmpty ? .green : .red,
+                                    title: "Unresolved errors",
+                                    detail: unresolvedIssues.isEmpty
+                                        ? "All caught up"
+                                        : "\(unresolvedIssues.count) open"
+                                )
+                            }
+
+                            NavigationLink {
+                                SpecListView()
+                            } label: {
+                                AttentionRow(
+                                    icon: "doc.text.magnifyingglass",
+                                    tint: specsNeedingAttention.isEmpty ? .green : .indigo,
+                                    title: "Specs with new activity",
+                                    detail: specsNeedingAttention.isEmpty
+                                        ? "Nothing new"
+                                        : "\(specsNeedingAttention.count) updated"
+                                )
+                            }
+                        }
+
+                        if !unresolvedIssues.isEmpty {
+                            Section("Recent errors") {
+                                ForEach(unresolvedIssues.prefix(3)) { issue in
+                                    NavigationLink {
+                                        ErrorIssueDetailView(issue: issue)
+                                    } label: {
+                                        HomeErrorRow(issue: issue)
+                                    }
+                                }
+                            }
+                        }
+
+                        if !specsNeedingAttention.isEmpty {
+                            Section("Specs with new activity") {
+                                ForEach(specsNeedingAttention.prefix(3)) { spec in
+                                    NavigationLink {
+                                        SpecDetailView(spec: spec)
+                                    } label: {
+                                        HomeSpecRow(spec: spec)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Hive")
+            .refreshable { await reload(force: true) }
+            .task { await reload(force: false) }
+        }
+    }
+
+    private func reload(force: Bool) async {
+        if !force, !issues.isEmpty || !specs.isEmpty { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            async let issuesFetch = app.loadErrors()
+            async let specsFetch = app.loadSpecs()
+            issues = try await issuesFetch
+            specs = try await specsFetch
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct HomeHeader: View {
+    let greeting: String
+    let userName: String?
+    let server: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(greeting)
+                .font(.title2.weight(.semibold))
+            if let userName {
+                Text(userName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            if let server, let host = URL(string: server)?.host() {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe")
+                    Text(host)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct AttentionRow: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct HomeErrorRow: View {
+    let issue: HiveErrorIssue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(issue.title)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(2)
+            HStack(spacing: 8) {
+                Text(issue.level.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.red)
+                Text("•")
+                Text("\(issue.eventCount) event\(issue.eventCount == 1 ? "" : "s")")
+                if let projectName = issue.projectName, !projectName.isEmpty {
+                    Text("•")
+                    Text(projectName)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct HomeSpecRow: View {
+    let spec: HiveSpec
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("#\(spec.number)")
+                    .foregroundStyle(.secondary)
+                Text(spec.title)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(2)
+            }
+            if let summary = spec.summary, !summary.isEmpty {
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
@@ -480,6 +704,269 @@ struct DropDigestDetailView: View {
         .navigationTitle(digest.title)
         .navigationBarTitleDisplayMode(.inline)
     }
+}
+
+struct ErrorsListView: View {
+    @EnvironmentObject private var app: AppModel
+    @State private var issues: [HiveErrorIssue] = []
+    @State private var query = ""
+    @State private var errorMessage: String?
+    @State private var isLoading = true
+
+    private var visibleIssues: [HiveErrorIssue] {
+        guard !query.isEmpty else { return issues }
+        return issues.filter {
+            $0.title.localizedCaseInsensitiveContains(query)
+                || ($0.culprit?.localizedCaseInsensitiveContains(query) ?? false)
+                || ($0.projectName?.localizedCaseInsensitiveContains(query) ?? false)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading && issues.isEmpty {
+                    ProgressView("Loading Errors…")
+                } else if let errorMessage, issues.isEmpty {
+                    ContentUnavailableView(
+                        "Errors could not load",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(errorMessage)
+                    )
+                } else if visibleIssues.isEmpty && !query.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                } else if visibleIssues.isEmpty {
+                    ContentUnavailableView(
+                        "No errors captured",
+                        systemImage: "checkmark.seal",
+                        description: Text("New unhandled exceptions from your projects will appear here.")
+                    )
+                } else {
+                    List(visibleIssues) { issue in
+                        NavigationLink(value: issue) {
+                            ErrorIssueRow(issue: issue)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                    .navigationDestination(for: HiveErrorIssue.self) { issue in
+                        ErrorIssueDetailView(issue: issue)
+                    }
+                }
+            }
+            .navigationTitle("Errors")
+            .searchable(text: $query, prompt: "Search Errors")
+            .refreshable { await reload() }
+            .task { await reload() }
+        }
+    }
+
+    private func reload() async {
+        guard issues.isEmpty || !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            issues = try await app.loadErrors()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct ErrorIssueRow: View {
+    let issue: HiveErrorIssue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                LevelBadge(level: issue.level)
+                Text(issue.title)
+                    .font(.headline)
+                    .lineLimit(2)
+            }
+            if let culprit = issue.culprit, !culprit.isEmpty {
+                Text(culprit)
+                    .font(.subheadline.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            HStack(spacing: 8) {
+                if let projectName = issue.projectName, !projectName.isEmpty {
+                    Text(projectName)
+                    Text("•")
+                }
+                Text("\(issue.eventCount) event\(issue.eventCount == 1 ? "" : "s")")
+                if let lastSeen = relativeDate(issue.lastSeen) {
+                    Text("•")
+                    Text(lastSeen)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct ErrorIssueDetailView: View {
+    let issue: HiveErrorIssue
+
+    var body: some View {
+        List {
+            Section {
+                LabeledContent("Level", value: readable(issue.level))
+                LabeledContent("Status", value: readable(issue.status))
+                LabeledContent("Events", value: String(issue.eventCount))
+                if let platform = issue.platform, !platform.isEmpty {
+                    LabeledContent("Platform", value: platform)
+                }
+                if let projectName = issue.projectName, !projectName.isEmpty {
+                    LabeledContent("Project", value: projectName)
+                }
+                if let environment = issue.environment, !environment.isEmpty {
+                    LabeledContent("Environment", value: environment)
+                }
+                if let release = issue.release, !release.isEmpty {
+                    LabeledContent("Release", value: release)
+                }
+            }
+
+            if issue.exceptionType != nil || issue.exceptionValue != nil {
+                Section("Exception") {
+                    if let type = issue.exceptionType, !type.isEmpty {
+                        LabeledContent("Type", value: type)
+                    }
+                    if let value = issue.exceptionValue, !value.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Message")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(value)
+                                .font(.callout.monospaced())
+                                .textSelection(.enabled)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+
+            if issue.topFrameFunction != nil || issue.topFrameFilename != nil {
+                Section("Top frame") {
+                    if let function = issue.topFrameFunction, !function.isEmpty {
+                        LabeledContent("Function") {
+                            Text(function)
+                                .font(.callout.monospaced())
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+                    if let filename = issue.topFrameFilename, !filename.isEmpty {
+                        LabeledContent("File") {
+                            Text(filename)
+                                .font(.callout.monospaced())
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(2)
+                                .truncationMode(.middle)
+                        }
+                    }
+                }
+            }
+
+            if let culprit = issue.culprit, !culprit.isEmpty {
+                Section("Culprit") {
+                    Text(culprit)
+                        .font(.callout.monospaced())
+                        .textSelection(.enabled)
+                }
+            }
+
+            Section("Timeline") {
+                if let firstSeen = issue.firstSeen {
+                    LabeledContent("First seen", value: absoluteDate(firstSeen))
+                }
+                if let lastSeen = issue.lastSeen {
+                    LabeledContent("Last seen", value: absoluteDate(lastSeen))
+                }
+            }
+
+            if let fingerprint = issue.fingerprint, !fingerprint.isEmpty {
+                Section("Identity") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Fingerprint")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(fingerprint)
+                            .font(.footnote.monospaced())
+                            .textSelection(.enabled)
+                            .lineLimit(3)
+                            .truncationMode(.middle)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+
+            if let dashboard = issue.dashboardURL, let url = URL(string: dashboard) {
+                Section {
+                    Link(destination: url) {
+                        Label("Open in Hive", systemImage: "arrow.up.right.square")
+                    }
+                }
+            }
+        }
+        .navigationTitle(issue.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func absoluteDate(_ value: String) -> String {
+        guard let date = ISO8601DateFormatter.hive.date(from: value) else { return value }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+}
+
+private struct LevelBadge: View {
+    let level: String
+
+    private var background: Color {
+        switch level.lowercased() {
+        case "fatal", "error": .red.opacity(0.15)
+        case "warning": .orange.opacity(0.15)
+        case "info": .blue.opacity(0.15)
+        default: .gray.opacity(0.15)
+        }
+    }
+
+    private var foreground: Color {
+        switch level.lowercased() {
+        case "fatal", "error": .red
+        case "warning": .orange
+        case "info": .blue
+        default: .secondary
+        }
+    }
+
+    var body: some View {
+        Text(level.uppercased())
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(background, in: Capsule())
+            .foregroundStyle(foreground)
+    }
+}
+
+private func relativeDate(_ value: String?) -> String? {
+    guard let value, let date = ISO8601DateFormatter.hive.date(from: value) else { return nil }
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .abbreviated
+    return formatter.localizedString(for: date, relativeTo: Date())
+}
+
+private extension ISO8601DateFormatter {
+    static let hive: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 }
 
 struct AccountView: View {

@@ -25,10 +25,10 @@ final class HiveAccountStore: NSObject, ObservableObject {
     private var session: OAuthSession?
     private var authenticationSession: ASWebAuthenticationSession?
 
+    @Published private(set) var isBootstrapping = true
+
     override init() {
-        let savedServer =
-            UserDefaults.standard.string(forKey: HiveAccountStore.userDefaultsServerKey)
-                ?? HiveAccountStore.defaultServerURL
+        let savedServer = Self.initialServerAddress()
         self.pendingServer = savedServer
         super.init()
 
@@ -37,7 +37,61 @@ final class HiveAccountStore: NSObject, ObservableObject {
 
     var isSignedIn: Bool { session != nil }
 
+    /// Test-user sign-in is only offered on a dev instance (loopback).
+    var showsDevSignIn: Bool {
+        Self.pointsAtLoopback(pendingServer)
+    }
+
+    func signInAsTestUser() {
+        guard !isSigningIn else { return }
+        let trimmed = pendingServer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Enter your Hive server address."
+            return
+        }
+        errorMessage = nil
+        isSigningIn = true
+        Task {
+            do {
+                let signedInSession = try await client.devSignIn(server: trimmed)
+                try await self.completeSignIn(signedInSession)
+            } catch {
+                self.finish(error: error)
+            }
+        }
+    }
+
+    private static func initialServerAddress() -> String {
+        if let argument = launchArgumentValue(named: "-hive-server"), !argument.isEmpty {
+            return argument
+        }
+        if let env = ProcessInfo.processInfo.environment["HIVE_SERVER"], !env.isEmpty {
+            return env
+        }
+        if let saved = UserDefaults.standard.string(forKey: userDefaultsServerKey), !saved.isEmpty {
+            return saved
+        }
+        return defaultServerURL
+    }
+
+    private static func launchArgumentValue(named name: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: name), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
+    }
+
+    private static func pointsAtLoopback(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let host = URLComponents(string: trimmed)?.host?.lowercased() else {
+            return false
+        }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
+    }
+
     func bootstrap() async {
+        defer { isBootstrapping = false }
         do {
             guard let saved = try credentialStore.load() else { return }
             let current: ResourceResult<HiveUser> = try await client.resource(
@@ -77,6 +131,24 @@ final class HiveAccountStore: NSObject, ObservableObject {
                 finish(error: error)
             }
         }
+    }
+
+    func loadErrors() async throws -> [HiveErrorIssue] {
+        try await loadResource(.errors)
+    }
+
+    func loadSpecs() async throws -> [HiveSpec] {
+        try await loadResource(.specs)
+    }
+
+    private func loadResource<Value: Decodable>(_ resource: HiveResource) async throws -> Value {
+        guard let session else {
+            throw MobileClientError("Sign in to Hive to browse this resource.")
+        }
+        let result: ResourceResult<Value> = try await client.resource(resource, session: session)
+        try credentialStore.save(result.session)
+        self.session = result.session
+        return result.value
     }
 
     func signOut() {

@@ -4,7 +4,7 @@ import UIKit
 
 @MainActor
 final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
-    @Published var serverAddress = "https://hive.tuist.dev"
+    @Published var serverAddress: String
     @Published var errorMessage: String?
     @Published var isLoading = false
 
@@ -12,8 +12,64 @@ final class LoginViewModel: NSObject, ObservableObject, ASWebAuthenticationPrese
     private let onSignedIn: (OAuthSession) async throws -> Void
     private var authenticationSession: ASWebAuthenticationSession?
 
+    static let defaultServerAddress = "https://hive.tuist.dev"
+
     init(onSignedIn: @escaping (OAuthSession) async throws -> Void) {
         self.onSignedIn = onSignedIn
+        serverAddress = Self.initialServerAddress()
+    }
+
+    /// Test-user sign-in makes sense only on a dev instance, which is
+    /// invariably localhost. We show the button when the address points
+    /// at loopback so the option stays hidden in production.
+    var showsDevSignIn: Bool {
+        Self.pointsAtLoopback(serverAddress)
+    }
+
+    func signInAsTestUser() {
+        guard !isLoading else { return }
+        errorMessage = nil
+        isLoading = true
+
+        Task {
+            do {
+                let session = try await client.devSignIn(server: serverAddress)
+                try await onSignedIn(session)
+                isLoading = false
+            } catch {
+                finish(error: error)
+            }
+        }
+    }
+
+    private static func initialServerAddress() -> String {
+        if let argument = launchArgumentValue(named: "-hive-server"),
+           !argument.isEmpty
+        {
+            return argument
+        }
+        if let env = ProcessInfo.processInfo.environment["HIVE_SERVER"],
+           !env.isEmpty
+        {
+            return env
+        }
+        return defaultServerAddress
+    }
+
+    private static func launchArgumentValue(named name: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: name), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
+    }
+
+    private static func pointsAtLoopback(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let host = URLComponents(string: trimmed)?.host?.lowercased() else {
+            return false
+        }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 
     func signIn() {
@@ -170,6 +226,19 @@ struct LoginView: View {
                                 || model.serverAddress.trimmingCharacters(in: .whitespaces).isEmpty
                         )
                         .accessibilityIdentifier("continue-button")
+
+                        if model.showsDevSignIn {
+                            Button(action: model.signInAsTestUser) {
+                                Text("Sign in as test user")
+                                    .fontWeight(.medium)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.indigo)
+                            .disabled(model.isLoading)
+                            .accessibilityIdentifier("dev-login-button")
+                        }
 
                         Label(
                             "Hive opens your browser to sign in securely.",
