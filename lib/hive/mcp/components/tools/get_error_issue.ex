@@ -6,8 +6,8 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssue do
     title: "Get Error Issue",
     schema: %{
       "type" => "object",
-      "required" => ["id"],
-      "properties" => %{"id" => %{"type" => "string", "description" => "Issue id."}}
+      "required" => ["issue_id"],
+      "properties" => %{"issue_id" => %{"type" => "string", "description" => "Issue id."}}
     },
     output_schema:
       Hive.MCP.Tool.result_schema(
@@ -22,11 +22,11 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssue do
   def description, do: "Fetch a single error issue by id. Restricted to organization members."
 
   @impl EMCP.Tool
-  def call(conn, %{"id" => id}) do
+  def call(conn, %{"issue_id" => issue_id}) do
     user = conn.assigns[:current_user]
 
     if Policy.authorize?(:error_issue_read, user, nil) do
-      case Errors.fetch_issue(id) do
+      case Errors.fetch_issue(issue_id) do
         {:ok, issue} -> json_response(%{issue: Errors.serialize_issue(issue)})
         {:error, :not_found} -> json_response(%{error: "not_found"})
       end

@@ -23,13 +23,13 @@ defmodule Hive.MCP.Components.Tools.IgnoreErrorIssueTest do
   test "flips the status to ignored for a member", %{issue: issue} do
     user = mcp_user("member@example.com", :member)
 
-    response = IgnoreErrorIssue.call(mcp_conn(user), %{"id" => issue.id})
+    response = IgnoreErrorIssue.call(mcp_conn(user), %{"issue_id" => issue.id})
     assert %{"issue" => %{"status" => "ignored"}} = response_json(response)
   end
 
   test "returns forbidden for non-members", %{issue: issue} do
     outsider = mcp_user("guest@example.com", :collaborator)
-    response = IgnoreErrorIssue.call(mcp_conn(outsider), %{"id" => issue.id})
+    response = IgnoreErrorIssue.call(mcp_conn(outsider), %{"issue_id" => issue.id})
     assert response_json(response) == %{"error" => "forbidden"}
   end
 end

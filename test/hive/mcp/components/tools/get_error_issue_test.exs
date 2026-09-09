@@ -22,7 +22,7 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssueTest do
   test "returns the issue when the caller is a member", %{issue: issue} do
     user = mcp_user("member@example.com", :member)
 
-    response = GetErrorIssue.call(mcp_conn(user), %{"id" => issue.id})
+    response = GetErrorIssue.call(mcp_conn(user), %{"issue_id" => issue.id})
 
     assert %{
              "issue" => %{
@@ -38,14 +38,16 @@ defmodule Hive.MCP.Components.Tools.GetErrorIssueTest do
     user = mcp_user("member@example.com", :member)
 
     response =
-      GetErrorIssue.call(mcp_conn(user), %{"id" => "00000000-0000-0000-0000-000000000000"})
+      GetErrorIssue.call(mcp_conn(user), %{
+        "issue_id" => "00000000-0000-0000-0000-000000000000"
+      })
 
     assert response_json(response) == %{"error" => "not_found"}
   end
 
   test "rejects non-members", %{issue: issue} do
     outsider = mcp_user("guest@example.com", :collaborator)
-    response = GetErrorIssue.call(mcp_conn(outsider), %{"id" => issue.id})
+    response = GetErrorIssue.call(mcp_conn(outsider), %{"issue_id" => issue.id})
     assert response_json(response) == %{"error" => "forbidden"}
   end
 end
