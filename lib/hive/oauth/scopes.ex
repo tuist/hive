@@ -1,7 +1,7 @@
 defmodule Hive.OAuth.Scopes do
   @moduledoc false
 
-  @mobile_scopes ~w(mobile.me.read mobile.forage.read mobile.specs.read mobile.drops.read)
+  @mobile_scopes ~w(mobile.me.read mobile.forage.read mobile.specs.read mobile.drops.read mobile.errors.read)
 
   @umbrellas %{"mobile" => @mobile_scopes}
 

@@ -70,6 +70,10 @@ final class AppModel: ObservableObject {
         try await load(.dropDigests, as: [DropDigest].self)
     }
 
+    func loadErrors() async throws -> [HiveErrorIssue] {
+        try await load(.errors, as: [HiveErrorIssue].self)
+    }
+
     func signOut() async {
         if let credentials {
             try? await client.signOut(credentials)

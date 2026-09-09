@@ -32,7 +32,8 @@ defmodule HiveWeb.WellKnownControllerTest do
                "mobile.me.read",
                "mobile.forage.read",
                "mobile.specs.read",
-               "mobile.drops.read"
+               "mobile.drops.read",
+               "mobile.errors.read"
              ]
 
       assert "S256" in response["code_challenge_methods_supported"]
@@ -83,7 +84,8 @@ defmodule HiveWeb.WellKnownControllerTest do
                "mobile.me.read",
                "mobile.forage.read",
                "mobile.specs.read",
-               "mobile.drops.read"
+               "mobile.drops.read",
+               "mobile.errors.read"
              ]
     end
   end

@@ -326,4 +326,74 @@ defmodule HiveWeb.Api.V1.Schemas do
       required: [:data]
     })
   end
+
+  defmodule ErrorIssue do
+    @moduledoc false
+
+    require OpenApiSpex
+    alias OpenApiSpex.Schema
+
+    OpenApiSpex.schema(%{
+      title: "ErrorIssue",
+      type: :object,
+      properties: %{
+        id: %Schema{type: :string, format: :uuid},
+        title: %Schema{type: :string},
+        culprit: %Schema{type: :string, nullable: true},
+        level: %Schema{
+          type: :string,
+          enum: ["fatal", "error", "warning", "info", "debug"]
+        },
+        status: %Schema{
+          type: :string,
+          enum: ["unresolved", "resolved", "ignored"]
+        },
+        platform: %Schema{type: :string, nullable: true},
+        event_count: %Schema{type: :integer, minimum: 0},
+        first_seen: %Schema{type: :string, format: :"date-time", nullable: true},
+        last_seen: %Schema{type: :string, format: :"date-time", nullable: true},
+        project_id: %Schema{type: :string, format: :uuid, nullable: true},
+        project_name: %Schema{type: :string, nullable: true},
+        fingerprint: %Schema{type: :string, nullable: true},
+        dashboard_url: %Schema{type: :string, format: :uri, nullable: true},
+        environment: %Schema{type: :string, nullable: true},
+        release: %Schema{type: :string, nullable: true},
+        exception_type: %Schema{type: :string, nullable: true},
+        exception_value: %Schema{type: :string, nullable: true},
+        top_frame_function: %Schema{type: :string, nullable: true},
+        top_frame_filename: %Schema{type: :string, nullable: true}
+      },
+      required: [:id, :title, :level, :status, :event_count]
+    })
+  end
+
+  defmodule ErrorIssueListResponse do
+    @moduledoc false
+
+    require OpenApiSpex
+    alias OpenApiSpex.Schema
+
+    OpenApiSpex.schema(%{
+      title: "ErrorIssueListResponse",
+      type: :object,
+      properties: %{
+        data: %Schema{type: :array, items: ErrorIssue},
+        pagination: Pagination
+      },
+      required: [:data, :pagination]
+    })
+  end
+
+  defmodule ErrorIssueResponse do
+    @moduledoc false
+
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "ErrorIssueResponse",
+      type: :object,
+      properties: %{data: ErrorIssue},
+      required: [:data]
+    })
+  end
 end

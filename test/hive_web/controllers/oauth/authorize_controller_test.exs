@@ -116,6 +116,7 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert "mobile.forage.read" in granted
       assert "mobile.specs.read" in granted
       assert "mobile.drops.read" in granted
+      assert "mobile.errors.read" in granted
       refute "mobile" in granted
     end
 
@@ -135,6 +136,7 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
       assert response =~ "Read forage items"
       assert response =~ "Read specifications"
       assert response =~ "Read drops and digests"
+      assert response =~ "Read captured error issues"
       refute response =~ "Mobile app access"
     end
 
@@ -200,7 +202,7 @@ defmodule HiveWeb.OAuth.AuthorizeControllerTest do
           %{
             authorized_scopes:
               Enum.map(
-                ~w(mobile.me.read mobile.forage.read mobile.specs.read mobile.drops.read),
+                ~w(mobile.me.read mobile.forage.read mobile.specs.read mobile.drops.read mobile.errors.read),
                 &%{name: &1}
               )
           }

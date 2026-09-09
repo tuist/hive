@@ -127,6 +127,28 @@ struct MobileClient {
         return ResourceResult(session: OAuthSession(raw: result.session), value: result.data)
     }
 
+    func devSignIn(server: String) async throws -> OAuthSession {
+        let trimmed = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let base = URL(string: trimmed) else {
+            throw MobileClientError("The Hive address is not a valid URL.")
+        }
+        let endpoint = base.appendingPathComponent("api/v1/dev/mobile_session")
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+            throw MobileClientError("The Hive server does not support test-user sign-in in this environment.")
+        }
+
+        // The endpoint returns the fully-formed session payload the shared core
+        // expects. Storing it verbatim keeps the Rust session shape in one place.
+        let raw = String(decoding: data, as: UTF8.self)
+        return OAuthSession(raw: raw)
+    }
+
     func signOut(_ session: OAuthSession) async throws {
         let final = try await run(core.signOutStart(session: session))
         let result: EffectHeader = try decode(final)

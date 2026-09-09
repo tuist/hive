@@ -120,6 +120,9 @@ private struct WorkspaceHarnessView: View {
 
     @EnvironmentObject private var inferenceAccounts: InferenceAccountStore
     @EnvironmentObject private var agentRuntime: AgentSessionRuntimeStore
+    #if os(macOS)
+    @EnvironmentObject private var overview: HiveOverviewStore
+    #endif
     @StateObject private var workspaceStore = WorkspaceStore()
     @StateObject private var nearbyDesktopStore = NearbyDesktopStore()
     @State private var selectedWorkspaceID: Workspace.ID?
@@ -209,6 +212,22 @@ private struct WorkspaceHarnessView: View {
                 }
                 #endif
 
+                #if os(macOS)
+                Section("Hive") {
+                    Label("Home", systemImage: "house")
+                        .tag(WorkspaceNavigationItem.home)
+                    Label("Errors", systemImage: "exclamationmark.triangle")
+                        .badge(overview.unresolvedErrorsCount)
+                        .tag(WorkspaceNavigationItem.errors)
+                    Label("Specs", systemImage: "doc.text")
+                        .badge(overview.specsNeedingAttentionCount)
+                        .tag(WorkspaceNavigationItem.specs)
+                    Label("Account", systemImage: "person.crop.circle")
+                        .tag(WorkspaceNavigationItem.account)
+                }
+                #endif
+
+                #if os(iOS)
                 Section {
                     ForEach(workspaceStore.workspaces) { workspace in
                         DisclosureGroup(
@@ -304,6 +323,7 @@ private struct WorkspaceHarnessView: View {
                         .tag(WorkspaceNavigationItem.workspace(workspace.id))
                     }
                 }
+                #endif
             }
             #if os(macOS)
             .listStyle(.sidebar)
@@ -343,63 +363,11 @@ private struct WorkspaceHarnessView: View {
             }
             #endif
         } detail: {
-            if let project = selectedProject, let activeWorktreeSession {
-                AgentSessionView(
-                    project: project,
-                    worktree: activeWorktreeSession.worktree,
-                    session: activeWorktreeSession.session,
-                    close: {
-                        activeSessionTarget = nil
-                        if let selectedWorkspaceID {
-                            selectedNavigationItem = .project(
-                                workspaceID: selectedWorkspaceID,
-                                projectID: project.id
-                            )
-                        }
-                    },
-                    newSession: {
-                        createAdditionalSession(in: activeWorktreeSession.worktree, for: project)
-                    },
-                    start: { prompt, configuration in
-                        startAgentSession(
-                            with: prompt,
-                            configuration: configuration,
-                            for: activeWorktreeSession.session
-                        )
-                    }
-                )
-            } else {
-                ProjectSessionsView(
-                    project: selectedProject,
-                    createWorktree: createNewWorktree,
-                    remoteSessionsAreAvailable: remoteSessionsAreAvailable
-                )
-            }
+            detailContent
         }
         .navigationSplitViewStyle(.prominentDetail)
         #if os(macOS)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("New Workspace") {
-                        isAddingWorkspace = true
-                    }
-
-                    if let selectedWorkspace {
-                        Divider()
-
-                        Button("Add Local Repository") {
-                            addLocalProject(to: selectedWorkspace.id)
-                        }
-                        Button("Clone Repository") {
-                            presentCloneRepository(in: selectedWorkspace.id)
-                        }
-                    }
-                } label: {
-                    Label("Add Workspace or Project", systemImage: "plus")
-                }
-            }
-
             ToolbarItem(placement: .automatic) {
                 Menu {
                     #if os(macOS)
@@ -447,6 +415,11 @@ private struct WorkspaceHarnessView: View {
         }
         #endif
         .onAppear {
+            #if os(macOS)
+            if selectedNavigationItem == nil {
+                selectedNavigationItem = .home
+            }
+            #else
             if selectedWorkspaceID == nil {
                 selectedWorkspaceID = workspaceStore.workspaces.first?.id
             }
@@ -454,6 +427,7 @@ private struct WorkspaceHarnessView: View {
                 selectedNavigationItem = .workspace(selectedWorkspaceID)
                 expandedWorkspaceIDs.insert(selectedWorkspaceID)
             }
+            #endif
         }
         .onChange(of: selectedNavigationItem) { _, item in
             guard let item else { return }
@@ -480,6 +454,8 @@ private struct WorkspaceHarnessView: View {
                     worktreeID: worktreeID,
                     sessionID: sessionID
                 )
+            case .home, .errors, .specs, .account:
+                activeSessionTarget = nil
             }
         }
         .sheet(isPresented: $isAddingWorkspace) {
@@ -538,6 +514,62 @@ private struct WorkspaceHarnessView: View {
             }
         } message: {
             Text(workspaceStore.errorMessage ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        #if os(macOS)
+        switch selectedNavigationItem {
+        case .home:
+            HiveHomeView()
+        case .errors:
+            HiveErrorsView()
+        case .specs:
+            HiveSpecsView()
+        case .account:
+            HiveDesktopAccountView()
+        default:
+            projectDetail
+        }
+        #else
+        projectDetail
+        #endif
+    }
+
+    @ViewBuilder
+    private var projectDetail: some View {
+        if let project = selectedProject, let activeWorktreeSession {
+            AgentSessionView(
+                project: project,
+                worktree: activeWorktreeSession.worktree,
+                session: activeWorktreeSession.session,
+                close: {
+                    activeSessionTarget = nil
+                    if let selectedWorkspaceID {
+                        selectedNavigationItem = .project(
+                            workspaceID: selectedWorkspaceID,
+                            projectID: project.id
+                        )
+                    }
+                },
+                newSession: {
+                    createAdditionalSession(in: activeWorktreeSession.worktree, for: project)
+                },
+                start: { prompt, configuration in
+                    startAgentSession(
+                        with: prompt,
+                        configuration: configuration,
+                        for: activeWorktreeSession.session
+                    )
+                }
+            )
+        } else {
+            ProjectSessionsView(
+                project: selectedProject,
+                createWorktree: createNewWorktree,
+                remoteSessionsAreAvailable: remoteSessionsAreAvailable
+            )
         }
     }
 
@@ -803,6 +835,10 @@ private enum WorkspaceNavigationItem: Hashable {
         worktreeID: ProjectWorktree.ID,
         sessionID: AgentSession.ID
     )
+    case home
+    case errors
+    case specs
+    case account
 }
 
 private struct ProjectSessionsView: View {

@@ -193,7 +193,7 @@ msgstr ""
 msgid "Mobile app access"
 msgstr ""
 
-#: lib/hive_web/controllers/oauth/authorize_html.ex:189
+#: lib/hive_web/controllers/oauth/authorize_html.ex:192
 #, elixir-autogen, elixir-format
 msgid "Model Context Protocol access"
 msgstr ""
@@ -276,4 +276,9 @@ msgstr ""
 #: lib/hive_web/controllers/oauth/authorize_controller.ex:109
 #, elixir-autogen, elixir-format
 msgid "Signed request objects are not supported by this authorization endpoint."
+msgstr ""
+
+#: lib/hive_web/controllers/oauth/authorize_html.ex:189
+#, elixir-autogen, elixir-format
+msgid "Read captured error issues"
 msgstr ""

@@ -74,6 +74,44 @@ struct HiveDrop: Decodable, Identifiable, Hashable {
     }
 }
 
+struct HiveErrorIssue: Decodable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let culprit: String?
+    let level: String
+    let status: String
+    let platform: String?
+    let eventCount: Int
+    let firstSeen: String?
+    let lastSeen: String?
+    let projectId: String?
+    let projectName: String?
+    let fingerprint: String?
+    let dashboardURL: String?
+    let environment: String?
+    let release: String?
+    let exceptionType: String?
+    let exceptionValue: String?
+    let topFrameFunction: String?
+    let topFrameFilename: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, culprit, level, status, platform
+        case eventCount = "event_count"
+        case firstSeen = "first_seen"
+        case lastSeen = "last_seen"
+        case projectId = "project_id"
+        case projectName = "project_name"
+        case fingerprint
+        case dashboardURL = "dashboard_url"
+        case environment, release
+        case exceptionType = "exception_type"
+        case exceptionValue = "exception_value"
+        case topFrameFunction = "top_frame_function"
+        case topFrameFilename = "top_frame_filename"
+    }
+}
+
 struct DropDigest: Decodable, Identifiable, Hashable {
     let id: String
     let weekStart: String

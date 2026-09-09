@@ -1,6 +1,7 @@
 defmodule HiveWeb.Api.V1.Presenter do
   @moduledoc false
 
+  alias Hive.Errors.Issue, as: ErrorIssue
   alias Hive.Forage.Item
   alias Hive.Drops.Drop
   alias Hive.Drops.WeeklyDigest
@@ -75,6 +76,48 @@ defmodule HiveWeb.Api.V1.Presenter do
       published_at: digest.published_at
     }
   end
+
+  def error_issue(%ErrorIssue{} = issue, opts \\ []) do
+    latest_event = Keyword.get(opts, :latest_event)
+    dashboard_url = Keyword.get(opts, :dashboard_url)
+
+    %{
+      id: issue.id,
+      title: issue.title,
+      culprit: issue.culprit,
+      level: to_string(issue.level),
+      status: to_string(issue.status),
+      platform: issue.platform,
+      event_count: issue.event_count,
+      first_seen: iso8601(issue.first_seen),
+      last_seen: iso8601(issue.last_seen),
+      project_id: issue.project_id,
+      project_name: project_name(issue),
+      fingerprint: issue.fingerprint,
+      dashboard_url: dashboard_url,
+      environment: event_field(latest_event, :environment),
+      release: event_field(latest_event, :release),
+      exception_type: event_field(latest_event, :exception_type),
+      exception_value: event_field(latest_event, :exception_value),
+      top_frame_function: event_field(latest_event, :top_frame_function),
+      top_frame_filename: event_field(latest_event, :top_frame_filename)
+    }
+  end
+
+  defp event_field(nil, _key), do: nil
+
+  defp event_field(event, key) when is_map(event) do
+    case Map.get(event, key) do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  defp project_name(%ErrorIssue{project: %{name: name}}), do: name
+  defp project_name(_), do: nil
+
+  defp iso8601(nil), do: nil
+  defp iso8601(%DateTime{} = value), do: DateTime.to_iso8601(value)
 
   def pagination(%{current_page: current_page, total_entries: total_entries} = meta) do
     %{
