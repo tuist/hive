@@ -1,21 +1,33 @@
 defmodule Hive.Errors.Fingerprint do
   @moduledoc """
-  Groups events into issues. Honors an SDK-supplied `fingerprint`
-  verbatim when present; otherwise computes a deterministic 64-char
-  hex digest from the event's exception type, top in-app frame, and
-  normalized message.
+  Groups events into issues using a deterministic 64-char hex digest.
+  SDK-supplied fingerprints override grouping unless they include a
+  `{{ default }}` token, which expands to the event's exception type,
+  top in-app frame, and normalized message used by default grouping.
   """
 
   alias Hive.Errors.SentryEvent
 
   @spec compute(SentryEvent.t()) :: String.t()
-  def compute(%SentryEvent{fingerprint_override: override}) when is_list(override) do
+  def compute(%SentryEvent{fingerprint_override: override} = event) when is_list(override) do
     override
+    |> Enum.flat_map(fn component ->
+      if Regex.match?(~r/\A\{\{\s*default\s*\}\}\z/, component),
+        do: default_components(event),
+        else: [component]
+    end)
     |> Enum.join("|")
     |> hash()
   end
 
   def compute(%SentryEvent{} = event) do
+    event
+    |> default_components()
+    |> Enum.join("|")
+    |> hash()
+  end
+
+  defp default_components(event) do
     type = event.exception_type || ""
 
     {function, location} =
@@ -27,8 +39,6 @@ defmodule Hive.Errors.Fingerprint do
     message = normalize_message(event.message || event.exception_value || "")
 
     [type, function, location, message]
-    |> Enum.join("|")
-    |> hash()
   end
 
   defp normalize_message(binary) when is_binary(binary) do
