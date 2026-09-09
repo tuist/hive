@@ -86,6 +86,67 @@ defmodule Hive.ErrorsTest do
     end
   end
 
+  describe "ingest_envelope/3" do
+    test "expanded and custom fingerprints agree across event rows and issue observations",
+         %{project: project} do
+      test_pid = self()
+      domain_id = Ecto.UUID.generate()
+
+      stub(Hive.Errors.Event.Buffer, :insert, fn row ->
+        send(test_pid, {:ch_row, row})
+        {:ok, row}
+      end)
+
+      stub(Hive.Errors.IssueCoalescer, :observe, fn _server,
+                                                    ^project,
+                                                    fingerprint,
+                                                    event,
+                                                    domain_id: ^domain_id ->
+        send(test_pid, {:observation, fingerprint, event})
+        :ok
+      end)
+
+      for {fingerprint, issue_count} <- [
+            {["BuildWorker", "{{ default }}"], 2},
+            {["BuildWorker"], 1}
+          ] do
+        rows =
+          Enum.map(
+            [
+              {"MatchError", "production"},
+              {"Postgrex.Error", "canary"},
+              {"MatchError", "canary"}
+            ],
+            fn {type, environment} ->
+              payload = %{
+                "fingerprint" => fingerprint,
+                "environment" => environment,
+                "exception" => %{"values" => [%{"type" => type}]}
+              }
+
+              body = Enum.join(["{}", ~s({"type":"event"}), Jason.encode!(payload)], "\n")
+              assert :ok = Errors.ingest_envelope(project, body, domain_id: domain_id)
+              assert_received {:ch_row, row}
+              assert_received {:observation, observed_fingerprint, event}
+
+              assert row.fingerprint == observed_fingerprint
+
+              assert row.issue_id ==
+                       Issue.deterministic_id(project.id, domain_id, observed_fingerprint)
+
+              assert row.domain_id == domain_id
+              assert Jason.decode!(row.payload) == payload
+              assert event.fingerprint_override == fingerprint
+              row
+            end
+          )
+
+        assert length(Enum.uniq_by(rows, & &1.issue_id)) == issue_count
+        assert Enum.at(rows, 0).issue_id == Enum.at(rows, 2).issue_id
+      end
+    end
+  end
+
   describe "list_issues/1" do
     test "filters by project and status", %{project: project} do
       {:ok, other} = Projects.create_project(%{"name" => "Other"})

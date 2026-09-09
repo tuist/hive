@@ -97,9 +97,28 @@ Events are grouped into issues by a deterministic fingerprint derived
 from the exception type, the top in-application stack frame, and a
 normalized version of the message. Numeric identifiers in the message
 are collapsed so an error affecting many records does not fragment
-into a separate issue per record. A Software Development Kit that
-supplies an explicit `fingerprint` field overrides this default,
-allowing bespoke grouping when required.
+into a separate issue per record.
+
+A Software Development Kit can supply an explicit `fingerprint` array:
+
+- Without a `{{ default }}` token, the array overrides default grouping.
+  For example, `["build-worker"]` intentionally groups all events with
+  that fingerprint together, even if their exceptions differ.
+- With `{{ default }}` (also accepted as `{{default}}`), Hive incorporates
+  its default exception grouping at that position. For example,
+  `["build-worker", "{{ default }}"]` separates different exceptions
+  within that worker. A token alone behaves like omitting the fingerprint.
+
+Grouping does not separate environments automatically. Include the
+environment as a custom fingerprint component if production and canary
+occurrences of the same error should form separate issues.
+
+Earlier Hive versions treated the default token as literal text, which
+could combine unrelated errors into one issue. Corrected grouping applies
+to newly ingested events; existing issues and historical events are not
+automatically split. Repairing historical groups requires regrouping the
+retained events and reconciling issue counts, metadata, statuses, and
+links. Re-sending old envelopes adds events again and is not a repair.
 
 ## Resolution
 
