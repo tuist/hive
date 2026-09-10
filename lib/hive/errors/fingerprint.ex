@@ -4,6 +4,10 @@ defmodule Hive.Errors.Fingerprint do
   SDK-supplied fingerprints override grouping unless they include a
   `{{ default }}` token, which expands to the event's exception type,
   top in-app frame, and normalized message used by default grouping.
+
+  Log-shaped events carry none of those, so when all of them are blank
+  grouping falls back to the identity the event does carry: its
+  logger, transaction, level, and tracing event name.
   """
 
   alias Hive.Errors.SentryEvent
@@ -28,6 +32,13 @@ defmodule Hive.Errors.Fingerprint do
   end
 
   defp default_components(event) do
+    case exception_components(event) do
+      ["", "", "", ""] -> identity_components(event)
+      components -> components
+    end
+  end
+
+  defp exception_components(event) do
     type = event.exception_type || ""
 
     {function, location} =
@@ -39,6 +50,13 @@ defmodule Hive.Errors.Fingerprint do
     message = normalize_message(event.message || event.exception_value || "")
 
     [type, function, location, message]
+  end
+
+  # Without these, every structureless event in a project hashes the
+  # same three separators and collapses into one catch-all issue.
+  defp identity_components(event) do
+    [event.logger, event.transaction, event.level, event.tracing_name]
+    |> Enum.map(&(&1 || ""))
   end
 
   defp normalize_message(binary) when is_binary(binary) do

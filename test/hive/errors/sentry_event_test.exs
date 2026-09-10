@@ -115,6 +115,22 @@ defmodule Hive.Errors.SentryEventTest do
       assert event.fingerprint_override == ["custom", "group"]
     end
 
+    test "extracts the Rust SDK tracing event name from contexts" do
+      event =
+        SentryEvent.parse(%{
+          "contexts" => %{
+            "Rust Tracing Fields" => %{"name" => "BatchSpanProcessor.ExportError"}
+          }
+        })
+
+      assert event.tracing_name == "BatchSpanProcessor.ExportError"
+
+      assert SentryEvent.parse(%{"contexts" => %{"os" => %{"name" => "Linux"}}}).tracing_name ==
+               nil
+
+      assert SentryEvent.parse(%{}).tracing_name == nil
+    end
+
     test "converts non-binary tag values to strings" do
       event = SentryEvent.parse(%{"tags" => %{"attempt" => 3, "ok" => true}})
       assert event.tags == %{"attempt" => "3", "ok" => "true"}
@@ -134,6 +150,29 @@ defmodule Hive.Errors.SentryEventTest do
     test "falls back to the message" do
       event = SentryEvent.parse(%{"message" => "connection refused"})
       assert SentryEvent.title(event) == "connection refused"
+    end
+
+    test "falls back to the tracing event name when there is no message" do
+      event =
+        SentryEvent.parse(%{
+          "message" => "",
+          "logger" => "opentelemetry_sdk",
+          "contexts" => %{
+            "Rust Tracing Fields" => %{"name" => "BatchSpanProcessor.ExportError"}
+          }
+        })
+
+      assert SentryEvent.title(event) == "BatchSpanProcessor.ExportError"
+    end
+
+    test "falls back to the logger when there is no tracing event name" do
+      event = SentryEvent.parse(%{"message" => "", "logger" => "opentelemetry_sdk"})
+      assert SentryEvent.title(event) == "opentelemetry_sdk"
+    end
+
+    test "falls back to the event id when the event carries no identity" do
+      event = SentryEvent.parse(%{"event_id" => "abcd1234abcd1234abcd1234abcd1234"})
+      assert SentryEvent.title(event) == "Event abcd1234abcd1234abcd1234abcd1234"
     end
   end
 

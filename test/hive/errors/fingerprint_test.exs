@@ -168,6 +168,52 @@ defmodule Hive.Errors.FingerprintTest do
       end
     end
 
+    test "structureless events group by logger, transaction, level, and tracing name" do
+      base = log_event()
+
+      variants = [
+        log_event(%{"logger" => "other_sdk"}),
+        log_event(%{"transaction" => "export_spans"}),
+        log_event(%{"level" => "warning"}),
+        log_event(%{"contexts" => %{"Rust Tracing Fields" => %{"name" => "Other.Error"}}})
+      ]
+
+      fingerprints = Enum.map([base | variants], &Fingerprint.compute/1)
+      assert length(Enum.uniq(fingerprints)) == length(fingerprints)
+    end
+
+    test "structureless events no longer collapse into the empty-component bucket" do
+      empty_components = Base.encode16(:crypto.hash(:sha256, "|||"), case: :lower)
+
+      refute Fingerprint.compute(log_event()) == empty_components
+      refute Fingerprint.compute(SentryEvent.parse(%{})) == empty_components
+    end
+
+    test "per-event noise in a structureless event does not split groups" do
+      a = log_event(%{"server_name" => "kura-a", "release" => "kura@0.41.1"})
+      b = log_event(%{"server_name" => "kura-b", "release" => "kura@0.42.0"})
+
+      assert Fingerprint.compute(a) == Fingerprint.compute(b)
+    end
+
+    test "the identity fallback only applies when every exception component is blank" do
+      typed = %{log_event() | exception_type: "ExportError"}
+
+      refute Fingerprint.compute(typed) == Fingerprint.compute(log_event())
+
+      assert Fingerprint.compute(typed) ==
+               Fingerprint.compute(%{typed | logger: "unused", tracing_name: "unused"})
+    end
+
+    test "a default token expands to the identity fallback for structureless events" do
+      event = log_event()
+      with_token = %{event | fingerprint_override: ["{{ default }}"]}
+      other = %{with_token | tracing_name: "Other.Error"}
+
+      assert Fingerprint.compute(with_token) == Fingerprint.compute(event)
+      refute Fingerprint.compute(with_token) == Fingerprint.compute(other)
+    end
+
     test "returns a 64-character lowercase hex digest" do
       digest = Fingerprint.compute(SentryEvent.parse(%{}))
       assert String.length(digest) == 64
@@ -190,5 +236,21 @@ defmodule Hive.Errors.FingerprintTest do
       )
 
     SentryEvent.parse(%{"exception" => %{"values" => [exception]}})
+  end
+
+  # Mirrors the shape the Sentry Rust SDK sends for `tracing` events:
+  # no exception, no frames, and an empty message.
+  defp log_event(attrs \\ %{}) do
+    %{
+      "logger" => "opentelemetry_sdk",
+      "level" => "error",
+      "platform" => "native",
+      "message" => "",
+      "contexts" => %{
+        "Rust Tracing Fields" => %{"name" => "BatchSpanProcessor.ExportError"}
+      }
+    }
+    |> Map.merge(attrs)
+    |> SentryEvent.parse()
   end
 end

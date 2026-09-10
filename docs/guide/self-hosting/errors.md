@@ -99,6 +99,14 @@ normalized version of the message. Numeric identifiers in the message
 are collapsed so an error affecting many records does not fragment
 into a separate issue per record.
 
+Events that carry no exception, no stack frames, and no message — the
+log-shaped events some Software Development Kits emit when they forward
+tracing or logging output — have none of that identity to group on.
+These are grouped by their logger, transaction, and level instead, plus
+the name of the tracing event for the Rust Software Development Kit.
+Their issue title falls back the same way, to the tracing event name or
+the logger, rather than to the event identifier.
+
 A Software Development Kit can supply an explicit `fingerprint` array:
 
 - Without a `{{ default }}` token, the array overrides default grouping.
@@ -113,12 +121,14 @@ Grouping does not separate environments automatically. Include the
 environment as a custom fingerprint component if production and canary
 occurrences of the same error should form separate issues.
 
-Earlier Hive versions treated the default token as literal text, which
-could combine unrelated errors into one issue. Corrected grouping applies
-to newly ingested events; existing issues and historical events are not
-automatically split. Repairing historical groups requires regrouping the
-retained events and reconciling issue counts, metadata, statuses, and
-links. Re-sending old envelopes adds events again and is not a repair.
+Earlier Hive versions treated the default token as literal text, and
+grouped every log-shaped event in a project together regardless of what
+it reported. Either could combine unrelated errors into one issue.
+Corrected grouping applies to newly ingested events; existing issues and
+historical events are not automatically split. Repairing historical
+groups requires regrouping the retained events and reconciling issue
+counts, metadata, statuses, and links. Re-sending old envelopes adds
+events again and is not a repair.
 
 ## Resolution
 
