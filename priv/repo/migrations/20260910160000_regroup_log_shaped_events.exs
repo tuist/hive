@@ -83,6 +83,18 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
   )
 
   def up do
+    # `Hive.IngestRepo` is only configured when ClickHouse is enabled
+    # (config/runtime.exs sets it inside that branch), so starting it
+    # unconditionally would abort the migration — and the deploy — on
+    # every instance running without ClickHouse.
+    if Application.get_env(:hive, :clickhouse_enabled, false) do
+      refile_and_report()
+    end
+
+    :ok
+  end
+
+  defp refile_and_report do
     {:ok, _pid} = ensure_ingest_repo()
     Logger.info("errors: refiling log-shaped events onto their identity")
 
@@ -92,8 +104,6 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
     # recording the migration as applied.
     report = run(DateTime.utc_now())
     Logger.info("errors: refiled #{inspect(report)}")
-
-    :ok
   end
 
   # Irreversible: the superseded fingerprint described a grouping that
@@ -281,10 +291,17 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
 
   defp message(payload) do
     cond do
-      is_binary(payload["message"]) and payload["message"] != "" -> payload["message"]
-      is_map(payload["message"]) -> payload["message"]["formatted"] || payload["message"]["message"]
-      is_map(payload["logentry"]) -> payload["logentry"]["formatted"] || payload["logentry"]["message"]
-      true -> nil
+      is_binary(payload["message"]) and payload["message"] != "" ->
+        payload["message"]
+
+      is_map(payload["message"]) ->
+        payload["message"]["formatted"] || payload["message"]["message"]
+
+      is_map(payload["logentry"]) ->
+        payload["logentry"]["formatted"] || payload["logentry"]["message"]
+
+      true ->
+        nil
     end
   end
 
@@ -300,8 +317,15 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
   # Components reach the hash as strings, the way the ingest path
   # normalized them; reading decoded JSON as-is would hand a numeric
   # component to `Regex.match?/2`, which raises.
-  defp fingerprint_override(fingerprint) when is_list(fingerprint),
-    do: Enum.map(fingerprint, &to_string/1)
+  # An empty array collapses to nil the way the live parser does, so
+  # such an event is compared against the default-path hash rather
+  # than the hash of an empty string, and is refiled like any other.
+  defp fingerprint_override(fingerprint) when is_list(fingerprint) do
+    case Enum.map(fingerprint, &to_string/1) do
+      [] -> nil
+      list -> list
+    end
+  end
 
   defp fingerprint_override(_), do: nil
 
@@ -473,10 +497,17 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
   # Excludes the destinations as well as the retained fingerprints: a
   # fingerprint events left can also be one others arrived at, and
   # deleting it would drop a row written moments earlier.
+  #
+  # `retained` alone is not enough here. The scan only reads
+  # log-shaped rows, so an event that fails that filter never reaches
+  # `classify/2` and never marks its fingerprint retained — asking
+  # ClickHouse what is actually left is the only way to know the issue
+  # describes nothing.
   defp delete_emptied_issues(state) do
     state.vacated
     |> MapSet.difference(state.retained)
     |> MapSet.difference(MapSet.new(Map.keys(state.groups)))
+    |> Enum.filter(&empty_fingerprint?/1)
     |> Enum.reduce(0, fn {project_id, domain_id, fingerprint}, acc ->
       {count, _} =
         "errors_issues"
@@ -489,6 +520,20 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
 
       acc + count
     end)
+  end
+
+  defp empty_fingerprint?({project_id, _domain_id, fingerprint}) do
+    %{rows: [[count]]} =
+      Hive.IngestRepo.query!(
+        """
+        SELECT count() FROM errors_events
+        WHERE fingerprint = {fingerprint:FixedString(64)}
+          AND project_id = {project_id:String}
+        """,
+        %{"fingerprint" => fingerprint, "project_id" => project_id}
+      )
+
+    count == 0
   end
 
   defp domain_scope(query, nil), do: where(query, [i], is_nil(i.domain_id))
@@ -532,7 +577,9 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEvents do
     <<time_low::32, time_mid::16, _::4, time_hi::12, _::2, clock_hi::14, node::48, _rest::binary>> =
       :crypto.hash(:sha, @uuid_namespace <> name)
 
-    Ecto.UUID.cast!(<<time_low::32, time_mid::16, 5::4, time_hi::12, 2::2, clock_hi::14, node::48>>)
+    Ecto.UUID.cast!(
+      <<time_low::32, time_mid::16, 5::4, time_hi::12, 2::2, clock_hi::14, node::48>>
+    )
   end
 
   # ClickHouse hands `DateTime64` back as a `NaiveDateTime`; the

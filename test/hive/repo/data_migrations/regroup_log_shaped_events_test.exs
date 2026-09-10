@@ -135,6 +135,18 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEventsTest do
       refute row.affected?
     end
 
+    # The live parser collapses an empty array to nil, so such an
+    # event grouped through the default path and is refilable like any
+    # other. Treating [] as a literal array would strand it.
+    test "refiles an event sent with an empty fingerprint array", %{project: project} do
+      payload = otel_payload() |> Map.put("fingerprint", [])
+
+      row = @migration.decorate(row(project, payload, logger: "opentelemetry_sdk"))
+
+      assert row.affected?
+      assert row.corrected == Fingerprint.compute(parsed(payload, logger: "opentelemetry_sdk"))
+    end
+
     # A stored payload is always valid JSON — ingest decoded it before
     # writing the row — but the decision must not raise if one is not,
     # and it should land where live grouping would put an event whose
@@ -151,6 +163,19 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEventsTest do
         })
 
       assert row.corrected == live
+    end
+  end
+
+  describe "up/0" do
+    # `Hive.IngestRepo` is only configured when ClickHouse is enabled,
+    # so touching it unconditionally aborts the migration — and the
+    # deploy — on instances running without it. The test environment
+    # is one of them.
+    test "does not touch ClickHouse when it is disabled" do
+      refute Application.get_env(:hive, :clickhouse_enabled, false)
+      reject(&Hive.IngestRepo.query!/2)
+
+      assert @migration.up() == :ok
     end
   end
 
@@ -239,6 +264,26 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEventsTest do
       assert sql =~ "top_frame_filename = ''"
     end
 
+    # The scan only reads log-shaped rows, so a fingerprint can still
+    # hold events it never saw. Deleting its issue would leave those
+    # events pointing at a row that no longer exists.
+    test "keeps an issue while ClickHouse still holds events at its fingerprint", %{
+      project: project
+    } do
+      payload = otel_payload()
+      issue = seed_issue(project, @catch_all, "Event c59fc1e9", 3)
+
+      stub_clickhouse([[row(project, payload, logger: "opentelemetry_sdk")]],
+        remaining_at_origin: 1
+      )
+
+      report = @migration.run(DateTime.utc_now())
+
+      assert report.moved == 1
+      assert report.issues_deleted == 0
+      assert Repo.get!(Issue, issue.id)
+    end
+
     test "does nothing before the events table exists" do
       stub(Hive.IngestRepo, :query!, fn
         "EXISTS TABLE errors_events", _ -> %{rows: [[0]]}
@@ -256,14 +301,18 @@ defmodule Hive.Repo.DataMigrations.RegroupLogShapedEventsTest do
 
   ## Helpers
 
-  defp stub_clickhouse(batches) do
+  defp stub_clickhouse(batches, opts \\ []) do
     agent = start_supervised!({Agent, fn -> batches end})
+    remaining = Keyword.get(opts, :remaining_at_origin, 0)
     test_pid = self()
 
     stub(Hive.IngestRepo, :query!, fn sql, params ->
       cond do
         String.starts_with?(sql, "EXISTS TABLE") ->
           %{rows: [[1]]}
+
+        String.starts_with?(sql, "SELECT count()") ->
+          %{rows: [[remaining]]}
 
         String.starts_with?(sql, "SELECT") ->
           send(test_pid, {:read, params})
