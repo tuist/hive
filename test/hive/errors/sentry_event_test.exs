@@ -131,8 +131,10 @@ defmodule Hive.Errors.SentryEventTest do
     test "falls back to the ingest time for unparseable timestamps" do
       before = DateTime.utc_now()
       event = SentryEvent.parse(%{"timestamp" => "not a timestamp"})
+      later = DateTime.utc_now()
 
       assert DateTime.compare(event.timestamp, before) != :lt
+      assert DateTime.compare(event.timestamp, later) != :gt
     end
 
     test "honors explicit fingerprint override" do
