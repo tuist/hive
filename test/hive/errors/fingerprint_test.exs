@@ -196,6 +196,14 @@ defmodule Hive.Errors.FingerprintTest do
       assert Fingerprint.compute(a) == Fingerprint.compute(b)
     end
 
+    test "record identifiers in a structureless transaction do not split groups" do
+      a = log_event(%{"transaction" => "GET /users/12345"})
+      b = log_event(%{"transaction" => "GET /users/99999"})
+
+      assert Fingerprint.compute(a) == Fingerprint.compute(b)
+      refute Fingerprint.compute(a) == Fingerprint.compute(log_event())
+    end
+
     test "the identity fallback only applies when every exception component is blank" do
       typed = %{log_event() | exception_type: "ExportError"}
 
