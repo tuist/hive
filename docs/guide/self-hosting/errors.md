@@ -124,11 +124,18 @@ occurrences of the same error should form separate issues.
 Earlier Hive versions treated the default token as literal text, and
 grouped every log-shaped event in a project together regardless of what
 it reported. Either could combine unrelated errors into one issue.
-Corrected grouping applies to newly ingested events; existing issues and
-historical events are not automatically split. Repairing historical
-groups requires regrouping the retained events and reconciling issue
-counts, metadata, statuses, and links. Re-sending old envelopes adds
-events again and is not a repair.
+
+Upgrading past those versions refiles the events affected by the first
+of them, once: the errors hidden inside an issue that combined them
+reappear as separate issues carrying their own first-seen and last-seen
+times, and the combined issue is removed. Having resolved or ignored a
+combined issue does not carry over to the issues that replace it.
+
+Log-shaped events are not refiled, because the events themselves record
+nothing that distinguishes them retroactively — corrected grouping
+applies to newly ingested ones, and any issue that already collected
+them keeps what it collected. Re-sending old envelopes adds events again
+and is not a repair.
 
 ## Resolution
 
