@@ -251,11 +251,19 @@ defmodule Hive.Errors.SentryEvent do
   defp parse_timestamp(value) when is_binary(value) do
     case DateTime.from_iso8601(value) do
       {:ok, dt, _offset} -> dt
+      {:error, :missing_offset} -> parse_naive_timestamp(value)
       _ -> DateTime.utc_now()
     end
   end
 
   defp parse_timestamp(_), do: DateTime.utc_now()
+
+  defp parse_naive_timestamp(value) do
+    case NaiveDateTime.from_iso8601(value) do
+      {:ok, naive} -> DateTime.from_naive!(naive, "Etc/UTC")
+      _ -> DateTime.utc_now()
+    end
+  end
 
   defp string(nil, default), do: default
   defp string("", default), do: default
