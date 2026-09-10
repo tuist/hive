@@ -110,6 +110,33 @@ defmodule Hive.Errors.SentryEventTest do
       assert %DateTime{} = unix.timestamp
     end
 
+    test "interprets naive ISO 8601 timestamps as UTC" do
+      event = SentryEvent.parse(%{"timestamp" => "2026-09-09T10:03:33.889513"})
+
+      assert event.timestamp == ~U[2026-09-09 10:03:33.889513Z]
+    end
+
+    test "preserves the instant of offset-bearing timestamps" do
+      event = SentryEvent.parse(%{"timestamp" => "2026-09-09T12:03:33.889513+02:00"})
+
+      assert event.timestamp == ~U[2026-09-09 10:03:33.889513Z]
+    end
+
+    test "parses unix timestamps sent as numbers" do
+      event = SentryEvent.parse(%{"timestamp" => 1_788_000_213.889513})
+
+      assert event.timestamp == DateTime.from_unix!(1_788_000_213_889_513, :microsecond)
+    end
+
+    test "falls back to the ingest time for unparseable timestamps" do
+      before = DateTime.utc_now()
+      event = SentryEvent.parse(%{"timestamp" => "not a timestamp"})
+      later = DateTime.utc_now()
+
+      assert DateTime.compare(event.timestamp, before) != :lt
+      assert DateTime.compare(event.timestamp, later) != :gt
+    end
+
     test "honors explicit fingerprint override" do
       event = SentryEvent.parse(%{"fingerprint" => ["custom", "group"]})
       assert event.fingerprint_override == ["custom", "group"]
