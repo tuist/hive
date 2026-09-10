@@ -20,6 +20,7 @@ defmodule Hive.Errors.SentryEvent do
     :server_name,
     :transaction,
     :logger,
+    :tracing_name,
     :exception_type,
     :exception_value,
     :top_frame,
@@ -55,6 +56,7 @@ defmodule Hive.Errors.SentryEvent do
       server_name: string(payload["server_name"]),
       transaction: string(payload["transaction"]),
       logger: string(payload["logger"]),
+      tracing_name: parse_tracing_name(payload),
       exception_type: exception_type,
       exception_value: exception_value,
       top_frame: top_frame,
@@ -71,7 +73,8 @@ defmodule Hive.Errors.SentryEvent do
 
   @doc """
   A short, human-readable title for the issue. Falls back through
-  message, formatted logentry, and event_id.
+  message, formatted logentry, tracing event name, logger, and
+  event_id.
   """
   def title(%__MODULE__{exception_type: type, exception_value: value})
       when is_binary(type) and byte_size(type) > 0 do
@@ -83,6 +86,12 @@ defmodule Hive.Errors.SentryEvent do
 
   def title(%__MODULE__{message: message}) when is_binary(message) and byte_size(message) > 0,
     do: message
+
+  def title(%__MODULE__{tracing_name: name}) when is_binary(name) and byte_size(name) > 0,
+    do: name
+
+  def title(%__MODULE__{logger: logger}) when is_binary(logger) and byte_size(logger) > 0,
+    do: logger
 
   def title(%__MODULE__{event_id: event_id}), do: "Event #{event_id}"
 
@@ -163,6 +172,16 @@ defmodule Hive.Errors.SentryEvent do
 
       true ->
         nil
+    end
+  end
+
+  # The Rust SDK's `tracing` integration emits events with no
+  # exception, no frames, and an empty message; the event's name is
+  # carried in this context instead.
+  defp parse_tracing_name(payload) do
+    case payload["contexts"] do
+      %{"Rust Tracing Fields" => %{"name" => name}} -> string(name)
+      _ -> nil
     end
   end
 

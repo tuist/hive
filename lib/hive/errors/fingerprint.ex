@@ -4,6 +4,10 @@ defmodule Hive.Errors.Fingerprint do
   SDK-supplied fingerprints override grouping unless they include a
   `{{ default }}` token, which expands to the event's exception type,
   top in-app frame, and normalized message used by default grouping.
+
+  Log-shaped events carry none of those, so when all of them are blank
+  grouping falls back to the identity the event does carry: its
+  logger, normalized transaction, level, and tracing event name.
   """
 
   alias Hive.Errors.SentryEvent
@@ -28,6 +32,13 @@ defmodule Hive.Errors.Fingerprint do
   end
 
   defp default_components(event) do
+    case exception_components(event) do
+      ["", "", "", ""] -> identity_components(event)
+      components -> components
+    end
+  end
+
+  defp exception_components(event) do
     type = event.exception_type || ""
 
     {function, location} =
@@ -36,12 +47,27 @@ defmodule Hive.Errors.Fingerprint do
         frame -> {frame["function"] || "", frame["module"] || frame["filename"] || ""}
       end
 
-    message = normalize_message(event.message || event.exception_value || "")
+    message = normalize_text(event.message || event.exception_value || "")
 
     [type, function, location, message]
   end
 
-  defp normalize_message(binary) when is_binary(binary) do
+  # Without these, every structureless event in a project hashes the
+  # same three separators and collapses into one catch-all issue.
+  # `transaction` is the one free-text component here, so it gets the
+  # same normalization the message does: SDKs that name transactions
+  # per record ("GET /users/12345") would otherwise fragment into an
+  # issue per record.
+  defp identity_components(event) do
+    [
+      event.logger || "",
+      normalize_text(event.transaction || ""),
+      event.level || "",
+      event.tracing_name || ""
+    ]
+  end
+
+  defp normalize_text(binary) when is_binary(binary) do
     binary
     |> String.replace(~r/0x[0-9a-fA-F]+/, "0x*")
     |> String.replace(~r/\d+/, "N")
@@ -50,7 +76,7 @@ defmodule Hive.Errors.Fingerprint do
     |> String.trim()
   end
 
-  defp normalize_message(_), do: ""
+  defp normalize_text(_), do: ""
 
   defp hash(binary) do
     :sha256
