@@ -190,7 +190,7 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
       Hive.IngestRepo.query!(
         """
         SELECT toString(event_id), project_id, domain_id, fingerprint,
-               timestamp, level, platform, payload
+               timestamp, level, platform, logger, transaction, payload
         FROM errors_events
         WHERE timestamp <= {cutoff:DateTime64(6)}#{keyset}
         ORDER BY timestamp, event_id
@@ -217,8 +217,27 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
 
   Takes the row as `read_batch/3` selects it. Public for tests.
   """
-  def decorate([event_id, project_id, domain_id, fingerprint, ts, level, platform, payload]) do
-    event = payload |> decode() |> parse()
+  def decorate([
+        event_id,
+        project_id,
+        domain_id,
+        fingerprint,
+        ts,
+        level,
+        platform,
+        logger,
+        transaction,
+        payload
+      ]) do
+    # `logger`, `transaction` and `level` are read from their columns
+    # rather than the payload: the ingest path denormalized them there
+    # with this same parser, so they already carry its normalization.
+    event =
+      payload
+      |> decode()
+      |> parse()
+      |> Map.merge(%{logger: logger, transaction: transaction, level: level})
+
     override = event.fingerprint
 
     # The row is only touched when hashing its fingerprint array as
@@ -256,16 +275,35 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   defp default_token?(component), do: Regex.match?(@default_token, component)
 
   defp default_components(event) do
+    case exception_components(event) do
+      ["", "", "", ""] -> identity_components(event)
+      components -> components
+    end
+  end
+
+  defp exception_components(event) do
     {function, location} =
       case event.top_frame do
         nil -> {"", ""}
         frame -> {frame["function"] || "", frame["module"] || frame["filename"] || ""}
       end
 
-    [event.type || "", function, location, normalize_message(event.message || event.value || "")]
+    [event.type || "", function, location, normalize_text(event.message || event.value || "")]
   end
 
-  defp normalize_message(binary) when is_binary(binary) do
+  # Log-shaped events carry none of the above, so grouping falls back
+  # to the identity they do carry. Without it they all hash the same
+  # three separators and collapse into one catch-all issue.
+  defp identity_components(event) do
+    [
+      event.logger || "",
+      normalize_text(event.transaction || ""),
+      event.level || "",
+      event.tracing_name || ""
+    ]
+  end
+
+  defp normalize_text(binary) when is_binary(binary) do
     binary
     |> String.replace(~r/0x[0-9a-fA-F]+/, "0x*")
     |> String.replace(~r/\d+/, "N")
@@ -274,7 +312,7 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
     |> String.trim()
   end
 
-  defp normalize_message(_), do: ""
+  defp normalize_text(_), do: ""
 
   defp hash(binary), do: :sha256 |> :crypto.hash(binary) |> Base.encode16(case: :lower)
 
@@ -287,8 +325,18 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
       value: value,
       top_frame: top_frame(frames),
       message: message(payload),
+      tracing_name: tracing_name(payload),
       fingerprint: fingerprint_override(payload["fingerprint"])
     }
+  end
+
+  # The Rust SDK's tracing integration emits events with no exception,
+  # no frames and an empty message; the event's name lives here.
+  defp tracing_name(payload) do
+    case payload["contexts"] do
+      %{"Rust Tracing Fields" => %{"name" => name}} -> presence(name)
+      _ -> nil
+    end
   end
 
   # Components reach the hash as strings, the way the ingest path
@@ -355,13 +403,17 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   defp title(%{message: message}, _event_id) when is_binary(message) and message != "",
     do: message
 
+  defp title(%{tracing_name: name}, _event_id) when is_binary(name) and name != "", do: name
+
+  defp title(%{logger: logger}, _event_id) when is_binary(logger) and logger != "", do: logger
+
   # `errors_issues.title` is NOT NULL, and the live pipeline falls back
   # to the event id in its 32-character form.
   defp title(_event, event_id), do: "Event #{String.replace(event_id, "-", "")}"
 
-  defp culprit(%{top_frame: nil}), do: nil
+  defp culprit(%{top_frame: nil, transaction: transaction}), do: presence(transaction)
 
-  defp culprit(%{top_frame: frame}) do
+  defp culprit(%{top_frame: frame, transaction: transaction}) do
     location =
       case {frame["filename"] || frame["abs_path"], frame["lineno"]} do
         {name, line} when is_binary(name) and not is_nil(line) -> "#{name}:#{line}"
@@ -370,7 +422,7 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
       end
 
     case Enum.filter([frame["function"] || frame["module"], location], &presence/1) do
-      [] -> nil
+      [] -> presence(transaction)
       parts -> Enum.join(parts, " at ")
     end
   end

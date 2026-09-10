@@ -53,6 +53,67 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
       end
     end
 
+    # These carry no exception, no frames and an empty message, so
+    # grouping falls back to the identity they do carry. Getting this
+    # wrong would refile them into the catch-all issue that the
+    # fallback exists to eliminate.
+    test "derives the fingerprint live grouping gives a log-shaped event", %{project: project} do
+      payload = %{
+        "fingerprint" => ["{{ default }}"],
+        "platform" => "elixir",
+        "logger" => "my_app.worker",
+        "level" => "error",
+        "transaction" => "process/1",
+        "message" => ""
+      }
+
+      row =
+        @migration.decorate(
+          row(project, payload,
+            fingerprint: @stale,
+            logger: "my_app.worker",
+            transaction: "process/1"
+          )
+        )
+
+      assert row.affected?
+      assert row.corrected == Fingerprint.compute(SentryEvent.parse(payload))
+      # Not the all-blank catch-all hash.
+      refute row.corrected == hash("|||")
+    end
+
+    test "derives the title and culprit live gives a log-shaped event", %{project: project} do
+      payload = %{
+        "fingerprint" => ["{{ default }}"],
+        "platform" => "native",
+        "logger" => "opentelemetry_sdk",
+        "level" => "error",
+        "transaction" => "export/1",
+        "message" => "",
+        "contexts" => %{"Rust Tracing Fields" => %{"name" => "BatchSpanProcessor.ExportError"}}
+      }
+
+      parsed = %{
+        SentryEvent.parse(payload)
+        | logger: "opentelemetry_sdk",
+          transaction: "export/1"
+      }
+
+      row =
+        @migration.decorate(
+          row(project, payload,
+            fingerprint: @stale,
+            logger: "opentelemetry_sdk",
+            transaction: "export/1"
+          )
+        )
+
+      assert row.title == SentryEvent.title(parsed)
+      assert row.title == "BatchSpanProcessor.ExportError"
+      assert row.culprit == SentryEvent.culprit(parsed)
+      assert row.culprit == "export/1"
+    end
+
     test "derives the title and culprit the live code would", %{project: project} do
       payload = exception_payload("RuntimeError", "kaboom", "boom/0", "lib/x.ex")
       parsed = SentryEvent.parse(payload)
@@ -410,6 +471,8 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
       Keyword.get(opts, :timestamp, ~N[2026-09-04 22:03:34.335295]),
       Keyword.get(opts, :level, "error"),
       Keyword.get(opts, :platform, "elixir"),
+      Keyword.get(opts, :logger, ""),
+      Keyword.get(opts, :transaction, ""),
       Jason.encode!(payload)
     ]
   end
@@ -423,6 +486,8 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
       ~N[2026-09-04 22:03:34.335295],
       "error",
       "elixir",
+      "",
+      "",
       payload
     ]
   end
