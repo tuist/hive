@@ -67,6 +67,13 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   # runs migrations from an init container on every pod, so above one
   # replica two of them start this at the same time, and without the
   # lock both would copy the same events.
+  #
+  # That lock is also why this lives here rather than in
+  # `priv/ingest_repo/migrations`, where migration order would
+  # guarantee the events table exists and make the check in `run/2`
+  # unnecessary. ClickHouse migrations take no lock at all —
+  # `Ecto.Adapters.ClickHouse.lock_for_migrations/3` just calls the
+  # function — so the concurrent init containers would race.
   @disable_ddl_transaction true
 
   @batch_size 500
@@ -128,6 +135,10 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   # events table does not exist yet when this runs. There is nothing
   # stored to refile in that case — but querying it regardless aborts
   # the migration, and with it the deploy.
+  #
+  # The Postgres side needs no such check: `errors_issues` is created
+  # by an earlier migration of this same repo, so ordering already
+  # guarantees it. Only the cross-repo table can be missing.
   defp events_table?() do
     %{rows: [[exists]]} = Hive.IngestRepo.query!("EXISTS TABLE errors_events", %{})
     exists == 1
