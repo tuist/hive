@@ -121,9 +121,43 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
       refute @migration.decorate(row(project, payload, fingerprint: correct)).affected?
     end
 
+    # The live ingest path stores these fine because it runs the array
+    # through `to_string/1` before matching, so the migration has to
+    # too or it raises on the first numeric component it meets.
+    test "handles a non-string component in the fingerprint array", %{project: project} do
+      payload =
+        "RuntimeError"
+        |> exception_payload("kaboom", "boom/0", "lib/x.ex")
+        |> Map.put("fingerprint", [12_345, "{{ default }}"])
+
+      row = @migration.decorate(row(project, payload, fingerprint: hash("12345|{{ default }}")))
+
+      assert row.affected?
+      assert row.corrected == Fingerprint.compute(SentryEvent.parse(payload))
+    end
+
     test "ignores an unparseable payload", %{project: project} do
       row = @migration.decorate(row_with_payload(project, "not json", @stale))
       refute row.affected?
+    end
+  end
+
+  # `Hive.Release.migrate` runs the Postgres migrations before the
+  # ClickHouse ones that create the events table, so on a first install
+  # this migration runs against a table that does not exist yet.
+  describe "run/2 before the events table exists" do
+    test "does nothing instead of aborting the migration" do
+      stub(Hive.IngestRepo, :query!, fn
+        "EXISTS TABLE errors_events", _ -> %{rows: [[0]]}
+        sql, _ -> raise "should not have queried: #{sql}"
+      end)
+
+      assert @migration.run(DateTime.utc_now()) == %{
+               scanned: 0,
+               moved: 0,
+               issues_written: 0,
+               issues_deleted: 0
+             }
     end
   end
 
@@ -243,6 +277,44 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
       assert reloaded.culprit == "culprit set by the live pipeline"
     end
 
+    # A fingerprint that events left can also be one that other events
+    # arrived at. Deleting it would drop an issue row written moments
+    # earlier and orphan the events now pointing at it.
+    #
+    # Reaching that state takes a contrived pair, because a
+    # destination is a hash of expanded components and a vacated
+    # fingerprint is a hash of a literal array: they can only coincide
+    # when one event's components are exactly another event's
+    # fingerprint array. An exception whose message is itself the
+    # token is the shortest way there.
+    test "keeps an issue whose fingerprint is also a destination", %{project: project} do
+      arriving = exception_payload("A", "{{ default }}", "f/0", "lib/a.ex")
+      components = ["A", "f/0", "Elixir.Example", "{{ default }}"]
+      destination = hash(Enum.join(components, "|"))
+
+      assert destination == Fingerprint.compute(SentryEvent.parse(arriving))
+
+      departing =
+        "B"
+        |> exception_payload("b", "g/0", "lib/b.ex")
+        |> Map.put("fingerprint", components)
+
+      seed_issue(project, destination, "stale", 1)
+
+      stub_clickhouse([
+        [
+          row(project, arriving, fingerprint: @stale),
+          row(project, departing, fingerprint: destination)
+        ]
+      ])
+
+      report = @migration.run(DateTime.utc_now())
+
+      assert report.moved == 2
+      assert report.issues_deleted == 0
+      assert Repo.get_by!(Issue, project_id: project.id, fingerprint: destination)
+    end
+
     test "pages with a keyset cursor rather than re-reading from the start", %{project: project} do
       first = exception_payload("RuntimeError", "one", "boom/0", "lib/x.ex")
       second = exception_payload("ArgumentError", "two", "bang/0", "lib/y.ex")
@@ -281,19 +353,24 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprintsTest do
     test_pid = self()
 
     stub(Hive.IngestRepo, :query!, fn sql, params ->
-      if String.starts_with?(sql, "SELECT") do
-        send(test_pid, {:read, params})
+      cond do
+        String.starts_with?(sql, "EXISTS TABLE") ->
+          %{rows: [[1]]}
 
-        rows =
-          Agent.get_and_update(agent, fn
-            [] -> {[], []}
-            [head | tail] -> {head, tail}
-          end)
+        String.starts_with?(sql, "SELECT") ->
+          send(test_pid, {:read, params})
 
-        %{rows: rows}
-      else
-        send(test_pid, {:write, sql, params})
-        %{rows: []}
+          rows =
+            Agent.get_and_update(agent, fn
+              [] -> {[], []}
+              [head | tail] -> {head, tail}
+            end)
+
+          %{rows: rows}
+
+        true ->
+          send(test_pid, {:write, sql, params})
+          %{rows: []}
       end
     end)
   end

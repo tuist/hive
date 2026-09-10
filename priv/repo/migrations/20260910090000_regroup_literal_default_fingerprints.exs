@@ -24,6 +24,10 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   `20260904150000_migrate_errors_issue_ids_to_deterministic.exs` copies
   the issue-id derivation for the same reason.
 
+  On a first install this runs before the ClickHouse migrations have
+  created the events table, and simply does nothing — there is no
+  history to repair on an empty instance.
+
   ## What it touches
 
   Only events it can positively identify as victims of the bug: the
@@ -76,6 +80,8 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
 
   @levels ~w(fatal error warning info debug)
 
+  @nothing_to_do %{scanned: 0, moved: 0, issues_written: 0, issues_deleted: 0}
+
   # Every column carried across unchanged by the copy. `issue_id` and
   # `fingerprint`, the two being rewritten, are supplied as literals.
   @carried ~w(
@@ -90,7 +96,13 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
     if Application.get_env(:hive, :clickhouse_enabled, false) do
       {:ok, _pid} = ensure_ingest_repo()
       Logger.info("errors: refiling events grouped under a literal default fingerprint")
-      Logger.info("errors: refiled #{inspect(run(DateTime.utc_now()))}")
+
+      # Bound to its own variable on purpose. `Logger` only evaluates
+      # its message when the level is enabled, so interpolating this
+      # call would skip the repair entirely wherever the level is
+      # above :info — while still recording the migration as applied.
+      report = run(DateTime.utc_now())
+      Logger.info("errors: refiled #{inspect(report)}")
     end
 
     :ok
@@ -108,6 +120,20 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
   Public so the grouping decisions can be exercised by tests.
   """
   def run(cutoff, batch_size \\ @batch_size) do
+    if events_table?(), do: refile(cutoff, batch_size), else: @nothing_to_do
+  end
+
+  # Postgres migrations run before the ClickHouse ones (`ecto_repos` is
+  # ordered `[Hive.Repo, Hive.IngestRepo]`), so on a first install the
+  # events table does not exist yet when this runs. There is nothing
+  # stored to refile in that case — but querying it regardless aborts
+  # the migration, and with it the deploy.
+  defp events_table?() do
+    %{rows: [[exists]]} = Hive.IngestRepo.query!("EXISTS TABLE errors_events", %{})
+    exists == 1
+  end
+
+  defp refile(cutoff, batch_size) do
     state =
       scan(cutoff, batch_size, %{
         scanned: 0,
@@ -250,9 +276,18 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
       value: value,
       top_frame: top_frame(frames),
       message: message(payload),
-      fingerprint: payload["fingerprint"]
+      fingerprint: fingerprint_override(payload["fingerprint"])
     }
   end
+
+  # Components reach the hash as strings, the way the ingest path
+  # normalized them. Reading the decoded JSON as-is would hand a
+  # numeric component — `["12345", "{{ default }}"]` arrives as
+  # `[12345, ...]` — to `Regex.match?/2`, which raises.
+  defp fingerprint_override(fingerprint) when is_list(fingerprint),
+    do: Enum.map(fingerprint, &to_string/1)
+
+  defp fingerprint_override(_), do: nil
 
   defp first_exception(payload) do
     values =
@@ -486,9 +521,14 @@ defmodule Hive.Repo.DataMigrations.RegroupLiteralDefaultFingerprints do
     count
   end
 
+  # Subtracts the destinations as well as the retained fingerprints: a
+  # fingerprint that events left can also be one that other events
+  # arrived at, and deleting it would drop an issue row written
+  # moments earlier and orphan its events.
   defp delete_emptied_issues(state) do
     state.vacated
     |> MapSet.difference(state.retained)
+    |> MapSet.difference(MapSet.new(Map.keys(state.groups)))
     |> Enum.reduce(0, fn {project_id, domain_id, fingerprint}, acc ->
       {count, _} =
         "errors_issues"
