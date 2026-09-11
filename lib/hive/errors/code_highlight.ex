@@ -12,6 +12,8 @@ defmodule Hive.Errors.CodeHighlight do
       frame's `platform` (or when Lumis raises for any reason)
   """
 
+  require Logger
+
   @default_theme "catppuccin_latte"
 
   @doc """
@@ -56,20 +58,41 @@ defmodule Hive.Errors.CodeHighlight do
     Lumis.highlight(source,
       formatter:
         {:html_inline,
-         language: language,
-         theme: @default_theme,
-         highlight_lines: %{lines: [current_line]},
-         header: %{line_numbers: true, line_numbers_start: start_line}}
+         language: language, theme: @default_theme, highlight_lines: %{lines: [current_line]}}
     )
     |> case do
-      {:ok, html} -> {:ok, html}
-      _ -> :error
+      {:ok, html} ->
+        {:ok, renumber_lines(html, start_line)}
+
+      other ->
+        Logger.warning("[Errors.CodeHighlight] Lumis returned #{inspect(other)}")
+        :error
     end
   rescue
-    _ -> :error
+    exception ->
+      Logger.warning("[Errors.CodeHighlight] Lumis raised: #{Exception.message(exception)}")
+
+      :error
   end
 
   defp do_highlight(_source, nil = _language, _start, _current), do: :error
+
+  # Lumis numbers `data-line` from 1; the CSS renders those values as the
+  # gutter, so shift them onto the frame's absolute file lines. Source text
+  # is HTML-escaped by Lumis, so only real attributes can match here.
+  defp renumber_lines(html, start_line) when start_line in [0, 1], do: html
+
+  defp renumber_lines(html, start_line) do
+    offset = start_line - 1
+
+    Regex.replace(
+      ~r/(<div class="l-line"[^>]*\bdata-line=")(\d+)(")/,
+      html,
+      fn _match, prefix, number, suffix ->
+        prefix <> to_string(String.to_integer(number) + offset) <> suffix
+      end
+    )
+  end
 
   # Fallback when Lumis has no lexer for the platform or raises.
   # Emits a compatible `<pre class="lumis">` structure so the same
