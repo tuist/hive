@@ -8,6 +8,14 @@ anonymous reader never receives private or organization-only content.
 Most pages include a **Subscribe** menu that provides the correct address
 without requiring readers to construct it manually.
 
+## Hive Blog
+
+The documentation site's blog is also available as public feeds:
+
+| Content | Atom 1.0 | Really Simple Syndication 2.0 |
+|---|---|---|
+| Blog posts | `/blog/atom.xml` | `/blog/rss.xml` |
+
 ## Forage
 
 | Content | Atom 1.0 | Really Simple Syndication 2.0 |

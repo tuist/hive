@@ -8,10 +8,12 @@
     "wrangler": "4.90.1"
   },
   "scripts": {
+    "predev": "node scripts/generate-blog-feed.mjs",
     "dev": "vitepress dev",
+    "prebuild": "node scripts/generate-blog-feed.mjs",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build && wrangler deploy"
   },
   "aube": {
     "allowBuilds": {

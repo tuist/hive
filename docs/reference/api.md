@@ -1,8 +1,13 @@
 # Application programming interface
 
-Hive exposes a JSON application programming interface
-([API](https://en.wikipedia.org/wiki/API)) for integrations that need Flight
-history or continuation context outside the dashboard.
+Hive exposes two JSON application programming interfaces
+([APIs](https://en.wikipedia.org/wiki/API): the Flight API for operational
+integrations and the versioned mobile API for native clients. Both use OAuth
+2.0 bearer tokens, but they have different resources and scopes.
+
+The complete OpenAPI document is available at `/api/openapi.json` on every Hive
+instance. It is the authoritative source for response fields and authorization
+requirements.
 
 ## Authenticate
 
@@ -52,3 +57,23 @@ Clients that use the
 resource with `list_flights`, `get_flight`, and
 `start_forage_item_flight`. `start_grafana_alert_flight` remains available for
 Grafana-specific clients and accepts the same objective values.
+
+## Mobile API
+
+Native clients use the `/api/v1` resource. Its protected-resource metadata is
+available at `/.well-known/oauth-protected-resource/api/v1`. Request the
+`mobile` umbrella scope, or the narrower scope for each resource the client
+needs:
+
+| Scope | Resource |
+|---|---|
+| `mobile.me.read` | `GET /api/v1/me` |
+| `mobile.forage.read` | `GET /api/v1/forage` and `GET /api/v1/forage/:item_id` |
+| `mobile.specs.read` | `GET /api/v1/specs` and `GET /api/v1/specs/:number` |
+| `mobile.drops.read` | `GET /api/v1/drops`, `GET /api/v1/drops/:number`, and digest endpoints |
+| `mobile.errors.read` | `GET /api/v1/errors` and `GET /api/v1/errors/:id` |
+
+The mobile API is read-only. It follows the signed-in account's role and the
+resource's visibility, so a token cannot reveal private content that the
+account could not see in the dashboard. The [native apps guide](/guide/self-hosting/mobile)
+describes the browser-based authorization flow and supported clients.
