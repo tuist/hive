@@ -191,4 +191,14 @@ defmodule Hive.Agents.ErrorsTest do
       refute Errors.terminal_attempt?(nil)
     end
   end
+
+  test "bounds attempts even when postponements inflated the stored maximum" do
+    refute Errors.terminal_attempt?(%Oban.Job{attempt: 1, max_attempts: 132})
+    assert Errors.terminal_attempt?(%Oban.Job{attempt: 3, max_attempts: 132})
+    assert Errors.terminal_attempt?(%Oban.Job{attempt: 129, max_attempts: 132})
+  end
+
+  test "recognizes payment-required status without relying on provider wording" do
+    assert Errors.hard_failure_reason(%{status: 402}) == :llm_credit_limit
+  end
 end

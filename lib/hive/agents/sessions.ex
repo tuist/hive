@@ -99,6 +99,26 @@ defmodule Hive.Agents.Sessions do
     end
   end
 
+  @doc """
+  Runs a tool-free operation as one schema-constrained response, without an agent loop.
+  """
+  def run_object_operation(agent_module, operation_name, args, opts \\ []) do
+    {inference_role, opts} = Keyword.pop(opts, :inference_role, :inference)
+    {timeout, opts} = Keyword.pop(opts, :timeout, @run_timeout)
+
+    with {:ok, llm_opts} <- client_opts(inference_role) do
+      request_opts =
+        llm_opts
+        |> Keyword.merge(opts)
+        |> Keyword.put_new(:receive_timeout, timeout)
+        |> Keyword.put_new(:max_tokens, 1_200)
+
+      Audit.with_context(agent_actor_context(agent_module, llm_opts), fn ->
+        Hive.Agents.StructuredOperation.run(agent_module, operation_name, args, request_opts)
+      end)
+    end
+  end
+
   defp run_opts(llm_opts, opts) do
     llm_opts
     |> Keyword.merge(opts)

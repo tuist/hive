@@ -224,4 +224,16 @@ defmodule Hive.Forage.GitHubIssueClassificationWorkerTest do
     refreshed = Repo.get!(GitHubIssue, issue.id).classification_failed_at
     assert DateTime.compare(refreshed, first) == :gt
   end
+
+  test "discards an old postponed job before another model request" do
+    issue = insert_issue!()
+    reject(GitHubIssueClassification, :classify, 1)
+
+    assert {:discard, :llm_transient_exhausted} =
+             GitHubIssueClassificationWorker.perform(%Oban.Job{
+               args: %{"issue_id" => issue.id},
+               attempt: 129,
+               max_attempts: 132
+             })
+  end
 end

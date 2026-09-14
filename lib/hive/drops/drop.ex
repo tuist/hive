@@ -25,6 +25,7 @@ defmodule Hive.Drops.Drop do
     field :version, :string
     field :published_at, :utc_datetime
     field :classified_at, :utc_datetime
+    field :classification_fingerprint, :string
     field :classification_failure, :string
     field :classification_failed_at, :utc_datetime
 

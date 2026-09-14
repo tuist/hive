@@ -8,6 +8,7 @@ defmodule Hive.Agents.Errors do
   # 408 (Request Timeout) and 429 (Too Many Requests) are the transient
   # exceptions that stay retryable.
   @retryable_client_statuses [408, 429]
+  @max_model_attempts 3
 
   @credit_fragments [
     "credit_limit",
@@ -123,14 +124,14 @@ defmodule Hive.Agents.Errors do
   end
 
   @doc """
-  Returns true when a job is on (or past) its final Oban attempt.
+  Returns true on the final attempt, independently of Oban's snooze-inflated maximum.
 
   Callers use it to move retry-exhausted work into a durable tombstone so the
   sweeper does not re-enqueue the same row indefinitely.
   """
   def terminal_attempt?(%{attempt: attempt, max_attempts: max_attempts})
       when is_integer(attempt) and is_integer(max_attempts) do
-    attempt >= max_attempts
+    attempt >= min(max_attempts, @max_model_attempts)
   end
 
   def terminal_attempt?(_job), do: false
@@ -144,7 +145,7 @@ defmodule Hive.Agents.Errors do
     text = reason_text(reason)
 
     cond do
-      contains_any?(text, @credit_fragments) ->
+      status_code(reason) == 402 or contains_any?(text, @credit_fragments) ->
         :llm_credit_limit
 
       contains_any?(text, @provider_unavailable_fragments) ->

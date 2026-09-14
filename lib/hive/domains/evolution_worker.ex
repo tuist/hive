@@ -37,7 +37,7 @@ defmodule Hive.Domains.EvolutionWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{}) do
+  def perform(%Oban.Job{} = job) do
     case Evolution.evolve_from_work_items() do
       {:ok, %{created: created, updated: updated, skipped: skipped}} ->
         Logger.info(
@@ -48,17 +48,20 @@ defmodule Hive.Domains.EvolutionWorker do
         :ok
 
       {:error, reason} ->
-        handle_evolution_error(reason)
+        handle_evolution_error(reason, job)
 
       other ->
         {:error, {:unexpected_evolution_result, other}}
     end
   end
 
-  defp handle_evolution_error(reason) do
+  defp handle_evolution_error(reason, job) do
     cond do
       hard_reason = Errors.hard_failure_reason(reason) ->
         {:cancel, hard_reason}
+
+      Errors.terminal_attempt?(job) ->
+        {:discard, :llm_transient_exhausted}
 
       Errors.provider_unavailable?(reason) ->
         Logger.warning(

@@ -18,7 +18,7 @@ defmodule Hive.Drops.WeeklyDigestWorker do
   @provider_snooze_seconds 3_600
 
   @impl Oban.Worker
-  def perform(%Oban.Job{}) do
+  def perform(%Oban.Job{} = job) do
     Audit.put_context(%{interface: "worker"})
 
     outcomes = WeeklyDigests.generate_publishable_weeks()
@@ -37,7 +37,7 @@ defmodule Hive.Drops.WeeklyDigestWorker do
     cond do
       Enum.any?(outcomes, &match?({:error, _reason}, &1)) ->
         {:error, reason} = Enum.find(outcomes, &match?({:error, _reason}, &1))
-        handle_error(reason)
+        handle_error(reason, job)
 
       Enum.any?(outcomes, &match?({:ok, _digest, :busy}, &1)) ->
         {:snooze, @claim_snooze_seconds}
@@ -46,10 +46,10 @@ defmodule Hive.Drops.WeeklyDigestWorker do
         :ok
     end
   rescue
-    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] -> handle_error(error)
+    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] -> handle_error(error, job)
   end
 
-  defp handle_error(reason) do
+  defp handle_error(reason, job) do
     sanitized = Errors.sanitize_reason(reason, :weekly_digest_generation_failed)
 
     cond do
@@ -59,6 +59,9 @@ defmodule Hive.Drops.WeeklyDigestWorker do
         )
 
         {:cancel, hard_reason}
+
+      Errors.terminal_attempt?(job) ->
+        {:discard, :llm_transient_exhausted}
 
       Errors.provider_unavailable?(reason) ->
         Logger.warning(

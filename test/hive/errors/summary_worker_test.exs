@@ -54,4 +54,11 @@ defmodule Hive.Errors.SummaryWorkerTest do
 
     assert {:cancel, :llm_credit_limit} = SummaryWorker.perform(%Oban.Job{attempt: 1})
   end
+
+  test "stops postponing provider failures after the fixed third attempt" do
+    stub(Hive.Errors.Summaries, :reconcile, fn _opts -> {:error, %{status: 503}} end)
+
+    assert {:discard, :llm_transient_exhausted} =
+             Hive.Errors.SummaryWorker.perform(%Oban.Job{attempt: 3, max_attempts: 5})
+  end
 end

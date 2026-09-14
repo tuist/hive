@@ -162,6 +162,19 @@ Kubernetes execution layer for file and command operations while Agent Sandbox
 owns isolated pod lifecycle and cleanup. Self-hosters can supply another
 provider through the runtime-configurable Condukt sandbox contract.
 
+GitHub issue classification, drop classification, and domain evolution request
+one schema-constrained result per evaluation. They do not spend additional
+turns asking an agent to submit its answer. Classification remembers both
+selected domains and empty results; duplicate jobs reuse them while the source
+and candidate-domain context remain unchanged. Results are discarded if their
+source changes while the model is responding.
+
+Classification jobs stop after three executions, including executions postponed
+by a provider outage. Older jobs whose allowed attempts grew during an outage
+are stopped before making another classification request. Exhausted work is
+reconsidered after a day. Summary, digest, and domain-evolution workers also stop
+postponing provider failures after the third execution.
+
 Scheduled classification retries only revisit pending work. Rejections that
 describe the request, such as invalid credentials, are recorded and are not
 requested again for unchanged source content. Rejections that describe the

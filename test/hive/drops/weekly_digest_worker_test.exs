@@ -48,4 +48,11 @@ defmodule Hive.Drops.WeeklyDigestWorkerTest do
 
     assert {:cancel, :llm_credit_limit} = WeeklyDigestWorker.perform(%Oban.Job{})
   end
+
+  test "stops postponing provider failures after the fixed third attempt" do
+    stub(WeeklyDigests, :generate_publishable_weeks, fn -> [{:error, %{status: 503}}] end)
+
+    assert {:discard, :llm_transient_exhausted} =
+             WeeklyDigestWorker.perform(%Oban.Job{attempt: 3, max_attempts: 5})
+  end
 end

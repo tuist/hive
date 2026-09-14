@@ -135,4 +135,49 @@ defmodule Hive.Drops.DomainClassificationTest do
            |> String.graphemes()
            |> Enum.all?(&(&1 == "🎉"))
   end
+
+  test "reuses a classification until source or candidate domain context changes" do
+    domain = create_domain!("Cached-#{System.unique_integer([:positive])}")
+    drop = insert_rss_drop!()
+    test_pid = self()
+
+    runner = fn _input ->
+      send(test_pid, :classified)
+      {:ok, %{domain_ids: [domain.id]}}
+    end
+
+    opts = [agents_enabled?: fn -> true end, runner: runner]
+
+    assert {:ok, [chosen]} = DomainClassification.classify(drop.id, opts)
+    assert chosen == domain.id
+    assert_received :classified
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    refute_received :classified
+
+    drop |> Ecto.Changeset.change(body: "Changed release") |> Repo.update!()
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    assert_received :classified
+
+    {:ok, _} = Domains.update_domain(domain, %{description: "Changed scope"})
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    assert_received :classified
+  end
+
+  test "does not save a model result after its domain context changes" do
+    domain = create_domain!("Edited-#{System.unique_integer([:positive])}")
+    drop = insert_rss_drop!()
+
+    runner = fn _input ->
+      {:ok, _} = Domains.update_domain(domain, %{description: "Updated while classifying"})
+      {:ok, %{domain_ids: [domain.id]}}
+    end
+
+    assert {:error, :classification_input_changed} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert is_nil(Repo.get!(Drop, drop.id).classification_fingerprint)
+  end
 end

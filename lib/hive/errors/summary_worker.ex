@@ -46,13 +46,13 @@ defmodule Hive.Errors.SummaryWorker do
         :ok
 
       {:error, reason} ->
-        handle_error(reason)
+        handle_error(reason, job)
     end
   rescue
-    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] -> handle_error(error)
+    error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] -> handle_error(error, job)
   end
 
-  defp handle_error(reason) do
+  defp handle_error(reason, job) do
     sanitized = Errors.sanitize_reason(reason, :error_summary_failed)
 
     cond do
@@ -63,6 +63,9 @@ defmodule Hive.Errors.SummaryWorker do
         )
 
         {:cancel, hard_reason}
+
+      Errors.terminal_attempt?(job) ->
+        {:discard, :llm_transient_exhausted}
 
       Errors.provider_unavailable?(reason) ->
         Logger.warning("[Errors.SummaryWorker] Model provider unavailable: #{inspect(sanitized)}")

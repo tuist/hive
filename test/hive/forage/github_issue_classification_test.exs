@@ -304,4 +304,52 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     assert is_nil(changed.classification_failed_at)
     assert %DateTime{} = changed.classified_at
   end
+
+  test "reuses successful and empty classifications but reevaluates changed inputs" do
+    domain = create_domain_with_new_repo!("cached")
+    {_repo, issue} = seed_issue!(domain)
+    test_pid = self()
+
+    runner = fn _input ->
+      send(test_pid, :classified)
+      {:ok, %{domain_ids: []}}
+    end
+
+    opts = [agents_enabled?: fn -> true end, runner: runner]
+
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    assert_received :classified
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    refute_received :classified
+
+    issue |> Ecto.Changeset.change(title: "Different issue") |> Repo.update!()
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    assert_received :classified
+
+    {:ok, _} = Domains.update_domain(domain, %{description: "Different scope"})
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    assert_received :classified
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    refute_received :classified
+  end
+
+  test "does not save a model result over a source edited during classification" do
+    domain = create_domain_with_new_repo!("edited")
+    {_repo, issue} = seed_issue!(domain)
+
+    runner = fn _input ->
+      issue |> Ecto.Changeset.change(title: "Updated while classifying") |> Repo.update!()
+      {:ok, %{domain_ids: [domain.id]}}
+    end
+
+    assert {:error, :classification_input_changed} =
+             GitHubIssueClassification.classify(issue.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    current = Repo.get!(GitHubIssue, issue.id)
+    assert current.title == "Updated while classifying"
+    assert is_nil(current.classification_fingerprint)
+  end
 end

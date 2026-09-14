@@ -37,9 +37,14 @@ defmodule Hive.Drops.DomainClassificationWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"drop_id" => drop_id}} = job) do
-    drop_id
-    |> DomainClassification.classify()
-    |> handle_classification_result(job, drop_id)
+    if job.attempt > 3 do
+      :ok = Drops.mark_drop_classification_failed(drop_id, :llm_transient_exhausted)
+      {:discard, :llm_transient_exhausted}
+    else
+      drop_id
+      |> DomainClassification.classify()
+      |> handle_classification_result(job, drop_id)
+    end
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
       handle_classification_result({:error, error}, job, drop_id)

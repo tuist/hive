@@ -115,7 +115,7 @@ defmodule Hive.Domains.Evolution do
     agent = Keyword.get(opts, :agent, EvolutionAgent)
     agent_opts = Keyword.get(opts, :agent_opts, [])
 
-    Sessions.run_operation(agent, :evolve_domains, input, agent_opts)
+    Sessions.run_object_operation(agent, :evolve_domains, input, agent_opts)
   end
 
   defp skip_fingerprint?(fingerprint) do
