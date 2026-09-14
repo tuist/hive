@@ -14,3 +14,6 @@ import BlogIndex from '../.vitepress/theme/components/BlogIndex.vue'
 # Latest From the Hive Blog
 
 <BlogIndex />
+
+Subscribe to new posts with [Atom](/blog/atom.xml) or [RSS](/blog/rss.xml).
+For the product itself, start with the [Hive guide](/guide/self-hosting/).

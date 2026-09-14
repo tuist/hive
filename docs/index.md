@@ -21,8 +21,14 @@ hero:
 features:
   - title: Organize the product
     details: Projects and domains give every signal, proposal, and release a durable place in the product.
+    link: /guide/using-hive/projects
+    linkText: Learn about projects
   - title: Shape what comes next
     details: Forage gathers requests, feedback, issues, and alerts. Specs turn that evidence into shared product intent.
+    link: /guide/using-hive/forage
+    linkText: Explore Forage
   - title: Follow what shipped
     details: Drops connect releases and changelogs back to the product areas and source material they improve.
+    link: /guide/self-hosting/drops
+    linkText: Follow shipped work
 ---
