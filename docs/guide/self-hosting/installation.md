@@ -29,6 +29,67 @@ The container listens on port `4000` unless [`PORT`](/reference/configuration#po
 is set. See the [configuration reference](/reference/configuration) for
 all optional settings.
 
+## Choose a deployment method
+
+### Run the container directly
+
+Create an environment file containing the required settings and any optional
+provider credentials. Generate the session secret once and keep it stable:
+
+```bash
+mix phx.gen.secret
+```
+
+Set the generated value as `SECRET_KEY_BASE`, then run the release migration
+before starting the web process. Replace `<version>` with the Hive release you
+want to run:
+
+```bash
+export HIVE_IMAGE=ghcr.io/tuist/hive:<version>
+
+docker run --rm --env-file .env "$HIVE_IMAGE" \
+  /app/bin/hive eval "Hive.Release.migrate"
+
+docker run --detach --name hive --env-file .env --publish 4000:4000 "$HIVE_IMAGE"
+```
+
+The migration container must be able to reach the same PostgreSQL database as
+the web container. If the two containers use a Docker network, attach both
+commands to that network with `--network`. Run the migration again for each
+release before replacing the web container.
+
+### Deploy with Helm
+
+The published chart is available from the Hive OCI registry. Its default
+configuration creates a PostgreSQL cluster through CloudNativePG and an
+Ingress through ingress-nginx and cert-manager, so install those operators and
+make a storage class available first. The chart can also use an existing
+PostgreSQL service and existing secret-manager integration through its values.
+
+Create the application secret with at least a stable session secret:
+
+```bash
+kubectl create namespace hive
+kubectl -n hive create secret generic hive-app \\
+  --from-literal=SECRET_KEY_BASE="$(mix phx.gen.secret)"
+```
+
+Install a chart release and set the public hostname. Use the chart version that
+matches the application release you select:
+
+```bash
+helm upgrade --install hive oci://ghcr.io/tuist/charts/hive \\
+  --version <chart-version> \\
+  --namespace hive \\
+  --set host=hive.example.com \\
+  --set secrets.existingSecret=hive-app
+```
+
+Review the chart's [`values.yaml`](https://github.com/tuist/hive/blob/main/infra/helm/hive/values.yaml)
+for storage, backups, authentication, object storage, ClickHouse, and external
+secret-manager settings. Keep credentials in Kubernetes Secrets or the
+external secret manager rather than in a values file.
+
 ## Start with a public instance
 
 Hive is public by default. This lets you confirm that the installation is

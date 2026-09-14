@@ -5,6 +5,7 @@ const docsSidebar = [
       { text: "Overview", link: "/guide/self-hosting/" },
       { text: "Install Hive", link: "/guide/self-hosting/installation" },
       { text: "Authentication", link: "/guide/self-hosting/authentication" },
+      { text: "Native apps", link: "/guide/self-hosting/mobile" },
       { text: "Authorization", link: "/guide/self-hosting/authorization" },
     ],
   },

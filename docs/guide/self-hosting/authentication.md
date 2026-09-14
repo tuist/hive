@@ -89,6 +89,8 @@ The issuer must expose its discovery document at
 
 ## Mobile application
 
+For installation and day-to-day connection steps, see [Native apps](./mobile).
+
 The Hive mobile application starts by asking for the address of the Hive
 deployment. It discovers the deployment's authorization endpoints and
 registers that installation as a public client through Open Authorization
