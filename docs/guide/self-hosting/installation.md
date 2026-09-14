@@ -70,7 +70,7 @@ Create the application secret with at least a stable session secret:
 
 ```bash
 kubectl create namespace hive
-kubectl -n hive create secret generic hive-app \\
+kubectl -n hive create secret generic hive-app \
   --from-literal=SECRET_KEY_BASE="$(mix phx.gen.secret)"
 ```
 
@@ -78,10 +78,10 @@ Install a chart release and set the public hostname. Use the chart version that
 matches the application release you select:
 
 ```bash
-helm upgrade --install hive oci://ghcr.io/tuist/charts/hive \\
-  --version <chart-version> \\
-  --namespace hive \\
-  --set host=hive.example.com \\
+helm upgrade --install hive oci://ghcr.io/tuist/charts/hive \
+  --version <chart-version> \
+  --namespace hive \
+  --set host=hive.example.com \
   --set secrets.existingSecret=hive-app
 ```
 

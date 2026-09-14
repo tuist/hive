@@ -53,7 +53,7 @@ and optional session. The session contains the model and agent identifiers,
 source repository metadata, and messages captured during execution.
 
 Clients that use the
-[Model Context Protocol](https://modelcontextprotocol.org/) can access the same
+[Model Context Protocol](https://modelcontextprotocol.io/) can access the same
 resource with `list_flights`, `get_flight`, and
 `start_forage_item_flight`. `start_grafana_alert_flight` remains available for
 Grafana-specific clients and accepts the same objective values.
