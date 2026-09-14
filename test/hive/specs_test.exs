@@ -230,6 +230,7 @@ defmodule Hive.SpecsTest do
     end
 
     test "inherits visibility from the project and only allows private overrides" do
+      suffix = System.unique_integer([:positive])
       member = user("member@tuist.dev")
       contributor = user("contributor@example.com")
       {:ok, public_project} = Projects.create_project(%{name: "Hive", visibility: "public"})
@@ -237,14 +238,14 @@ defmodule Hive.SpecsTest do
 
       private_domain =
         create_domain!(%{
-          name: "Private domain",
+          name: "Private domain #{suffix}",
           project_id: public_project.id,
           visibility: "private"
         })
 
       public_domain =
         create_domain!(%{
-          name: "Public domain",
+          name: "Public domain #{suffix}",
           project_id: private_project.id,
           visibility: "public"
         })
