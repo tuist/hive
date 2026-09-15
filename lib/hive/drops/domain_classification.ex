@@ -63,11 +63,57 @@ defmodule Hive.Drops.DomainClassification do
   end
 
   defp run_agent(drop, candidates, opts) do
+    input = build_input(drop, candidates)
+
+    fingerprint = input_fingerprint(input)
+
+    case reuse_classification(drop.id, fingerprint) do
+      {:ok, :not_cached} ->
+        run_and_persist(drop, candidates, input, fingerprint, opts)
+
+      result ->
+        result
+    end
+  end
+
+  defp reuse_classification(drop_id, fingerprint) do
+    Repo.transaction(fn ->
+      current =
+        Drop
+        |> lock("FOR UPDATE")
+        |> Repo.get!(drop_id)
+        |> Repo.preload([:github_repository, :domains])
+
+      if current.classification_fingerprint == fingerprint do
+        current_input = build_input(current, candidate_domains(current))
+
+        if input_fingerprint(current_input) != fingerprint do
+          Repo.rollback(:classification_input_changed)
+        end
+
+        Drop
+        |> where([drop], drop.id == ^drop_id)
+        |> Repo.update_all(
+          set: [
+            classified_at: DateTime.utc_now() |> DateTime.truncate(:second),
+            classification_failure: nil,
+            classification_failed_at: nil
+          ]
+        )
+
+        Enum.map(current.domains, & &1.id)
+      else
+        :not_cached
+      end
+    end)
+  end
+
+  defp run_and_persist(drop, candidates, input, fingerprint, opts) do
     runner = Keyword.get(opts, :runner, &run_classifier(&1, opts))
 
-    case runner.(build_input(drop, candidates)) do
-      {:ok, %{domain_ids: ids}} -> persist(drop, candidates, ids)
-      {:ok, %{"domain_ids" => ids}} -> persist(drop, candidates, ids)
+    case runner.(input) do
+      {:ok, %{domain_ids: ids}} -> persist(drop, candidates, ids, fingerprint)
+      {:ok, %{"domain_ids" => ids}} -> persist(drop, candidates, ids, fingerprint)
       {:ok, _other} -> {:error, :invalid_agent_response}
       {:error, :llm_not_configured} -> fallback(drop, candidates)
       {:error, reason} -> {:error, reason}
@@ -80,7 +126,7 @@ defmodule Hive.Drops.DomainClassification do
     {:ok, ids}
   end
 
-  defp persist(drop, candidates, ids) when is_list(ids) do
+  defp persist(drop, candidates, ids, fingerprint) when is_list(ids) do
     allowed = MapSet.new(candidates, & &1.id)
 
     selected =
@@ -89,11 +135,21 @@ defmodule Hive.Drops.DomainClassification do
       |> Enum.uniq()
       |> Enum.filter(&MapSet.member?(allowed, &1))
 
-    Drops.replace_drop_domains(drop, selected)
-    {:ok, selected}
+    Repo.transaction(fn ->
+      current =
+        Drop |> lock("FOR UPDATE") |> Repo.get!(drop.id) |> Repo.preload(:github_repository)
+
+      current_input = build_input(current, candidate_domains(current))
+
+      if input_fingerprint(current_input) != fingerprint do
+        Repo.rollback(:classification_input_changed)
+      end
+
+      Drops.replace_drop_domains(current, selected, classification_fingerprint: fingerprint)
+    end)
   end
 
-  defp persist(_drop, _candidates, _other), do: {:error, :invalid_agent_response}
+  defp persist(_drop, _candidates, _other, _fingerprint), do: {:error, :invalid_agent_response}
 
   defp candidate_domains(%Drop{
          source_type: :github_release,
@@ -162,11 +218,16 @@ defmodule Hive.Drops.DomainClassification do
     }
   end
 
+  defp input_fingerprint(input) do
+    :crypto.hash(:sha256, :erlang.term_to_binary(input, [:deterministic]))
+    |> Base.encode16(case: :lower)
+  end
+
   defp run_classifier(input, opts) do
     agent = Keyword.get(opts, :agent, DomainClassifierAgent)
     agent_opts = Keyword.get(opts, :agent_opts, [])
 
-    Sessions.run_operation(agent, :classify_drop, input, agent_opts)
+    Sessions.run_object_operation(agent, :classify_drop, input, agent_opts)
   end
 
   defp load_drop(id) do

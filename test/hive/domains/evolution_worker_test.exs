@@ -60,4 +60,11 @@ defmodule Hive.Domains.EvolutionWorkerTest do
 
     assert {:error, ^sanitized} = EvolutionWorker.perform(%Oban.Job{})
   end
+
+  test "stops postponing provider failures after the fixed third attempt" do
+    stub(Evolution, :evolve_from_work_items, fn -> {:error, %{status: 503}} end)
+
+    assert {:discard, :llm_transient_exhausted} =
+             EvolutionWorker.perform(%Oban.Job{attempt: 3, max_attempts: 5})
+  end
 end

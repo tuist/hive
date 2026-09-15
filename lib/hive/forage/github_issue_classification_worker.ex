@@ -36,9 +36,14 @@ defmodule Hive.Forage.GitHubIssueClassificationWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"issue_id" => issue_id}} = job) do
-    issue_id
-    |> GitHubIssueClassification.classify()
-    |> handle_classification_result(job, issue_id)
+    if job.attempt > 3 do
+      :ok = GitHubIssueClassification.mark_failed(issue_id, :llm_transient_exhausted)
+      {:discard, :llm_transient_exhausted}
+    else
+      issue_id
+      |> GitHubIssueClassification.classify()
+      |> handle_classification_result(job, issue_id)
+    end
   rescue
     error in [ReqLLM.Error.API.Request, ReqLLM.Error.API.Response] ->
       handle_classification_result({:error, error}, job, issue_id)

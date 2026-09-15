@@ -324,7 +324,7 @@ defmodule Hive.Drops do
   stamps `classified_at` so the sweeper does not pick the row up again.
   Passes through the list of domain ids that were actually linked.
   """
-  def replace_drop_domains(%Drop{} = drop, domain_ids) when is_list(domain_ids) do
+  def replace_drop_domains(%Drop{} = drop, domain_ids, opts \\ []) when is_list(domain_ids) do
     classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
     selected =
@@ -355,6 +355,7 @@ defmodule Hive.Drops do
       |> Repo.update_all(
         set: [
           classified_at: classified_at,
+          classification_fingerprint: Keyword.get(opts, :classification_fingerprint),
           classification_failure: nil,
           classification_failed_at: nil
         ]

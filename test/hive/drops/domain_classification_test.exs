@@ -135,4 +135,109 @@ defmodule Hive.Drops.DomainClassificationTest do
            |> String.graphemes()
            |> Enum.all?(&(&1 == "🎉"))
   end
+
+  test "reuses a classification until source or candidate domain context changes" do
+    domain = create_domain!("Cached-#{System.unique_integer([:positive])}")
+    drop = insert_rss_drop!()
+    test_pid = self()
+
+    runner = fn _input ->
+      send(test_pid, :classified)
+      {:ok, %{domain_ids: [domain.id]}}
+    end
+
+    opts = [agents_enabled?: fn -> true end, runner: runner]
+
+    assert {:ok, [chosen]} = DomainClassification.classify(drop.id, opts)
+    assert chosen == domain.id
+    assert_received :classified
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    refute_received :classified
+
+    drop |> Ecto.Changeset.change(body: "Changed release") |> Repo.update!()
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    assert_received :classified
+
+    {:ok, _} = Domains.update_domain(domain, %{description: "Changed scope"})
+    assert {:ok, [^chosen]} = DomainClassification.classify(drop.id, opts)
+    assert_received :classified
+  end
+
+  for result <- [:selected, :empty] do
+    test "restores #{result} classifications when requeued with unchanged model input" do
+      assert_restored_after_requeue(unquote(result))
+    end
+  end
+
+  defp assert_restored_after_requeue(result) do
+    domain = create_domain!("Requeued-#{System.unique_integer([:positive])}")
+    body = String.duplicate("a", 600)
+    drop = insert_rss_drop!(%{body: body})
+    ids = if result == :selected, do: [domain.id], else: []
+
+    assert {:ok, ^ids} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: fn _ -> {:ok, %{domain_ids: ids}} end
+             )
+
+    fingerprint = Repo.get!(Drop, drop.id).classification_fingerprint
+
+    drop
+    |> Ecto.Changeset.change(
+      body: body <> " [x] done",
+      classified_at: nil,
+      classification_failure: "llm_credit_limit",
+      classification_failed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    )
+    |> Repo.update!()
+
+    assert {:ok, ^ids} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: fn _ -> flunk("unchanged model input must not spend again") end
+             )
+
+    restored = Repo.get!(Drop, drop.id) |> Repo.preload(:domains)
+    assert %DateTime{} = restored.classified_at
+    assert is_nil(restored.classification_failure)
+    assert is_nil(restored.classification_failed_at)
+    assert restored.classification_fingerprint == fingerprint
+    assert Enum.map(restored.domains, & &1.id) == ids
+  end
+
+  test "does not restore a cached result from a stale drop snapshot" do
+    _domain = create_domain!("Stale-#{System.unique_integer([:positive])}")
+    drop = insert_rss_drop!()
+    opts = [agents_enabled?: fn -> true end, runner: fn _ -> {:ok, %{domain_ids: []}} end]
+    assert {:ok, []} = DomainClassification.classify(drop.id, opts)
+    stale = Repo.get!(Drop, drop.id) |> Repo.preload(:github_repository)
+    stale |> Ecto.Changeset.change(title: "Changed input", classified_at: nil) |> Repo.update!()
+
+    assert {:error, :classification_input_changed} =
+             DomainClassification.classify_drop(stale,
+               agents_enabled?: fn -> true end,
+               runner: fn _ -> flunk("must not classify the stale input") end
+             )
+
+    assert is_nil(Repo.get!(Drop, drop.id).classified_at)
+  end
+
+  test "does not save a model result after its domain context changes" do
+    domain = create_domain!("Edited-#{System.unique_integer([:positive])}")
+    drop = insert_rss_drop!()
+
+    runner = fn _input ->
+      {:ok, _} = Domains.update_domain(domain, %{description: "Updated while classifying"})
+      {:ok, %{domain_ids: [domain.id]}}
+    end
+
+    assert {:error, :classification_input_changed} =
+             DomainClassification.classify(drop.id,
+               agents_enabled?: fn -> true end,
+               runner: runner
+             )
+
+    assert is_nil(Repo.get!(Drop, drop.id).classification_fingerprint)
+  end
 end

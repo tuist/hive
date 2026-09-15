@@ -70,14 +70,60 @@ defmodule Hive.Forage.GitHubIssueClassification do
   end
 
   defp run_agent(issue, candidate_domains, opts) do
+    input = build_input(issue, candidate_domains)
+
+    fingerprint = input_fingerprint(input)
+
+    case reuse_classification(issue.id, fingerprint) do
+      {:ok, :not_cached} ->
+        run_and_persist(issue, candidate_domains, input, fingerprint, opts)
+
+      result ->
+        result
+    end
+  end
+
+  defp reuse_classification(issue_id, fingerprint) do
+    Repo.transaction(fn ->
+      current =
+        GitHubIssue
+        |> lock("FOR UPDATE")
+        |> Repo.get!(issue_id)
+        |> Repo.preload([:github_repository, :domains])
+
+      if current.classification_fingerprint == fingerprint do
+        current_input = build_input(current, candidate_domains(current.github_repository_id))
+
+        if input_fingerprint(current_input) != fingerprint do
+          Repo.rollback(:classification_input_changed)
+        end
+
+        GitHubIssue
+        |> where([issue], issue.id == ^issue_id)
+        |> Repo.update_all(
+          set: [
+            classified_at: DateTime.utc_now() |> DateTime.truncate(:second),
+            classification_failure: nil,
+            classification_failed_at: nil
+          ]
+        )
+
+        Enum.map(current.domains, & &1.id)
+      else
+        :not_cached
+      end
+    end)
+  end
+
+  defp run_and_persist(issue, candidate_domains, input, fingerprint, opts) do
     runner = Keyword.get(opts, :runner, &run_classifier(&1, opts))
 
-    case runner.(build_input(issue, candidate_domains)) do
+    case runner.(input) do
       {:ok, %{domain_ids: domain_ids}} ->
-        persist_classification(issue, candidate_domains, domain_ids)
+        persist_classification(issue, candidate_domains, domain_ids, fingerprint)
 
       {:ok, %{"domain_ids" => domain_ids}} ->
-        persist_classification(issue, candidate_domains, domain_ids)
+        persist_classification(issue, candidate_domains, domain_ids, fingerprint)
 
       {:ok, _other} ->
         {:error, :invalid_agent_response}
@@ -92,7 +138,8 @@ defmodule Hive.Forage.GitHubIssueClassification do
     end
   end
 
-  defp persist_classification(issue, candidate_domains, domain_ids) when is_list(domain_ids) do
+  defp persist_classification(issue, candidate_domains, domain_ids, fingerprint)
+       when is_list(domain_ids) do
     allowed = MapSet.new(candidate_domains, & &1.id)
 
     selected =
@@ -101,14 +148,30 @@ defmodule Hive.Forage.GitHubIssueClassification do
       |> Enum.uniq()
       |> Enum.filter(&MapSet.member?(allowed, &1))
 
-    persist!(issue, selected)
-    {:ok, selected}
+    Repo.transaction(fn ->
+      current =
+        GitHubIssue
+        |> lock("FOR UPDATE")
+        |> Repo.get!(issue.id)
+        |> Repo.preload(:github_repository)
+
+      current_input = build_input(current, candidate_domains(current.github_repository_id))
+
+      if input_fingerprint(current_input) != fingerprint do
+        Repo.rollback(:classification_input_changed)
+      end
+
+      persist!(current, selected, fingerprint)
+      selected
+    end)
   end
 
-  defp persist_classification(_issue, _candidate_domains, _other),
+  defp persist_classification(_issue, _candidate_domains, _other, _fingerprint),
     do: {:error, :invalid_agent_response}
 
-  defp persist!(%GitHubIssue{id: issue_id}, domain_ids) do
+  defp persist!(issue, domain_ids, fingerprint \\ nil)
+
+  defp persist!(%GitHubIssue{id: issue_id}, domain_ids, fingerprint) do
     classified_at = DateTime.utc_now() |> DateTime.truncate(:second)
     inserted_at = classified_at
 
@@ -133,6 +196,7 @@ defmodule Hive.Forage.GitHubIssueClassification do
       |> Repo.update_all(
         set: [
           classified_at: classified_at,
+          classification_fingerprint: fingerprint,
           classification_failure: nil,
           classification_failed_at: nil
         ]
@@ -206,11 +270,16 @@ defmodule Hive.Forage.GitHubIssueClassification do
     }
   end
 
+  defp input_fingerprint(input) do
+    :crypto.hash(:sha256, :erlang.term_to_binary(input, [:deterministic]))
+    |> Base.encode16(case: :lower)
+  end
+
   defp run_classifier(input, opts) do
     agent = Keyword.get(opts, :agent, GitHubIssueClassifierAgent)
     agent_opts = Keyword.get(opts, :agent_opts, [])
 
-    Sessions.run_operation(agent, :classify_issue, input, agent_opts)
+    Sessions.run_object_operation(agent, :classify_issue, input, agent_opts)
   end
 
   defp load_issue(id) do

@@ -141,7 +141,7 @@ Treat language-model tokens as a metered production resource. Any agentic workfl
 
 1. Create `lib/hive/<domain>/agents/<name>_agent.ex` (e.g. `lib/hive/forage/agents/issue_triage_agent.ex`).
 2. `use Condukt` and implement `system_prompt/0` and `tools/0`. Append `Hive.Agents.StyleGuide.prose_rules()` to the system prompt so the cross-cutting style rules apply.
-3. Expose a public entry point (e.g. `triage(issue)`) that calls `Hive.Agents.Sessions.run/3`. Don't call `Condukt.run/3` directly: the wrapper merges the resolved LLM client options and is the hook point for future audit-trail wiring.
+3. Expose a public entry point (e.g. `triage(issue)`) that calls `Hive.Agents.Sessions.run/3`. For a tool-free typed operation, use `Hive.Agents.Sessions.run_object_operation/4`: it validates the declared schemas and requests one structured response through ReqLLM, avoiding the optional `submit_result` tool in the agent loop. Classification stores input fingerprints with its domain links and reuses unchanged results. Don't call `Condukt.run/3` directly: the wrapper merges the resolved LLM client options and is the hook point for future audit-trail wiring.
 4. Define tools inline with `Condukt.tool(name:, description:, parameters:, call:)`. Keep their `call:` callbacks short and delegate to a context module under `lib/hive/<domain>/`.
 5. In tests, `Mimic.copy/1` the agent module in `test/test_helper.exs` and stub the entry-point function. `Mimic.copy(Condukt, type_check: true)` is already in place for end-to-end stubs. For unit tests of code that doesn't need a real LLM round-trip, `Hive.TestSupport.Agents.NoopAgent` is a minimal `use Condukt` agent backed by a runtime that returns `{:ok, "handled: " <> prompt}`.
 

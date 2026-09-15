@@ -65,4 +65,26 @@ defmodule Hive.Drops.DomainClassificationWorkerTest do
     assert log =~ "Model provider rejected classification"
     refute log =~ "full prompt body"
   end
+
+  test "discards an old postponed job before another model request" do
+    drop =
+      elem(
+        Drops.upsert_drop(%{
+          source_type: :rss,
+          external_id: "exhausted",
+          title: "Drop",
+          url: "https://example.com/drop"
+        }),
+        1
+      )
+
+    reject(DomainClassification, :classify, 1)
+
+    assert {:discard, :llm_transient_exhausted} =
+             DomainClassificationWorker.perform(%Oban.Job{
+               args: %{"drop_id" => drop.id},
+               attempt: 129,
+               max_attempts: 132
+             })
+  end
 end
