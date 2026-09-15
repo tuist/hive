@@ -43,6 +43,19 @@ defmodule Hive.GitHub.WebhooksTest do
     assert activity.metadata["pull_request_url"] == "https://github.com/acme/widgets/pull/42"
   end
 
+  test "records long error titles in the audit trail" do
+    long_title = String.duplicate("a", 300)
+    %{issue: issue, repository: repository} = linked_error_fixture(%{"message" => long_title})
+
+    assert :ok =
+             Webhooks.handle_event(
+               "pull_request",
+               pull_request_payload(repository, "#{HiveWeb.Endpoint.url()}/errors/#{issue.id}")
+             )
+
+    assert [%Activity{target_label: ^long_title}] = Repo.all(Activity)
+  end
+
   test "ignores error links from another Hive project" do
     %{issue: issue, repository: repository} = linked_error_fixture()
     {:ok, other_project} = Projects.create_project(%{"name" => unique_name("Other")})
@@ -100,7 +113,7 @@ defmodule Hive.GitHub.WebhooksTest do
     "sha256=#{digest}"
   end
 
-  defp linked_error_fixture do
+  defp linked_error_fixture(event_payload \\ %{"message" => "boom"}) do
     {:ok, project} = Projects.create_project(%{"name" => unique_name("Widgets")})
 
     {:ok, repository} =
@@ -110,8 +123,7 @@ defmodule Hive.GitHub.WebhooksTest do
         "visibility" => "private"
       })
 
-    {:ok, issue} =
-      Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(%{"message" => "boom"}))
+    {:ok, issue} = Hive.ErrorsHelpers.seed_issue(project, SentryEvent.parse(event_payload))
 
     %{project: project, repository: repository, issue: issue}
   end
