@@ -165,9 +165,10 @@ provider through the runtime-configurable Condukt sandbox contract.
 GitHub issue classification, drop classification, and domain evolution request
 one schema-constrained result per evaluation. They do not spend additional
 turns asking an agent to submit its answer. Classification remembers both
-selected domains and empty results; duplicate jobs reuse them while the source
-and candidate-domain context remain unchanged. Results are discarded if their
-source changes while the model is responding.
+selected domains and empty results; duplicate jobs reuse them while the model
+input and candidate-domain context remain unchanged. Sync edits outside the body
+excerpt sent to the model reuse the saved result and mark classification complete
+again. Results are discarded if their source changes while the model is responding.
 
 Classification jobs stop after three executions, including executions postponed
 by a provider outage. Older jobs whose allowed attempts grew during an outage

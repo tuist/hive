@@ -67,13 +67,45 @@ defmodule Hive.Drops.DomainClassification do
 
     fingerprint = input_fingerprint(input)
 
-    current = Repo.get!(Drop, drop.id)
+    case reuse_classification(drop.id, fingerprint) do
+      {:ok, :not_cached} ->
+        run_and_persist(drop, candidates, input, fingerprint, opts)
 
-    if current.classification_fingerprint == fingerprint and current.classified_at do
-      {:ok, current |> Repo.preload(:domains) |> Map.fetch!(:domains) |> Enum.map(& &1.id)}
-    else
-      run_and_persist(drop, candidates, input, fingerprint, opts)
+      result ->
+        result
     end
+  end
+
+  defp reuse_classification(drop_id, fingerprint) do
+    Repo.transaction(fn ->
+      current =
+        Drop
+        |> lock("FOR UPDATE")
+        |> Repo.get!(drop_id)
+        |> Repo.preload([:github_repository, :domains])
+
+      if current.classification_fingerprint == fingerprint do
+        current_input = build_input(current, candidate_domains(current))
+
+        if input_fingerprint(current_input) != fingerprint do
+          Repo.rollback(:classification_input_changed)
+        end
+
+        Drop
+        |> where([drop], drop.id == ^drop_id)
+        |> Repo.update_all(
+          set: [
+            classified_at: DateTime.utc_now() |> DateTime.truncate(:second),
+            classification_failure: nil,
+            classification_failed_at: nil
+          ]
+        )
+
+        Enum.map(current.domains, & &1.id)
+      else
+        :not_cached
+      end
+    end)
   end
 
   defp run_and_persist(drop, candidates, input, fingerprint, opts) do

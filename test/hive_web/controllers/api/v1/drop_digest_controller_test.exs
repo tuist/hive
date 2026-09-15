@@ -7,17 +7,19 @@ defmodule HiveWeb.Api.V1.DropDigestControllerTest do
 
   test "lists, searches, paginates, and gets published weekly digests", %{conn: conn} do
     {token, _user} = mobile_access_token!("drop-digests@example.com", "mobile", @resource)
+    week_start = Date.add(~D[2030-01-07], 7 * System.unique_integer([:positive, :monotonic]))
+    week_start_string = Date.to_iso8601(week_start)
 
     wanted =
       insert_digest!(%{
-        week_start: ~D[2026-07-06],
-        week_end: ~D[2026-07-10],
+        week_start: week_start,
+        week_end: Date.add(week_start, 4),
         title: "The mobile feedback loop"
       })
 
     insert_digest!(%{
-      week_start: ~D[2026-06-29],
-      week_end: ~D[2026-07-03],
+      week_start: Date.add(week_start, -7),
+      week_end: Date.add(week_start, -3),
       title: "A quieter server week"
     })
 
@@ -29,7 +31,7 @@ defmodule HiveWeb.Api.V1.DropDigestControllerTest do
 
     assert [
              %{
-               "week_start" => "2026-07-06",
+               "week_start" => ^week_start_string,
                "title" => "The mobile feedback loop",
                "drop_count" => 2
              }

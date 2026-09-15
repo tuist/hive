@@ -333,6 +333,69 @@ defmodule Hive.Forage.GitHubIssueClassificationTest do
     refute_received :classified
   end
 
+  for result <- [:selected, :empty] do
+    test "restores #{result} classifications after a sync changes only unseen body content" do
+      assert_restored_after_sync(unquote(result))
+    end
+  end
+
+  defp assert_restored_after_sync(result) do
+    stub(Hive.Agents, :enabled?, fn -> true end)
+    domain = create_domain_with_new_repo!("resynced")
+    {repository, issue} = seed_issue!(domain)
+    body = String.duplicate("a", 600)
+    issue |> Ecto.Changeset.change(body: body) |> Repo.update!()
+    ids = if result == :selected, do: [domain.id], else: []
+
+    assert {:ok, ^ids} =
+             GitHubIssueClassification.classify(issue.id,
+               runner: fn _ -> {:ok, %{domain_ids: ids}} end
+             )
+
+    fingerprint = Repo.get!(GitHubIssue, issue.id).classification_fingerprint
+
+    assert {:ok, synced} =
+             Forage.upsert_repository_github_issue(repository, %Issues{
+               number: issue.number,
+               title: issue.title,
+               body: body <> " [x] done",
+               state: "open"
+             })
+
+    assert is_nil(synced.classified_at)
+    assert synced.classification_fingerprint == fingerprint
+    GitHubIssueClassification.mark_failed(issue.id, :llm_credit_limit)
+
+    assert {:ok, ^ids} =
+             GitHubIssueClassification.classify(issue.id,
+               runner: fn _ -> flunk("unchanged model input must not spend again") end
+             )
+
+    restored = Repo.get!(GitHubIssue, issue.id) |> Repo.preload(:domains)
+    assert %DateTime{} = restored.classified_at
+    assert is_nil(restored.classification_failure)
+    assert is_nil(restored.classification_failed_at)
+    assert restored.classification_fingerprint == fingerprint
+    assert Enum.map(restored.domains, & &1.id) == ids
+  end
+
+  test "does not restore a cached result from a stale issue snapshot" do
+    domain = create_domain_with_new_repo!("stale")
+    {_repository, issue} = seed_issue!(domain)
+    opts = [agents_enabled?: fn -> true end, runner: fn _ -> {:ok, %{domain_ids: []}} end]
+    assert {:ok, []} = GitHubIssueClassification.classify(issue.id, opts)
+    stale = Repo.get!(GitHubIssue, issue.id) |> Repo.preload(:github_repository)
+    stale |> Ecto.Changeset.change(title: "Changed input", classified_at: nil) |> Repo.update!()
+
+    assert {:error, :classification_input_changed} =
+             GitHubIssueClassification.classify_issue(stale,
+               agents_enabled?: fn -> true end,
+               runner: fn _ -> flunk("must not classify the stale input") end
+             )
+
+    assert is_nil(Repo.get!(GitHubIssue, issue.id).classified_at)
+  end
+
   test "does not save a model result over a source edited during classification" do
     domain = create_domain_with_new_repo!("edited")
     {_repo, issue} = seed_issue!(domain)

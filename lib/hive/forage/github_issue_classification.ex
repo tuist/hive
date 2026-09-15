@@ -74,13 +74,45 @@ defmodule Hive.Forage.GitHubIssueClassification do
 
     fingerprint = input_fingerprint(input)
 
-    current = Repo.get!(GitHubIssue, issue.id)
+    case reuse_classification(issue.id, fingerprint) do
+      {:ok, :not_cached} ->
+        run_and_persist(issue, candidate_domains, input, fingerprint, opts)
 
-    if current.classification_fingerprint == fingerprint and current.classified_at do
-      {:ok, current |> Repo.preload(:domains) |> Map.fetch!(:domains) |> Enum.map(& &1.id)}
-    else
-      run_and_persist(issue, candidate_domains, input, fingerprint, opts)
+      result ->
+        result
     end
+  end
+
+  defp reuse_classification(issue_id, fingerprint) do
+    Repo.transaction(fn ->
+      current =
+        GitHubIssue
+        |> lock("FOR UPDATE")
+        |> Repo.get!(issue_id)
+        |> Repo.preload([:github_repository, :domains])
+
+      if current.classification_fingerprint == fingerprint do
+        current_input = build_input(current, candidate_domains(current.github_repository_id))
+
+        if input_fingerprint(current_input) != fingerprint do
+          Repo.rollback(:classification_input_changed)
+        end
+
+        GitHubIssue
+        |> where([issue], issue.id == ^issue_id)
+        |> Repo.update_all(
+          set: [
+            classified_at: DateTime.utc_now() |> DateTime.truncate(:second),
+            classification_failure: nil,
+            classification_failed_at: nil
+          ]
+        )
+
+        Enum.map(current.domains, & &1.id)
+      else
+        :not_cached
+      end
+    end)
   end
 
   defp run_and_persist(issue, candidate_domains, input, fingerprint, opts) do
