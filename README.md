@@ -4,9 +4,8 @@
 
 <h1 align="center">Hive</h1>
 
-> [!WARNING]
-> Hive is a work in progress and is still changing quickly. Expect APIs,
-> behavior, and deployment details to change often.
+> [!Important]
+> We've consolidated all the operations into an open source project, Atlas, that lives in [tuist/tuist](https://github.com/tuist/tuist), so we are no longer maintaining this.
 
 <p align="center">
   <a href="https://github.com/tuist/hive/actions/workflows/hive.yml">
